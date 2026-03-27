@@ -1,0 +1,171 @@
+In my Next.js BizilCore app, I need a self-service SMS notification 
+system where each user connects their own SMS.net.bd API key 
+and controls which notifications they want to send to customers.
+
+---
+
+### 1. Database Schema (add to existing schema)
+
+Table: sms_settings
+- id
+- user_id (foreign key)
+- api_key (encrypted)
+- is_connected (boolean, default false)
+- created_at
+- updated_at
+
+Table: sms_notification_preferences
+- id
+- user_id (foreign key)
+- order_confirmed (boolean, default true)
+- order_status_changed (boolean, default false)
+- delivery_confirmed (boolean, default false)
+- payment_received (boolean, default false)
+- low_stock_alert (boolean, default false)
+- created_at
+- updated_at
+
+---
+
+### 2. Settings Page — SMS Tab (/settings → SMS section)
+
+**Section A: API Connection**
+- Input field: "SMS.net.bd API Key" (password type, masked)
+- Button: "সংযোগ করুন" → calls POST /api/settings/sms/connect
+- Show connection status:
+  * 🟢 "সংযুক্ত আছে" if connected
+  * 🔴 "সংযুক্ত নেই" if not connected
+- Button: "সংযোগ বিচ্ছিন্ন করুন" if already connected
+- Show helper text:
+  "আপনার API Key পেতে portal.sms.net.bd তে একটি 
+   অ্যাকাউন্ট খুলুন এবং API section থেকে key নিন।"
+- Show link: "কিভাবে পাবেন? →" (opens a guide modal)
+
+**Section B: Notification Preferences (only show if connected)**
+Show checkboxes:
+
+☑ অর্ডার কনফার্ম হলে SMS পাঠাবো
+  "নতুন অর্ডার তৈরি হলে কাস্টমারকে SMS যাবে"
+
+☐ অর্ডার স্ট্যাটাস পরিবর্তন হলে
+  "অর্ডারের অবস্থা পরিবর্তন হলে কাস্টমারকে জানানো হবে"
+
+☐ ডেলিভারি নিশ্চিত হলে
+  "পণ্য ডেলিভারি হলে কাস্টমারকে জানানো হবে"
+
+☐ পেমেন্ট পাওয়া গেলে
+  "পেমেন্ট কনফার্ম হলে কাস্টমারকে জানানো হবে"
+
+☐ স্টক কম হলে (নিজেকে জানাবে)
+  "পণ্যের স্টক কমে গেলে আপনাকে সতর্ক করা হবে"
+
+- Button: "পছন্দ সংরক্ষণ করুন"
+
+**Section C: Test SMS**
+- Input: "টেস্ট নম্বর" (phone number input)
+- Button: "টেস্ট SMS পাঠান"
+  → Sends a test SMS to verify connection works
+
+---
+
+### 3. API Routes
+
+**POST `/api/settings/sms/connect`**
+- Accept { api_key }
+- Verify API key by calling SMS.net.bd balance check endpoint:
+  GET https://api.sms.net.bd/balance?api_key={api_key}
+- If valid (returns balance): save encrypted api_key, set is_connected = true
+  Also show remaining SMS balance to user
+- If invalid: return error "API Key সঠিক নয়"
+
+**POST `/api/settings/sms/disconnect`**
+- Set is_connected = false, delete api_key for current user
+
+**GET `/api/settings/sms`**
+- Return current user's sms settings and notification preferences
+- Return masked api_key: "••••••••xxxx"
+- Return current SMS balance if connected
+
+**PUT `/api/settings/sms/preferences`**
+- Update sms_notification_preferences table for current user
+
+**POST `/api/settings/sms/test`**
+- Accept { phone }
+- Send test SMS using user's own api_key
+- Message: "BizilCore SMS সংযোগ সফল! আপনার নোটিফিকেশন সিস্টেম চালু আছে।"
+- Use SMS.net.bd API:
+  POST https://api.sms.net.bd/sendsms
+  Body: { api_key, msg, to }
+
+---
+
+### 4. lib/sms.js utility
+
+export async function sendSMS(apiKey, toPhone, message) {
+  // Auto-format: 01XXXXXXXXX stays as is for SMS.net.bd
+  const response = await fetch("https://api.sms.net.bd/sendsms", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      api_key: apiKey,
+      msg: message,
+      to: toPhone,
+    }),
+  });
+  return response.json();
+}
+
+export async function checkSMSBalance(apiKey) {
+  const response = await fetch(
+    `https://api.sms.net.bd/balance?api_key=${apiKey}`
+  );
+  return response.json();
+}
+
+export async function shouldSendSMS(userId, preferenceKey) {
+  const settings = await getUserSMSSettings(userId);
+  if (!settings?.is_connected) return false;
+  return settings?.preferences?.[preferenceKey] === true;
+}
+
+---
+
+### 5. Trigger SMS on Order Events
+
+After order is created successfully:
+
+const smsEnabled = await shouldSendSMS(userId, "order_confirmed");
+if (smsEnabled) {
+  const settings = await getUserSMSSettings(userId);
+  const customerPhone = order.customer.phone;
+  const message = 
+    `আপনার অর্ডার #${order.id} কনফার্ম হয়েছে! ` +
+    `মোট: ${order.total} টাকা। ` +
+    `ধন্যবাদ।`;
+
+  await sendSMS(settings.api_key, customerPhone, message);
+}
+
+Similarly add triggers for:
+- order_status_changed → when order status is updated
+- delivery_confirmed → when delivery is marked complete  
+- payment_received → when payment is confirmed
+- low_stock_alert → send to owner's own phone number
+
+---
+
+### 6. Guide Modal (কিভাবে API Key পাবেন)
+
+Show step-by-step modal when user clicks "কিভাবে পাবেন? →":
+
+ধাপ ১: portal.sms.net.bd তে যান এবং Sign Up করুন
+ধাপ ২: Email verify করে লগইন করুন
+ধাপ ৩: Dashboard থেকে "API" মেনুতে যান
+ধাপ ৪: আপনার API Key কপি করুন
+ধাপ ৫: BizilCore Settings এ paste করে "সংযোগ করুন" চাপুন
+
+---
+
+Use my existing database (Prisma/MongoDB), auth system, and UI 
+styling. Settings page SMS tab must be accessible to logged-in 
+users only. Encrypt the api_key before storing in database.

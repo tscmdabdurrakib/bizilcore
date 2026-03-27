@@ -1,0 +1,90 @@
+=== PHASE 2 — STEP 4: PAYMENT + SUBSCRIPTION SYSTEM ===
+(Most critical — enables revenue)
+
+--- 1. DATABASE UPDATE ---
+Add Subscription model:
+model Subscription {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id])
+  plan        String   @default("free") -- free/pro/business
+  status      String   @default("active") -- active/expired/cancelled
+  startDate   DateTime @default(now())
+  endDate     DateTime?
+  autoRenew   Boolean  @default(false)
+}
+
+Add Payment model:
+model Payment {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  amount        Float
+  method        String   -- "bkash" or "nagad"
+  transactionId String?
+  plan          String
+  months        Int      @default(1)
+  status        String   -- "pending/completed/failed"
+  createdAt     DateTime @default(now())
+}
+
+--- 2. FEATURE GATING ---
+Create /lib/features.ts — plan feature limits:
+const PLAN_LIMITS = {
+  free:     { products: 50, ordersPerMonth: 100, staff: 0, sms: false, courier: false, export: false },
+  pro:      { products: -1, ordersPerMonth: -1,  staff: 3, sms: true,  courier: true,  export: true  },
+  business: { products: -1, ordersPerMonth: -1,  staff: -1, sms: true, courier: true,  export: true  }
+}
+
+Create useFeatureGate() hook:
+- Check user's current plan
+- Return: canAccess(featureName) boolean
+- Show upgrade modal if feature locked
+
+Upgrade prompt modal:
+- "এই ফিচারটি Pro plan এ আছে"
+- Current price: ৳২৯৯/মাস
+- "আপগ্রেড করুন" button
+
+--- 3. BKASH INTEGRATION ---
+Create /lib/bkash.ts:
+- Sandbox API first: bkash.net/checkout
+- Function: createBkashPayment(amount, orderId) → returns bkashURL
+- Function: verifyBkashPayment(paymentId) → returns status
+- .env: BKASH_APP_KEY, BKASH_APP_SECRET, BKASH_USERNAME, BKASH_PASSWORD
+
+--- 4. NAGAD INTEGRATION ---
+Create /lib/nagad.ts:
+- Function: createNagadPayment(amount, orderId) → returns nagadURL
+- Function: verifyNagadPayment(orderId) → returns status
+- .env: NAGAD_MERCHANT_ID, NAGAD_MERCHANT_KEY
+
+--- 5. SUBSCRIPTION UPGRADE FLOW ---
+On /pricing page and /settings — Subscription tab:
+
+"আপগ্রেড করুন" button → upgrade modal:
+Step 1: Select plan (Pro ৳২৯৯ / Business ৳৬৯৯)
+Step 2: Select duration (১ মাস / ৩ মাস -৫% / ৬ মাস -১০%)
+Step 3: Select payment method: bKash / Nagad
+Step 4: Redirect to payment gateway
+Step 5: On success webhook → update Subscription in database → show success
+
+Payment success page:
+- "পেমেন্ট সফল হয়েছে! ৳[amount]"
+- Plan: Pro | Valid until: [date]
+- "Dashboard এ যান" button
+
+--- 6. SUBSCRIPTION MANAGEMENT ---
+In /settings — Subscription tab:
+- Current plan badge + expiry date
+- "Renew করুন" button if expiring within 7 days
+- Payment history table: date, plan, amount, method, status
+- "Invoice Download করুন" for each payment
+
+--- 7. AUTO-EXPIRY CRON JOB ---
+Create /api/cron/check-subscriptions (called daily):
+- Find subscriptions where endDate < today
+- Set status = "expired", plan = "free"
+- Send SMS: "আপনার Pro plan মেয়াদ শেষ হয়েছে। Renew করুন।"
+
+Same design system. All text Bangla.

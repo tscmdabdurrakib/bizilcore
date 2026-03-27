@@ -1,0 +1,105 @@
+=== PHASE 3 — STEP 4: GROWTH ENGINE + MULTI-SHOP ===
+
+--- 1. DATABASE ADDITIONS ---
+
+model ReferralCode {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  code      String   @unique  -- e.g. "RINA50"
+  uses      Int      @default(0)
+  earnings  Float    @default(0)
+  createdAt DateTime @default(now())
+}
+
+model Referral {
+  id          String   @id @default(cuid())
+  referrerId  String
+  referrer    User     @relation("referrer", fields: [referrerId], references: [id])
+  referredId  String
+  referred    User     @relation("referred", fields: [referredId], references: [id])
+  reward      String   -- "1_month_pro"
+  rewardGiven Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+Add to Shop: parentShopId String? (for multi-shop)
+Add to User: maxShops Int @default(1)
+
+--- 2. REFERRAL PROGRAM ---
+On /settings — new "Referral" tab:
+- User's unique referral code (auto-generated)
+- "কোড Copy করুন" button
+- Share message: "HisabBoi দিয়ে আমার business অনেক সহজ হয়েছে! 
+  তুমিও try করো। আমার code দিয়ে signup করলে ১ মাস Pro free পাবে: [code]"
+- "WhatsApp এ Share করুন" button
+
+Stats: কতজন refer করেছ | মোট free মাস earned
+
+On /signup page:
+- Optional "Referral code" field
+- Validate code → show "আপনি ১ মাস Pro free পাবেন!"
+- After signup: give referred user 1 month Pro
+- Give referrer 1 month Pro (after referred user active 7 days)
+
+--- 3. AFFILIATE DASHBOARD ---
+New page: /affiliate (Pro+ only)
+
+For influencers/bloggers/YouTubers:
+- Unique affiliate link with tracking
+- Commission: ৳৫০ per Pro signup, ৳১৫০ per Business signup
+- Dashboard: clicks | signups | earnings | pending payout
+- Minimum payout: ৳৫০০ via bKash
+
+Admin panel (internal): approve affiliates, process payouts
+
+--- 4. MULTI-SHOP (Business Plan) ---
+Update Shop model: add multi-shop support
+
+New /shops page (Business plan only):
+- List all shops owned
+- "+ নতুন shop যোগ করুন" button (max 3 for Business)
+- Shop switcher in sidebar topbar
+
+Consolidated /reports:
+- Toggle: "সব shop একসাথে" vs individual shop
+- Combined P&L across all shops
+- Inventory transfer between shops:
+  From Shop A → To Shop B → quantity → confirm
+
+--- 5. GAMIFICATION ---
+Add to User model:
+- streak: Int (consecutive days logged in)
+- totalOrders: Int
+- badges: String[] 
+
+Badge system:
+- "প্রথম বিক্রি" — first order created
+- "১০০ অর্ডার" — 100 orders milestone
+- "৩০ দিন active" — 30 day streak
+- "বড় বিক্রেতা" — ৳১ lakh total revenue
+- "Team leader" — added first staff member
+
+Show badges on profile/settings page.
+Weekly leaderboard (anonymous): top sellers this week in your category.
+"এই সপ্তাহে আপনার rank: #৪৭ পোশাক বিক্রেতাদের মধ্যে"
+
+--- 6. SUPPLIER MANAGEMENT ---
+New model + /suppliers page:
+
+- Supplier list: name, phone, product categories supplied
+- Purchase order create: supplier + products + quantity + price
+- Purchase order status: ordered → received → payment done
+- Auto-update stock when PO marked "received"
+- Supplier payment tracking (due to supplier)
+
+--- 7. COMMUNITY TIPS (light) ---
+Weekly push notification + in-app card:
+"এই সপ্তাহের business tip: Eid এর আগে ৪ সপ্তাহ stock বাড়িয়ে রাখুন।"
+
+Tips stored in DB, admin can add new ones.
+User can react: helpful / not helpful.
+Based on shop category (পোশাক sellers get fashion tips).
+
+All Bangla UI. Same design system. 
+Respect plan limits: Multi-shop = Business only, Affiliate = Pro+.

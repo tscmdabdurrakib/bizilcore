@@ -1,0 +1,150 @@
+ MULTI-VERTICAL FOUNDATION
+(All previous phases complete)
+
+এই step এ existing app কে multi-vertical বানাব।
+কোনো পুরনো code ভাঙবে না — শুধু extend করব।
+
+--- 1. DATABASE UPDATE ---
+
+Update Shop model — add these fields:
+  businessType   String  @default("fcommerce")
+  -- Values: "fcommerce" | "restaurant" | "pharmacy" 
+  --         | "retail" | "salon" | "tailor"
+  
+  businessConfig Json?
+  -- Stores type-specific config as JSON:
+  -- restaurant: { tableCount: 10, hasDelivery: true, vatRate: 5 }
+  -- pharmacy:   { vatRate: 7.5, requiresPrescription: true }
+  -- retail:     { hasThermalPrinter: false, quickPosMode: true }
+  -- salon:      { slotDurationMinutes: 30, workingHours: "9-8" }
+  -- tailor:     { defaultLeadDays: 7, advancePercent: 50 }
+
+  activeModules  String[]
+  -- Auto-set based on businessType on creation
+
+Create helper function /lib/modules.ts:
+
+const BUSINESS_MODULES = {
+  fcommerce:  ["dashboard","inventory","orders","customers",
+               "hisab","reports","courier","settings"],
+  restaurant: ["dashboard","inventory","orders","customers",
+               "hisab","reports","tables","kitchen","staff","settings"],
+  pharmacy:   ["dashboard","inventory","orders","customers",
+               "hisab","reports","prescriptions","expiry","settings"],
+  retail:     ["dashboard","inventory","pos","customers",
+               "hisab","reports","settings"],
+  salon:      ["dashboard","inventory","appointments","customers",
+               "hisab","reports","staff","settings"],
+  tailor:     ["dashboard","inventory","orders","customers",
+               "hisab","reports","measurements","courier","settings"],
+}
+
+function getModules(businessType: string): string[]
+function hasModule(businessType: string, module: string): boolean
+function getNavItems(businessType: string): NavItem[]
+
+--- 2. ONBOARDING UPDATE ---
+
+Update /onboarding Step 1 — add business type selection BEFORE
+shop name input:
+
+Show 6 cards in a 2x3 grid. Each card:
+- Icon (colored square)
+- Business type name in Bangla
+- Short description
+
+Cards:
+1. F-Commerce    — "Facebook / online এ পণ্য বেচি"
+2. রেস্তোরাঁ     — "খাবারের ব্যবসা করি"
+3. ফার্মেসি      — "ওষুধের দোকান চালাই"
+4. রিটেইল দোকান  — "মুদি / কাপড় / অন্য দোকান"
+5. সেলুন / পার্লার — "Beauty / grooming service দিই"
+6. দর্জি / বুটিক  — "কাপড় বানাই / সেলাই করি"
+
+On select: highlight card with green border.
+"পরবর্তী ধাপ" button → goes to shop info (name, phone, etc.)
+
+After onboarding completes:
+- Set shop.businessType = selected type
+- Set shop.activeModules = BUSINESS_MODULES[type]
+- Redirect to type-specific dashboard
+
+--- 3. DYNAMIC SIDEBAR NAVIGATION ---
+
+Update the sidebar component to be fully dynamic.
+Read businessType from session/context.
+Use getNavItems(businessType) to build nav.
+
+Nav items per business type:
+
+F-Commerce nav:
+  ড্যাশবোর্ড | অর্ডার | পণ্য ও স্টক | কাস্টমার | হিসাব | রিপোর্ট
+
+Restaurant nav:
+  ড্যাশবোর্ড | টেবিল | অর্ডার | মেনু | কিচেন | স্টাফ | হিসাব | রিপোর্ট
+
+Pharmacy nav:
+  ড্যাশবোর্ড | ওষুধ স্টক | বিক্রয় | প্রেসক্রিপশন | মেয়াদ সতর্কতা | হিসাব | রিপোর্ট
+
+Retail nav:
+  ড্যাশবোর্ড | দ্রুত বিক্রয় (POS) | পণ্য | কাস্টমার | হিসাব | রিপোর্ট
+
+Salon nav:
+  ড্যাশবোর্ড | অ্যাপয়েন্টমেন্ট | সার্ভিস | কাস্টমার | স্টাফ | হিসাব | রিপোর্ট
+
+Tailor nav:
+  ড্যাশবোর্ড | অর্ডার | মাপজোখ | কাপড় স্টক | কাস্টমার | হিসাব | রিপোর্ট
+
+Each nav item has: icon, Bangla label, route, required module name.
+If hasModule(businessType, module) === false → hide that nav item.
+
+--- 4. DYNAMIC DASHBOARD ---
+
+Update /dashboard to render based on businessType.
+
+Create separate dashboard widget sets:
+
+DashboardFCommerce — (existing): 
+  today sales, pending orders, total due, low stock
+
+DashboardRestaurant:
+  আজকের বিক্রি | খোলা টেবিল (X/Y) | Pending orders | আজকের লাভ
+  + Active table map (small grid showing which tables occupied)
+
+DashboardPharmacy:
+  আজকের বিক্রি | মেয়াদ শেষের সতর্কতা | কম স্টক | আজকের লাভ
+  + "৭ দিনের মধ্যে মেয়াদ শেষ" alert list
+
+DashboardRetail:
+  আজকের বিক্রি | মোট লেনদেন | কম স্টক | আজকের লাভ
+  + Quick POS shortcut button (big, prominent)
+
+DashboardSalon:
+  আজকের অ্যাপয়েন্টমেন্ট (X টি) | আজকের আয় | Walk-in count | আজকের লাভ
+  + Today's appointment timeline
+
+DashboardTailor:
+  চলমান অর্ডার | আজ Delivery | বাকি কাপড় | আজকের আয়
+  + "আজ Delivery দিতে হবে" order list
+
+Render logic in /dashboard/page.tsx:
+  const { businessType } = useShop()
+  if (businessType === 'restaurant') return <DashboardRestaurant />
+  if (businessType === 'pharmacy')   return <DashboardPharmacy />
+  // etc.
+
+--- 5. SETTINGS — BUSINESS TYPE SWITCH ---
+
+In /settings — new "Business Type" section:
+- Current type badge
+- "Business Type পরিবর্তন করুন" button
+- Warning modal: "পরিবর্তন করলে কিছু module hide হতে পারে।
+  আপনার data মুছবে না। নিশ্চিত?"
+- On confirm → update businessType + activeModules → reload
+
+"নতুন Shop যোগ করুন" button (Business plan):
+- Creates a second shop under same account
+- Can have different businessType
+- Shop switcher appears in sidebar top
+
+All Bangla UI. Same design system.

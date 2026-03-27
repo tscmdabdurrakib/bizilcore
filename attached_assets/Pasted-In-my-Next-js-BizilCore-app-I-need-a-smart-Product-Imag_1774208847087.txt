@@ -1,0 +1,221 @@
+In my Next.js BizilCore app, I need a smart Product Image System 
+with plan-based restrictions. No breaking existing functionality.
+
+---
+
+### 1. Plan-based Image Rules
+
+FREE PLAN:
+- Cannot upload images directly
+- Can only add image via URL (external link)
+- Max 1 image URL per product
+- URL can be from anywhere (Pinterest, Google, etc.)
+- Show helper text: "যেকোনো ছবির লিংক দিন 
+  (Pinterest, Google Images বা যেকোনো জায়গা থেকে)"
+
+PRO PLAN:
+- Can upload 1 image directly (max 800KB)
+- Can add remaining images via URL
+- Max 5 images per product (1 upload + 4 URLs)
+- Show upload slot first, then URL slots below
+
+BUSINESS PLAN:
+- Can upload up to 5 images directly (max 800KB each)
+- Max 5 images per product
+- All can be direct upload or URL mix
+
+---
+
+### 2. Image Size Limit
+- Max file size: 800KB per image
+- Allowed formats: JPG, JPEG, PNG, WEBP
+- If file exceeds 800KB → show inline error immediately:
+  "ছবির সাইজ ৮০০KB এর বেশি হওয়া যাবে না। 
+   অনুগ্রহ করে ছোট সাইজের ছবি দিন।"
+- Validate on client side (before upload) AND server side
+
+---
+
+### 3. Cloudinary Setup for Direct Uploads
+
+Install: npm install cloudinary next-cloudinary
+
+Environment variables to add:
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your_cloud_name
+
+Upload settings:
+- Folder: bizilcore/products/{userId}/
+- Auto quality optimization: quality: "auto"
+- Auto format: fetch_format: "auto"
+- Max file size enforced: 800KB
+
+---
+
+### 4. Database Schema (update products table)
+
+Add to products table:
+- images: JSON array of image objects
+  [
+    {
+      id: "unique_id",
+      type: "upload" | "url",
+      src: "cloudinary_url or external_url",
+      isPrimary: boolean,
+      order: number
+    }
+  ]
+
+---
+
+### 5. API Routes
+
+POST /api/products/upload-image
+- Check user plan from database
+- Check current image count for this product
+- Validate file size ≤ 800KB (server side)
+- Validate file type (jpg/jpeg/png/webp only)
+- If FREE plan → reject with error:
+  "ফ্রি প্ল্যানে সরাসরি ছবি আপলোড করা যাবে না। 
+   ছবির লিংক ব্যবহার করুন।"
+- If PRO plan and already has 1 upload → reject:
+  "প্রো প্ল্যানে মাত্র ১টি ছবি আপলোড করা যাবে।"
+- If BUSINESS plan and already has 5 uploads → reject:
+  "সর্বোচ্চ ৫টি ছবি আপলোড করা যাবে।"
+- Upload to Cloudinary with optimization settings
+- Return cloudinary URL
+
+POST /api/products/add-image-url
+- Check user plan
+- Check current image count
+- If FREE plan and already has 1 URL → reject:
+  "ফ্রি প্ল্যানে একটি পণ্যে মাত্র ১টি ছবি যোগ করা যাবে।"
+- If PRO plan and total images ≥ 5 → reject
+- If BUSINESS plan and total images ≥ 5 → reject
+- Basic URL validation (must start with http/https)
+- Save URL to product images array
+
+DELETE /api/products/remove-image
+- Remove image from product
+- If type is "upload" → also delete from Cloudinary
+- Update images array in database
+
+---
+
+### 6. Product Image UI Component
+
+Create components/ProductImageManager.jsx:
+
+**FREE PLAN UI:**
+- Show info banner:
+  "🔒 ফ্রি প্ল্যানে শুধু ছবির লিংক যোগ করা যাবে"
+- Single URL input field
+- Placeholder: "https://i.pinimg.com/... বা যেকোনো ছবির লিংক"
+- "লিংক যোগ করুন" button
+- Show preview of URL image below (lazy loaded)
+- Upgrade prompt: "আরও ছবি যোগ করতে Pro তে আপগ্রেড করুন →"
+
+**PRO PLAN UI:**
+- Section 1 — Direct Upload (1 slot):
+  - Drag & drop or click to upload zone
+  - Show "সর্বোচ্চ ৮০০KB | JPG, PNG, WEBP"
+  - Real-time file size validation on select
+  - Upload progress bar
+  - If already uploaded: show image with remove button
+  
+- Section 2 — URL Images (up to 4 more):
+  - "+ ছবির লিংক যোগ করুন" button
+  - Each URL input with preview
+  - Remove button per URL
+
+**BUSINESS PLAN UI:**
+- Up to 5 upload slots (drag & drop)
+- Mix of upload and URL allowed
+- Drag to reorder images (first image = primary/thumbnail)
+- Each slot shows:
+  - Upload option OR URL input toggle
+  - Preview thumbnail
+  - Remove button
+  - "প্রধান ছবি" badge on first image
+
+**All Plans — Image Preview:**
+- Show uploaded/URL images as thumbnail grid
+- Click to see full size
+- First image marked as "প্রধান ছবি" (primary/thumbnail)
+
+---
+
+### 7. Lazy Loading (ALL plans, ALL images)
+
+For ALL images across the entire app use lazy loading:
+```jsx
+// Use Next.js Image component with lazy loading
+import Image from "next/image";
+
+<Image
+  src={imageUrl}
+  alt={productName}
+  width={400}
+  height={400}
+  loading="lazy"
+  placeholder="blur"
+  blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+  onError={(e) => {
+    e.target.src = "/images/placeholder-product.png";
+  }}
+/>
+```
+
+For external URLs (free plan Pinterest/Google links):
+```jsx
+// Use regular img tag with lazy loading for external URLs
+<img
+  src={imageUrl}
+  alt={productName}
+  loading="lazy"
+  onError={(e) => {
+    e.target.src = "/images/placeholder-product.png";
+  }}
+  style={{ width: "100%", height: "auto" }}
+/>
+```
+
+Create a fallback placeholder image at:
+public/images/placeholder-product.png
+(a simple grey box with camera icon)
+
+---
+
+### 8. URL Image Validation & Safety
+
+For external URL images (free plan):
+- Must start with https:// (not http for security)
+- Basic format check (ends with jpg/jpeg/png/webp/gif 
+  OR is a valid image URL)
+- On load error → show placeholder automatically
+- Add note in UI: 
+  "⚠️ বাইরের লিংক যেকোনো সময় কাজ না করতে পারে। 
+   নিজের ছবি আপলোড করতে Pro প্ল্যান নিন।"
+
+---
+
+### 9. Plan Limit Summary Component
+
+Show a small info box in the image manager:
+
+FREE:   [■□□□□] ১/১ ছবি (শুধু লিংক)
+PRO:    [■■□□□] ২/৫ ছবি (১ আপলোড + লিংক)
+BUSINESS: [■■■□□] ৩/৫ ছবি (সব আপলোড)
+
+---
+
+### 10. Important Notes
+
+- Never store Pinterest/external URLs permanently without warning user
+- All Cloudinary uploads go to bizilcore/products/{userId}/ folder
+- Enable Cloudinary auto-optimization (quality: auto, format: auto)
+- All image operations require authenticated user
+- Log all upload attempts with user_id and timestamp
+- Use existing plan/subscription data from current auth system

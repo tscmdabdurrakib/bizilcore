@@ -1,0 +1,547 @@
+Build a SaaS web app for Bangladeshi Facebook sellers.
+Stack: Next.js 14 (App Router), TypeScript, Tailwind CSS, shadcn/ui, Prisma, PostgreSQL, NextAuth.js
+
+=== STEP 1: FOUNDATION ONLY ===
+
+--- 1. TAILWIND CONFIG ---
+Set up tailwind.config.ts with these custom colors:
+colors: {
+  primary: { DEFAULT: '#0F6E56', light: '#E1F5EE', text: '#085041' },
+  bg: { DEFAULT: '#F7F6F2', surface: '#FFFFFF' },
+  border: { DEFAULT: '#E8E6DF' },
+  text: { primary: '#1A1A18', secondary: '#5A5A56', muted: '#A8A69E' },
+  success: '#1D9E75', warning: '#EF9F27', danger: '#E24B4A', info: '#378ADD'
+}
+Add Inter font from Google Fonts as default font.
+
+--- 2. DATABASE SCHEMA (Prisma) ---
+Create these models:
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  gender    String?
+  onboarded Boolean  @default(false)
+  createdAt DateTime @default(now())
+  shop      Shop?
+  orders    Order[]
+  transactions Transaction[]
+}
+
+model Shop {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  category  String?
+  logoUrl   String?
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  products  Product[]
+  customers Customer[]
+}
+
+model Product {
+  id         String   @id @default(cuid())
+  name       String
+  buyPrice   Float
+  sellPrice  Float
+  stockQty   Int      @default(0)
+  lowStockAt Int      @default(5)
+  category   String?
+  imageUrl   String?
+  shopId     String
+  shop       Shop     @relation(fields: [shopId], references: [id])
+  orderItems OrderItem[]
+  createdAt  DateTime @default(now())
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  address   String?
+  fbProfile String?
+  dueAmount Float    @default(0)
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id])
+  orders    Order[]
+  createdAt DateTime @default(now())
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  customerId  String?
+  customer    Customer?   @relation(fields: [customerId], references: [id])
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  status      String      @default("pending")
+  source      String      @default("facebook")
+  totalAmount Float
+  paidAmount  Float       @default(0)
+  dueAmount   Float       @default(0)
+  items       OrderItem[]
+  createdAt   DateTime    @default(now())
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  unitPrice Float
+  subtotal  Float
+}
+
+model Transaction {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String   -- "income" or "expense"
+  amount    Float
+  category  String?
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+--- 3. AUTH SETUP ---
+Set up NextAuth.js with CredentialsProvider (email + password with bcrypt).
+Create these API routes:
+- POST /api/auth/[...nextauth] — NextAuth handler
+- POST /api/register — create new user (hash password with bcrypt)
+
+Auth rules:
+- After SIGNUP → redirect to /onboarding
+- After LOGIN → if user.onboarded === true → /dashboard, else → /onboarding
+- Create middleware.ts: protect all routes starting with /dashboard and /onboarding
+- If unauthenticated user visits /dashboard → redirect to /login
+
+--- 4. CREATE THESE PAGES (UI only, no logic yet) ---
+
+/login page:
+- Centered card, white bg
+- Logo + "আবার স্বাগতম" heading
+- Email input, Password input
+- "লগইন করুন" primary button
+- "পাসওয়ার্ড ভুলে গেছেন?" link
+- "নতুন account? সাইনআপ করুন" link
+
+/signup page:
+- Centered card
+- "বিনামূল্যে শুরু করুন" heading
+- Name, Email, Password, Shop name inputs
+- Terms checkbox: "আমি Terms & Privacy Policy মেনে নিচ্ছি"
+- "সাইনআপ করুন" primary button
+- "ইতিমধ্যে account আছে? লগইন করুন" link
+
+/forgot-password page:
+- Email input + "রিসেট লিংক পাঠান" button
+
+Global UI rules for all pages:
+- Font: Inter
+- All text/labels/buttons in Bangla as specified
+- Input height: 38px, border: 1px solid #E8E6DF, border-radius: 8px, focus border: #0F6E56
+- Primary button: bg #0F6E56, white text, border-radius 8px
+- Success toast: green, bottom-right — "সফলভাবে সেভ হয়েছে ✓"
+- Error toast: red — "কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করুন।"
+
+
+
+===========================================================================================================================
+
+
+
+
+=== STEP 2: PUBLIC PAGES + ONBOARDING ===
+(Database, auth, and UI config from Step 1 are already done)
+
+--- 1. SHARED LAYOUT ---
+Create a public Navbar component used on all public pages:
+- Left: Logo (green square icon + "HisabBoi" text)
+- Center links: ফিচার, প্রাইসিং, ব্লগ
+- Right: "লগইন" (secondary button) + "বিনামূল্যে শুরু করুন" (primary button)
+- Mobile: hamburger menu
+
+Create a Footer component:
+- 4 columns: Product (features, pricing, blog), Company (about, contact), Legal (privacy, terms), Social
+- Bottom: "© ২০২৬ HisabBoi. সর্বস্বত্ব সংরক্ষিত।"
+
+--- 2. HOME PAGE (/) ---
+Section 1 — Hero:
+- Headline: "Facebook এ বেচেন? হিসাব রাখুন সহজে"
+- Subtext: "স্টক, অর্ডার, কাস্টমার — সব এক জায়গায়। বাংলাদেশের ৫,০০০+ seller এর বিশ্বাস।"
+- Two buttons: "বিনামূল্যে শুরু করুন" (primary) + "ফিচার দেখুন" (secondary)
+- Right side: dashboard screenshot mockup (use a placeholder colored div)
+
+Section 2 — Social proof bar:
+- "৫,০০০+ seller ব্যবহার করছেন" + "৯৮% satisfied" + "বাংলাদেশে #১"
+
+Section 3 — Features (3 cards):
+- Card 1: স্টক ম্যানেজমেন্ট — পণ্য কমলে alert পাবেন
+- Card 2: অর্ডার ট্র্যাকিং — pending থেকে delivered পর্যন্ত
+- Card 3: হিসাব — প্রতিদিনের লাভ-ক্ষতি এক নজরে
+
+Section 4 — How it works (3 steps):
+- Step 1: "সাইনআপ করুন" — ২ মিনিটে account খুলুন
+- Step 2: "পণ্য যোগ করুন" — ছবি ও দাম দিন
+- Step 3: "অর্ডার ট্র্যাক করুন" — Facebook থেকে order এখানে manage করুন
+
+Section 5 — Testimonials (3 cards):
+- "Rina Boutique, ঢাকা" — "আগে Excel এ হিসাব রাখতাম, এখন অনেক সহজ!"
+- "Fatema Fashion, চট্টগ্রাম" — "স্টক শেষ হলে আগেই alert পাই, আর miss হয় না।"
+- "Sumaiya Crafts, সিলেট" — "কাস্টমারের বাকি হিসাব এখন automatically track হয়।"
+
+Section 6 — Pricing preview:
+- Free plan card + Pro plan card (highlight Pro)
+- "সব প্ল্যান দেখুন" button → /pricing
+
+Section 7 — FAQ accordion (5 items):
+- "HisabBoi কি বিনামূল্যে?" → হ্যাঁ, Free plan চিরকাল বিনামূল্যে।
+- "bKash এ payment দেওয়া যাবে?" → হ্যাঁ, bKash ও Nagad সাপোর্ট করে।
+- "Mobile এ কাজ করবে?" → হ্যাঁ, সম্পূর্ণ mobile-friendly।
+- "Data কি safe?" → হ্যাঁ, encrypted ও secure server এ থাকে।
+- "Cancel করতে পারব?" → যেকোনো সময় cancel করা যাবে।
+
+Section 8 — Final CTA:
+- "আজই শুরু করুন — বিনামূল্যে" heading + signup button
+
+--- 3. OTHER PUBLIC PAGES ---
+
+/features — list all features with icons and descriptions (use content from previous prompt)
+/pricing — Free / Pro (৳২৯৯) / Business (৳৬৯৯) plan cards with full comparison table
+/blog — Static page with 3 placeholder blog post cards
+/about — Mission statement + "আমরা Bangladesh এর ছোট ব্যবসাকে digital করতে চাই"
+/contact — Name, email, message form + "মেসেজ পাঠান" button
+
+--- 4. ONBOARDING WIZARD (/onboarding) ---
+3-step wizard with progress indicator (Step 1 of 3):
+
+Step 1 — Shop setup:
+- Shop name (pre-filled from signup)
+- Phone number
+- Business category (dropdown: পোশাক, জুয়েলারি, খাবার, সৌন্দর্য, গৃহস্থালি, অন্যান্য)
+- Gender (radio: ভাই / আপু) — used for dashboard greeting
+- Logo upload (optional)
+- "পরবর্তী ধাপ" button
+
+Step 2 — Add first products:
+- "আপনার প্রথম ৩টি পণ্য যোগ করুন (ঐচ্ছিক)" heading
+- 3 product rows: name + sell price + stock qty
+- "পরবর্তী ধাপ" + "এখন না, পরে করব" buttons
+
+Step 3 — Success screen:
+- Green checkmark animation
+- "আপনার shop ready! 🎉" heading
+- "এখন dashboard এ যান" primary button → /dashboard
+
+On completing onboarding: set user.onboarded = true in database
+
+
+
+
+
+
+
+
+
+
+===================================================================================================
+
+
+
+
+=== STEP 3: APP PAGES (all require login) ===
+(Foundation, auth, public pages, onboarding from Steps 1 & 2 are done)
+
+--- SHARED APP LAYOUT ---
+Create a layout for all /dashboard/* pages:
+
+Desktop sidebar (200px, white, left):
+- Top: Logo
+- Nav items with Bangla labels and icons:
+  ড্যাশবোর্ড / অর্ডার / পণ্য ও স্টক / কাস্টমার / হিসাব / রিপোর্ট / সেটিংস
+- Active item: bg #E1F5EE, color #085041, left border 3px solid #0F6E56
+- Inactive: color #5A5A56, hover bg #F4F2EB
+- Bottom: shop avatar + name + plan badge
+
+Top bar (sticky, white, 52px):
+- Left: current page title
+- Right: notification bell (with red dot) + "নতুন অর্ডার" primary button
+
+Mobile bottom nav (hidden on desktop):
+- 5 icons: ড্যাশবোর্ড, অর্ডার, পণ্য, হিসাব, আরো
+
+Page background: #F7F6F2
+
+--- 1. DASHBOARD (/dashboard) ---
+Greeting: "আসসালামু আলাইকুম, [name] আপু/ভাইয়া 👋" (based on gender)
+Date: today in Bangla format
+
+4 stat cards (grid):
+- আজকের বিক্রি: sum of today's orders
+- Pending অর্ডার: count of status=pending orders
+- মোট বাকি পাবেন: sum of all customer dueAmounts
+- কম স্টক: count of products where stockQty <= lowStockAt
+
+Recent orders table (last 5):
+- Customer avatar (initials), name, product summary, amount, status badge
+- Status badge colors as defined in design system
+- "সব দেখুন →" link
+
+Last 7 days bar chart (use Recharts):
+- X axis: day names in Bangla (রবি, সোম, মঙ্গল...)
+- Y axis: ৳ amount
+- Today's bar: #0F6E56, others: #E1F5EE
+
+Today's hisab summary card:
+- মোট আয়, মোট খরচ, আজকের লাভ (in green)
+
+Low stock alert card:
+- Product name, stock bar, quantity
+- "স্টক দেখুন →" link
+
+--- 2. INVENTORY (/inventory) ---
+Top: search input + "পণ্য যোগ করুন" button
+Filter tabs: সব | কম স্টক | শেষ
+
+Product table/grid with:
+- Product image (or placeholder), name, category
+- Buy price, sell price, stock quantity
+- Stock status badge: ভালো (green) / কম (amber) / শেষ (red)
+- Edit + Delete action buttons
+
+/inventory/new — Add product form:
+- Product name, category (dropdown), image upload
+- Buy price, sell price (side by side)
+- Stock quantity, low stock alert threshold
+- "পণ্য সেভ করুন" button
+
+On save: stockQty updates automatically when orders are placed
+
+--- 3. ORDERS (/orders) ---
+Top: search + filter by status + "নতুন অর্ডার" button
+
+Order list with status tabs: সব | Pending | নিশ্চিত | পাঠানো | পৌঁছেছে | Return
+
+Each row: order ID, customer name, items summary, total, status badge, date
+
+/orders/new — Create order form:
+- Customer: select existing or type new name+phone
+- Add products: searchable dropdown, quantity, auto-calculates price
+- Payment: total amount, paid amount, due auto-calculated
+- Order source: Facebook / WhatsApp / Direct / Referral
+- COD tracking: Cash collected / Courier এর কাছে / Return হয়েছে
+- "অর্ডার সেভ করুন" button
+- On save: auto-decrease product stockQty
+
+/orders/[id] — Order detail:
+- All order info + items table
+- Status update dropdown (change status)
+- Payment update (add payment, reduce due)
+- Customer info card with link to customer profile
+
+--- 4. CUSTOMERS (/customers) ---
+Top: search + "কাস্টমার যোগ করুন" button
+
+Customer list: avatar (initials), name, phone, total orders, due amount
+
+/customers/new — Add customer form:
+- Name, phone, address, Facebook profile URL
+- "সেভ করুন" button
+
+/customers/[id] — Customer profile:
+- Info card (name, phone, address, fb link)
+- Due amount (highlighted if > 0)
+- Order history table (all their orders)
+- "নতুন অর্ডার" button pre-filled with this customer
+
+--- 5. HISAB (/hisab) ---
+Top summary row: আজকের আয় | আজকের খরচ | আজকের লাভ
+
+Two buttons: "+ আয় যোগ করুন" (green) | "+ খরচ যোগ করুন" (red outline)
+
+Transaction list (today by default, filter by date):
+- Type badge (আয়/খরচ), category, note, amount, time
+- Income: green amount, Expense: red amount
+
+Add income modal:
+- Amount, category (বিক্রি / Advance / অন্যান্য আয়), note, date
+
+Add expense modal:
+- Amount, category (পণ্য কেনা / Courier / Packaging / বেতন / ভাড়া / অন্যান্য), note, date
+
+Daily totals at bottom: মোট আয় - মোট খরচ = লাভ/ক্ষতি
+
+--- 6. REPORTS (/reports) ---
+Date range filter: আজ | এই সপ্তাহ | এই মাস | Custom range
+
+Report cards (use Recharts for all charts):
+
+Sales trend (line chart):
+- X: dates, Y: ৳ amount
+- Color: #0F6E56
+
+Order status breakdown (pie/donut chart):
+- Colors matching status badge colors
+
+Top 5 products (horizontal bar chart):
+- Product name vs units sold
+
+Monthly P&L summary table:
+- Month | আয় | খরচ | লাভ/ক্ষতি
+
+"রিপোর্ট Download করুন" button → export as PDF (use html2canvas or similar)
+
+--- 7. SETTINGS (/settings) ---
+Tabs: Shop Profile | Subscription | Notifications
+
+Shop Profile tab:
+- Edit shop name, phone, category, logo
+- "সেভ করুন" button → updates Shop in database
+
+Subscription tab:
+- Current plan badge (Free/Pro/Business)
+- Plan comparison cards
+- "আপগ্রেড করুন" button (no payment integration yet — show "শীঘ্রই আসছে" modal)
+
+Notifications tab:
+- Toggle: কম স্টক alert
+- Toggle: নতুন order notification
+- Toggle: Customer due reminder
+- "সেভ করুন" button
+
+--- GLOBAL RULES FOR ALL APP PAGES ---
+Empty states — Bangla friendly message + action button:
+- No orders: "এখনো কোনো অর্ডার নেই। প্রথম অর্ডার যোগ করুন!"
+- No products: "কোনো পণ্য নেই। প্রথম পণ্য যোগ করুন!"
+- No customers: "কোনো কাস্টমার নেই। প্রথম কাস্টমার যোগ করুন!"
+
+Loading: skeleton shimmer cards (no spinner)
+Delete: confirm modal "আপনি কি নিশ্চিত? এই কাজ undo করা যাবে না।" + red delete button
+Currency: ৳ symbol (e.g. ৳১,৫০০)
+Date: Bangla format (২০ মার্চ ২০২৬) or relative (আজ, গতকাল)
+Toast success: "সফলভাবে সেভ হয়েছে ✓" (green, bottom-right)
+Toast error: "কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করুন।" (red)
+
+
+
+===========================================================================
+
+
+
+=== PHASE 2 — STEP 1: COURIER INTEGRATION ===
+(Phase 1 app is complete and working)
+
+Add courier integration to the existing Next.js app.
+
+--- 1. DATABASE UPDATE ---
+Add to Order model in Prisma:
+  courierName    String?   -- "pathao" or "ecourier"
+  courierTrackId String?   -- tracking number
+  courierStatus  String?   -- booked/picked/transit/delivered/returned
+  codStatus      String?   -- collected/with_courier/returned
+  courierBookedAt DateTime?
+
+--- 2. PATHAO INTEGRATION ---
+Create /lib/pathao.ts:
+- Function: bookPathaoDelivery(order) → returns trackingId
+- Function: getPathaoStatus(trackingId) → returns status
+- Use Pathao Merchant API (sandbox first)
+- Store API credentials in .env:
+  PATHAO_CLIENT_ID, PATHAO_CLIENT_SECRET, PATHAO_BASE_URL
+
+--- 3. ECOURIER INTEGRATION ---
+Create /lib/ecourier.ts:
+- Function: bookEcourierDelivery(order) → returns trackingId
+- Function: getEcourierStatus(trackingId) → returns status
+- Store in .env: ECOURIER_API_KEY, ECOURIER_API_SECRET
+
+--- 4. UI CHANGES ---
+
+On /orders/[id] page, add "Courier Booking" section:
+- Dropdown: "Pathao দিয়ে পাঠান" / "eCourier দিয়ে পাঠান"
+- Button: "Courier Book করুন" → calls API → saves trackingId
+- If already booked: show tracking number + current status badge
+- COD status dropdown: "Courier এর কাছে আছে" / "Cash পেয়েছি" / "Return হয়েছে"
+
+On /orders list page:
+- Add courier status column
+- Filter: "COD pending" tab — orders where codStatus = 'with_courier'
+
+New /dashboard widget:
+- "COD Collection Summary" card:
+  - Courier এর কাছে: ৳X (Y টি order)
+  - এই মাসে collected: ৳X
+
+--- 5. WEBHOOK (optional for now, add placeholder) ---
+Create POST /api/webhooks/pathao and /api/webhooks/ecourier
+- These will receive status updates from courier companies
+- For now just log the payload and return 200
+
+All new UI text in Bangla. Same design system as Phase 1.
+
+
+========================================================================
+
+
+=== PHASE 2 — STEP 2: SMS NOTIFICATIONS + INVOICE PDF ===
+
+--- 1. SMS GATEWAY (SSL Wireless) ---
+Create /lib/sms.ts:
+- Function: sendSMS(phone, message) → calls SSL Wireless API
+- .env: SSL_SMS_API_KEY, SSL_SMS_SID, SSL_SMS_SENDER_ID
+
+Auto-send SMS on these triggers:
+- Order confirmed → "আপনার অর্ডার নিশ্চিত হয়েছে। ধন্যবাদ! - [ShopName]"
+- Order shipped → "আপনার পণ্য পাঠানো হয়েছে। Tracking: [trackingId] - [ShopName]"
+- Order delivered → "আপনার পণ্য পৌঁছেছে। ধন্যবাদ! - [ShopName]"
+- Due reminder (manual trigger) → "আপনার বাকি আছে ৳[amount]। [ShopName]"
+
+In /settings — Notifications tab, add:
+- Toggle: "Order confirm SMS পাঠাবে"
+- Toggle: "Shipped SMS পাঠাবে"
+- Toggle: "Delivered SMS পাঠাবে"
+- SMS balance display (fetch from SSL API)
+- Custom template editor for each SMS type
+
+Add to Transaction model — track SMS cost as expense automatically.
+
+--- 2. INVOICE PDF ---
+Install @react-pdf/renderer
+
+Create /lib/invoice-pdf.tsx — InvoiceDocument component:
+Layout:
+  - Header: Shop logo + name + phone + address
+  - Invoice #: INV-[orderId short]
+  - Date: Bangla format
+  - Customer: name, phone, address
+  - Items table: পণ্য | পরিমাণ | একক মূল্য | মোট
+  - Summary: Subtotal, paid, due
+  - Footer: "ধন্যবাদ আপনার কেনাকাটার জন্য!"
+  - Colors: primary #0F6E56
+
+On /orders/[id] page, add:
+- "Invoice Download করুন" button → generates and downloads PDF
+- "WhatsApp এ পাঠান" button → opens wa.me link with pre-filled message
+
+--- 3. BARCODE / SKU ---
+On /inventory/new and edit form, add:
+- Auto-generate SKU button (e.g. PRD-001, PRD-002)
+- Manual SKU input field
+
+On /inventory page:
+- Add SKU column to product table
+- "Barcode Scan করুন" button → opens camera using @zxing/browser
+  - On scan match: highlight that product row
+
+--- 4. CSV BULK IMPORT ---
+On /inventory page, add "Excel থেকে Import করুন" button:
+- Download template CSV button
+- Upload CSV → parse with Papaparse → preview table → "Import করুন"
+- Template columns: নাম, ক্রয় মূল্য, বিক্রয় মূল্য, স্টক, ক্যাটাগরি
+- Show success: "X টি পণ্য import হয়েছে"
+
+Same design system. All text Bangla.

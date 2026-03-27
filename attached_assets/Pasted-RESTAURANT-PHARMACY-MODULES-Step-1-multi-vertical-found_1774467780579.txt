@@ -1,0 +1,242 @@
+RESTAURANT + PHARMACY MODULES
+(Step 1 multi-vertical foundation complete)
+
+--- PART A: RESTAURANT MODULE ---
+
+-- A1. DATABASE ADDITIONS --
+
+model Table {
+  id       String  @id @default(cuid())
+  shopId   String
+  shop     Shop    @relation(fields: [shopId], references: [id])
+  number   Int
+  capacity Int     @default(4)
+  status   String  @default("empty")
+  -- "empty" | "occupied" | "reserved" | "cleaning"
+  floor    String? @default("ground")
+  currentOrderId String?
+}
+
+model MenuItem {
+  id          String  @id @default(cuid())
+  shopId      String
+  shop        Shop    @relation(fields: [shopId], references: [id])
+  name        String
+  nameEn      String?
+  category    String  -- "main" | "starter" | "drinks" | "dessert"
+  price       Float
+  costPrice   Float?
+  imageUrl    String?
+  isAvailable Boolean @default(true)
+  isVeg       Boolean @default(false)
+  prepMinutes Int     @default(15)
+  orderItems  RestaurantOrderItem[]
+}
+
+model RestaurantOrder {
+  id         String   @id @default(cuid())
+  shopId     String
+  tableId    String?
+  table      Table?   @relation(fields: [tableId], references: [id])
+  type       String   -- "dine_in" | "takeaway" | "delivery"
+  status     String   @default("pending")
+  -- "pending"|"preparing"|"ready"|"served"|"paid"
+  items      RestaurantOrderItem[]
+  totalAmount Float
+  paidAmount  Float   @default(0)
+  customerName String?
+  customerPhone String?
+  note       String?
+  createdAt  DateTime @default(now())
+}
+
+model RestaurantOrderItem {
+  id         String      @id @default(cuid())
+  orderId    String
+  order      RestaurantOrder @relation(fields: [orderId], references: [id])
+  menuItemId String
+  menuItem   MenuItem    @relation(fields: [menuItemId], references: [id])
+  quantity   Int
+  unitPrice  Float
+  note       String?     -- "no onion", "extra spicy"
+}
+
+-- A2. TABLE MANAGEMENT PAGE (/tables) --
+
+Visual floor map:
+- Grid of table cards (2x5 or 3x4 based on tableCount setting)
+- Table card shows: number, capacity, status color
+  Empty: white border | Occupied: green fill | Reserved: amber | Cleaning: gray
+- Click empty table → "নতুন অর্ডার নিন" modal
+- Click occupied table → view current order + add items + bill
+
+"টেবিল ব্যবস্থাপনা" button → modal to add/edit tables
+- Number of tables input, floor selector (Ground / 1st / Roof)
+- "সেভ করুন"
+
+-- A3. RESTAURANT ORDER PAGE (/restaurant/orders) --
+
+New order flow:
+Step 1: Order type selector (3 big buttons):
+  "টেবিলে বসা" | "নিয়ে যাবে" | "Home Delivery"
+
+Step 2 (if dine-in): Table number selector grid
+
+Step 3: Menu browser:
+- Category tabs: সব | মেইন | স্টার্টার | পানীয় | মিষ্টি
+- Menu item cards: photo, name, price, "+" button
+- Cart sidebar (right): items added, quantities, total
+- Item special note: tap item → "বিশেষ নির্দেশ?" input
+
+Step 4: Confirm:
+- Order summary
+- "অর্ডার দিন" → creates RestaurantOrder, auto-notifies Kitchen
+
+-- A4. KITCHEN DISPLAY SYSTEM (/kitchen) --
+
+Full-screen page (for kitchen tablet/TV):
+- Auto-refresh every 30 seconds (or real-time with SSE)
+- Cards per active order:
+  - Table number (big, bold)
+  - Items list with quantities
+  - Time since ordered (shows 🔴 if > 20 min)
+  - "প্রস্তুত" button → marks order ready → notifies waiter
+
+Layout: 3-column grid of order cards
+Colors: 
+  < 10 min: green border
+  10-20 min: amber border  
+  > 20 min: red border (urgent)
+
+Separate URL so kitchen staff can bookmark it.
+No login required if accessed from local network (IP whitelist option).
+
+-- A5. MENU MANAGEMENT (/menu) --
+
+Menu item list with category tabs.
+Add menu item form:
+- Photo upload, name (Bangla + optional English)
+- Category, price, cost price (for profit calc)
+- Prep time (minutes), veg toggle
+- Available today toggle (can turn off daily specials)
+
+"আজকের মেনু" quick toggle: bulk on/off by category
+
+-- A6. RESTAURANT DASHBOARD UPDATES --
+Recipe cost calculator:
+- Select menu item → shows: sell price, cost price, profit margin %
+- "সবচেয়ে লাভজনক আইটেম" top 5 list
+
+--- PART B: PHARMACY MODULE ---
+
+-- B1. DATABASE ADDITIONS --
+
+model Medicine {
+  id           String  @id @default(cuid())
+  shopId       String
+  shop         Shop    @relation(fields: [shopId], references: [id])
+  brandName    String
+  genericName  String?
+  manufacturer String?
+  category     String  -- "tablet"|"syrup"|"injection"|"cream"|"drop"
+  unit         String  -- "pcs"|"bottle"|"strip"|"tube"
+  buyPrice     Float
+  sellPrice    Float
+  stockQty     Float
+  lowStockAt   Float   @default(10)
+  requiresRx   Boolean @default(false)
+  isControlled Boolean @default(false)
+  batches      MedicineBatch[]
+}
+
+model MedicineBatch {
+  id           String   @id @default(cuid())
+  medicineId   String
+  medicine     Medicine @relation(fields: [medicineId], references: [id])
+  batchNumber  String
+  expiryDate   DateTime
+  quantity     Float
+  buyPrice     Float
+  addedAt      DateTime @default(now())
+}
+
+model Prescription {
+  id           String   @id @default(cuid())
+  shopId       String
+  customerId   String?
+  customer     Customer? @relation(fields: [customerId], references: [id])
+  doctorName   String?
+  patientName  String
+  patientPhone String?
+  imageUrl     String?  -- prescription photo upload
+  notes        String?
+  saleId       String?
+  createdAt    DateTime @default(now())
+}
+
+-- B2. MEDICINE INVENTORY (/inventory for pharmacy) --
+
+Rename "পণ্য" → "ওষুধ" in nav for pharmacy type.
+
+Medicine list with columns:
+Brand name | Generic | Category | Stock | Expiry status | Price | Actions
+
+Expiry status badge:
+- > 3 months: সবুজ (good)
+- 1-3 months: হলুদ (expiring soon)  
+- < 1 month: লাল (urgent)
+- Expired: কালো (remove from shelf)
+
+Add medicine form — extra fields vs normal product:
+- Brand name + Generic name (with autocomplete from common BD medicines)
+- Manufacturer, category, unit type
+- Requires prescription toggle
+- Controlled drug toggle (requires special log)
+- Batch details: batch number + expiry date + quantity
+
+Batch management:
+- Each medicine can have multiple batches (FIFO selling)
+- When selling: auto-deduct from oldest batch first
+
+-- B3. EXPIRY ALERT PAGE (/expiry) --
+
+Dashboard for expiring medicines:
+- Filter tabs: মেয়াদ শেষ | ১ মাসের মধ্যে | ৩ মাসের মধ্যে
+- Table: medicine name, batch, expiry date, quantity, action
+- "Return to supplier" action button
+- "Discount করুন" action → sets temporary discount price
+
+Auto SMS to owner (weekly, Monday morning):
+"আপনার X টি ওষুধের মেয়াদ ১ মাসের মধ্যে শেষ হবে। HisabBoi তে দেখুন।"
+
+-- B4. PRESCRIPTION MODULE (/prescriptions) --
+
+Prescription log page:
+- List of prescriptions taken
+- Each entry: patient name, doctor, date, medicines sold, photo
+- "প্রেসক্রিপশন যোগ করুন" button
+
+During a sale (if medicine requiresRx === true):
+- Popup: "এই ওষুধের জন্য প্রেসক্রিপশন দরকার"
+- Option 1: Upload prescription photo
+- Option 2: Enter doctor name + patient info manually
+- Option 3: "Skip" (owner's responsibility warning)
+
+-- B5. PHARMACY POS (/pos for pharmacy) --
+
+Quick sale interface (same as retail POS):
+- Search medicine by name (fast autocomplete)
+- Add to cart, quantity, auto-price fill
+- Customer optional (cash sale common)
+- If prescription medicine in cart → trigger prescription check
+- Print receipt with medicine names + prices + VAT
+
+VAT calculation:
+- Bangladesh pharmacy VAT: 7.5% on non-essential medicines
+- Essential medicines: 0% VAT
+- Toggle per medicine: VAT applicable yes/no
+- Invoice shows VAT breakdown
+
+All new UI text in Bangla.
+Same design system — green primary color throughout.
+Pharmacy-specific color accent for expiry warnings: use red/amber badges.

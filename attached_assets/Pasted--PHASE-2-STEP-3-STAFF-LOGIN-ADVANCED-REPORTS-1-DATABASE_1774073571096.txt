@@ -1,0 +1,86 @@
+=== PHASE 2 — STEP 3: STAFF LOGIN + ADVANCED REPORTS ===
+
+--- 1. DATABASE UPDATE ---
+Add StaffMember model:
+model StaffMember {
+  id         String   @id @default(cuid())
+  shopId     String
+  shop       Shop     @relation(fields: [shopId], references: [id])
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  role       String   -- "manager" or "staff"
+  inviteToken String? @unique
+  invitedAt  DateTime @default(now())
+  joinedAt   DateTime?
+  isActive   Boolean  @default(true)
+}
+
+Add ActivityLog model:
+model ActivityLog {
+  id        String   @id @default(cuid())
+  shopId    String
+  userId    String
+  action    String   -- "order_created", "product_edited", etc.
+  detail    String?
+  createdAt DateTime @default(now())
+}
+
+--- 2. STAFF INVITE FLOW ---
+In /settings — add new "Staff" tab:
+- Current staff list: name, role, last active, remove button
+- "Staff invite করুন" button → modal:
+  - Email or phone input
+  - Role select: Manager / Staff
+  - "Invite পাঠান" → generates invite token → sends SMS or email
+  - Link: yourapp.com/invite/[token]
+
+Create /invite/[token] page:
+- Shows shop name + inviter name
+- "Accept করুন" → creates user account (if new) → links to shop as staff
+- Role-based middleware: check staffMember.role before allowing actions
+
+Staff permission matrix:
+  Manager: can do everything except settings and billing
+  Staff: can only view + create orders, cannot delete or edit prices
+
+--- 3. ADVANCED REPORTS PAGE UPDATE ---
+Replace existing /reports with:
+
+Tab 1 — Sales Report:
+- Date range picker (custom range)
+- Line chart: daily sales trend
+- Comparison: this month vs last month
+- Total orders, total revenue, avg order value cards
+
+Tab 2 — Product Report:
+- Top 10 selling products (bar chart)
+- Slow-moving products (not sold in 30 days)
+- Stock value report: total inventory worth
+
+Tab 3 — Customer Report:
+- Top 10 customers by order value
+- Customer retention: repeat vs new
+- Due balance leaderboard
+
+Tab 4 — COD Reconciliation:
+- Per-courier breakdown: Pathao vs eCourier
+- Total sent, total collected, total pending, total returned
+- Monthly COD collection chart
+
+Tab 5 — P&L Report:
+- Monthly income vs expense bar chart
+- Category-wise expense breakdown (pie chart)
+- Net profit trend line chart
+- Export buttons: "PDF Download" + "Excel Download"
+
+--- 4. EXCEL EXPORT (all pages) ---
+Add export button to:
+- /orders → orders-[date].xlsx
+- /customers → customers.xlsx  
+- /inventory → stock-report.xlsx
+- /reports → monthly-pl-[month].xlsx
+
+Use SheetJS (xlsx package) for all exports.
+Bangla column headers where possible.
+
+Same design system. All text Bangla.

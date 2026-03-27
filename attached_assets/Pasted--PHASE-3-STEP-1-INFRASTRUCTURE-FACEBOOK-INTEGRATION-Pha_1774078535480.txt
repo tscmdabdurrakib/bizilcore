@@ -1,0 +1,84 @@
+=== PHASE 3 — STEP 1: INFRASTRUCTURE + FACEBOOK INTEGRATION ===
+(Phase 1 & 2 complete)
+
+--- 1. REDIS CACHE SETUP ---
+Install ioredis. Create /lib/redis.ts:
+- Cache dashboard stats (TTL: 5 minutes)
+- Cache product list per shop (TTL: 2 minutes)
+- Invalidate cache on data write (orders, products, transactions)
+- Pattern: cache key = "shop:[shopId]:[dataType]"
+
+Update /dashboard API route:
+- Check Redis first → if hit, return cached data
+- If miss → query DB → store in Redis → return
+
+--- 2. BACKGROUND JOBS (BullMQ) ---
+Install bullmq + ioredis. Create /lib/queue.ts:
+
+Job queues:
+- sms-queue: process SMS sends async (retry 3x on fail)
+- notification-queue: push notifications
+- report-queue: generate PDF/Excel in background (heavy tasks)
+- cleanup-queue: daily cleanup jobs
+
+Update all SMS sends to use queue instead of direct API call.
+Add job status tracking in DB.
+
+--- 3. ERROR MONITORING ---
+Install @sentry/nextjs:
+- Track all API errors
+- Track client-side errors
+- Performance monitoring on slow DB queries
+- Alert on error spike
+
+--- 4. DB OPTIMIZATION ---
+Add indexes to Prisma schema:
+@@index([shopId]) on Product, Order, Customer, Transaction
+@@index([status]) on Order
+@@index([createdAt]) on Order, Transaction
+@@index([userId]) on all models
+
+Add pagination to all list endpoints (page, limit params).
+Max 50 items per page. Add "Load more" button to all tables.
+
+--- 5. FACEBOOK PAGE INTEGRATION ---
+Add to database:
+model FacebookConnection {
+  id            String   @id @default(cuid())
+  shopId        String   @unique
+  shop          Shop     @relation(fields: [shopId], references: [id])
+  pageId        String
+  pageName      String
+  accessToken   String   (encrypted)
+  connectedAt   DateTime @default(now())
+  isActive      Boolean  @default(true)
+}
+
+.env additions:
+FACEBOOK_APP_ID, FACEBOOK_APP_SECRET
+
+Create /settings — new "Facebook" tab:
+- "Facebook Page সংযুক্ত করুন" button
+- OAuth flow: redirect to Facebook → user selects page → 
+  callback saves pageId + accessToken
+- Show connected page name + disconnect option
+
+Create /api/facebook/comments route:
+- Fetch recent comments from connected FB page posts
+- Parse comment for order keywords:
+  "নেব", "চাই", "অর্ডার", "buy", "order", "inbox"
+- If match found → create "suggested order" with:
+  - Customer name (from FB commenter)
+  - Product guess (from post context)
+  - Status: "draft" (needs seller confirmation)
+
+New /orders page section: "Facebook থেকে সম্ভাব্য অর্ডার":
+- Card per suggestion: commenter name + comment text + "অর্ডার বানান" button
+- On click → pre-fill new order form with customer info
+
+Create /api/webhooks/facebook:
+- Verify webhook with FB (challenge response)
+- Receive real-time comment notifications
+- Auto-create suggested orders
+
+All Bangla UI. Same design system.

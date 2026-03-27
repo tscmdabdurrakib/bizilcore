@@ -1,0 +1,233 @@
+In my Next.js BizilCore business management app, I need a full-featured 
+Task Management system. This is for a small ecommerce/retail business 
+with 1-5 team members managing orders, deliveries, supplier, accounts, 
+and team work.
+
+---
+
+### 1. Database Schema
+
+Table: tasks
+- id
+- user_id (owner - foreign key)
+- title
+- description (text, nullable)
+- status (enum: todo, in_progress, review, done)
+- priority (enum: low, medium, high, urgent)
+- assigned_to (foreign key to team_members, nullable)
+- due_date (datetime, nullable)
+- reminder_at (datetime, nullable)
+- order_id (foreign key, nullable — link task to an order)
+- category (enum: order, delivery, supplier, accounts, team, general)
+- tags (array of strings)
+- attachments (array of file URLs, nullable)
+- is_recurring (boolean, default false)
+- recurrence_type (enum: daily, weekly, monthly, nullable)
+- completed_at (datetime, nullable)
+- created_at
+- updated_at
+
+Table: task_comments
+- id
+- task_id (foreign key)
+- user_id (foreign key)
+- comment (text)
+- created_at
+
+Table: task_activity_log
+- id
+- task_id (foreign key)
+- user_id (foreign key)
+- action (text) — e.g. "Status changed to Done"
+- created_at
+
+---
+
+### 2. Task Page Layout (/tasks)
+
+**Top Bar:**
+- Page title: "টাস্ক ম্যানেজমেন্ট"
+- Button: "+ নতুন টাস্ক" (opens create task modal)
+- View toggle: [Kanban Board | List View | Calendar View]
+- Filter bar:
+  - Priority filter (All / Low / Medium / High / Urgent)
+  - Category filter (All / অর্ডার / ডেলিভারি / সাপ্লায়ার / হিসাব / টিম / সাধারণ)
+  - Assigned to filter
+  - Due date filter (Today / This Week / Overdue / All)
+- Search bar: "টাস্ক খুঁজুন..."
+
+---
+
+### 3. View 1 — Kanban Board (default view)
+
+4 columns side by side:
+| করতে হবে (todo) | চলছে (in_progress) | রিভিউ (review) | সম্পন্ন (done) |
+
+Each task card shows:
+- Title
+- Priority badge (color coded: 🔴 Urgent / 🟠 High / 🟡 Medium / 🟢 Low)
+- Category badge
+- Assigned member avatar + name
+- Due date (show red if overdue)
+- Order link badge if linked (e.g. "#ORD-123")
+- Comment count icon
+- Drag-and-drop between columns to change status
+
+Column headers show task count.
+Clicking a card opens Task Detail Modal.
+
+---
+
+### 4. View 2 — List View
+
+Table with columns:
+টাস্ক নাম | ক্যাটাগরি | প্রায়োরিটি | অ্যাসাইন করা | শেষ তারিখ | স্ট্যাটাস | অ্যাকশন
+
+- Sortable columns
+- Bulk select with checkboxes
+- Bulk actions: Mark as Done / Delete / Change Priority / Reassign
+- Inline status change dropdown
+- Pagination (20 per page)
+
+---
+
+### 5. View 3 — Calendar View
+
+- Monthly calendar showing tasks by due_date
+- Color coded by priority
+- Click a date to see tasks for that day
+- Click a task to open detail modal
+
+---
+
+### 6. Task Detail Modal (full featured)
+
+When clicking any task, open a side panel or modal showing:
+
+**Header:**
+- Task title (editable inline)
+- Status dropdown (todo / in_progress / review / done)
+- Priority dropdown
+- Close button
+
+**Details Section:**
+- Description (rich text editor)
+- Category badge
+- Assigned to (dropdown of team members)
+- Due date picker with time
+- Reminder date picker (send notification before due)
+- Tags (add/remove tags)
+- Linked Order (search and link an order by ID or customer name)
+- Recurring task toggle:
+  If enabled → show recurrence options (daily/weekly/monthly)
+
+**Attachments Section:**
+- Upload files / images
+- Show uploaded file list with delete option
+
+**Comments Section:**
+- Show all comments with user avatar + time
+- Text input + "মন্তব্য করুন" button
+- Real-time feel (re-fetch on submit)
+
+**Activity Log Section:**
+- Show all changes: "Rahim status পরিবর্তন করেছেন: todo → done" with timestamp
+
+**Footer Actions:**
+- "সম্পন্ন চিহ্নিত করুন" green button
+- "টাস্ক মুছুন" red button
+
+---
+
+### 7. Create Task Modal
+
+Fields:
+- Task Title* (required)
+- Description
+- Category* (dropdown)
+- Priority* (dropdown, default: medium)
+- Assigned To (dropdown of team members)
+- Due Date + Time
+- Set Reminder
+- Link to Order (optional search)
+- Tags (optional)
+- Recurring toggle
+
+Button: "টাস্ক তৈরি করুন"
+
+---
+
+### 8. Dashboard Widget (add to existing dashboard)
+
+Show a "আজকের টাস্ক" widget card:
+- Count of: Overdue / Due Today / In Progress / Done Today
+- List of top 5 upcoming tasks with priority badges
+- Quick "সম্পন্ন" checkbox per task
+- "সব টাস্ক দেখুন →" link
+
+---
+
+### 9. Reminder / Notification System
+
+When a task's reminder_at time is reached:
+- Show in-app notification (bell icon in navbar)
+- If user has email connected → send email reminder:
+  Subject: "⏰ টাস্ক রিমাইন্ডার: {task_title}"
+  Body: Task details + due date + link to task
+
+For overdue tasks:
+- Show red badge on Tasks menu in sidebar
+- Show overdue count on dashboard
+
+---
+
+### 10. Smart Auto-Task Creation
+
+When certain events happen in BizilCore, auto-create tasks:
+
+→ New Order Created:
+  Auto-create task: "অর্ডার #ID প্রস্তুত করুন"
+  Category: order, Priority: high, Due: same day
+
+→ Order Status = "Shipped":
+  Auto-create task: "ডেলিভারি কনফার্ম করুন #ID"
+  Category: delivery, Priority: medium, Due: +2 days
+
+→ Stock goes below threshold:
+  Auto-create task: "স্টক রিফিল করুন: {product_name}"
+  Category: supplier, Priority: urgent
+
+→ Payment overdue (if payment_due_date passed):
+  Auto-create task: "পেমেন্ট কালেক্ট করুন: {customer_name}"
+  Category: accounts, Priority: high
+
+---
+
+### 11. API Routes
+
+GET    /api/tasks              — list all tasks (with filters)
+POST   /api/tasks              — create task
+GET    /api/tasks/:id          — get single task with comments + logs
+PUT    /api/tasks/:id          — update task
+DELETE /api/tasks/:id          — delete task
+PATCH  /api/tasks/:id/status   — quick status change (for kanban drag)
+POST   /api/tasks/:id/comments — add comment
+GET    /api/tasks/stats        — get counts (overdue, today, done, etc.)
+
+---
+
+### 12. Sidebar & Navigation
+
+- Add "টাস্ক" to the existing sidebar navigation
+- Show red badge with overdue task count if any
+- Icon: checkbox or clipboard icon
+
+---
+
+Use my existing database (Prisma/MongoDB), auth system, 
+and UI styling conventions.
+Make drag-and-drop kanban work using @dnd-kit/core library.
+Make the calendar view using react-calendar or similar.
+All text labels should be in Bangla.
+Mobile responsive layout required.
+sob jaigai update korte,, notun feature hisebe tumi ata fiture hisebe futuure page a add korba,, ar ay option ta page sudhu pro and business subcribe kora user gulo free plan a pabe na, ar pricing page ay info ta add korba. 

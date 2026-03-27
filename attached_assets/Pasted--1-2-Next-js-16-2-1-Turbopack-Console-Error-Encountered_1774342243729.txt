@@ -1,0 +1,58 @@
+
+
+1/2
+
+Next.js 16.2.1
+Turbopack
+Console Error
+
+
+
+Encountered a script tag while rendering React component. Scripts inside React components are never executed when rendering on the client. Consider using template tag instead (https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template).
+app/layout.tsx (25:9) @ RootLayout
+
+
+  23 |     <html lang="bn" className={`${inter.variable} h-full`} suppressHyd...
+  24 |       <body className="min-h-full antialiased" suppressHydrationWarning>
+> 25 |         <Script
+     |         ^
+  26 |           id="dark-mode-init"
+  27 |           strategy="beforeInteractive"
+  28 |           dangerouslySetInnerHTML={{
+Call Stack
+15
+
+Hide 13 ignore-listed frame(s)
+createConsoleError
+node_modules/next/src/next-devtools/shared/console-error.ts (16:35)
+handleConsoleError
+node_modules/next/src/next-devtools/userspace/app/errors/use-error-handler.ts (31:31)
+console.error
+node_modules/next/src/next-devtools/userspace/app/errors/intercept-console-error.ts (36:27)
+completeWork
+node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js (12961:34)
+runWithFiberInDEV
+node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js (986:30)
+completeUnitOfWork
+node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js (19132:19)
+performUnitOfWork
+node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js (19005:11)
+workLoopSync
+node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js (18816:41)
+renderRootSync
+node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js (18797:11)
+performWorkOnRoot
+node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js (17823:11)
+performWorkOnRootViaSchedulerTask
+node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js (20471:7)
+MessagePort.performWorkUntilDeadline
+node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js (45:48)
+script
+<anonymous>
+Script
+node_modules/next/src/client/script.tsx (327:11)
+RootLayout
+app/layout.tsx (25:9)
+1
+2
+Was this helpful?

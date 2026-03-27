@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="60" viewBox="0 0 240 60">
+  <defs>
+    <linearGradient id="gBracket" x1="15" y1="82" x2="85" y2="10" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#064838"/>
+      <stop offset="50%"  stop-color="#0F8060"/>
+      <stop offset="100%" stop-color="#1ED98C"/>
+    </linearGradient>
+    <linearGradient id="gBracket2" x1="85" y1="82" x2="15" y2="10" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#064838"/>
+      <stop offset="50%"  stop-color="#0E7258"/>
+      <stop offset="100%" stop-color="#16C07C"/>
+    </linearGradient>
+    <linearGradient id="gCircle" x1="32" y1="38" x2="68" y2="80" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#18C47E"/>
+      <stop offset="100%" stop-color="#053C2E"/>
+    </linearGradient>
+    <linearGradient id="gArrow" x1="54" y1="50" x2="84" y2="8" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#1ED98C"/>
+      <stop offset="100%" stop-color="#56FFB8"/>
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#0A5240"/>
+      <stop offset="40%"  stop-color="#0F6E56"/>
+      <stop offset="100%" stop-color="#1BAA78"/>
+    </linearGradient>
+  </defs>
+
+  <!-- White rounded background -->
+  <rect x="0" y="0" width="240" height="60" rx="12" ry="12" fill="#ffffff"/>
+
+  <!-- Logo icon scaled to 48x48, centered vertically at x=6 -->
+  <g transform="translate(6, 6) scale(0.48)">
+    <!-- Left V-bracket -->
+    <path d="M50 11 L15 47 L50 83"
+      stroke="url(#gBracket)" stroke-width="12"
+      stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Right V-bracket -->
+    <path d="M50 11 L85 47 L50 83"
+      stroke="url(#gBracket2)" stroke-width="12"
+      stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Outer circle -->
+    <circle cx="50" cy="59" r="20" fill="url(#gCircle)"/>
+    <!-- Inner dark core -->
+    <circle cx="50" cy="59" r="9" fill="#042E22" opacity="0.92"/>
+    <!-- Arrow shaft -->
+    <line x1="55" y1="47" x2="74" y2="20"
+      stroke="url(#gArrow)" stroke-width="10"
+      stroke-linecap="round"/>
+    <!-- Arrow head -->
+    <polygon points="83,9 80,26 68,17" fill="#56FFB8"/>
+  </g>
+
+  <!-- BizilCore text with gradient fill -->
+  <text x="60" y="40"
+    font-family="'Segoe UI', Arial, sans-serif"
+    font-size="26"
+    font-weight="800"
+    letter-spacing="-0.5"
+    fill="url(#textGrad)">BizilCore</text>
+</svg>

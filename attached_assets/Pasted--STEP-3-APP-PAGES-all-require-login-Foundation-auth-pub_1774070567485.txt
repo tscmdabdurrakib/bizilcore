@@ -1,0 +1,172 @@
+=== STEP 3: APP PAGES (all require login) ===
+(Foundation, auth, public pages, onboarding from Steps 1 & 2 are done)
+
+--- SHARED APP LAYOUT ---
+Create a layout for all /dashboard/* pages:
+
+Desktop sidebar (200px, white, left):
+- Top: Logo
+- Nav items with Bangla labels and icons:
+  ড্যাশবোর্ড / অর্ডার / পণ্য ও স্টক / কাস্টমার / হিসাব / রিপোর্ট / সেটিংস
+- Active item: bg #E1F5EE, color #085041, left border 3px solid #0F6E56
+- Inactive: color #5A5A56, hover bg #F4F2EB
+- Bottom: shop avatar + name + plan badge
+
+Top bar (sticky, white, 52px):
+- Left: current page title
+- Right: notification bell (with red dot) + "নতুন অর্ডার" primary button
+
+Mobile bottom nav (hidden on desktop):
+- 5 icons: ড্যাশবোর্ড, অর্ডার, পণ্য, হিসাব, আরো
+
+Page background: #F7F6F2
+
+--- 1. DASHBOARD (/dashboard) ---
+Greeting: "আসসালামু আলাইকুম, [name] আপু/ভাইয়া 👋" (based on gender)
+Date: today in Bangla format
+
+4 stat cards (grid):
+- আজকের বিক্রি: sum of today's orders
+- Pending অর্ডার: count of status=pending orders
+- মোট বাকি পাবেন: sum of all customer dueAmounts
+- কম স্টক: count of products where stockQty <= lowStockAt
+
+Recent orders table (last 5):
+- Customer avatar (initials), name, product summary, amount, status badge
+- Status badge colors as defined in design system
+- "সব দেখুন →" link
+
+Last 7 days bar chart (use Recharts):
+- X axis: day names in Bangla (রবি, সোম, মঙ্গল...)
+- Y axis: ৳ amount
+- Today's bar: #0F6E56, others: #E1F5EE
+
+Today's hisab summary card:
+- মোট আয়, মোট খরচ, আজকের লাভ (in green)
+
+Low stock alert card:
+- Product name, stock bar, quantity
+- "স্টক দেখুন →" link
+
+--- 2. INVENTORY (/inventory) ---
+Top: search input + "পণ্য যোগ করুন" button
+Filter tabs: সব | কম স্টক | শেষ
+
+Product table/grid with:
+- Product image (or placeholder), name, category
+- Buy price, sell price, stock quantity
+- Stock status badge: ভালো (green) / কম (amber) / শেষ (red)
+- Edit + Delete action buttons
+
+/inventory/new — Add product form:
+- Product name, category (dropdown), image upload
+- Buy price, sell price (side by side)
+- Stock quantity, low stock alert threshold
+- "পণ্য সেভ করুন" button
+
+On save: stockQty updates automatically when orders are placed
+
+--- 3. ORDERS (/orders) ---
+Top: search + filter by status + "নতুন অর্ডার" button
+
+Order list with status tabs: সব | Pending | নিশ্চিত | পাঠানো | পৌঁছেছে | Return
+
+Each row: order ID, customer name, items summary, total, status badge, date
+
+/orders/new — Create order form:
+- Customer: select existing or type new name+phone
+- Add products: searchable dropdown, quantity, auto-calculates price
+- Payment: total amount, paid amount, due auto-calculated
+- Order source: Facebook / WhatsApp / Direct / Referral
+- COD tracking: Cash collected / Courier এর কাছে / Return হয়েছে
+- "অর্ডার সেভ করুন" button
+- On save: auto-decrease product stockQty
+
+/orders/[id] — Order detail:
+- All order info + items table
+- Status update dropdown (change status)
+- Payment update (add payment, reduce due)
+- Customer info card with link to customer profile
+
+--- 4. CUSTOMERS (/customers) ---
+Top: search + "কাস্টমার যোগ করুন" button
+
+Customer list: avatar (initials), name, phone, total orders, due amount
+
+/customers/new — Add customer form:
+- Name, phone, address, Facebook profile URL
+- "সেভ করুন" button
+
+/customers/[id] — Customer profile:
+- Info card (name, phone, address, fb link)
+- Due amount (highlighted if > 0)
+- Order history table (all their orders)
+- "নতুন অর্ডার" button pre-filled with this customer
+
+--- 5. HISAB (/hisab) ---
+Top summary row: আজকের আয় | আজকের খরচ | আজকের লাভ
+
+Two buttons: "+ আয় যোগ করুন" (green) | "+ খরচ যোগ করুন" (red outline)
+
+Transaction list (today by default, filter by date):
+- Type badge (আয়/খরচ), category, note, amount, time
+- Income: green amount, Expense: red amount
+
+Add income modal:
+- Amount, category (বিক্রি / Advance / অন্যান্য আয়), note, date
+
+Add expense modal:
+- Amount, category (পণ্য কেনা / Courier / Packaging / বেতন / ভাড়া / অন্যান্য), note, date
+
+Daily totals at bottom: মোট আয় - মোট খরচ = লাভ/ক্ষতি
+
+--- 6. REPORTS (/reports) ---
+Date range filter: আজ | এই সপ্তাহ | এই মাস | Custom range
+
+Report cards (use Recharts for all charts):
+
+Sales trend (line chart):
+- X: dates, Y: ৳ amount
+- Color: #0F6E56
+
+Order status breakdown (pie/donut chart):
+- Colors matching status badge colors
+
+Top 5 products (horizontal bar chart):
+- Product name vs units sold
+
+Monthly P&L summary table:
+- Month | আয় | খরচ | লাভ/ক্ষতি
+
+"রিপোর্ট Download করুন" button → export as PDF (use html2canvas or similar)
+
+--- 7. SETTINGS (/settings) ---
+Tabs: Shop Profile | Subscription | Notifications
+
+Shop Profile tab:
+- Edit shop name, phone, category, logo
+- "সেভ করুন" button → updates Shop in database
+
+Subscription tab:
+- Current plan badge (Free/Pro/Business)
+- Plan comparison cards
+- "আপগ্রেড করুন" button (no payment integration yet — show "শীঘ্রই আসছে" modal)
+
+Notifications tab:
+- Toggle: কম স্টক alert
+- Toggle: নতুন order notification
+- Toggle: Customer due reminder
+- "সেভ করুন" button
+
+--- GLOBAL RULES FOR ALL APP PAGES ---
+Empty states — Bangla friendly message + action button:
+- No orders: "এখনো কোনো অর্ডার নেই। প্রথম অর্ডার যোগ করুন!"
+- No products: "কোনো পণ্য নেই। প্রথম পণ্য যোগ করুন!"
+- No customers: "কোনো কাস্টমার নেই। প্রথম কাস্টমার যোগ করুন!"
+
+Loading: skeleton shimmer cards (no spinner)
+Delete: confirm modal "আপনি কি নিশ্চিত? এই কাজ undo করা যাবে না।" + red delete button
+Currency: ৳ symbol (e.g. ৳১,৫০০)
+Date: Bangla format (২০ মার্চ ২০২৬) or relative (আজ, গতকাল)
+Toast success: "সফলভাবে সেভ হয়েছে ✓" (green, bottom-right)
+Toast error: "কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করুন।" (red)

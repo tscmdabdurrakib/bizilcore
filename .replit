@@ -1,0 +1,47 @@
+modules = ["nodejs-20", "web", "bash"]
+[agent]
+expertMode = true
+
+[nix]
+channel = "stable-25_05"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[userenv]
+
+[userenv.shared]
+AUTH_SECRET = "8371665139ac5457f09fa184a4737e896460968eaaefe3e360034f2ea82cba73"
+BKASH_BASE_URL = "https://tokenized.pay.bka.sh/v1.2.0-beta"
+NAGAD_BASE_URL = "https://api.mynagad.com/remote-payment-gateway-1.0"
+SUPABASE_DIRECT_URL = "postgresql://postgres.qoliepmmquycarvospag:[XM4PecUuPiaGBPOI]@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres"
+EMAIL_FROM_NAME = "BizilCore"
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 120000

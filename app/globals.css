@@ -1,0 +1,350 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #0F6E56;
+  --color-primary-light: #E1F5EE;
+  --color-primary-text: #085041;
+  --color-bg: #F7F6F2;
+  --color-bg-surface: #FFFFFF;
+  --color-border: #E8E6DF;
+  --color-text-primary: #1A1A18;
+  --color-text-secondary: #5A5A56;
+  --color-text-muted: #A8A69E;
+  --color-success: #1D9E75;
+  --color-warning: #EF9F27;
+  --color-danger: #E24B4A;
+  --color-info: #378ADD;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ── Light mode design tokens ─────────────────────── */
+:root {
+  --background: #F7F6F2;
+  --foreground: #1A1A18;
+
+  /* App shell */
+  --shell-bg:               #FFFFFF;
+  --shell-border:           #E8E6DF;
+  --shell-text:             #1A1A18;
+  --shell-text-sub:         #5A5A56;
+  --shell-text-muted:       #A8A69E;
+  --shell-outer-bg:         #F7F6F2;
+  --shell-nav-active-bg:    #E1F5EE;
+  --shell-nav-active-color: #085041;
+  --shell-nav-active-border:#0F6E56;
+  --shell-nav-inactive:     #5A5A56;
+
+  /* Component tokens (used via S object in pages) */
+  --c-bg:           #F7F6F2;
+  --c-surface:      #FFFFFF;
+  --c-surface-raised:#FFFFFF;
+  --c-border:       #E8E6DF;
+  --c-text:         #1A1A18;
+  --c-text-sub:     #5A5A56;
+  --c-text-muted:   #A8A69E;
+  --c-primary:      #0F6E56;
+  --c-primary-light:#E1F5EE;
+  --c-primary-text: #085041;
+
+  /* ── Semantic backgrounds ───────────────────────── */
+  --bg-success-soft:   #ECFDF5;
+  --bg-success-text:   #0F6E56;
+  --bg-success-border: #A3E4CC;
+  --bg-danger-soft:    #FFE8E8;
+  --bg-danger-text:    #E24B4A;
+  --bg-danger-border:  #FFBBBB;
+  --bg-warning-soft:   #FFF3DC;
+  --bg-warning-text:   #EF9F27;
+  --bg-warning-border: #F5D9A0;
+  --bg-info-soft:      #E1F0FF;
+  --bg-info-text:      #2B7CE9;
+  --bg-info-border:    #A3C8F5;
+  --bg-purple-soft:    #F0E8FF;
+  --bg-purple-text:    #7C3AED;
+  --bg-fb-soft:        #EEF3FD;
+  --bg-fb-text:        #1877F2;
+
+  /* ── Status badge colors ────────────────────────── */
+  --status-pending-bg:    #FFF3DC;
+  --status-pending-text:  #EF9F27;
+  --status-confirmed-bg:  #E1F0FF;
+  --status-confirmed-text:#2B7CE9;
+  --status-shipped-bg:    #F0E8FF;
+  --status-shipped-text:  #7C3AED;
+  --status-delivered-bg:  #E1F5EE;
+  --status-delivered-text:#0F6E56;
+  --status-returned-bg:   #FFE8E8;
+  --status-returned-text: #E24B4A;
+  --status-cancelled-bg:  #F3F3F3;
+  --status-cancelled-text:#6B6B6B;
+
+  /* ── Priority badge colors ──────────────────────── */
+  --priority-urgent-bg:   #FEE2E2;
+  --priority-urgent-text: #DC2626;
+  --priority-high-bg:     #FFEDD5;
+  --priority-high-text:   #EA580C;
+  --priority-medium-bg:   #FEF9C3;
+  --priority-medium-text: #CA8A04;
+  --priority-low-bg:      #DCFCE7;
+  --priority-low-text:    #16A34A;
+
+  /* ── Icon tint colors ───────────────────────────── */
+  --icon-green-bg:   #DCFCE7;
+  --icon-green-text: #0F6E56;
+  --icon-blue-bg:    #DBEAFE;
+  --icon-blue-text:  #2563EB;
+  --icon-purple-bg:  #EDE9FE;
+  --icon-purple-text:#7C3AED;
+  --icon-amber-bg:   #FEF3C7;
+  --icon-amber-text: #D97706;
+  --icon-red-bg:     #FEE2E2;
+  --icon-red-text:   #DC2626;
+  --icon-orange-bg:  #FFEDD5;
+  --icon-orange-text:#EA580C;
+  --icon-teal-bg:    #CCFBF1;
+  --icon-teal-text:  #0F766E;
+
+  /* ── Group / segment badges ─────────────────────── */
+  --group-vip-bg:        #FFF3DC;
+  --group-vip-text:      #92600A;
+  --group-wholesale-bg:  #EEF3FD;
+  --group-wholesale-text:#2B5FC1;
+
+  /* ── Row selection ──────────────────────────────── */
+  --row-selected-bg: #F0FBF7;
+}
+
+/* ── Dark mode design tokens ─────────────────────── */
+html.dark {
+  --background: #111110;
+  --foreground: #EDECEA;
+
+  /* App shell */
+  --shell-bg:               #1C1C1B;
+  --shell-border:           #2D2D2B;
+  --shell-text:             #EDECEA;
+  --shell-text-sub:         #9B9B96;
+  --shell-text-muted:       #6E6E6A;
+  --shell-outer-bg:         #111110;
+  --shell-nav-active-bg:    #0D2B1F;
+  --shell-nav-active-color: #6EE7B7;
+  --shell-nav-active-border:#34D399;
+  --shell-nav-inactive:     #7A7A76;
+
+  /* Component tokens */
+  --c-bg:           #111110;
+  --c-surface:      #1C1C1B;
+  --c-surface-raised:#252523;
+  --c-border:       #2D2D2B;
+  --c-text:         #EDECEA;
+  --c-text-sub:     #A8A6A0;
+  --c-text-muted:   #6E6E6A;
+  --c-primary:      #34D399;
+  --c-primary-light:#0D2B1F;
+  --c-primary-text: #6EE7B7;
+
+  /* ── Semantic backgrounds (dark) ────────────────── */
+  --bg-success-soft:   rgba(52, 211, 153, 0.13);
+  --bg-success-text:   #34D399;
+  --bg-success-border: rgba(52, 211, 153, 0.25);
+  --bg-danger-soft:    rgba(226, 75, 74, 0.14);
+  --bg-danger-text:    #FCA5A5;
+  --bg-danger-border:  rgba(226, 75, 74, 0.3);
+  --bg-warning-soft:   rgba(239, 159, 39, 0.14);
+  --bg-warning-text:   #FCD34D;
+  --bg-warning-border: rgba(239, 159, 39, 0.3);
+  --bg-info-soft:      rgba(43, 124, 233, 0.14);
+  --bg-info-text:      #93C5FD;
+  --bg-info-border:    rgba(43, 124, 233, 0.3);
+  --bg-purple-soft:    rgba(124, 58, 237, 0.14);
+  --bg-purple-text:    #C4B5FD;
+  --bg-fb-soft:        rgba(24, 119, 242, 0.12);
+  --bg-fb-text:        #60A5FA;
+
+  /* ── Status badge colors (dark) ─────────────────── */
+  --status-pending-bg:    rgba(239, 159, 39, 0.16);
+  --status-pending-text:  #FCD34D;
+  --status-confirmed-bg:  rgba(43, 124, 233, 0.16);
+  --status-confirmed-text:#93C5FD;
+  --status-shipped-bg:    rgba(124, 58, 237, 0.16);
+  --status-shipped-text:  #C4B5FD;
+  --status-delivered-bg:  rgba(52, 211, 153, 0.16);
+  --status-delivered-text:#34D399;
+  --status-returned-bg:   rgba(226, 75, 74, 0.16);
+  --status-returned-text: #FCA5A5;
+  --status-cancelled-bg:  rgba(107, 107, 107, 0.18);
+  --status-cancelled-text:#A8A6A0;
+
+  /* ── Priority badge colors (dark) ───────────────── */
+  --priority-urgent-bg:   rgba(220, 38, 38, 0.16);
+  --priority-urgent-text: #F87171;
+  --priority-high-bg:     rgba(234, 88, 12, 0.16);
+  --priority-high-text:   #FB923C;
+  --priority-medium-bg:   rgba(202, 138, 4, 0.16);
+  --priority-medium-text: #FACC15;
+  --priority-low-bg:      rgba(22, 163, 74, 0.16);
+  --priority-low-text:    #4ADE80;
+
+  /* ── Icon tint colors (dark) ────────────────────── */
+  --icon-green-bg:   rgba(52, 211, 153, 0.14);
+  --icon-green-text: #34D399;
+  --icon-blue-bg:    rgba(96, 165, 250, 0.14);
+  --icon-blue-text:  #60A5FA;
+  --icon-purple-bg:  rgba(167, 139, 250, 0.14);
+  --icon-purple-text:#A78BFA;
+  --icon-amber-bg:   rgba(251, 191, 36, 0.14);
+  --icon-amber-text: #FCD34D;
+  --icon-red-bg:     rgba(248, 113, 113, 0.14);
+  --icon-red-text:   #F87171;
+  --icon-orange-bg:  rgba(251, 146, 60, 0.14);
+  --icon-orange-text:#FB923C;
+  --icon-teal-bg:    rgba(45, 212, 191, 0.14);
+  --icon-teal-text:  #2DD4BF;
+
+  /* ── Group / segment badges (dark) ──────────────── */
+  --group-vip-bg:        rgba(239, 159, 39, 0.15);
+  --group-vip-text:      #FCD34D;
+  --group-wholesale-bg:  rgba(43, 124, 233, 0.15);
+  --group-wholesale-text:#93C5FD;
+
+  /* ── Row selection (dark) ───────────────────────── */
+  --row-selected-bg: rgba(52, 211, 153, 0.08);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* ── Dark mode overrides for Tailwind utilities ───── */
+html.dark .bg-white,
+html.dark [class*="bg-white"] {
+  background-color: var(--c-surface) !important;
+}
+
+html.dark .bg-gray-50,
+html.dark .hover\:bg-gray-50:hover {
+  background-color: color-mix(in srgb, var(--c-surface) 60%, var(--c-bg)) !important;
+}
+
+html.dark .bg-gray-100,
+html.dark .hover\:bg-gray-100:hover {
+  background-color: var(--c-bg) !important;
+}
+
+html.dark .text-gray-400,
+html.dark .text-gray-500,
+html.dark .text-gray-600 {
+  color: var(--c-text-muted) !important;
+}
+
+html.dark .text-gray-700,
+html.dark .text-gray-800 {
+  color: var(--c-text-sub) !important;
+}
+
+html.dark .text-gray-900 {
+  color: var(--c-text) !important;
+}
+
+html.dark .border-gray-200,
+html.dark .border-gray-100 {
+  border-color: var(--c-border) !important;
+}
+
+html.dark .divide-gray-200 > * + * {
+  border-color: var(--c-border) !important;
+}
+
+/* ── Dark mode: form inputs, selects, textareas ───── */
+html.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html.dark select,
+html.dark textarea {
+  background-color: var(--c-surface);
+  color: var(--c-text);
+  border-color: var(--c-border);
+  color-scheme: dark;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: var(--c-text-muted);
+}
+
+html.dark select option {
+  background-color: var(--c-surface);
+  color: var(--c-text);
+}
+
+html.dark input[type="date"],
+html.dark input[type="time"],
+html.dark input[type="datetime-local"] {
+  color-scheme: dark;
+}
+
+/* ── Dark mode: modal elevated surfaces ───────────── */
+html.dark [class*="fixed"][class*="inset-0"] > [class*="rounded"],
+html.dark [class*="fixed"][class*="inset-0"] > div > [class*="rounded"],
+html.dark [class*="fixed"][class*="inset-0"] [class*="bg-white"] {
+  background-color: var(--c-surface-raised) !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255,255,255,0.06) !important;
+}
+
+/* ── Dark mode: card/surface elevation ────────────── */
+html.dark .rounded-2xl.border,
+html.dark .rounded-xl.border {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Dark mode: animate-pulse skeleton ────────────── */
+html.dark .animate-pulse .bg-gray-100,
+html.dark .animate-pulse [class*="bg-gray-100"] {
+  background-color: var(--c-surface) !important;
+}
+
+/* ── Dark mode: checkbox / radio accent ───────────── */
+html.dark input[type="checkbox"],
+html.dark input[type="radio"] {
+  accent-color: var(--c-primary);
+  color-scheme: dark;
+}
+
+/* ── Dark mode scrollbar ───────────────────────────── */
+html.dark ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+html.dark ::-webkit-scrollbar-track {
+  background: var(--c-bg);
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: var(--c-border);
+  border-radius: 3px;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--c-text-muted);
+}
+
+/* Smooth color transitions for dark mode switching */
+body,
+header, aside, nav, main, section, article, div,
+button, a, span, p, h1, h2, h3, h4, h5, h6, label,
+input, select, textarea {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease;
+}
+
+/* Keep interactive elements fast */
+button, a {
+  transition: background-color 0.1s ease, border-color 0.1s ease, color 0.1s ease, opacity 0.1s ease, transform 0.1s ease;
+}
+
+/* Table of Contents sidebar link hover */
+.toc-link:hover {
+  background-color: #0F6E56 !important;
+  color: white !important;
+}

@@ -1,0 +1,561 @@
+=== FEATURE: BIZILCORE STORE — MULTI-TENANT E-COMMERCE ===
+(BizilCore SaaS এর ভেতরে একটি নতুন feature)
+
+━━━ CONCEPT ━━━
+প্রতিটি BizilCore shop owner পাবে তাদের নিজস্ব 
+e-commerce website:
+  URL: bizilcore.com/store/[shopSlug]
+  অথবা custom domain: www.theirshop.com
+
+এটা Next.js App Router দিয়ে বানানো SPA।
+কোনো page reload হবে না — সব client-side navigation।
+BizilCore dashboard এর data automatically sync হবে।
+
+━━━ DATABASE ADDITIONS ━━━
+
+Add to Shop model:
+  storeSlug         String?   @unique
+  storeEnabled      Boolean   @default(false)
+  storeTheme        String    @default("default")
+  storePrimaryColor String?
+  storeAccentColor  String?
+  storeBannerUrl    String?
+  storeTagline      String?
+  storeAbout        String?
+  storeShowReviews  Boolean   @default(true)
+  storeShowStock    Boolean   @default(false)
+  storeCODEnabled   Boolean   @default(true)
+  storeBkashNumber  String?
+  storeNagadNumber  String?
+  storeMinOrder     Float?
+  storeFreeShipping Float?
+  storeShippingFee  Float     @default(60)
+  storeCustomDomain String?
+  storeSocialFB     String?
+  storeSocialIG     String?
+  storeSocialWA     String?
+
+model StoreOrder {
+  id              String    @id @default(cuid())
+  shopId          String
+  shop            Shop      @relation(fields: [shopId], references: [id])
+  orderNumber     String    @unique
+  customerName    String
+  customerPhone   String
+  customerAddress String
+  customerDistrict String?
+  customerNote    String?
+  items           StoreOrderItem[]
+  subtotal        Float
+  shippingFee     Float     @default(60)
+  discountAmount  Float     @default(0)
+  totalAmount     Float
+  paymentMethod   String    -- "cod"|"bkash"|"nagad"
+  paymentStatus   String    @default("pending")
+  status          String    @default("pending")
+  couponCode      String?
+  ipAddress       String?
+  createdAt       DateTime  @default(now())
+}
+
+model StoreOrderItem {
+  id          String     @id @default(cuid())
+  storeOrderId String
+  storeOrder  StoreOrder @relation(fields: [storeOrderId], references: [id])
+  productId   String
+  product     Product    @relation(fields: [productId], references: [id])
+  variantId   String?
+  productName String
+  quantity    Int
+  unitPrice   Float
+  subtotal    Float
+}
+
+model ProductVariant {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  name      String  -- "Size: L", "Color: Red"
+  type      String  -- "size"|"color"|"material"
+  value     String
+  priceAdj  Float   @default(0)
+  stockQty  Int     @default(0)
+  imageUrl  String?
+}
+
+model StoreReview {
+  id         String   @id @default(cuid())
+  shopId     String
+  productId  String?
+  product    Product? @relation(fields: [productId], references: [id])
+  orderId    String?
+  reviewerName String
+  rating     Int      -- 1-5
+  comment    String?
+  isApproved Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model Coupon {
+  id          String   @id @default(cuid())
+  shopId      String
+  code        String
+  type        String   -- "percent"|"fixed"
+  value       Float
+  minOrder    Float?
+  maxDiscount Float?
+  usedCount   Int      @default(0)
+  maxUse      Int?
+  expiresAt   DateTime?
+  isActive    Boolean  @default(true)
+  @@unique([shopId, code])
+}
+
+━━━ THEMES — ৫টি বানাতে হবে ━━━
+
+Create /themes folder with 5 theme configs:
+
+1. "elegant" — Premium fashion theme
+   Colors: Black bg, gold accent, white text
+   Layout: Full-width hero, grid products, minimal nav
+
+2. "vibrant" — Colorful lifestyle theme
+   Colors: White bg, bright pink/purple accent
+   Layout: Banner slider, category icons, card products
+
+3. "minimal" — Clean modern theme
+   Colors: White bg, dark text, single accent color
+   Layout: Simple nav, list+grid toggle, clean cards
+
+4. "bold" — Strong brand theme
+   Colors: Dark bg, bright green (like BizilCore)
+   Layout: Big typography, featured product hero
+
+5. "classic" — Traditional shop theme
+   Colors: Light gray bg, blue accent
+   Layout: Traditional e-commerce layout like Daraz
+
+Each theme is a ThemeConfig object:
+{
+  id: "elegant",
+  name: "Elegant",
+  preview: "/themes/elegant-preview.jpg",
+  config: {
+    navStyle: "centered"|"left"|"minimal",
+    heroStyle: "fullwidth"|"split"|"banner",
+    productCard: "square"|"tall"|"horizontal",
+    fontHeading: "Playfair Display"|"Inter"|"Hind Siliguri",
+    fontBody: "Inter"|"Hind Siliguri",
+    borderRadius: "none"|"sm"|"lg"|"full",
+    shadows: boolean,
+    animations: boolean
+  }
+}
+
+━━━ STORE PAGES (all under /store/[slug]/) ━━━
+
+All pages are Next.js App Router with:
+  - No full page reload (use next/link everywhere)
+  - Framer Motion page transitions
+  - Skeleton loading states
+  - Mobile-first responsive
+
+1. HOME PAGE (/store/[slug])
+
+Sections (order based on theme):
+  a. NAVBAR:
+     - Shop logo + name
+     - Search bar (searches products instantly)
+     - Cart icon with item count badge
+     - "অর্ডার ট্র্যাক করুন" link
+     
+  b. HERO BANNER:
+     - Shop banner image (uploaded by owner)
+     - Shop tagline text
+     - "এখনই কিনুন" CTA button
+     - (If no banner: auto-generated gradient with shop name)
+     
+  c. CATEGORIES ROW:
+     - Horizontal scrollable category pills
+     - Click → filters products
+     
+  d. FEATURED PRODUCTS:
+     - 4-8 products marked as featured
+     - Product cards (image, name, price, "কার্টে যোগ করুন")
+     
+  e. ALL PRODUCTS GRID:
+     - Filterable by category
+     - Sort: নতুন আগে | কম দাম | বেশি দাম | জনপ্রিয়
+     - Infinite scroll or "আরো দেখুন" button
+     
+  f. ABOUT SECTION:
+     - Shop about text
+     - Stats: মোট পণ্য X | X+ satisfied customers
+     
+  g. FOOTER:
+     - Shop name, social links
+     - "Powered by BizilCore" (small, subtle)
+     - Links: হোম | পণ্য | অর্ডার ট্র্যাক | যোগাযোগ
+
+2. PRODUCT LIST PAGE (/store/[slug]/products)
+   - All products with filters sidebar (mobile: bottom sheet)
+   - Category filter, price range slider
+   - Grid/List view toggle
+
+3. PRODUCT DETAIL PAGE (/store/[slug]/products/[productId])
+   
+   Layout:
+   LEFT: Product image gallery
+     - Main image large
+     - Thumbnail row below (click to switch)
+     - Zoom on hover (desktop)
+     
+   RIGHT: Product info
+     - Product name (large, bold)
+     - Price (৳X,XXX) — if compare price: show strikethrough
+     - Discount badge (e.g. "২০% ছাড়")
+     - Rating stars (if reviews enabled)
+     - Stock status: "স্টক আছে ✓" or "স্টক শেষ ✗"
+       (show stock count only if storeShowStock=true)
+     
+     VARIANTS (if product has variants):
+       Size selector: [S] [M] [L] [XL] — selected=highlighted
+       Color selector: colored circles
+       → Price updates if variant has price adjustment
+       → Stock updates per variant
+     
+     Quantity selector: [ - ] [ 2 ] [ + ]
+     
+     Two buttons:
+       "কার্টে যোগ করুন" (outline)
+       "এখনই কিনুন" (primary) → goes directly to checkout
+     
+     Product description (below buttons)
+     
+     Reviews section (if enabled):
+       Star rating summary
+       Individual review cards
+       "রিভিউ দিন" button (opens modal)
+
+4. CART PAGE (/store/[slug]/cart)
+   
+   Cart items list:
+     Product image, name, variant, quantity controls, price, remove
+   
+   Order summary card:
+     Subtotal: ৳X
+     Shipping: ৳৬০ (or FREE if above threshold)
+     Discount: -৳X (if coupon applied)
+     Total: ৳X
+   
+   Coupon input:
+     Text input + "প্রয়োগ করুন" button
+     Valid: show green "৳X ছাড় পেলেন!"
+     Invalid: show red error
+   
+   "চেকআউট করুন" button (full width, primary)
+   "কেনাকাটা চালিয়ে যান" link
+
+5. CHECKOUT PAGE (/store/[slug]/checkout)
+   
+   Single page checkout (no multi-step, all visible):
+   
+   Section 1 — আপনার তথ্য:
+     নাম* | ফোন নম্বর* | বিকল্প ফোন
+   
+   Section 2 — ডেলিভারি ঠিকানা:
+     জেলা* (dropdown — all BD districts)
+     উপজেলা* (dynamic based on district)
+     বিস্তারিত ঠিকানা* (textarea)
+     Delivery charge auto-updates based on district
+       (Dhaka: ৳৬০, Outside Dhaka: ৳১২০)
+   
+   Section 3 — পেমেন্ট পদ্ধতি:
+     Radio options:
+       💵 Cash on Delivery (COD)
+         "পণ্য পেয়ে টাকা দিন"
+       📱 bKash (if shop has bKash number)
+         "বিকাশ নম্বর: 01XXXXXXXXX"
+         "Send Money করে Transaction ID দিন"
+         Transaction ID input field
+       📱 Nagad (if shop has Nagad number)
+         Same as bKash
+   
+   Section 4 — অর্ডার নোট (optional):
+     "বিশেষ কোনো নির্দেশনা থাকলে লিখুন..."
+   
+   Order summary (sticky on desktop, bottom on mobile):
+     Items list, total, "অর্ডার দিন" button
+   
+   On submit:
+     Validate all fields
+     Create StoreOrder in database
+     Auto-creates corresponding Order in BizilCore dashboard
+     Show success page
+
+6. ORDER SUCCESS PAGE (/store/[slug]/order-success)
+   
+   Green checkmark animation
+   "অর্ডার সফলভাবে দেওয়া হয়েছে!"
+   Order number: #ORD-2026-001
+   "আপনার ফোনে SMS পাঠানো হয়েছে"
+   "অর্ডার ট্র্যাক করুন" button
+   "আরো কেনাকাটা করুন" button
+
+7. ORDER TRACKING PAGE (/store/[slug]/track)
+   
+   Input: ফোন নম্বর + অর্ডার নম্বর
+   "ট্র্যাক করুন" button
+   
+   Shows order timeline:
+   ✅ অর্ডার গ্রহণ হয়েছে — [date]
+   ✅ নিশ্চিত করা হয়েছে — [date]
+   🔄 প্যাক করা হচ্ছে — [date]
+   ○ পাঠানো হয়েছে
+   ○ পৌঁছে গেছে
+
+━━━ BIZILCORE DASHBOARD — STORE MANAGEMENT ━━━
+
+Add new section in BizilCore sidebar:
+  "আমার স্টোর" (between Inventory and Customers)
+
+Sub-pages:
+
+/dashboard/store/setup:
+  Step 1: Store enable করুন (toggle)
+  Step 2: Store URL: bizilcore.com/store/[your-slug]
+    Slug input with availability check
+    "পাওয়া গেছে ✓" or "ইতিমধ্যে নেওয়া হয়েছে ✗"
+  Step 3: "স্টোর দেখুন" preview link
+
+/dashboard/store/theme:
+  Theme selector page:
+    5 theme cards in grid
+    Each card: preview image, theme name
+    Selected theme: green border + checkmark
+    "এই theme ব্যবহার করুন" button
+    
+  Color customizer:
+    Primary color picker
+    Accent color picker
+    Preview updates live (iframe embed of store)
+
+/dashboard/store/appearance:
+  Banner image upload
+  Shop logo upload
+  Tagline input
+  About text (textarea)
+  Social media links (FB, Instagram, WhatsApp)
+
+/dashboard/store/products:
+  List of all products with toggles:
+    "স্টোরে দেখাবে" toggle per product
+    "Featured" toggle (shows in featured section)
+    Product image + name + price
+  
+  Bulk actions: Show all / Hide all
+
+/dashboard/store/settings:
+  Delivery settings:
+    Dhaka delivery charge: ৳[input]
+    Outside Dhaka: ৳[input]
+    Free shipping above: ৳[input] (0 = disabled)
+  
+  Payment methods:
+    COD enabled toggle
+    bKash number input
+    Nagad number input
+  
+  Order settings:
+    Minimum order amount
+    Auto-confirm orders toggle
+  
+  Advanced:
+    Show stock count (toggle)
+    Customer reviews (toggle)
+    Custom domain input (info text: contact support)
+
+/dashboard/store/orders:
+  List of store orders (separate from main orders)
+  Each row: order number, customer, items, total, payment, status
+  Click → order detail with fulfill/cancel actions
+  
+  Store orders also appear in main /orders page 
+  with "স্টোর অর্ডার" badge
+
+/dashboard/store/coupons:
+  Coupon list: code, type, discount, uses, expiry, status
+  "নতুন Coupon তৈরি করুন" button → form:
+    Code (auto-generate or custom)
+    Type: % ছাড় or ৳ ছাড়
+    Value, min order, max discount, usage limit, expiry
+  
+/dashboard/store/reviews:
+  Review list: product, reviewer, rating, comment, date
+  Approve / Reject buttons
+  Approved reviews show on store
+
+/dashboard/store/analytics:
+  Store stats:
+    Total visits (track with simple page view counter)
+    Total store orders
+    Store revenue
+    Top products by store sales
+    Conversion rate: visits → orders
+
+━━━ TECHNICAL IMPLEMENTATION ━━━
+
+Install packages:
+npm install framer-motion
+npm install react-hot-toast
+npm install @radix-ui/react-dialog
+npm install react-image-gallery
+
+File structure:
+/app
+  /store
+    /[slug]
+      layout.tsx        -- loads shop data, applies theme
+      page.tsx          -- home page
+      /products
+        page.tsx        -- product list
+        /[productId]
+          page.tsx      -- product detail
+      /cart
+        page.tsx        -- cart
+      /checkout
+        page.tsx        -- checkout
+      /order-success
+        page.tsx        -- success
+      /track
+        page.tsx        -- tracking
+  /dashboard
+    /store
+      /setup/page.tsx
+      /theme/page.tsx
+      /appearance/page.tsx
+      /products/page.tsx
+      /settings/page.tsx
+      /orders/page.tsx
+      /coupons/page.tsx
+      /reviews/page.tsx
+      /analytics/page.tsx
+
+/lib
+  /store
+    cart.ts             -- cart state (Zustand)
+    theme.ts            -- theme config loader
+    
+/themes
+  elegant.ts
+  vibrant.ts
+  minimal.ts
+  bold.ts
+  classic.ts
+
+/components
+  /store
+    Navbar.tsx
+    ProductCard.tsx
+    Cart.tsx
+    ThemeProvider.tsx
+    VariantSelector.tsx
+
+━━━ CART STATE MANAGEMENT ━━━
+
+Use Zustand for cart (persists in localStorage):
+
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+
+const useCart = create(persist((set, get) => ({
+  items: [],
+  shopSlug: null,
+  addItem: (product, variant, qty) => ...
+  removeItem: (productId, variantId) => ...
+  updateQty: (productId, variantId, qty) => ...
+  clearCart: () => ...
+  total: () => items.reduce(...)
+}), { name: 'bizilcore-cart' }))
+
+Cart clears automatically when shop changes
+(prevent mixing items from different shops)
+
+━━━ THEME SYSTEM ━━━
+
+ThemeProvider wraps entire /store/[slug] layout:
+
+// layout.tsx
+const shop = await getShop(slug)
+const theme = themes[shop.storeTheme]
+
+return (
+  <ThemeProvider theme={theme} colors={{
+    primary: shop.storePrimaryColor || theme.defaults.primary,
+    accent: shop.storeAccentColor || theme.defaults.accent,
+  }}>
+    <StoreNavbar shop={shop} />
+    {children}
+    <StoreFooter shop={shop} />
+  </ThemeProvider>
+)
+
+ThemeProvider injects CSS variables:
+:root {
+  --store-primary: [primaryColor];
+  --store-accent: [accentColor];
+  --store-radius: [borderRadius from theme];
+  --store-font-heading: [fontHeading from theme];
+}
+
+━━━ SEO ━━━
+
+Each store page has proper metadata:
+
+// /store/[slug]/page.tsx
+export async function generateMetadata({ params }) {
+  const shop = await getShop(params.slug)
+  return {
+    title: `${shop.name} — অনলাইন শপ`,
+    description: shop.storeTagline || 
+      `${shop.name} এর অনলাইন শপে স্বাগতম`,
+    openGraph: {
+      images: [shop.storeBannerUrl || shop.logoUrl]
+    }
+  }
+}
+
+━━━ SMS NOTIFICATION ━━━
+
+On new store order:
+  SMS to shop owner:
+    "নতুন অর্ডার! #[number]
+     [customer_name] | ৳[total]
+     BizilCore Dashboard এ দেখুন"
+
+  SMS to customer:
+    "আপনার অর্ডার পেয়েছি!
+     অর্ডার নং: #[number]
+     ট্র্যাক করুন: bizilcore.com/store/[slug]/track
+     - [ShopName]"
+
+━━━ BUILD ORDER ━━━
+
+Build in this exact order:
+1. Database schema update + migrations
+2. Theme system (ThemeProvider + 5 themes)
+3. Store home page (basic, without filters)
+4. Product detail page + variants
+5. Cart (Zustand state)
+6. Checkout + order creation
+7. Order success + tracking
+8. Dashboard store management pages
+9. Product filters + search
+10. Reviews + coupons
+11. Analytics
+12. SEO + performance optimization
+
+All Bangla UI for store-facing pages.
+Dashboard management pages: same BizilCore design system.
+Store pages: theme-dependent styling.
+Mobile-first. No page reloads. Fast loading.

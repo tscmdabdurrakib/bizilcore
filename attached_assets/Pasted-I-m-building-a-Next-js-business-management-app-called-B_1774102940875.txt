@@ -1,0 +1,86 @@
+I'm building a Next.js business management app called BizilCore. 
+I need a complete "Forgot Password / Reset Password" feature using 
+Nodemailer with Gmail.
+
+Please implement the following:
+
+1. **Forgot Password Page** (`/forgot-password`)
+   - A simple form with an email input field
+   - On submit, call POST `/api/forgot-password`
+   - Show success message: "Reset link পাঠানো হয়েছে আপনার email এ"
+
+2. **API Route** (`/app/api/forgot-password/route.js`)
+   - Accept POST request with { email }
+   - Check if user exists in the database
+   - Generate a secure random token using crypto.randomBytes(32)
+   - Save token + expiry (1 hour) in the database
+   - Send reset email using Nodemailer + Gmail SMTP
+   - Email should contain a styled HTML template in Bangla with a reset button
+
+3. **Reset Password Page** (`/reset-password`)
+   - Read `token` from URL query params
+   - Show a form with new password + confirm password fields
+   - On submit, call POST `/api/reset-password`
+   - Show success message on completion
+
+4. **API Route** (`/app/api/reset-password/route.js`)
+   - Accept POST request with { token, password }
+   - Verify token exists in DB and is not expired
+   - Hash the new password using bcryptjs
+   - Update user's password in the database
+   - Delete the used token from database
+
+5. **Environment Variables needed:**
+   - EMAIL_USER (Gmail address)
+   - EMAIL_PASS (Gmail App Password)
+   - NEXTAUTH_URL (base URL of the app)
+
+6. **lib/mailer.js** utility file
+   - Nodemailer transporter setup
+   - sendResetEmail(toEmail, resetToken) function
+   - Styled HTML email template in Bangla
+
+Use my existing database setup (Prisma/MongoDB — whatever is already 
+in this project). Make sure to install nodemailer and bcryptjs if not 
+already installed.
+
+
+In my Next.js BizilCore app, I need a "Contact Form Email Notification" 
+feature. When a user submits a contact form on the website, the business 
+owner should receive an email notification.
+
+Please implement the following:
+
+1. **Contact Form Page** (`/contact` or wherever the contact form is)
+   - Fields: Name, Email, Phone Number, Message
+   - On submit, call POST `/api/contact`
+   - Show success message: "আপনার বার্তা পাঠানো হয়েছে! আমরা শীঘ্রই যোগাযোগ করব।"
+   - Show error message if something fails
+
+2. **API Route** (`/app/api/contact/route.js`)
+   - Accept POST request with { name, email, phone, message }
+   - Validate that all fields are filled
+   - Send an email to the OWNER using Nodemailer + Gmail SMTP
+   - Email should have a clean styled HTML template showing:
+     * Sender's Name
+     * Sender's Email
+     * Sender's Phone Number
+     * Message content
+     * Date and time of submission
+   - Also send a confirmation email to the USER saying their 
+     message has been received
+
+3. **lib/mailer.js** (update existing or create new)
+   - Add sendContactEmail(ownerEmail, formData) function
+   - Add sendContactConfirmation(userEmail, userName) function
+   - Both should have styled HTML templates in Bangla
+
+4. **Environment Variables needed:**
+   - EMAIL_USER (Gmail address — also used as owner email)
+   - EMAIL_PASS (Gmail App Password)
+
+Use nodemailer which should already be installed. 
+Use my existing project structure and styling conventions.
+
+
+install node mailer,, ar email tamplete er design ta professional hote hobe

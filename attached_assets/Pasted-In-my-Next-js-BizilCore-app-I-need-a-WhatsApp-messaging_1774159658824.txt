@@ -1,0 +1,216 @@
+In my Next.js BizilCore app, I need a WhatsApp messaging system using 
+Meta WhatsApp Cloud API. Users will connect their own Meta API credentials 
+in Settings, then send WhatsApp messages from the Communications page.
+
+---
+
+### 1. Database Schema (add to existing schema)
+
+Table: whatsapp_settings
+- id
+- user_id (foreign key, unique)
+- api_token (encrypted)
+- phone_number_id (encrypted)
+- business_account_id
+- is_connected (boolean, default false)
+- connected_at
+- created_at
+- updated_at
+
+---
+
+### 2. Settings Page — WhatsApp Tab (/settings → WhatsApp tab)
+
+**Section A: Connection Status Banner**
+- If connected: show green banner
+  "✅ WhatsApp সংযুক্ত আছে — আপনি এখন message পাঠাতে পারবেন"
+- If not connected: show yellow banner
+  "⚠️ WhatsApp সংযুক্ত নেই — নিচের গাইড দেখে সংযোগ করুন"
+
+**Section B: API Credentials Form**
+- Input: "API Token" (password type, masked, show/hide toggle)
+- Input: "Phone Number ID"
+- Input: "Business Account ID" (optional)
+- Button: "সংযোগ যাচাই করুন ও সংরক্ষণ করুন"
+  → calls POST /api/settings/whatsapp/connect
+  → show loading spinner while verifying
+  → on success: show "✅ সংযোগ সফল হয়েছে!"
+  → on error: show "❌ API Token বা Phone Number ID সঠিক নয়"
+- If connected: show "সংযোগ বিচ্ছিন্ন করুন" red button
+
+**Section C: Step-by-Step Guide (always visible, collapsible)**
+Show a beautiful step-by-step guide card with this content:
+
+Title: "কিভাবে WhatsApp API সেটআপ করবেন"
+
+ধাপ ১ — Meta Developer Account খুলুন
+  → developers.facebook.com এ যান
+  → "Get Started" বা "Login" করুন
+  → [বাটন: Meta Developer Console খুলুন →]
+
+ধাপ ২ — নতুন App তৈরি করুন  
+  → "My Apps" → "Create App" click করুন
+  → App Type: "Business" সিলেক্ট করুন
+  → App Name যেকোনো নাম দিন (যেমন: MyShop)
+  → "Create App" চাপুন
+
+ধাপ ৩ — WhatsApp যোগ করুন
+  → App Dashboard এ "Add Product" এ যান
+  → "WhatsApp" খুঁজে "Set up" click করুন
+  → আপনার Facebook Business Page সিলেক্ট করুন
+
+ধাপ ৪ — API Credentials সংগ্রহ করুন
+  → WhatsApp → API Setup এ যান
+  → "Temporary access token" কপি করুন → এটাই API Token
+  → "Phone number ID" কপি করুন
+  → উপরে দেওয়া form এ paste করুন
+
+ধাপ ৫ — Permanent Token বানান (Important!)
+  → Temporary token মাত্র ২৪ ঘণ্টা কাজ করে
+  → System User token বানাতে:
+    business.facebook.com → System Users → Add
+    → Admin System User তৈরি করুন
+    → Generate Token → WhatsApp permission দিন
+  → এই token টা permanent থাকবে
+
+  Show info box: 
+  "💡 Free Plan এ প্রতি মাসে ১০০০টি conversation বিনামূল্যে।
+   এর বেশি হলে Meta এর pricing অনুযায়ী charge হবে।"
+
+**Section D: Test Message (only show if connected)**
+- Input: "টেস্ট নম্বর দিন" (phone number)
+- Button: "টেস্ট Message পাঠান"
+- Show result: success or error message
+
+---
+
+### 3. Communications Page (/communications)
+
+**Layout:**
+- Left side: Contact/Customer list with search
+- Right side: Message composer
+
+**Message Composer:**
+- Dropdown: "প্রাপক নির্বাচন করুন" 
+  (load from customers list, show name + phone)
+- OR manual phone input toggle
+- Textarea: "বার্তা লিখুন" (max 1000 chars, show counter)
+- Button: "WhatsApp Message পাঠান 📤"
+  → calls POST /api/communications/whatsapp/send
+  → show success: "✅ Message পাঠানো হয়েছে!"
+  → show error with reason
+
+**Message History Table (below composer):**
+- Columns: প্রাপক, নম্বর, বার্তা (truncated), সময়, স্ট্যাটাস
+- Status badges: ✅ সফল / ❌ ব্যর্থ / ⏳ পাঠানো হচ্ছে
+- Pagination
+
+**If WhatsApp not connected — show banner:**
+"⚠️ WhatsApp সংযুক্ত নেই। 
+ [Settings এ যান →] বাটন"
+
+---
+
+### 4. API Routes
+
+**POST /api/settings/whatsapp/connect**
+- Accept { api_token, phone_number_id, business_account_id }
+- Verify by calling Meta API:
+  GET https://graph.facebook.com/v18.0/{phone_number_id}
+  Headers: Authorization: Bearer {api_token}
+- If valid: encrypt and save credentials, set is_connected = true
+- If invalid: return 400 with error message
+
+**POST /api/settings/whatsapp/disconnect**
+- Clear credentials, set is_connected = false
+
+**GET /api/settings/whatsapp**
+- Return connection status
+- Return masked token (show last 6 chars only: "••••••••abc123")
+- Never return raw token
+
+**POST /api/settings/whatsapp/test**
+- Accept { phone }
+- Send test message using user's credentials
+- Message: "✅ আপনার BizilCore WhatsApp সংযোগ সফল হয়েছে! 🎉"
+
+**POST /api/communications/whatsapp/send**
+- Accept { to_phone, message, customer_id (optional) }
+- Get user's decrypted api_token and phone_number_id from DB
+- Auto-format phone: 01XXXXXXXXX → 880XXXXXXXXXX
+- Send via Meta API:
+  POST https://graph.facebook.com/v18.0/{phone_number_id}/messages
+  {
+    messaging_product: "whatsapp",
+    to: formatted_phone,
+    type: "text",
+    text: { body: message }
+  }
+- Save to message_logs table:
+  { user_id, customer_id, to_phone, message, status, sent_at }
+- Return success or error
+
+**GET /api/communications/whatsapp/history**
+- Return paginated message history for current user
+- Include customer name if customer_id exists
+
+---
+
+### 5. lib/whatsapp.js
+
+export async function sendWhatsAppMessage(apiToken, phoneNumberId, toPhone, message) {
+  const formattedPhone = toPhone.startsWith("0") 
+    ? "88" + toPhone 
+    : toPhone;
+
+  const res = await fetch(
+    `https://graph.facebook.com/v18.0/${phoneNumberId}/messages`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: formattedPhone,
+        type: "text",
+        text: { body: message },
+      }),
+    }
+  );
+
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data;
+}
+
+export async function verifyWhatsAppCredentials(apiToken, phoneNumberId) {
+  const res = await fetch(
+    `https://graph.facebook.com/v18.0/${phoneNumberId}`,
+    {
+      headers: { "Authorization": `Bearer ${apiToken}` },
+    }
+  );
+  return res.ok;
+}
+
+---
+
+### 6. message_logs table (add to schema)
+- id
+- user_id (foreign key)
+- customer_id (nullable foreign key)
+- to_phone
+- message (text)
+- status (enum: pending, sent, failed)
+- error_message (nullable)
+- sent_at
+
+---
+
+Use my existing database (Prisma/MongoDB), auth system, 
+and UI styling conventions. 
+Encrypt api_token using AES-256 before storing in database.
+Add the WhatsApp tab to the existing Settings page tabs.
+Add Communications to the existing sidebar navigation.

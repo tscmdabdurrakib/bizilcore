@@ -1,0 +1,66 @@
+
+> bizilcore@0.1.0 dev
+> next dev -p 5000 -H 0.0.0.0
+
+[1G[0K[1m[38;2;173;127;168m▲ Next.js 16.2.1[39m[22m (Turbopack)
+- Local:         http://localhost:5000
+- Network:       http://0.0.0.0:5000
+[32m[1m✓[22m[39m Ready in 875ms
+
+[37m[1m○[22m[39m Compiling /dashboard ...
+ GET /dashboard [32m200[39m in 17.2s[2m (next.js: 11.6s, proxy.ts: 17ms, application-code: 5.6s)[22m
+ GET /api/community-tips/count [32m200[39m in 490ms[2m (next.js: 27ms, application-code: 463ms)[22m
+ GET /api/notifications [32m200[39m in 720ms[2m (next.js: 55ms, application-code: 665ms)[22m
+ GET /api/tasks/stats [32m200[39m in 1051ms[2m (next.js: 97ms, application-code: 954ms)[22m
+ POST /api/tasks/reminders [32m200[39m in 910ms[2m (next.js: 135ms, application-code: 775ms)[22m
+ GET /api/leaderboard [32m200[39m in 792ms[2m (next.js: 69ms, application-code: 723ms)[22m
+ GET /api/gamification [32m200[39m in 1140ms[2m (next.js: 126ms, application-code: 1014ms)[22m
+ GET /api/community-tips?limit=3 [32m200[39m in 649ms[2m (next.js: 30ms, application-code: 618ms)[22m
+ GET /api/auth/session [32m200[39m in 945ms[2m (next.js: 934ms, application-code: 12ms)[22m
+ GET /api/auth/session [32m200[39m in 161ms[2m (next.js: 149ms, application-code: 12ms)[22m
+[Cron] Subscription check: 0 checked, 0 expired. Referrer rewards: 0 pending, 0 rewarded.
+ GET /api/cron/check-subscriptions [32m200[39m in 927ms[2m (next.js: 27ms, application-code: 900ms)[22m
+[Cron] Subscription check: undefined checked, undefined expired.
+ GET /api/auth/session [32m200[39m in 218ms[2m (next.js: 208ms, application-code: 10ms)[22m
+ GET /api/auth/session [32m200[39m in 10ms[2m (next.js: 2ms, application-code: 8ms)[22m
+ GET /api/auth/session [32m200[39m in 147ms[2m (next.js: 131ms, application-code: 16ms)[22m
+ GET /api/auth/session [32m200[39m in 14ms[2m (next.js: 3ms, application-code: 10ms)[22m
+ GET /api/auth/session [32m200[39m in 138ms[2m (next.js: 127ms, application-code: 11ms)[22m
+ GET /api/auth/session [32m200[39m in 14ms[2m (next.js: 4ms, application-code: 11ms)[22m
+ GET /api/auth/session [32m200[39m in 142ms[2m (next.js: 129ms, application-code: 13ms)[22m
+ GET /api/auth/session [32m200[39m in 12ms[2m (next.js: 2ms, application-code: 10ms)[22m
+ GET /api/auth/session [32m200[39m in 146ms[2m (next.js: 134ms, application-code: 12ms)[22m
+ GET /api/auth/session [32m200[39m in 12ms[2m (next.js: 2ms, application-code: 10ms)[22m
+ GET /api/auth/session [32m200[39m in 131ms[2m (next.js: 119ms, application-code: 12ms)[22m
+ GET /api/auth/session [32m200[39m in 14ms[2m (next.js: 3ms, application-code: 11ms)[22m
+ GET /api/auth/session [32m200[39m in 135ms[2m (next.js: 123ms, application-code: 12ms)[22m
+ GET /api/auth/session [32m200[39m in 12ms[2m (next.js: 4ms, application-code: 8ms)[22m
+ GET /api/auth/session [32m200[39m in 138ms[2m (next.js: 127ms, application-code: 11ms)[22m
+ GET /api/auth/session [32m200[39m in 11ms[2m (next.js: 2ms, application-code: 9ms)[22m
+ GET /api/auth/session [32m200[39m in 129ms[2m (next.js: 120ms, application-code: 9ms)[22m
+ GET /api/auth/session [32m200[39m in 11ms[2m (next.js: 2ms, application-code: 9ms)[22m
+ GET /api/auth/session [32m200[39m in 131ms[2m (next.js: 123ms, application-code: 9ms)[22m
+ GET /api/auth/session [32m200[39m in 12ms[2m (next.js: 1990µs, application-code: 10ms)[22m
+ GET /api/auth/session [32m200[39m in 132ms[2m (next.js: 122ms, application-code: 11ms)[22m
+ GET /api/auth/session [32m200[39m in 11ms[2m (next.js: 3ms, application-code: 8ms)[22m
+ GET /api/auth/session [32m200[39m in 150ms[2m (next.js: 136ms, application-code: 14ms)[22m
+ GET /api/auth/session [32m200[39m in 11ms[2m (next.js: 2ms, application-code: 9ms)[22m
+ GET /api/auth/session [32m200[39m in 133ms[2m (next.js: 122ms, application-code: 11ms)[22m
+ GET /api/auth/session [32m200[39m in 13ms[2m (next.js: 4ms, application-code: 9ms)[22m
+ GET /api/auth/session [32m200[39m in 144ms[2m (next.js: 133ms, application-code: 12ms)[22m
+ GET /api/auth/session [32m200[39m in 10ms[2m (next.js: 2ms, application-code: 8ms)[22m
+ GET /api/auth/session [32m200[39m in 132ms[2m (next.js: 121ms, application-code: 11ms)[22m
+ GET /api/auth/session [32m200[39m in 11ms[2m (next.js: 1914µs, application-code: 9ms)[22m
+ GET /api/auth/session [32m200[39m in 145ms[2m (next.js: 135ms, application-code: 11ms)[22m
+ GET /api/auth/session [32m200[39m in 10ms[2m (next.js: 2ms, application-code: 8ms)[22m
+ GET /api/auth/session [32m200[39m in 134ms[2m (next.js: 124ms, application-code: 10ms)[22m
+ GET /api/auth/session [32m200[39m in 11ms[2m (next.js: 2ms, application-code: 9ms)[22m
+ GET /api/auth/session [32m200[39m in 136ms[2m (next.js: 126ms, application-code: 10ms)[22m
+ GET /api/auth/session [32m200[39m in 15ms[2m (next.js: 4ms, application-code: 11ms)[22m
+ GET /api/auth/session [32m200[39m in 177ms[2m (next.js: 162ms, application-code: 15ms)[22m
+ GET /api/auth/session [32m200[39m in 11ms[2m (next.js: 2ms, application-code: 9ms)[22m
+ GET /api/auth/session [32m200[39m in 128ms[2m (next.js: 116ms, application-code: 11ms)[22m
+ GET /api/auth/session [32m200[39m in 10ms[2m (next.js: 1996µs, application-code: 8ms)[22m
+ GET /api/auth/session [32m200[39m in 138ms[2m (next.js: 128ms, application-code: 10ms)[22m
+ GET /api/auth/session [32m200[39m in 54ms[2m (next.js: 3ms, application-code: 51ms)[22m
+[32m[1m✓[22m[39m Compiled in 502ms

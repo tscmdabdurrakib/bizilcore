@@ -1,0 +1,541 @@
+=== FIX: REAL THEME SYSTEM FOR BIZILCORE STORE ===
+(Replace existing color-picker based theme with 
+ proper full layout theme system)
+
+━━━ CONCEPT ━━━
+প্রতিটি theme হবে একটি সম্পূর্ণ আলাদা design:
+- আলাদা layout structure
+- আলাদা section order
+- আলাদা typography
+- আলাদা component styles
+- আলাদা navigation style
+- আলাদা product card design
+- আলাদা hero/banner design
+
+User apply করলে পুরো store এর look & feel বদলে যাবে।
+
+━━━ THEME ARCHITECTURE ━━━
+
+Create /lib/themes/index.ts:
+
+export type ThemeConfig = {
+  id: string
+  name: string
+  namebn: string         -- Bangla name
+  description: string
+  category: string       -- "fashion"|"food"|"general"|"pharmacy"|"minimal"
+  previewImage: string
+  
+  layout: {
+    navStyle: "topbar_logo_left" | "topbar_centered" | "sidebar" | "minimal_sticky"
+    navBg: string        -- CSS color
+    navTextColor: string
+    heroStyle: "fullwidth_image" | "split_text_image" | "video_bg" | "banner_slider" | "text_only_centered"
+    heroHeight: string   -- "100vh" | "70vh" | "50vh" | "400px"
+    productGridCols: 2 | 3 | 4
+    productCardStyle: "shadow_card" | "borderless" | "outlined" | "image_overlay"
+    footerStyle: "minimal" | "columns" | "dark_full"
+    sectionOrder: string[] -- ["hero","categories","featured","all_products","about","testimonials"]
+  }
+  
+  colors: {
+    primary: string
+    accent: string
+    background: string
+    surface: string
+    text: string
+    textMuted: string
+    border: string
+    badge: string
+  }
+  
+  typography: {
+    fontHeading: string  -- Google Font name
+    fontBody: string
+    headingWeight: string
+    heroSize: string     -- "text-5xl" | "text-6xl" | "text-7xl"
+    productNameSize: string
+  }
+  
+  components: {
+    borderRadius: string   -- "rounded-none" | "rounded-md" | "rounded-xl" | "rounded-full"
+    buttonStyle: "solid" | "outline" | "soft" | "ghost"
+    buttonRadius: string
+    shadows: boolean
+    animations: boolean
+    imageAspectRatio: "square" | "portrait" | "landscape"
+  }
+}
+
+━━━ ৫টি THEME DEFINE করুন ━━━
+
+-- Theme 1: "BOLD" (Fashion / T-shirt / Clothing) --
+export const boldTheme: ThemeConfig = {
+  id: "bold",
+  name: "Bold",
+  namebn: "বোল্ড",
+  description: "Fashion ও clothing brand এর জন্য",
+  category: "fashion",
+  
+  layout: {
+    navStyle: "topbar_logo_left",
+    navBg: "#111111",
+    navTextColor: "#ffffff",
+    heroStyle: "fullwidth_image",
+    heroHeight: "90vh",
+    productGridCols: 3,
+    productCardStyle: "image_overlay",
+    footerStyle: "dark_full",
+    sectionOrder: ["hero","featured","categories","all_products","testimonials"]
+  },
+  
+  colors: {
+    primary: "#111111",
+    accent: "#ff3d00",
+    background: "#f8f8f8",
+    surface: "#ffffff",
+    text: "#111111",
+    textMuted: "#666666",
+    border: "#eeeeee",
+    badge: "#ff3d00"
+  },
+  
+  typography: {
+    fontHeading: "Bebas Neue",
+    fontBody: "Inter",
+    headingWeight: "900",
+    heroSize: "text-7xl",
+    productNameSize: "text-lg"
+  },
+  
+  components: {
+    borderRadius: "rounded-none",
+    buttonStyle: "solid",
+    buttonRadius: "rounded-none",
+    shadows: false,
+    animations: true,
+    imageAspectRatio: "portrait"
+  }
+}
+
+-- Theme 2: "ELEGANT" (Jewelry / Luxury / Boutique) --
+export const elegantTheme: ThemeConfig = {
+  id: "elegant",
+  name: "Elegant",
+  namebn: "এলিগেন্ট",
+  description: "গহনা, বুটিক ও luxury পণ্যের জন্য",
+  category: "fashion",
+  
+  layout: {
+    navStyle: "topbar_centered",
+    navBg: "#1a0a00",
+    navTextColor: "#d4af37",
+    heroStyle: "split_text_image",
+    heroHeight: "70vh",
+    productGridCols: 3,
+    productCardStyle: "borderless",
+    footerStyle: "dark_full",
+    sectionOrder: ["hero","featured","all_products","about","testimonials"]
+  },
+  
+  colors: {
+    primary: "#1a0a00",
+    accent: "#d4af37",
+    background: "#fdfaf5",
+    surface: "#ffffff",
+    text: "#1a0a00",
+    textMuted: "#8b7355",
+    border: "#e8dcc8",
+    badge: "#d4af37"
+  },
+  
+  typography: {
+    fontHeading: "Cormorant Garamond",
+    fontBody: "Hind Siliguri",
+    headingWeight: "600",
+    heroSize: "text-6xl",
+    productNameSize: "text-base"
+  },
+  
+  components: {
+    borderRadius: "rounded-sm",
+    buttonStyle: "outline",
+    buttonRadius: "rounded-none",
+    shadows: false,
+    animations: true,
+    imageAspectRatio: "square"
+  }
+}
+
+-- Theme 3: "FRESH" (Food / Restaurant / Grocery) --
+export const freshTheme: ThemeConfig = {
+  id: "fresh",
+  name: "Fresh",
+  namebn: "ফ্রেশ",
+  description: "খাবার, রেস্তোরাঁ ও grocery এর জন্য",
+  category: "food",
+  
+  layout: {
+    navStyle: "topbar_logo_left",
+    navBg: "#ffffff",
+    navTextColor: "#1a1a1a",
+    heroStyle: "banner_slider",
+    heroHeight: "60vh",
+    productGridCols: 4,
+    productCardStyle: "shadow_card",
+    footerStyle: "columns",
+    sectionOrder: ["hero","categories","featured","all_products","about"]
+  },
+  
+  colors: {
+    primary: "#2e7d32",
+    accent: "#ff6f00",
+    background: "#f9fbe7",
+    surface: "#ffffff",
+    text: "#1b5e20",
+    textMuted: "#558b2f",
+    border: "#dcedc8",
+    badge: "#ff6f00"
+  },
+  
+  typography: {
+    fontHeading: "Hind Siliguri",
+    fontBody: "Hind Siliguri",
+    headingWeight: "700",
+    heroSize: "text-5xl",
+    productNameSize: "text-sm"
+  },
+  
+  components: {
+    borderRadius: "rounded-xl",
+    buttonStyle: "solid",
+    buttonRadius: "rounded-full",
+    shadows: true,
+    animations: true,
+    imageAspectRatio: "square"
+  }
+}
+
+-- Theme 4: "MINIMAL" (General / Tech / Accessories) --
+export const minimalTheme: ThemeConfig = {
+  id: "minimal",
+  name: "Minimal",
+  namebn: "মিনিমাল",
+  description: "সাধারণ ও পরিষ্কার ডিজাইন, সব ধরনের পণ্যের জন্য",
+  category: "general",
+  
+  layout: {
+    navStyle: "minimal_sticky",
+    navBg: "#ffffff",
+    navTextColor: "#000000",
+    heroStyle: "text_only_centered",
+    heroHeight: "50vh",
+    productGridCols: 4,
+    productCardStyle: "outlined",
+    footerStyle: "minimal",
+    sectionOrder: ["hero","all_products","categories","featured","about"]
+  },
+  
+  colors: {
+    primary: "#000000",
+    accent: "#0070f3",
+    background: "#ffffff",
+    surface: "#fafafa",
+    text: "#000000",
+    textMuted: "#666666",
+    border: "#eaeaea",
+    badge: "#0070f3"
+  },
+  
+  typography: {
+    fontHeading: "Inter",
+    fontBody: "Inter",
+    headingWeight: "700",
+    heroSize: "text-5xl",
+    productNameSize: "text-sm"
+  },
+  
+  components: {
+    borderRadius: "rounded-md",
+    buttonStyle: "solid",
+    buttonRadius: "rounded-md",
+    shadows: false,
+    animations: false,
+    imageAspectRatio: "square"
+  }
+}
+
+-- Theme 5: "VIBRANT" (Kids / Gifts / Lifestyle) --
+export const vibrantTheme: ThemeConfig = {
+  id: "vibrant",
+  name: "Vibrant",
+  namebn: "ভাইব্র্যান্ট",
+  description: "শিশু পণ্য, গিফট ও lifestyle এর জন্য",
+  category: "general",
+  
+  layout: {
+    navStyle: "topbar_logo_left",
+    navBg: "#7c3aed",
+    navTextColor: "#ffffff",
+    heroStyle: "split_text_image",
+    heroHeight: "70vh",
+    productGridCols: 3,
+    productCardStyle: "shadow_card",
+    footerStyle: "columns",
+    sectionOrder: ["hero","categories","featured","all_products","testimonials","about"]
+  },
+  
+  colors: {
+    primary: "#7c3aed",
+    accent: "#f59e0b",
+    background: "#fdf4ff",
+    surface: "#ffffff",
+    text: "#1e1b4b",
+    textMuted: "#6d28d9",
+    border: "#e9d5ff",
+    badge: "#f59e0b"
+  },
+  
+  typography: {
+    fontHeading: "Nunito",
+    fontBody: "Hind Siliguri",
+    headingWeight: "800",
+    heroSize: "text-5xl",
+    productNameSize: "text-base"
+  },
+  
+  components: {
+    borderRadius: "rounded-2xl",
+    buttonStyle: "soft",
+    buttonRadius: "rounded-full",
+    shadows: true,
+    animations: true,
+    imageAspectRatio: "square"
+  }
+}
+
+export const themes = {
+  bold: boldTheme,
+  elegant: elegantTheme,
+  fresh: freshTheme,
+  minimal: minimalTheme,
+  vibrant: vibrantTheme,
+}
+
+━━━ THEME PROVIDER ━━━
+
+Create /components/store/ThemeProvider.tsx:
+
+"use client"
+import { createContext, useContext } from 'react'
+import { ThemeConfig } from '@/lib/themes'
+
+const ThemeContext = createContext<ThemeConfig | null>(null)
+
+export function ThemeProvider({ 
+  theme, 
+  customColors,
+  children 
+}: { 
+  theme: ThemeConfig
+  customColors?: { primary?: string; accent?: string }
+  children: React.ReactNode 
+}) {
+  const mergedTheme = {
+    ...theme,
+    colors: {
+      ...theme.colors,
+      primary: customColors?.primary || theme.colors.primary,
+      accent: customColors?.accent || theme.colors.accent,
+    }
+  }
+  
+  const cssVars = {
+    '--theme-primary': mergedTheme.colors.primary,
+    '--theme-accent': mergedTheme.colors.accent,
+    '--theme-bg': mergedTheme.colors.background,
+    '--theme-surface': mergedTheme.colors.surface,
+    '--theme-text': mergedTheme.colors.text,
+    '--theme-text-muted': mergedTheme.colors.textMuted,
+    '--theme-border': mergedTheme.colors.border,
+    '--theme-radius': mergedTheme.components.borderRadius,
+    '--nav-bg': mergedTheme.layout.navBg,
+    '--nav-text': mergedTheme.layout.navTextColor,
+  } as React.CSSProperties
+  
+  return (
+    <ThemeContext.Provider value={mergedTheme}>
+      <div style={cssVars} className="theme-root">
+        {children}
+      </div>
+    </ThemeContext.Provider>
+  )
+}
+
+export const useTheme = () => useContext(ThemeContext)!
+
+━━━ DYNAMIC COMPONENTS ━━━
+
+Create /components/store/DynamicHero.tsx:
+  Read theme.layout.heroStyle and render accordingly:
+  
+  "fullwidth_image": 
+    Full viewport width image with dark overlay
+    Text overlay on left: tagline + CTA button
+    Background: shop banner image
+    Text: white, huge (theme heroSize)
+    Style matches BOLD theme — dramatic, fashion-forward
+    
+  "split_text_image":
+    Left 50%: Text content (heading + subtext + 2 buttons)
+    Right 50%: Featured product image or banner
+    Style matches ELEGANT and VIBRANT themes
+    
+  "banner_slider":
+    Auto-rotating banner (3 slides)
+    Slide 1: Shop welcome banner
+    Slide 2: Featured category
+    Slide 3: Discount/offer
+    Dots navigation at bottom
+    Style matches FRESH theme
+    
+  "text_only_centered":
+    Centered text only, no image
+    Shop name large + tagline + CTA
+    Clean, minimal
+    Style matches MINIMAL theme
+
+Create /components/store/DynamicProductCard.tsx:
+  Read theme.components.productCardStyle:
+  
+  "image_overlay":
+    Image takes full card
+    Product name + price overlay at bottom (dark gradient)
+    Add to cart on hover (slide up)
+    → BOLD theme style
+    
+  "borderless":
+    No card border or shadow
+    Image → name below → price below
+    Minimalist, gallery-like
+    → ELEGANT theme style
+    
+  "shadow_card":
+    White card with soft shadow
+    Image top → content bottom
+    Rounded corners
+    → FRESH and VIBRANT theme style
+    
+  "outlined":
+    Thin border card
+    Clean, no shadow
+    → MINIMAL theme style
+
+Create /components/store/DynamicNav.tsx:
+  Read theme.layout.navStyle:
+  
+  "topbar_logo_left": Logo left, links center, cart right
+  "topbar_centered": Logo center, links below
+  "minimal_sticky": Minimal sticky, logo + cart only, links in hamburger
+
+━━━ GOOGLE FONTS LOADING ━━━
+
+In /store/[slug]/layout.tsx:
+  Dynamically load fonts based on active theme:
+  
+  const fontMap = {
+    "Bebas Neue": "https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap",
+    "Cormorant Garamond": "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&display=swap",
+    "Hind Siliguri": "https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap",
+    "Nunito": "https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap",
+    "Inter": "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap",
+  }
+  
+  Load the font for shop's active theme.
+  Apply via CSS variable: --theme-font-heading, --theme-font-body
+
+━━━ THEME SELECTOR PAGE (Dashboard) ━━━
+
+Replace current /dashboard/store/theme page completely.
+New design:
+
+Page title: "স্টোর থিম"
+Subtitle: "আপনার ব্যবসার ধরন অনুযায়ী থিম বেছে নিন"
+
+Theme cards grid (2 columns):
+  Each card (large, 350px height):
+    TOP HALF: Real visual preview
+      Not just color swatches!
+      Show an actual mini mockup of the theme:
+        - Nav bar style
+        - Hero section style  
+        - 2-3 product cards style
+      Use SVG or scaled-down real components
+    
+    BOTTOM HALF: Theme info
+      Theme name (Bangla + English)
+      Description: "Fashion ও clothing brand এর জন্য"
+      Category badge: "পোশাক" | "খাবার" | "সাধারণ"
+      
+      If currently active: 
+        Green border + "✓ ব্যবহার হচ্ছে" badge
+      
+      "এই থিম ব্যবহার করুন" button
+
+Custom color section (below theme grid):
+  Only shows AFTER theme is selected
+  "থিমের রং কাস্টমাইজ করুন (ঐচ্ছিক)"
+  Primary color picker
+  Accent color picker
+  Note: "রং না বদলালে থিমের ডিফল্ট রং ব্যবহার হবে"
+
+Live preview section:
+  "লাইভ প্রিভিউ" button → opens store in new tab
+  Preview iframe (shows store with selected theme)
+  "প্রয়োগ করুন" button → saves theme to database
+
+━━━ APPLY THEME ━━━
+
+When user clicks "এই থিম ব্যবহার করুন":
+  PATCH /api/store/theme
+  Body: { themeId: "bold", customPrimary: null, customAccent: null }
+  
+  Updates shop.storeTheme in database
+  
+  Store layout.tsx reads this and applies ThemeProvider:
+  const shop = await getShopBySlug(slug)
+  const theme = themes[shop.storeTheme || "minimal"]
+  
+  return (
+    <ThemeProvider 
+      theme={theme}
+      customColors={{
+        primary: shop.storePrimaryColor,
+        accent: shop.storeAccentColor
+      }}
+    >
+      ...
+    </ThemeProvider>
+  )
+
+━━━ BUILD ORDER ━━━
+
+1. Create /lib/themes/index.ts with all 5 theme configs
+2. Create ThemeProvider component
+3. Update /store/[slug]/layout.tsx to use ThemeProvider
+4. Create DynamicHero, DynamicNav, DynamicProductCard components
+5. Update all store pages to use theme variables (CSS vars)
+6. Replace theme selector page in dashboard
+7. Add Google Fonts dynamic loading
+8. Test each theme end-to-end
+
+━━━ RESULT ━━━
+
+After this:
+- "Bold" theme: T-shirt brand → dramatic black bg, huge text, image overlay cards
+- "Elegant" theme: Jewelry → dark gold, serif font, luxury feel
+- "Fresh" theme: Food shop → green, rounded, card products
+- "Minimal" theme: Any product → clean white, simple
+- "Vibrant" theme: Kids/gifts → purple, playful, rounded
+
+Each theme is a completely different visual experience.

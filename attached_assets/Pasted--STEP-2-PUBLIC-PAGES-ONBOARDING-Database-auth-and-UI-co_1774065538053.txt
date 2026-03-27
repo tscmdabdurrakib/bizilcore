@@ -1,0 +1,83 @@
+=== STEP 2: PUBLIC PAGES + ONBOARDING ===
+(Database, auth, and UI config from Step 1 are already done)
+
+--- 1. SHARED LAYOUT ---
+Create a public Navbar component used on all public pages:
+- Left: Logo (green square icon + "HisabBoi" text)
+- Center links: ফিচার, প্রাইসিং, ব্লগ
+- Right: "লগইন" (secondary button) + "বিনামূল্যে শুরু করুন" (primary button)
+- Mobile: hamburger menu
+
+Create a Footer component:
+- 4 columns: Product (features, pricing, blog), Company (about, contact), Legal (privacy, terms), Social
+- Bottom: "© ২০২৬ HisabBoi. সর্বস্বত্ব সংরক্ষিত।"
+
+--- 2. HOME PAGE (/) ---
+Section 1 — Hero:
+- Headline: "Facebook এ বেচেন? হিসাব রাখুন সহজে"
+- Subtext: "স্টক, অর্ডার, কাস্টমার — সব এক জায়গায়। বাংলাদেশের ৫,০০০+ seller এর বিশ্বাস।"
+- Two buttons: "বিনামূল্যে শুরু করুন" (primary) + "ফিচার দেখুন" (secondary)
+- Right side: dashboard screenshot mockup (use a placeholder colored div)
+
+Section 2 — Social proof bar:
+- "৫,০০০+ seller ব্যবহার করছেন" + "৯৮% satisfied" + "বাংলাদেশে #১"
+
+Section 3 — Features (3 cards):
+- Card 1: স্টক ম্যানেজমেন্ট — পণ্য কমলে alert পাবেন
+- Card 2: অর্ডার ট্র্যাকিং — pending থেকে delivered পর্যন্ত
+- Card 3: হিসাব — প্রতিদিনের লাভ-ক্ষতি এক নজরে
+
+Section 4 — How it works (3 steps):
+- Step 1: "সাইনআপ করুন" — ২ মিনিটে account খুলুন
+- Step 2: "পণ্য যোগ করুন" — ছবি ও দাম দিন
+- Step 3: "অর্ডার ট্র্যাক করুন" — Facebook থেকে order এখানে manage করুন
+
+Section 5 — Testimonials (3 cards):
+- "Rina Boutique, ঢাকা" — "আগে Excel এ হিসাব রাখতাম, এখন অনেক সহজ!"
+- "Fatema Fashion, চট্টগ্রাম" — "স্টক শেষ হলে আগেই alert পাই, আর miss হয় না।"
+- "Sumaiya Crafts, সিলেট" — "কাস্টমারের বাকি হিসাব এখন automatically track হয়।"
+
+Section 6 — Pricing preview:
+- Free plan card + Pro plan card (highlight Pro)
+- "সব প্ল্যান দেখুন" button → /pricing
+
+Section 7 — FAQ accordion (5 items):
+- "HisabBoi কি বিনামূল্যে?" → হ্যাঁ, Free plan চিরকাল বিনামূল্যে।
+- "bKash এ payment দেওয়া যাবে?" → হ্যাঁ, bKash ও Nagad সাপোর্ট করে।
+- "Mobile এ কাজ করবে?" → হ্যাঁ, সম্পূর্ণ mobile-friendly।
+- "Data কি safe?" → হ্যাঁ, encrypted ও secure server এ থাকে।
+- "Cancel করতে পারব?" → যেকোনো সময় cancel করা যাবে।
+
+Section 8 — Final CTA:
+- "আজই শুরু করুন — বিনামূল্যে" heading + signup button
+
+--- 3. OTHER PUBLIC PAGES ---
+
+/features — list all features with icons and descriptions (use content from previous prompt)
+/pricing — Free / Pro (৳২৯৯) / Business (৳৬৯৯) plan cards with full comparison table
+/blog — Static page with 3 placeholder blog post cards
+/about — Mission statement + "আমরা Bangladesh এর ছোট ব্যবসাকে digital করতে চাই"
+/contact — Name, email, message form + "মেসেজ পাঠান" button
+
+--- 4. ONBOARDING WIZARD (/onboarding) ---
+3-step wizard with progress indicator (Step 1 of 3):
+
+Step 1 — Shop setup:
+- Shop name (pre-filled from signup)
+- Phone number
+- Business category (dropdown: পোশাক, জুয়েলারি, খাবার, সৌন্দর্য, গৃহস্থালি, অন্যান্য)
+- Gender (radio: ভাই / আপু) — used for dashboard greeting
+- Logo upload (optional)
+- "পরবর্তী ধাপ" button
+
+Step 2 — Add first products:
+- "আপনার প্রথম ৩টি পণ্য যোগ করুন (ঐচ্ছিক)" heading
+- 3 product rows: name + sell price + stock qty
+- "পরবর্তী ধাপ" + "এখন না, পরে করব" buttons
+
+Step 3 — Success screen:
+- Green checkmark animation
+- "আপনার shop ready! 🎉" heading
+- "এখন dashboard এ যান" primary button → /dashboard
+
+On completing onboarding: set user.onboarded = true in database

@@ -1,0 +1,54 @@
+
+> bizilcore@0.1.0 dev
+> next dev -p 5000 -H 0.0.0.0
+
+[1G[0K[1m[38;2;173;127;168m▲ Next.js 16.2.1[39m[22m (Turbopack)
+- Local:         http://localhost:5000
+- Network:       http://0.0.0.0:5000
+[32m[1m✓[22m[39m Ready in 365ms
+
+[37m[1m○[22m[39m Compiling / ...
+ GET / [32m200[39m in 6.9s[2m (next.js: 4.3s, proxy.ts: 444ms, application-code: 2.1s)[22m
+ GET /api/auth/session [32m200[39m in 973ms[2m (next.js: 952ms, application-code: 21ms)[22m
+ GET /api/auth/session [32m200[39m in 181ms[2m (next.js: 173ms, application-code: 7ms)[22m
+ GET /dashboard [32m200[39m in 10.3s[2m (next.js: 4.2s, proxy.ts: 44ms, application-code: 6.1s)[22m
+ GET /api/community-tips/count [32m200[39m in 3.2s[2m (next.js: 1990ms, application-code: 1174ms)[22m
+ GET /api/leaderboard [32m200[39m in 3.0s[2m (next.js: 1408ms, application-code: 1640ms)[22m
+ GET /api/auth/session [32m200[39m in 136ms[2m (next.js: 119ms, application-code: 18ms)[22m
+ POST /api/tasks/reminders [32m200[39m in 3.1s[2m (next.js: 1189ms, application-code: 1890ms)[22m
+ GET /api/auth/session [32m200[39m in 21ms[2m (next.js: 4ms, application-code: 17ms)[22m
+ GET /api/gamification [32m200[39m in 3.8s[2m (next.js: 1937ms, application-code: 1840ms)[22m
+ GET /api/notifications [32m200[39m in 4.3s[2m (next.js: 1818ms, application-code: 2.5s)[22m
+ GET /api/community-tips?limit=3 [32m200[39m in 504ms[2m (next.js: 26ms, application-code: 478ms)[22m
+ GET /api/tasks/stats [32m200[39m in 3.7s[2m (next.js: 995ms, application-code: 2.7s)[22m
+ GET /api/auth/session [32m200[39m in 121ms[2m (next.js: 109ms, application-code: 12ms)[22m
+ GET /api/auth/session [32m200[39m in 9ms[2m (next.js: 2ms, application-code: 7ms)[22m
+[Cron] Subscription check: 0 checked, 0 expired. Referrer rewards: 0 pending, 0 rewarded.
+ GET /api/cron/check-subscriptions [32m200[39m in 930ms[2m (next.js: 40ms, application-code: 890ms)[22m
+[Cron] Subscription check: undefined checked, undefined expired.
+ GET /store/demo [33m404[39m in 996ms[2m (next.js: 676ms, proxy.ts: 9ms, application-code: 310ms)[22m
+[36m[browser][39m Encountered a script tag while rendering React component. Scripts inside React components are never executed when rendering on the client. Consider using template tag instead (https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template). 
+ GET /api/auth/session [32m200[39m in 158ms[2m (next.js: 152ms, application-code: 6ms)[22m
+ GET /api/auth/session [32m200[39m in 6ms[2m (next.js: 2ms, application-code: 4ms)[22m
+ GET /store/theme [34m307[39m in 120ms[2m (next.js: 24ms, proxy.ts: 6ms, application-code: 90ms)[22m
+ GET /login [32m200[39m in 210ms[2m (next.js: 62ms, proxy.ts: 5ms, application-code: 143ms)[22m
+ GET /api/auth/session [32m200[39m in 139ms[2m (next.js: 125ms, application-code: 14ms)[22m
+ GET /api/auth/session [32m200[39m in 9ms[2m (next.js: 4ms, application-code: 5ms)[22m
+ GET /api/auth/session [32m200[39m in 119ms[2m (next.js: 109ms, application-code: 10ms)[22m
+ GET /api/auth/session [32m200[39m in 10ms[2m (next.js: 2ms, application-code: 7ms)[22m
+ GET /api/auth/session [32m200[39m in 117ms[2m (next.js: 107ms, application-code: 11ms)[22m
+ GET /api/auth/session [32m200[39m in 12ms[2m (next.js: 2ms, application-code: 10ms)[22m
+ GET /api/auth/session [32m200[39m in 118ms[2m (next.js: 109ms, application-code: 9ms)[22m
+ GET /api/auth/session [32m200[39m in 10ms[2m (next.js: 3ms, application-code: 8ms)[22m
+ GET /api/auth/session [32m200[39m in 127ms[2m (next.js: 116ms, application-code: 11ms)[22m
+ GET /api/auth/session [32m200[39m in 10ms[2m (next.js: 2ms, application-code: 8ms)[22m
+ GET /api/auth/session [32m200[39m in 134ms[2m (next.js: 119ms, application-code: 15ms)[22m
+ GET /api/auth/session [32m200[39m in 12ms[2m (next.js: 2ms, application-code: 10ms)[22m
+ GET /api/auth/session [32m200[39m in 135ms[2m (next.js: 121ms, application-code: 15ms)[22m
+ GET /api/auth/session [32m200[39m in 11ms[2m (next.js: 2ms, application-code: 9ms)[22m
+ GET /api/auth/session [32m200[39m in 130ms[2m (next.js: 121ms, application-code: 10ms)[22m
+ GET /api/auth/session [32m200[39m in 11ms[2m (next.js: 2ms, application-code: 9ms)[22m
+ GET /api/auth/session [32m200[39m in 152ms[2m (next.js: 140ms, application-code: 12ms)[22m
+ GET /api/auth/session [32m200[39m in 16ms[2m (next.js: 4ms, application-code: 12ms)[22m
+ GET /api/auth/session [32m200[39m in 154ms[2m (next.js: 144ms, application-code: 10ms)[22m
+ GET /api/auth/session [32m200[39m in 16ms[2m (next.js: 9ms, application-code: 7ms)[22m

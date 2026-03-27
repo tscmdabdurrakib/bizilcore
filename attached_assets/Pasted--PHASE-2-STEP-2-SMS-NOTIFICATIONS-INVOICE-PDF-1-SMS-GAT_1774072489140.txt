@@ -1,0 +1,58 @@
+=== PHASE 2 — STEP 2: SMS NOTIFICATIONS + INVOICE PDF ===
+
+--- 1. SMS GATEWAY (SSL Wireless) ---
+Create /lib/sms.ts:
+- Function: sendSMS(phone, message) → calls SSL Wireless API
+- .env: SSL_SMS_API_KEY, SSL_SMS_SID, SSL_SMS_SENDER_ID
+
+Auto-send SMS on these triggers:
+- Order confirmed → "আপনার অর্ডার নিশ্চিত হয়েছে। ধন্যবাদ! - [ShopName]"
+- Order shipped → "আপনার পণ্য পাঠানো হয়েছে। Tracking: [trackingId] - [ShopName]"
+- Order delivered → "আপনার পণ্য পৌঁছেছে। ধন্যবাদ! - [ShopName]"
+- Due reminder (manual trigger) → "আপনার বাকি আছে ৳[amount]। [ShopName]"
+
+In /settings — Notifications tab, add:
+- Toggle: "Order confirm SMS পাঠাবে"
+- Toggle: "Shipped SMS পাঠাবে"
+- Toggle: "Delivered SMS পাঠাবে"
+- SMS balance display (fetch from SSL API)
+- Custom template editor for each SMS type
+
+Add to Transaction model — track SMS cost as expense automatically.
+
+--- 2. INVOICE PDF ---
+Install @react-pdf/renderer
+
+Create /lib/invoice-pdf.tsx — InvoiceDocument component:
+Layout:
+  - Header: Shop logo + name + phone + address
+  - Invoice #: INV-[orderId short]
+  - Date: Bangla format
+  - Customer: name, phone, address
+  - Items table: পণ্য | পরিমাণ | একক মূল্য | মোট
+  - Summary: Subtotal, paid, due
+  - Footer: "ধন্যবাদ আপনার কেনাকাটার জন্য!"
+  - Colors: primary #0F6E56
+
+On /orders/[id] page, add:
+- "Invoice Download করুন" button → generates and downloads PDF
+- "WhatsApp এ পাঠান" button → opens wa.me link with pre-filled message
+
+--- 3. BARCODE / SKU ---
+On /inventory/new and edit form, add:
+- Auto-generate SKU button (e.g. PRD-001, PRD-002)
+- Manual SKU input field
+
+On /inventory page:
+- Add SKU column to product table
+- "Barcode Scan করুন" button → opens camera using @zxing/browser
+  - On scan match: highlight that product row
+
+--- 4. CSV BULK IMPORT ---
+On /inventory page, add "Excel থেকে Import করুন" button:
+- Download template CSV button
+- Upload CSV → parse with Papaparse → preview table → "Import করুন"
+- Template columns: নাম, ক্রয় মূল্য, বিক্রয় মূল্য, স্টক, ক্যাটাগরি
+- Show success: "X টি পণ্য import হয়েছে"
+
+Same design system. All text Bangla.

@@ -1,0 +1,149 @@
+Build a SaaS web app for Bangladeshi Facebook sellers.
+Stack: Next.js 14 (App Router), TypeScript, Tailwind CSS, shadcn/ui, Prisma, PostgreSQL, NextAuth.js
+
+=== STEP 1: FOUNDATION ONLY ===
+
+--- 1. TAILWIND CONFIG ---
+Set up tailwind.config.ts with these custom colors:
+colors: {
+  primary: { DEFAULT: '#0F6E56', light: '#E1F5EE', text: '#085041' },
+  bg: { DEFAULT: '#F7F6F2', surface: '#FFFFFF' },
+  border: { DEFAULT: '#E8E6DF' },
+  text: { primary: '#1A1A18', secondary: '#5A5A56', muted: '#A8A69E' },
+  success: '#1D9E75', warning: '#EF9F27', danger: '#E24B4A', info: '#378ADD'
+}
+Add Inter font from Google Fonts as default font.
+
+--- 2. DATABASE SCHEMA (Prisma) ---
+Create these models:
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  gender    String?
+  onboarded Boolean  @default(false)
+  createdAt DateTime @default(now())
+  shop      Shop?
+  orders    Order[]
+  transactions Transaction[]
+}
+
+model Shop {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  category  String?
+  logoUrl   String?
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  products  Product[]
+  customers Customer[]
+}
+
+model Product {
+  id         String   @id @default(cuid())
+  name       String
+  buyPrice   Float
+  sellPrice  Float
+  stockQty   Int      @default(0)
+  lowStockAt Int      @default(5)
+  category   String?
+  imageUrl   String?
+  shopId     String
+  shop       Shop     @relation(fields: [shopId], references: [id])
+  orderItems OrderItem[]
+  createdAt  DateTime @default(now())
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  address   String?
+  fbProfile String?
+  dueAmount Float    @default(0)
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id])
+  orders    Order[]
+  createdAt DateTime @default(now())
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  customerId  String?
+  customer    Customer?   @relation(fields: [customerId], references: [id])
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  status      String      @default("pending")
+  source      String      @default("facebook")
+  totalAmount Float
+  paidAmount  Float       @default(0)
+  dueAmount   Float       @default(0)
+  items       OrderItem[]
+  createdAt   DateTime    @default(now())
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  unitPrice Float
+  subtotal  Float
+}
+
+model Transaction {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String   -- "income" or "expense"
+  amount    Float
+  category  String?
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+--- 3. AUTH SETUP ---
+Set up NextAuth.js with CredentialsProvider (email + password with bcrypt).
+Create these API routes:
+- POST /api/auth/[...nextauth] — NextAuth handler
+- POST /api/register — create new user (hash password with bcrypt)
+
+Auth rules:
+- After SIGNUP → redirect to /onboarding
+- After LOGIN → if user.onboarded === true → /dashboard, else → /onboarding
+- Create middleware.ts: protect all routes starting with /dashboard and /onboarding
+- If unauthenticated user visits /dashboard → redirect to /login
+
+--- 4. CREATE THESE PAGES (UI only, no logic yet) ---
+
+/login page:
+- Centered card, white bg
+- Logo + "আবার স্বাগতম" heading
+- Email input, Password input
+- "লগইন করুন" primary button
+- "পাসওয়ার্ড ভুলে গেছেন?" link
+- "নতুন account? সাইনআপ করুন" link
+
+/signup page:
+- Centered card
+- "বিনামূল্যে শুরু করুন" heading
+- Name, Email, Password, Shop name inputs
+- Terms checkbox: "আমি Terms & Privacy Policy মেনে নিচ্ছি"
+- "সাইনআপ করুন" primary button
+- "ইতিমধ্যে account আছে? লগইন করুন" link
+
+/forgot-password page:
+- Email input + "রিসেট লিংক পাঠান" button
+
+Global UI rules for all pages:
+- Font: Inter
+- All text/labels/buttons in Bangla as specified
+- Input height: 38px, border: 1px solid #E8E6DF, border-radius: 8px, focus border: #0F6E56
+- Primary button: bg #0F6E56, white text, border-radius 8px
+- Success toast: green, bottom-right — "সফলভাবে সেভ হয়েছে ✓"
+- Error toast: red — "কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করুন।"

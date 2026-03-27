@@ -1,0 +1,224 @@
+RETAIL POS + SALON + TAILOR MODULES
+
+--- PART A: RETAIL / GROCERY POS MODULE ---
+
+-- A1. QUICK POS INTERFACE (/pos) --
+
+Full-screen POS layout (optimized for tablet/touchscreen):
+
+Left panel (60%): Product grid
+- Large product cards with image, name, price
+- Category tabs at top for quick filtering
+- Search bar with instant results
+- "Barcode Scan" button (camera or USB scanner)
+
+Right panel (40%): Cart
+- Item list: name, qty buttons (- qty +), line total
+- Customer search (optional — cash sale default)
+- Discount field (৳ or %)
+- Total: subtotal + VAT + discount = Grand total
+- Payment buttons (big):
+  "নগদ" | "bKash" | "Card" | "বাকি"
+- "বিল করুন" → generates receipt
+
+Receipt options:
+- Print (thermal printer via browser print API)
+- SMS to customer
+- Skip
+
+-- A2. CASH REGISTER ---
+
+Start of day: "Cash Register খুলুন" → enter opening cash
+End of day: "Cash Register বন্ধ করুন" → enter closing cash
+  Shows: opening + sales cash - expenses = expected closing
+  Difference shows surplus/shortage with color
+
+Daily cash summary stored automatically.
+
+-- A3. OFFLINE POS MODE --
+
+Use IndexedDB (via Dexie.js) for offline storage:
+- Sync products to IndexedDB on app load
+- If internet lost → show "Offline Mode" banner
+- POS still works: reads products from IndexedDB
+- Saves transactions to IndexedDB queue
+- When internet restores → sync queue to server
+- Conflict resolution: server wins for stock counts
+
+--- PART B: SALON / BEAUTY PARLOR MODULE ---
+
+-- B1. DATABASE ADDITIONS --
+
+model Service {
+  id           String @id @default(cuid())
+  shopId       String
+  shop         Shop   @relation(fields: [shopId], references: [id])
+  name         String -- "Haircut", "Facial", "Manicure"
+  category     String -- "hair"|"skin"|"nail"|"makeup"|"other"
+  price        Float
+  durationMins Int    @default(30)
+  isActive     Boolean @default(true)
+  staffId      String?
+  appointments AppointmentItem[]
+}
+
+model Appointment {
+  id           String   @id @default(cuid())
+  shopId       String
+  customerId   String?
+  customer     Customer? @relation(fields: [customerId], references: [id])
+  staffId      String?
+  staff        StaffMember? @relation(fields: [staffId], references: [id])
+  date         DateTime
+  status       String   @default("scheduled")
+  -- "scheduled"|"confirmed"|"in_progress"|"completed"|"cancelled"
+  totalAmount  Float    @default(0)
+  paidAmount   Float    @default(0)
+  note         String?
+  items        AppointmentItem[]
+  createdAt    DateTime @default(now())
+}
+
+model AppointmentItem {
+  id            String      @id @default(cuid())
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+  serviceId     String
+  service       Service     @relation(fields: [serviceId], references: [id])
+  price         Float
+  staffCommission Float     @default(0)
+}
+
+-- B2. APPOINTMENT CALENDAR (/appointments) --
+
+Two views (toggle):
+1. Day view: timeline (9am-9pm), slots blocked per appointment
+2. List view: today's appointments as cards
+
+Appointment card:
+- Time, customer name, services, staff assigned, status badge
+- Actions: Confirm | Start | Complete | Cancel
+
+"নতুন অ্যাপয়েন্টমেন্ট" button → booking form:
+- Customer: select or add new
+- Date + time (30-min slots)
+- Services: multi-select from service list (prices auto-add)
+- Staff assign (optional)
+- Note field
+- "বুকিং নিশ্চিত করুন" → saves + sends SMS to customer:
+  "আপনার appointment নিশ্চিত হয়েছে [date] [time] এ। - [ShopName]"
+
+Reminder SMS auto-send 2 hours before appointment.
+
+-- B3. SERVICE MENU (/services) --
+
+Service list by category.
+Add service form:
+- Name (Bangla), category, price, duration in minutes
+- Assign default staff (optional)
+- Active toggle
+
+-- B4. WALK-IN TRACKING --
+
+On dashboard: "Walk-in নিন" quick button
+- Select services, optional customer name
+- Auto-creates appointment with current time
+- Shows on today's appointment list
+
+-- B5. STAFF COMMISSION TRACKING --
+
+Per completed appointment:
+- Each service has a commission % per staff member
+- Default: 30% of service price to staff
+- Configurable per staff per service
+
+Monthly staff payout report:
+- Staff name | Services done | Total revenue | Commission earned
+- "Commission দিয়েছি" mark button
+
+--- PART C: TAILOR / BOUTIQUE MODULE ---
+
+-- C1. DATABASE ADDITIONS --
+
+model Measurement {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  shopId     String
+  -- Clothing measurements (all in inches, optional)
+  chest      Float?
+  waist      Float?
+  hip        Float?
+  shoulder   Float?
+  sleeve     Float?
+  length     Float?
+  neck       Float?
+  inseam     Float?
+  notes      String?  -- special notes "slightly loose preferred"
+  updatedAt  DateTime @default(now())
+}
+
+model TailorOrder {
+  id              String   @id @default(cuid())
+  shopId          String
+  customerId      String
+  customer        Customer @relation(fields: [customerId], references: [id])
+  description     String   -- "Blue salwar kameez, zari work"
+  fabricSource    String   -- "customer_provided" | "shop_supplied"
+  fabricDetails   String?
+  measurements    Json?    -- snapshot of measurements at order time
+  advanceAmount   Float    @default(0)
+  totalAmount     Float
+  dueAmount       Float
+  deliveryDate    DateTime
+  status          String   @default("received")
+  -- "received"|"cutting"|"stitching"|"finishing"|"ready"|"delivered"
+  styleImageUrl   String?  -- reference photo uploaded by customer
+  notes           String?
+  createdAt       DateTime @default(now())
+}
+
+-- C2. TAILOR ORDER PAGE (/orders for tailor) --
+
+New tailor order form:
+- Customer: select existing (loads their measurements) or new
+- Description: what to make (free text + common templates)
+  Templates: সালোয়ার কামিজ | শাড়ি ব্লাউজ | পাঞ্জাবি | শার্ট | প্যান্ট
+- Fabric: "Customer এনেছে" or "আমাদের কাপড়" (links to inventory)
+- Style reference: photo upload option
+- Measurements: auto-fill from customer profile or edit
+- Delivery date picker
+- Total price, advance paid → due auto-calculated
+- "অর্ডার নিন" button
+
+Order status pipeline:
+কাপড় পেয়েছি → কাটা হচ্ছে → সেলাই হচ্ছে → ফিনিশিং → রেডি → দেওয়া হয়েছে
+
+SMS on "রেডি" status:
+"আপনার [description] তৈরি হয়ে গেছে। 
+ যেকোনো দিন নিয়ে যেতে পারেন। - [ShopName]"
+
+-- C3. MEASUREMENT MANAGER (/measurements) --
+
+Customer profile page update:
+- "মাপজোখ" tab → shows measurement card
+- Edit button → full measurement form (all fields optional)
+- "শেষ আপডেট: [date]" shown
+- Measurement history (if updated multiple times)
+
+Quick measurement card on tailor order form:
+- Shows existing measurements with edit option inline
+
+-- C4. DELIVERY CALENDAR (/delivery) --
+
+Calendar view showing orders by delivery date.
+Color coding:
+- Overdue (past delivery date, not delivered): red
+- Today: amber  
+- Tomorrow: yellow
+- Future: gray
+
+"আজ Deliver করতে হবে" widget on dashboard.
+
+All Bangla UI. Same design system throughout.
+Business-type-specific empty states with relevant Bangla messages.

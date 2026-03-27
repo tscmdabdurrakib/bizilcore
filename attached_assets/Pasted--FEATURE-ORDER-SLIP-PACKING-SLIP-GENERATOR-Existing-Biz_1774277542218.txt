@@ -1,0 +1,224 @@
+=== FEATURE: ORDER SLIP / PACKING SLIP GENERATOR ===
+(Existing BizilCore app এ add করুন)
+
+━━━ WHAT IT DOES ━━━
+When an order is confirmed, shop owner can generate a 
+professional printable slip to attach to the package.
+Slip includes: shop branding, customer details, 
+product details, QR code, barcode, and amount.
+
+━━━ DATABASE ━━━
+
+Add to Shop model:
+  slipPrimaryColor   String?  @default("#0d2d1a")
+  slipAccentColor    String?  @default("#00e676")
+  slipShowBarcode    Boolean  @default(true)
+  slipShowQR         Boolean  @default(true)
+  slipCustomMessage  String?  -- e.g. "ধন্যবাদ আপনার কেনাকাটার জন্য!"
+  slipShowSocialMedia Boolean @default(true)
+  slipFacebookPage   String?
+  slipWhatsapp       String?
+
+━━━ PACKAGES TO INSTALL ━━━
+npm install qrcode react-qr-code
+npm install jsbarcode
+npm install @react-pdf/renderer
+npm install html2canvas
+
+━━━ SLIP PAGE LAYOUT ━━━
+
+Create /app/dashboard/orders/[id]/slip/page.tsx
+
+Page has 2 sections:
+  Left: Live preview of slip (updates in real time)
+  Right: Customization panel
+
+━━━ SLIP DESIGN (A5 size: 148mm × 210mm) ━━━
+
+┌─────────────────────────────────────┐
+│  [SHOP LOGO]    SHOP NAME           │  ← Header (shop primary color bg)
+│                 📞 01XXXXXXXXX      │
+│                 📘 facebook.com/... │
+├─────────────────────────────────────┤
+│  অর্ডার স্লিপ          #ORD-001    │  ← Order info bar
+│  তারিখ: ২০ মার্চ ২০২৬              │
+├─────────────────────────────────────┤
+│  প্রাপক:                            │  ← Customer section
+│  নাম: Fatema Khanom                 │
+│  ফোন: 01XXXXXXXXX                  │
+│  ঠিকানা: বাড়ি #১২, রোড #৫,         │
+│           ধানমন্ডি, ঢাকা            │
+├─────────────────────────────────────┤
+│  পণ্যের বিবরণ:                      │  ← Products table
+│  ┌──────────┬─────┬──────┬───────┐  │
+│  │ পণ্য     │ পরি │ মূল্য│ মোট  │  │
+│  ├──────────┼─────┼──────┼───────┤  │
+│  │ থ্রি-পিস │  ২  │ ৬৫০ │ ১৩০০ │  │
+│  │ শাড়ি    │  ১  │ ৯৫০ │  ৯৫০ │  │
+│  └──────────┴─────┴──────┴───────┘  │
+│                                     │
+│  সর্বমোট:              ৳২,২৫০       │
+│  অগ্রিম পরিশোধ:         ৳৫০০        │
+│  বাকি (COD):           ৳১,৭৫০       │
+├─────────────────────────────────────┤
+│  [QR CODE]      [BARCODE]           │  ← Codes section
+│  Scan for       ORD-2026-001        │
+│  order details                      │
+├─────────────────────────────────────┤
+│  ধন্যবাদ আপনার কেনাকাটার জন্য! 🙏  │  ← Footer message
+│  পণ্য পেয়ে সমস্যা হলে যোগাযোগ করুন │
+└─────────────────────────────────────┘
+
+━━━ QR CODE CONTENT ━━━
+QR code encodes this JSON as string:
+{
+  "order": "ORD-2026-001",
+  "shop": "Shop Name",
+  "customer": "Fatema Khanom",
+  "phone": "01XXXXXXXXX",
+  "total": 2250,
+  "cod": 1750,
+  "date": "2026-03-20"
+}
+
+━━━ BARCODE CONTENT ━━━
+Barcode encodes the order number: "ORD-2026-001"
+Use CODE128 format via JsBarcode
+Width: full width of slip, height: 40px
+
+━━━ IMPLEMENTATION ━━━
+
+Create /components/OrderSlip.tsx:
+
+import QRCode from 'react-qr-code'
+import JsBarcode from 'jsbarcode'
+
+Props:
+  order: Order (with items, customer, shop)
+  settings: SlipSettings (colors, show/hide options)
+
+Render the slip as a styled div matching the layout above.
+Use inline styles only (for PDF compatibility).
+All measurements in mm converted to px (1mm = 3.78px).
+
+Colors applied:
+  Header background: settings.primaryColor
+  Header text: white
+  Accent (order number, total amount): settings.accentColor
+  Body text: #1a1a18
+  Table header: settings.primaryColor with opacity 0.1
+  Border color: #e8e6df
+
+━━━ CUSTOMIZATION PANEL ━━━
+
+Right side panel — "স্লিপ কাস্টমাইজ করুন":
+
+Section 1 — রং পরিবর্তন:
+  Primary color picker (default: shop's brand color)
+  Accent color picker
+  Preset color combos (4 quick options):
+    ● Dark Green + Bright Green (BizilCore default)
+    ● Deep Blue + Sky Blue
+    ● Dark Purple + Lavender  
+    ● Black + Gold
+
+Section 2 — দেখাবে কি না:
+  Toggle: QR Code দেখাবে
+  Toggle: Barcode দেখাবে
+  Toggle: Social media links দেখাবে
+  Toggle: Custom footer message দেখাবে
+
+Section 3 — কাস্টম মেসেজ:
+  Textarea: Footer message
+  Default: "ধন্যবাদ আপনার কেনাকাটার জন্য! পণ্য পেয়ে সমস্যা হলে যোগাযোগ করুন।"
+
+Section 4 — সোশ্যাল মিডিয়া:
+  Input: Facebook page URL
+  Input: WhatsApp number
+
+"ডিফল্ট হিসেবে সেভ করুন" button:
+  Saves these settings to Shop model
+  All future slips will use these settings
+
+━━━ PRINT / DOWNLOAD ━━━
+
+Two buttons at top of preview:
+
+Button 1 — "প্রিন্ট করুন" (primary):
+  Uses browser print API
+  CSS @media print: hide customization panel, show only slip
+  @page { size: A5; margin: 0; }
+  Auto-opens print dialog
+
+Button 2 — "PDF Download করুন" (secondary):
+  Uses html2canvas to capture slip div
+  Converts to PDF using jsPDF
+  File name: "BizilCore-ORD-2026-001.pdf"
+  
+Button 3 — "শেয়ার করুন" (icon button):
+  Generates shareable link (public, no login needed)
+  Route: /slip/[orderToken] (short random token)
+  Customer can view their order details at this URL
+  
+━━━ ACCESS FROM ORDER LIST ━━━
+
+In /orders page — each order row:
+  Add "স্লিপ" button (small, outline style)
+  Opens slip page for that order
+
+In /orders/[id] detail page:
+  Add prominent "স্লিপ প্রিন্ট করুন" button in header area
+  Next to existing status update button
+
+━━━ BULK SLIP PRINTING ━━━
+
+In /orders page:
+  Checkbox per order row (multi-select)
+  When 2+ orders selected: "নির্বাচিত স্লিপ প্রিন্ট করুন" button appears
+  Opens all selected slips in print-ready view
+  Single print dialog prints all of them
+
+━━━ SLIP SETTINGS PAGE ━━━
+
+In /settings → new tab "অর্ডার স্লিপ":
+  Same customization panel as above
+  "ডিফল্ট সেটিং সেভ করুন" button
+  "প্রিভিউ দেখুন" button → shows sample slip with dummy data
+
+━━━ STYLING NOTES ━━━
+
+Slip container:
+  width: 560px (A5 width in px at 96dpi)
+  min-height: 793px (A5 height)
+  background: white
+  font-family: 'Hind Siliguri', sans-serif (Bangla font)
+  Add Google Fonts import: Hind Siliguri for Bangla text
+
+Import Hind Siliguri from Google Fonts for proper Bangla rendering:
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap">
+
+All amounts formatted: ৳১,৭৫০ (with ৳ symbol and comma)
+All dates in Bangla format: "২০ মার্চ ২০২৬"
+Order number prominent: large, bold, accent color
+
+━━━ PRINT CSS ━━━
+
+Add to global CSS:
+@media print {
+  body * { visibility: hidden; }
+  #order-slip, #order-slip * { visibility: visible; }
+  #order-slip { 
+    position: absolute; 
+    left: 0; 
+    top: 0;
+    width: 148mm;
+    min-height: 210mm;
+  }
+  @page { 
+    size: A5 portrait; 
+    margin: 0mm; 
+  }
+}
+
+Build this feature with the same design system as the rest 
+of BizilCore — dark green primary, Bangla UI, same card styles.
