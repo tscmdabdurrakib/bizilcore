@@ -56,8 +56,8 @@ export default async function DashboardPage() {
 
       const todaySales      = todayAgg._sum.advanceAmount ?? 0;
       const todayOrderCount = todayAgg._count;
-      const todayIncome     = todayTx.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0);
-      const todayExpense    = todayTx.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+      const todayIncome     = todayTx.filter((t: any) => t.type === "income").reduce((s: number, t: any) => s + t.amount, 0);
+      const todayExpense    = todayTx.filter((t: any) => t.type === "expense").reduce((s: number, t: any) => s + t.amount, 0);
       const todayProfit     = todayIncome - todayExpense;
 
       return <DashboardTailor
@@ -69,7 +69,7 @@ export default async function DashboardPage() {
         todayProfit={todayProfit}
         pendingCount={activeOrders}
         activeOrders={activeOrders}
-        todayDeliveries={todayDeliveries.map(d => ({
+        todayDeliveries={todayDeliveries.map((d: any) => ({
           id: d.id,
           client: d.customerName,
           item: d.description,
@@ -94,8 +94,8 @@ export default async function DashboardPage() {
 
     const todaySales      = todayAgg._sum.totalAmount ?? 0;
     const todayOrderCount = todayAgg._count;
-    const todayIncome     = todayTx.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0);
-    const todayExpense    = todayTx.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+    const todayIncome     = todayTx.filter((t: any) => t.type === "income").reduce((s: number, t: any) => s + t.amount, 0);
+    const todayExpense    = todayTx.filter((t: any) => t.type === "expense").reduce((s: number, t: any) => s + t.amount, 0);
     const todayProfit     = todayIncome - todayExpense;
 
     const sharedProps = {
