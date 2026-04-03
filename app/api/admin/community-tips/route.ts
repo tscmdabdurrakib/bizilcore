@@ -24,7 +24,6 @@ export async function POST(req: NextRequest) {
     data: { title: title.trim(), body: body.trim(), category: category || null, week: week || null },
   });
 
-  // Send in-app notification to ALL users
   try {
     const allUserIds = await prisma.user.findMany({ where: { onboarded: true }, select: { id: true } });
     if (allUserIds.length > 0) {
@@ -54,8 +53,8 @@ export async function PATCH(req: NextRequest) {
   const tip = await prisma.communityTip.update({
     where: { id },
     data: {
-      ...(title !== undefined && { title }),
-      ...(body !== undefined && { body }),
+      ...(title !== undefined && { title: title.trim() }),
+      ...(body !== undefined && { body: body.trim() }),
       ...(category !== undefined && { category: category || null }),
       ...(week !== undefined && { week: week || null }),
       ...(isActive !== undefined && { isActive }),
@@ -69,6 +68,10 @@ export async function DELETE(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
+
+  // Delete reactions first to avoid foreign key constraint violation
+  await prisma.tipReaction.deleteMany({ where: { tipId: id } });
   await prisma.communityTip.delete({ where: { id } });
+
   return NextResponse.json({ success: true });
 }

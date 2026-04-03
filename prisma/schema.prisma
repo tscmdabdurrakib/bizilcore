@@ -1128,9 +1128,9 @@ model CommunityTip {
 model TipReaction {
   id        String       @id @default(cuid())
   tipId     String
-  tip       CommunityTip @relation(fields: [tipId], references: [id])
+  tip       CommunityTip @relation(fields: [tipId], references: [id], onDelete: Cascade)
   userId    String
-  user      User         @relation(fields: [userId], references: [id])
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   reaction  String
   createdAt DateTime     @default(now())
 
