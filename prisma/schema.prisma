@@ -20,6 +20,9 @@ model User {
   resetToken                 String?
   resetTokenExpiry           DateTime?
   createdAt                  DateTime                    @default(now())
+  accountStatus              String                      @default("active")
+  statusReason               String?
+  statusUpdatedAt            DateTime?
   streak                     Int                         @default(0)
   lastLoginDate              String?
   totalOrders                Int                         @default(0)

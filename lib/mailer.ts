@@ -658,3 +658,79 @@ export async function sendTaskReminderEmail(data: {
     text: `নমস্কার ${data.userName}!\n\nটাস্ক রিমাইন্ডার: ${data.taskTitle}${dueDateStr ? `\nডেডলাইন: ${dueDateStr}` : ""}\n\nটাস্ক দেখতে যান: ${tasksUrl}\n\n— BizilCore Team`,
   });
 }
+
+// ─── Account Status Email ─────────────────────────────────────────────────────
+
+const STATUS_EMAIL_CFG: Record<string, { icon: string; title: string; subtitle: string; color: string; bg: string }> = {
+  disabled: {
+    icon: "🚫", title: "আপনার অ্যাকাউন্ট নিষ্ক্রিয় করা হয়েছে",
+    subtitle: "Account Disabled", color: "#DC2626", bg: "#FEF2F2",
+  },
+  suspended: {
+    icon: "⏸️", title: "আপনার অ্যাকাউন্ট সাময়িকভাবে স্থগিত করা হয়েছে",
+    subtitle: "Account Suspended", color: "#D97706", bg: "#FFFBEB",
+  },
+  active: {
+    icon: "✅", title: "আপনার অ্যাকাউন্ট পুনরায় সক্রিয় করা হয়েছে",
+    subtitle: "Account Reactivated", color: "#059669", bg: "#ECFDF5",
+  },
+};
+
+export async function sendAccountStatusEmail(data: {
+  toEmail: string;
+  userName: string;
+  accountStatus: string;
+  statusReason?: string;
+}) {
+  const cfg = STATUS_EMAIL_CFG[data.accountStatus] ?? STATUS_EMAIL_CFG.active;
+  const isPositive = data.accountStatus === "active";
+
+  const body = `
+    <div style="text-align:center; margin-bottom:28px;">
+      <div style="display:inline-block; background:${cfg.bg}; border-radius:16px; width:64px; height:64px; line-height:64px; font-size:32px; margin-bottom:16px;">${cfg.icon}</div>
+      <h2 style="color:#1A1A18; font-size:20px; font-weight:700; margin-bottom:8px;">${cfg.title}</h2>
+      <p style="color:#5A5A56; font-size:14px;">নমস্কার ${data.userName},</p>
+    </div>
+
+    ${!isPositive ? `
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
+      style="background:${cfg.bg}; border:1px solid ${cfg.color}33; border-radius:12px; padding:20px; margin-bottom:20px;">
+      <tr><td>
+        <p style="color:${cfg.color}; font-size:13px; font-weight:600; margin-bottom:6px;">অ্যাকাউন্ট স্ট্যাটাস</p>
+        <p style="color:#1A1A18; font-size:16px; font-weight:700; margin-bottom:${data.statusReason ? "12px" : "0"};">${cfg.subtitle}</p>
+        ${data.statusReason ? `<p style="color:#4B5563; font-size:13px;">কারণ: ${data.statusReason}</p>` : ""}
+      </td></tr>
+    </table>
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
+      style="background:#F0FBF7; border:1px solid #0F6E5633; border-radius:12px; padding:20px; margin-bottom:20px;">
+      <tr><td>
+        <p style="color:#0A5240; font-size:13px; font-weight:600; margin-bottom:10px;">সমাধান করতে যোগাযোগ করুন</p>
+        <p style="color:#5A5A56; font-size:13px; margin-bottom:6px;">📧 ইমেইল: <a href="mailto:support@bizilcore.com" style="color:#0F6E56;">support@bizilcore.com</a></p>
+        <p style="color:#5A5A56; font-size:13px;">⏰ সাড়া পাবেন ২৪ ঘন্টার মধ্যে</p>
+      </td></tr>
+    </table>
+    ` : `
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
+      style="background:#ECFDF5; border:1px solid #059669; border-radius:12px; padding:20px; margin-bottom:20px;">
+      <tr><td>
+        <p style="color:#065F46; font-size:15px; font-weight:600; margin-bottom:6px;">অ্যাকাউন্ট পুনরায় সক্রিয়!</p>
+        <p style="color:#5A5A56; font-size:13px;">আপনার BizilCore অ্যাকাউন্ট এখন সম্পূর্ণ স্বাভাবিক। আপনি আবার সব ফিচার ব্যবহার করতে পারবেন।</p>
+      </td></tr>
+    </table>
+    ${ctaButton("https://app.bizilcore.com/dashboard", "📊 Dashboard-এ যান")}
+    `}
+  `;
+
+  const subjects: Record<string, string> = {
+    disabled:  "🚫 আপনার BizilCore অ্যাকাউন্ট নিষ্ক্রিয় করা হয়েছে",
+    suspended: "⏸️ আপনার BizilCore অ্যাকাউন্ট সাময়িকভাবে স্থগিত",
+    active:    "✅ আপনার BizilCore অ্যাকাউন্ট পুনরায় সক্রিয়",
+  };
+
+  await sendEmail("subscription", {
+    to: data.toEmail,
+    subject: subjects[data.accountStatus] ?? subjects.active,
+    html: baseEmailWrapper(cfg.title, cfg.subtitle, body),
+    text: `${cfg.title}\n\nনমস্কার ${data.userName},\n\n${data.statusReason ? `কারণ: ${data.statusReason}\n\n` : ""}যোগাযোগ: support@bizilcore.com\n\n— BizilCore Team`,
+  });
+}

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import AppSidebar from "@/components/AppSidebar";
 import AppTopbar from "@/components/AppTopbar";
+import AccountStatusModal from "@/components/AccountStatusModal";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -32,6 +33,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {children}
         </main>
       </div>
+      {/* Show status popup if account is disabled or suspended */}
+      {(user?.accountStatus === "disabled" || user?.accountStatus === "suspended") && (
+        <AccountStatusModal
+          accountStatus={user.accountStatus}
+          statusReason={user.statusReason ?? null}
+        />
+      )}
     </div>
   );
 }

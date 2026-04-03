@@ -28,6 +28,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         );
         if (!isValid) return null;
 
+        // Block disabled accounts from logging in
+        if (user.accountStatus === "disabled") {
+          throw new Error("account_disabled:" + (user.statusReason ?? ""));
+        }
+
         // Update login streak in background — don't block login
         updateLoginStreak(user.id).catch(() => {});
 
