@@ -1,5 +1,6 @@
 import Link from "next/link";
 import FAQAccordion from "@/components/FAQAccordion";
+import { prisma } from "@/lib/prisma";
 import {
   Package,
   ShoppingCart,
@@ -33,7 +34,22 @@ const C = {
   textMuted: "#A8A69E",
 };
 
-export default function HomePage() {
+const DEFAULT_PRICING = {
+  free:     { monthlyPrice: 0 },
+  pro:      { monthlyPrice: 299 },
+  business: { monthlyPrice: 699 },
+};
+
+export default async function HomePage() {
+  let pricingMap = DEFAULT_PRICING;
+  try {
+    const configs = await prisma.pricingConfig.findMany();
+    if (configs.length > 0) {
+      const map: Record<string, { monthlyPrice: number }> = {};
+      for (const c of configs) map[c.planKey] = { monthlyPrice: c.monthlyPrice };
+      pricingMap = { ...DEFAULT_PRICING, ...map };
+    }
+  } catch {}
   return (
     <div style={{ backgroundColor: C.bg }}>
 
@@ -555,7 +571,7 @@ export default function HomePage() {
             {/* Free */}
             <div className="rounded-2xl border p-6" style={{ borderColor: C.border }}>
               <p className="text-xs font-bold mb-2" style={{ color: C.textMuted }}>FREE</p>
-              <p className="text-4xl font-bold mb-1" style={{ color: C.text }}>৳০</p>
+              <p className="text-4xl font-bold mb-1" style={{ color: C.text }}>৳{pricingMap.free.monthlyPrice}</p>
               <p className="text-xs mb-6" style={{ color: C.textMuted }}>চিরকালের জন্য</p>
               <div className="space-y-2.5 mb-6">
                 {["৫০টি পণ্য", "১০০টি অর্ডার/মাস", "বেসিক রিপোর্ট", "১টি শপ"].map((f) => (
@@ -580,7 +596,7 @@ export default function HomePage() {
                 জনপ্রিয়
               </span>
               <p className="text-xs font-bold mb-2 text-white/70">PRO</p>
-              <p className="text-4xl font-bold mb-1 text-white">৳২৯৯</p>
+              <p className="text-4xl font-bold mb-1 text-white">৳{pricingMap.pro.monthlyPrice}</p>
               <p className="text-xs mb-6 text-white/60">প্রতি মাস</p>
               <div className="space-y-2.5 mb-6">
                 {["সীমাহীন পণ্য ও অর্ডার", "Advanced Analytics", "Courier Integration", "Invoice PDF", "Priority সাপোর্ট"].map((f) => (
@@ -602,7 +618,7 @@ export default function HomePage() {
             {/* Business */}
             <div className="rounded-2xl border p-6" style={{ borderColor: C.border }}>
               <p className="text-xs font-bold mb-2" style={{ color: C.textMuted }}>BUSINESS</p>
-              <p className="text-4xl font-bold mb-1" style={{ color: C.text }}>৳৬৯৯</p>
+              <p className="text-4xl font-bold mb-1" style={{ color: C.text }}>৳{pricingMap.business.monthlyPrice}</p>
               <p className="text-xs mb-6" style={{ color: C.textMuted }}>প্রতি মাস</p>
               <div className="space-y-2.5 mb-6">
                 {["সব Pro ফিচার", "৩টি শপ", "Multi-user (৫ জন)", "Staff Management", "Dedicated সাপোর্ট"].map((f) => (
