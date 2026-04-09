@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
@@ -52,6 +52,18 @@ interface NavGroup {
   items: NavItem[];
 }
 
+const storeSubItems: NavItem[] = [
+  { href: "/store/setup",                icon: Store,       label: "সেটআপ"          },
+  { href: "/store/theme",                icon: Palette,     label: "থিম"             },
+  { href: "/store/appearance",           icon: ImageIcon,   label: "লুক ও ফিল"      },
+  { href: "/store/products",             icon: Package,     label: "পণ্য"            },
+  { href: "/store/orders",               icon: ShoppingBag, label: "অর্ডার"          },
+  { href: "/store/coupons",              icon: Tag,         label: "কুপন"            },
+  { href: "/store/reviews",              icon: Star,        label: "রিভিউ"           },
+  { href: "/store/settings",             icon: Settings2,   label: "সেটিংস"          },
+  { href: "/dashboard/store/analytics",  icon: BarChart2,   label: "অ্যানালিটিক্স"  },
+];
+
 const navGroups: NavGroup[] = [
   {
     items: [
@@ -60,24 +72,6 @@ const navGroups: NavGroup[] = [
       { href: "/delivery",    icon: Navigation,      label: "ডেলিভারি" },
       { href: "/returns",     icon: RotateCcw,       label: "রিটার্ন" },
       { href: "/inventory",   icon: Package,         label: "পণ্য ও স্টক" },
-    ],
-  },
-  {
-    label: "আমার স্টোর",
-    items: [
-      { href: "/store/setup",      icon: Store,       label: "সেটআপ"     },
-      { href: "/store/theme",      icon: Palette,     label: "থিম"        },
-      { href: "/store/appearance", icon: ImageIcon,   label: "লুক ও ফিল" },
-      { href: "/store/products",   icon: Package,     label: "পণ্য"       },
-      { href: "/store/settings",   icon: Settings2,   label: "সেটিংস"    },
-      { href: "/store/orders",     icon: ShoppingBag, label: "অর্ডার"    },
-      { href: "/store/coupons",    icon: Tag,         label: "কুপন"       },
-      { href: "/store/reviews",    icon: Star,        label: "রিভিউ"     },
-      { href: "/dashboard/store/analytics",  icon: BarChart2,   label: "অ্যানালিটিক্স" },
-    ],
-  },
-  {
-    items: [
       { href: "/customers",   icon: Users,           label: "কাস্টমার" },
       { href: "/suppliers",   icon: Truck,           label: "Supplier" },
       { href: "/tasks",       icon: CheckSquare,     label: "টাস্ক" },
@@ -163,6 +157,7 @@ const moreMenuGroups = [
       { href: "/returns",    icon: RotateCcw,    label: "রিটার্ন" },
       { href: "/delivery",   icon: Navigation,   label: "ডেলিভারি" },
       { href: "/suppliers",  icon: Truck,        label: "Supplier" },
+      { href: "/tasks",      icon: CheckSquare,  label: "টাস্ক" },
     ],
   },
   {
@@ -335,6 +330,78 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
     );
   };
 
+  const StoreHoverItem = () => {
+    const storeActive = pathname.startsWith("/store");
+    const hoverRef = useRef<HTMLDivElement>(null);
+    const [open, setOpen] = useState(false);
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const show = () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      setOpen(true);
+    };
+    const hide = () => {
+      timerRef.current = setTimeout(() => setOpen(false), 120);
+    };
+
+    return (
+      <div ref={hoverRef} className="relative" onMouseEnter={show} onMouseLeave={hide}>
+        <div
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 text-sm font-medium transition-colors cursor-default select-none"
+          style={{
+            backgroundColor: storeActive ? "var(--shell-nav-active-bg)" : "transparent",
+            color: storeActive ? "var(--shell-nav-active-color)" : "var(--shell-nav-inactive)",
+            borderLeft: storeActive ? "3px solid var(--shell-nav-active-border)" : "3px solid transparent",
+          }}
+        >
+          <Store size={16} className="flex-shrink-0" />
+          <span className="truncate flex-1">আমার স্টোর</span>
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ flexShrink: 0, opacity: 0.5 }}>
+            <path d="M3 2L7 5L3 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
+
+        {open && (
+          <div
+            className="absolute left-full top-0 ml-1 z-50 rounded-xl shadow-xl border overflow-hidden"
+            style={{
+              backgroundColor: "var(--shell-bg)",
+              borderColor: "var(--shell-border)",
+              width: 200,
+              boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+            }}
+            onMouseEnter={show}
+            onMouseLeave={hide}
+          >
+            <div className="px-3 pt-2.5 pb-1">
+              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#0F6E56" }}>আমার স্টোর</p>
+            </div>
+            <div className="p-1.5 pt-0">
+              {storeSubItems.map((item) => {
+                const active = isActive(pathname, item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                    style={{
+                      backgroundColor: active ? "#E1F5EE" : "transparent",
+                      color: active ? "#0F6E56" : "var(--shell-nav-inactive)",
+                    }}
+                  >
+                    <item.icon size={14} className="flex-shrink-0" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <>
       {/* Desktop sidebar */}
@@ -363,6 +430,8 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
               {group.items.map((item) => (
                 <NavLink key={item.href} item={item} />
               ))}
+              {/* Store hover submenu after the first (main) group */}
+              {gi === 0 && isFCommerce && <StoreHoverItem />}
             </div>
           ))}
           {isAdmin && (
