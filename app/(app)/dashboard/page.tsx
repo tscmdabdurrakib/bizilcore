@@ -2,6 +2,7 @@ import { requireShop } from "@/lib/getShop";
 import { prisma } from "@/lib/prisma";
 import { formatBDT, formatBanglaDate, getStatusStyle } from "@/lib/utils";
 import SalesBarChart from "@/components/SalesBarChart";
+import SalesTargetWave from "@/components/SalesTargetWave";
 import Link from "next/link";
 import {
   Package, ShoppingBag, Users, AlertTriangle, Truck, Target,
@@ -316,24 +317,24 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Quick Actions ────────────────────────────────────────── */}
-      <div className="flex gap-4 overflow-x-auto pb-1 -mx-1 px-1">
+      <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
         {[
-          { href: "/orders/new",    icon: ShoppingBag,  label: "নতুন অর্ডার", color: "var(--icon-green-text)",  bg: "var(--icon-green-bg)" },
-          { href: "/inventory/new", icon: Package,      label: "পণ্য যোগ",   color: "var(--icon-blue-text)",   bg: "var(--icon-blue-bg)" },
-          { href: "/customers/new", icon: Users,        label: "গ্রাহক যোগ", color: "var(--icon-purple-text)", bg: "var(--icon-purple-bg)" },
-          { href: "/invoices/new",  icon: FileText,     label: "ইনভয়েস",     color: "var(--icon-amber-text)",  bg: "var(--icon-amber-bg)" },
-          { href: "/expenses/new",  icon: TrendingDown, label: "খরচ যোগ",   color: "var(--icon-red-text)",    bg: "var(--icon-red-bg)" },
+          { href: "/orders/new",    icon: ShoppingBag,  label: "নতুন অর্ডার", color: "#0F6E56",  bg: "#E1F5EE" },
+          { href: "/inventory/new", icon: Package,      label: "পণ্য যোগ",    color: "#3B82F6",  bg: "#EFF6FF" },
+          { href: "/customers/new", icon: Users,        label: "গ্রাহক যোগ",  color: "#8B5CF6",  bg: "#F5F3FF" },
+          { href: "/invoices/new",  icon: FileText,     label: "ইনভয়েস",      color: "#EF9F27",  bg: "#FFF3DC" },
+          { href: "/expenses/new",  icon: TrendingDown, label: "খরচ যোগ",    color: "#EF4444",  bg: "#FEE2E2" },
         ].map((a) => (
           <Link
             key={a.href}
             href={a.href}
-            className="flex flex-col items-center gap-3 px-5 py-4 rounded-2xl border flex-shrink-0 transition-all hover:scale-[1.04] hover:shadow-md active:scale-95"
-            style={{ backgroundColor: S.surface, borderColor: S.border, minWidth: "90px" }}
+            className="flex flex-col items-center gap-2.5 px-5 py-4 rounded-2xl flex-shrink-0 transition-all hover:scale-[1.03] hover:shadow-lg active:scale-95"
+            style={{ backgroundColor: a.bg, minWidth: "88px" }}
           >
-            <div className="w-11 h-11 rounded-2xl flex items-center justify-center" style={{ backgroundColor: a.bg }}>
-              <a.icon size={19} style={{ color: a.color }} />
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-white/60">
+              <a.icon size={20} style={{ color: a.color }} />
             </div>
-            <span className="text-[11px] font-bold text-center leading-tight whitespace-nowrap" style={{ color: S.secondary }}>
+            <span className="text-[11px] font-bold text-center leading-tight whitespace-nowrap" style={{ color: a.color }}>
               {a.label}
             </span>
           </Link>
@@ -400,38 +401,43 @@ export default async function DashboardPage() {
       {/* ── Sales Target ─────────────────────────────────────────── */}
       {salesTarget > 0 && (() => {
         const pct = Math.min(100, Math.round((monthSales / salesTarget) * 100));
-        const remaining = Math.max(0, salesTarget - monthSales);
         return (
-          <div className="rounded-2xl p-5 relative overflow-hidden" style={{ backgroundColor: "#E8F5F0", borderColor: S.border }}>
-            {/* wave decoration */}
-            <svg className="absolute bottom-0 left-0 w-full opacity-30" viewBox="0 0 600 60" preserveAspectRatio="none" style={{ height: 60 }}>
-              <path d="M0,30 C80,5 160,55 240,30 C320,5 400,55 480,30 C540,12 570,40 600,30 L600,60 L0,60 Z" fill="#0F6E56" />
-            </svg>
-            <svg className="absolute bottom-0 left-0 w-full opacity-15" viewBox="0 0 600 60" preserveAspectRatio="none" style={{ height: 60 }}>
-              <path d="M0,40 C100,15 200,55 300,35 C400,15 500,50 600,35 L600,60 L0,60 Z" fill="#0F6E56" />
-            </svg>
+          <div
+            className="rounded-2xl relative overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg, #E8F5F0 0%, #D0EDE3 100%)",
+              minHeight: 88,
+            }}
+          >
+            {/* Area chart fills full card */}
+            <SalesTargetWave data={chartData} />
 
-            <div className="relative flex items-start justify-between mb-3">
+            {/* Content on top */}
+            <div className="relative flex items-center justify-between px-5 py-4 h-full">
               <div>
-                <p className="text-sm font-bold" style={{ color: "#0A4033" }}>মাসিক বিক্রির লক্ষ্যমাত্রা</p>
-                <p className="text-xs mt-0.5" style={{ color: "#2D7A65" }}>{formatBDT(monthSales)} বিক্রি, লক্ষ্য {formatBDT(salesTarget)}</p>
+                <p className="text-sm font-bold leading-tight" style={{ color: "#0A4033" }}>মাসিক বিক্রির লক্ষ্যমাত্রা</p>
+                <p className="text-xs mt-1" style={{ color: "#2D7A65" }}>
+                  {formatBDT(monthSales)} বিক্রি, লক্ষ্য {formatBDT(salesTarget)}
+                </p>
+                <Link href="/settings?tab=account" className="text-[10px] mt-1.5 inline-block hover:underline" style={{ color: "#4CA98B" }}>
+                  লক্ষ্য পরিবর্তন →
+                </Link>
               </div>
               <div className="text-right">
-                <p className="text-3xl font-bold" style={{ color: pct >= 100 ? "#0F6E56" : "#0A4033" }}>{pct}%</p>
-                <p className="text-[11px] font-medium" style={{ color: "#2D7A65" }}>{pct >= 100 ? "লক্ষ্য পূর্ণ হয়েছে" : "লক্ষ্য পূর্ণ হার"}</p>
+                <p
+                  className="font-black leading-none"
+                  style={{
+                    fontSize: 36,
+                    color: pct >= 100 ? "#0F6E56" : "#0A4033",
+                    textShadow: "0 1px 8px rgba(255,255,255,0.5)",
+                  }}
+                >
+                  {pct}%
+                </p>
+                <p className="text-[11px] font-semibold mt-1" style={{ color: "#2D7A65" }}>
+                  {pct >= 100 ? "লক্ষ্য পূর্ণ হয়েছে 🎉" : "লক্ষ্য পূরণের হার"}
+                </p>
               </div>
-            </div>
-
-            <div className="relative h-3 rounded-full overflow-hidden mb-2" style={{ backgroundColor: "rgba(255,255,255,0.5)" }}>
-              <div
-                className="h-3 rounded-full transition-all duration-700"
-                style={{ width: `${pct}%`, background: pct >= 100 ? "linear-gradient(90deg,#0F6E56,#13A67E)" : pct >= 75 ? "linear-gradient(90deg,#EF9F27,#F5BD5D)" : "linear-gradient(90deg,#0F6E56,#4BB896)" }}
-              />
-            </div>
-            <div className="relative flex justify-between">
-              <span className="text-[10px]" style={{ color: "#2D7A65" }}>৳ ০</span>
-              <Link href="/settings?tab=account" className="text-[10px] hover:underline" style={{ color: "#2D7A65" }}>লক্ষ্য পরিবর্তন →</Link>
-              <span className="text-[10px]" style={{ color: "#2D7A65" }}>{pct >= 100 ? "🎉 অর্জিত!" : `আরো ${formatBDT(remaining)}`}</span>
             </div>
           </div>
         );
@@ -451,36 +457,50 @@ export default async function DashboardPage() {
         </div>
 
         <div className="rounded-2xl p-5 border flex flex-col" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-          <h3 className="font-bold text-sm mb-4" style={{ color: S.text }}>আজকের হিসাব</h3>
-          <div className="space-y-3 flex-1">
-            <div className="flex items-center justify-between p-3 rounded-xl" style={{ backgroundColor: "var(--bg-success-soft)" }}>
-              <div className="flex items-center gap-2">
-                <ArrowUpRight size={15} style={{ color: "var(--bg-success-text)" }} />
-                <span className="text-sm font-medium" style={{ color: "var(--bg-success-text)" }}>মোট আয়</span>
+          <h3 className="font-bold text-sm mb-4" style={{ color: S.text }}>আজকের বিবরণ</h3>
+          <div className="space-y-2.5 flex-1">
+            {/* আয় */}
+            <div className="flex items-center justify-between px-4 py-3 rounded-2xl" style={{ backgroundColor: "#E8F5F0" }}>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "#2D7A65" }}>মোট আয়</p>
+                <p className="text-lg font-bold mt-0.5" style={{ color: "#0F6E56" }}>{formatBDT(todayIncome)}</p>
               </div>
-              <span className="font-bold text-sm" style={{ color: "var(--bg-success-text)" }}>{formatBDT(todayIncome)}</span>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-xl" style={{ backgroundColor: "var(--bg-danger-soft)" }}>
-              <div className="flex items-center gap-2">
-                <ArrowDownRight size={15} style={{ color: "var(--bg-danger-text)" }} />
-                <span className="text-sm font-medium" style={{ color: "var(--bg-danger-text)" }}>মোট খরচ</span>
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: "rgba(15,110,86,0.15)" }}>
+                <ArrowUpRight size={18} style={{ color: "#0F6E56" }} />
               </div>
-              <span className="font-bold text-sm" style={{ color: "var(--bg-danger-text)" }}>{formatBDT(todayExpense)}</span>
             </div>
+
+            {/* খরচ */}
+            <div className="flex items-center justify-between px-4 py-3 rounded-2xl" style={{ backgroundColor: "#FEF2F2" }}>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "#B91C1C" }}>মোট খরচ</p>
+                <p className="text-lg font-bold mt-0.5" style={{ color: "#EF4444" }}>{formatBDT(todayExpense)}</p>
+              </div>
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: "rgba(239,68,68,0.15)" }}>
+                <ArrowDownRight size={18} style={{ color: "#EF4444" }} />
+              </div>
+            </div>
+
+            {/* লাভ */}
             <div className="border-t pt-3 flex items-center justify-between" style={{ borderColor: S.border }}>
-              <span className="text-sm font-bold" style={{ color: S.text }}>আজকের লাভ</span>
-              <span className="text-lg font-bold" style={{ color: todayProfit >= 0 ? "var(--bg-success-text)" : "var(--bg-danger-text)" }}>
+              <span className="text-sm font-bold" style={{ color: S.text }}>নাটকের নাট (লাভ)</span>
+              <span className="text-xl font-bold" style={{ color: todayProfit >= 0 ? "#0F6E56" : "#EF4444" }}>
                 {formatBDT(todayProfit)}
               </span>
             </div>
+
+            {/* অর্ডার */}
             <div className="flex items-center justify-between">
-              <span className="text-xs" style={{ color: S.muted }}>আজকের অর্ডার</span>
-              <span className="font-bold text-sm" style={{ color: S.text }}>{todayOrderCount}টি</span>
+              <span className="text-xs" style={{ color: S.muted }}>আজকের অর্ডার সংখ্যা</span>
+              <span className="text-sm font-bold px-2.5 py-0.5 rounded-full" style={{ backgroundColor: "#E1F5EE", color: "#0F6E56" }}>
+                {todayOrderCount}টি
+              </span>
             </div>
           </div>
-          <Link href="/hisab" className="mt-4 block text-center text-xs font-semibold py-2.5 rounded-xl hover:opacity-80 transition-opacity"
-            style={{ backgroundColor: S.primaryLight, color: S.primary }}>
-            হিসাব বই দেখুন →
+          <Link href="/hisab"
+            className="mt-4 block text-center text-xs font-semibold py-2.5 rounded-xl hover:opacity-80 transition-opacity"
+            style={{ backgroundColor: "#E8F5F0", color: "#0F6E56" }}>
+            বিবরণ দেখুন →
           </Link>
         </div>
       </div>
@@ -509,20 +529,22 @@ export default async function DashboardPage() {
               </Link>
             </div>
           ) : (
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {recentOrders.map((order) => {
                 const st = getStatusStyle(order.status);
                 const summary = order.items.slice(0, 2).map((i) =>
                   i.comboId ? (i.combo?.name ?? "কমবো") : (i.product?.name ?? "পণ্য")
                 ).join(", ") + (order.items.length > 2 ? ` +${order.items.length - 2}` : "");
                 const initial = (order.customer?.name ?? "?")[0].toUpperCase();
+                const avatarColors = ["#0F6E56","#3B82F6","#8B5CF6","#EF9F27","#EF4444"];
+                const avatarBg = avatarColors[initial.charCodeAt(0) % avatarColors.length];
                 return (
                   <Link key={order.id} href={`/orders/${order.id}`}
-                    className="flex items-center gap-3 p-3 rounded-xl hover:opacity-80 transition-opacity"
-                    style={{ backgroundColor: "var(--c-bg-alt, var(--c-surface))" }}>
+                    className="flex items-center gap-3 p-3 rounded-2xl border hover:shadow-md transition-all hover:scale-[1.005]"
+                    style={{ backgroundColor: S.surface, borderColor: S.border }}>
                     <div
-                      className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-                      style={{ backgroundColor: S.primary }}
+                      className="w-10 h-10 rounded-2xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm"
+                      style={{ backgroundColor: avatarBg }}
                     >
                       {initial}
                     </div>
@@ -531,8 +553,8 @@ export default async function DashboardPage() {
                       <p className="text-[11px] truncate" style={{ color: S.muted }}>{summary}</p>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="text-sm font-bold" style={{ color: S.text }}>{formatBDT(order.totalAmount)}</p>
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: st.bg, color: st.text }}>{st.label}</span>
+                      <p className="text-sm font-bold mb-1" style={{ color: S.text }}>{formatBDT(order.totalAmount)}</p>
+                      <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full" style={{ backgroundColor: st.bg, color: st.text }}>{st.label}</span>
                     </div>
                   </Link>
                 );
@@ -557,22 +579,28 @@ export default async function DashboardPage() {
             {topProductsWithDetails.length === 0 ? (
               <p className="text-xs text-center py-3" style={{ color: S.muted }}>এখনো কোনো বিক্রি নেই</p>
             ) : (
-              <div className="space-y-2.5">
-                {topProductsWithDetails.map((p, i) => (
-                  <div key={p.name} className="flex items-center gap-2.5">
-                    <span
-                      className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
-                      style={{
-                        backgroundColor: i === 0 ? "var(--bg-warning-soft)" : i === 1 ? "var(--c-surface)" : "var(--c-border)",
-                        color: i === 0 ? "var(--bg-warning-text)" : S.muted,
-                      }}
-                    >
-                      {i + 1}
-                    </span>
-                    <p className="text-xs font-medium flex-1 truncate" style={{ color: S.text }}>{p.name}</p>
-                    <span className="text-[10px] font-bold flex-shrink-0" style={{ color: S.muted }}>{p.qty}টি</span>
-                  </div>
-                ))}
+              <div className="space-y-3">
+                {(() => {
+                  const maxQty = Math.max(...topProductsWithDetails.map(p => p.qty), 1);
+                  const rankColors = ["#EF9F27","#A8A69E","#CD7F32"];
+                  return topProductsWithDetails.map((p, i) => (
+                    <div key={p.name}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span
+                          className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0 text-white"
+                          style={{ backgroundColor: rankColors[i] ?? "#A8A69E" }}
+                        >
+                          {i + 1}
+                        </span>
+                        <p className="text-xs font-medium flex-1 truncate" style={{ color: S.text }}>{p.name}</p>
+                        <span className="text-[10px] font-bold flex-shrink-0" style={{ color: S.muted }}>{p.qty}টি</span>
+                      </div>
+                      <div className="h-1.5 rounded-full overflow-hidden ml-7" style={{ backgroundColor: "var(--c-border)" }}>
+                        <div className="h-1.5 rounded-full" style={{ width: `${Math.round((p.qty / maxQty) * 100)}%`, backgroundColor: rankColors[i] ?? "#A8A69E" }} />
+                      </div>
+                    </div>
+                  ));
+                })()}
               </div>
             )}
           </div>
@@ -580,30 +608,38 @@ export default async function DashboardPage() {
           {/* COD Summary */}
           <div className="rounded-2xl p-5 border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: "var(--bg-warning-soft)" }}>
-                <Truck size={14} style={{ color: "var(--bg-warning-text)" }} />
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#FFF3DC" }}>
+                <Truck size={14} style={{ color: "#EF9F27" }} />
               </div>
               <h3 className="font-bold text-sm" style={{ color: S.text }}>COD Summary</h3>
             </div>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center p-2.5 rounded-xl" style={{ backgroundColor: "var(--bg-warning-soft)" }}>
-                <div>
-                  <p className="text-xs font-medium" style={{ color: S.text }}>Courier এ আছে</p>
-                  <p className="text-[10px]" style={{ color: S.muted }}>{codWithCourier.length}টি অর্ডার</p>
+            <div className="space-y-2.5">
+              <div className="rounded-2xl p-3" style={{ backgroundColor: "#FFF3DC" }}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "#B45309" }}>Courier এ আছে</p>
+                    <p className="text-base font-bold mt-0.5" style={{ color: "#EF9F27" }}>{formatBDT(codWithCourierAmount)}</p>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white" style={{ color: "#EF9F27" }}>
+                    {codWithCourier.length}টি
+                  </span>
                 </div>
-                <p className="font-bold text-sm" style={{ color: "var(--bg-warning-text)" }}>{formatBDT(codWithCourierAmount)}</p>
               </div>
-              <div className="flex justify-between items-center p-2.5 rounded-xl" style={{ backgroundColor: "var(--bg-success-soft)" }}>
-                <div>
-                  <p className="text-xs font-medium" style={{ color: S.text }}>Collected (মাস)</p>
-                  <p className="text-[10px]" style={{ color: S.muted }}>{codCollectedCount}টি অর্ডার</p>
+              <div className="rounded-2xl p-3" style={{ backgroundColor: "#E8F5F0" }}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "#2D7A65" }}>Collected (মাস)</p>
+                    <p className="text-base font-bold mt-0.5" style={{ color: "#0F6E56" }}>{formatBDT(codCollectedAmount)}</p>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white" style={{ color: "#0F6E56" }}>
+                    {codCollectedCount}টি
+                  </span>
                 </div>
-                <p className="font-bold text-sm" style={{ color: "var(--bg-success-text)" }}>{formatBDT(codCollectedAmount)}</p>
               </div>
             </div>
             <Link href="/orders?codStatus=with_courier"
-              className="mt-4 block text-center text-xs font-semibold py-2.5 rounded-xl hover:opacity-80 transition-opacity"
-              style={{ backgroundColor: "var(--bg-warning-soft)", color: "var(--bg-warning-text)" }}>
+              className="mt-3 block text-center text-xs font-semibold py-2.5 rounded-xl hover:opacity-80 transition-opacity"
+              style={{ backgroundColor: "#FFF3DC", color: "#EF9F27" }}>
               Pending COD দেখুন →
             </Link>
           </div>
