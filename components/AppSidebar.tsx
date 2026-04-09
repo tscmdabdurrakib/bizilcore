@@ -40,6 +40,7 @@ import {
   Star,
 } from "lucide-react";
 import { getNavGroups, getNavItems, BUSINESS_TYPE_META, type NavItem as ModuleNavItem } from "@/lib/modules";
+import { createPortal } from "react-dom";
 
 interface NavItem {
   href: string;
@@ -63,6 +64,93 @@ const storeSubItems: NavItem[] = [
   { href: "/store/settings",             icon: Settings2,   label: "সেটিংস"          },
   { href: "/dashboard/store/analytics",  icon: BarChart2,   label: "অ্যানালিটিক্স"  },
 ];
+
+function StoreHoverItem() {
+  const pathname = usePathname();
+  const storeActive = pathname.startsWith("/store");
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  const show = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setPos({ top: rect.top, left: rect.right + 6 });
+    }
+    setOpen(true);
+  };
+
+  const hide = () => {
+    timerRef.current = setTimeout(() => setOpen(false), 150);
+  };
+
+  const flyout = open && mounted ? (
+    <div
+      className="fixed z-[9999] rounded-xl shadow-2xl border overflow-hidden"
+      style={{
+        top: pos.top,
+        left: pos.left,
+        width: 196,
+        backgroundColor: "var(--shell-bg)",
+        borderColor: "var(--shell-border)",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+      }}
+      onMouseEnter={show}
+      onMouseLeave={hide}
+    >
+      <div className="px-3 pt-2.5 pb-1 border-b" style={{ borderColor: "var(--shell-border)" }}>
+        <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#0F6E56" }}>আমার স্টোর</p>
+      </div>
+      <div className="p-1.5">
+        {storeSubItems.map((item) => {
+          const active = pathname.startsWith(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+              style={{
+                backgroundColor: active ? "#E1F5EE" : "transparent",
+                color: active ? "#0F6E56" : "var(--shell-nav-inactive)",
+              }}
+            >
+              <item.icon size={14} className="flex-shrink-0" />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  ) : null;
+
+  return (
+    <>
+      <div ref={triggerRef} onMouseEnter={show} onMouseLeave={hide}>
+        <div
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 text-sm font-medium transition-colors cursor-default select-none"
+          style={{
+            backgroundColor: storeActive ? "var(--shell-nav-active-bg)" : "transparent",
+            color: storeActive ? "var(--shell-nav-active-color)" : "var(--shell-nav-inactive)",
+            borderLeft: storeActive ? "3px solid var(--shell-nav-active-border)" : "3px solid transparent",
+          }}
+        >
+          <Store size={16} className="flex-shrink-0" />
+          <span className="truncate flex-1">আমার স্টোর</span>
+          <svg width="9" height="9" viewBox="0 0 10 10" fill="none" style={{ flexShrink: 0, opacity: 0.45 }}>
+            <path d="M3 2L7 5L3 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
+      </div>
+      {mounted && flyout ? createPortal(flyout, document.body) : null}
+    </>
+  );
+}
 
 const navGroups: NavGroup[] = [
   {
@@ -327,78 +415,6 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
           </span>
         )}
       </Link>
-    );
-  };
-
-  const StoreHoverItem = () => {
-    const storeActive = pathname.startsWith("/store");
-    const hoverRef = useRef<HTMLDivElement>(null);
-    const [open, setOpen] = useState(false);
-    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    const show = () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      setOpen(true);
-    };
-    const hide = () => {
-      timerRef.current = setTimeout(() => setOpen(false), 120);
-    };
-
-    return (
-      <div ref={hoverRef} className="relative" onMouseEnter={show} onMouseLeave={hide}>
-        <div
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 text-sm font-medium transition-colors cursor-default select-none"
-          style={{
-            backgroundColor: storeActive ? "var(--shell-nav-active-bg)" : "transparent",
-            color: storeActive ? "var(--shell-nav-active-color)" : "var(--shell-nav-inactive)",
-            borderLeft: storeActive ? "3px solid var(--shell-nav-active-border)" : "3px solid transparent",
-          }}
-        >
-          <Store size={16} className="flex-shrink-0" />
-          <span className="truncate flex-1">আমার স্টোর</span>
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ flexShrink: 0, opacity: 0.5 }}>
-            <path d="M3 2L7 5L3 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </div>
-
-        {open && (
-          <div
-            className="absolute left-full top-0 ml-1 z-50 rounded-xl shadow-xl border overflow-hidden"
-            style={{
-              backgroundColor: "var(--shell-bg)",
-              borderColor: "var(--shell-border)",
-              width: 200,
-              boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
-            }}
-            onMouseEnter={show}
-            onMouseLeave={hide}
-          >
-            <div className="px-3 pt-2.5 pb-1">
-              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#0F6E56" }}>আমার স্টোর</p>
-            </div>
-            <div className="p-1.5 pt-0">
-              {storeSubItems.map((item) => {
-                const active = isActive(pathname, item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-                    style={{
-                      backgroundColor: active ? "#E1F5EE" : "transparent",
-                      color: active ? "#0F6E56" : "var(--shell-nav-inactive)",
-                    }}
-                  >
-                    <item.icon size={14} className="flex-shrink-0" />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
     );
   };
 
