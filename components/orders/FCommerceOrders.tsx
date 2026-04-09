@@ -650,20 +650,37 @@ export default function FCommerceOrders() {
 
       {/* ── Pagination ─────────────────────────────── */}
       {data.pages > 1 && (
-        <div className="flex items-center justify-between mt-4">
-          <p className="text-sm" style={{ color: S.muted }}>
-            মোট {data.total} অর্ডার — পৃষ্ঠা {data.page}/{data.pages}
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <p className="text-sm font-medium" style={{ color: S.muted }}>
+            <span className="font-bold" style={{ color: S.text }}>{data.total}</span> অর্ডার — পৃষ্ঠা{" "}
+            <span className="font-bold" style={{ color: S.text }}>{data.page}</span>/{data.pages}
           </p>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-              className="flex items-center gap-1 px-3 h-9 rounded-xl border text-sm disabled:opacity-40 hover:bg-gray-50 transition-colors"
-              style={{ borderColor: S.border, color: S.secondary }}>
-              <ChevronLeft size={15} /> আগের পৃষ্ঠা
+              className="flex items-center gap-1.5 px-4 h-9 rounded-2xl border text-sm font-semibold disabled:opacity-40 hover:bg-gray-50 transition-all active:scale-95"
+              style={{ borderColor: S.border, color: S.secondary, backgroundColor: S.surface }}>
+              <ChevronLeft size={14} /> আগের
             </button>
+            <div className="flex gap-1">
+              {Array.from({ length: Math.min(data.pages, 5) }, (_, i) => {
+                const pg = i + 1;
+                return (
+                  <button key={pg} onClick={() => setPage(pg)}
+                    className="w-9 h-9 rounded-2xl text-sm font-bold transition-all active:scale-95"
+                    style={{
+                      backgroundColor: page === pg ? S.primary : S.surface,
+                      color: page === pg ? "#fff" : S.secondary,
+                      border: `1px solid ${page === pg ? S.primary : S.border}`,
+                    }}>
+                    {pg}
+                  </button>
+                );
+              })}
+            </div>
             <button onClick={() => setPage(p => Math.min(data.pages, p + 1))} disabled={page === data.pages}
-              className="flex items-center gap-1 px-3 h-9 rounded-xl border text-sm disabled:opacity-40 hover:bg-gray-50 transition-colors"
-              style={{ borderColor: S.border, color: S.secondary }}>
-              পরের পৃষ্ঠা <ChevronRight size={15} />
+              className="flex items-center gap-1.5 px-4 h-9 rounded-2xl border text-sm font-semibold disabled:opacity-40 hover:bg-gray-50 transition-all active:scale-95"
+              style={{ borderColor: S.border, color: S.secondary, backgroundColor: S.surface }}>
+              পরের <ChevronRight size={14} />
             </button>
           </div>
         </div>
