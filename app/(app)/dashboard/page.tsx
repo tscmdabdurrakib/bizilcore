@@ -340,47 +340,61 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {/* ── 5 Stat Cards ─────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {[
-          {
-            icon: TrendingUp, label: "মাসিক বিক্রি", value: formatBDT(monthSales),
-            sub: monthGrowth !== null
-              ? (monthGrowth >= 0 ? `↑ ${monthGrowth}% গত মাসের চেয়ে` : `↓ ${Math.abs(monthGrowth)}% গত মাসের চেয়ে`)
-              : `${monthOrderCount}টি অর্ডার`,
-            color: "var(--icon-blue-text)", bg: "var(--icon-blue-bg)",
-            subColor: monthGrowth !== null ? (monthGrowth >= 0 ? "var(--bg-success-text)" : "var(--bg-danger-text)") : undefined,
-          },
-          {
-            icon: ShoppingBag, label: "Pending অর্ডার", value: `${pendingCount}টি`,
-            sub: "এখনো শিপ হয়নি", color: "var(--bg-warning-text)", bg: "var(--bg-warning-soft)",
-          },
-          {
-            icon: Users, label: "বাকি পাওনা", value: formatBDT(totalDue),
-            sub: "কাস্টমারদের কাছে", color: "var(--icon-purple-text)", bg: "var(--icon-purple-bg)",
-          },
-          {
-            icon: AlertTriangle, label: "কম স্টক", value: `${lowStockProducts.length}টি`,
-            sub: "পণ্য কম আছে", color: "var(--bg-danger-text)", bg: "var(--bg-danger-soft)",
-          },
-          {
-            icon: Calendar, label: "নতুন গ্রাহক", value: `${newCustomersMonth}জন`,
-            sub: "এই মাসে যোগ দিয়েছেন", color: "var(--bg-success-text)", bg: "var(--bg-success-soft)",
-          },
-        ].map((stat) => (
-          <div key={stat.label} className="rounded-2xl p-4 border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-2.5" style={{ backgroundColor: stat.bg }}>
-              <stat.icon size={15} style={{ color: stat.color }} />
+      {/* ── 4 Stat Cards ─────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* মাসিক বিক্রি */}
+        <div className="rounded-2xl p-4 border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#E1F5EE" }}>
+              <TrendingUp size={15} style={{ color: "#0F6E56" }} />
             </div>
-            <p className="text-[11px] mb-1" style={{ color: S.muted }}>{stat.label}</p>
-            <p className="text-lg font-bold" style={{ color: S.text }}>{stat.value}</p>
-            {stat.sub && (
-              <p className="text-[10px] mt-0.5" style={{ color: (stat as { subColor?: string }).subColor ?? S.muted }}>
-                {stat.sub}
-              </p>
-            )}
+            <p className="text-[11px] font-medium" style={{ color: S.muted }}>মাসিক বিক্রি</p>
           </div>
-        ))}
+          <p className="text-xl font-bold" style={{ color: "#0F6E56" }}>{formatBDT(monthSales)}</p>
+          {monthGrowth !== null ? (
+            <p className="text-[11px] mt-1 font-semibold" style={{ color: monthGrowth >= 0 ? "var(--bg-success-text)" : "var(--bg-danger-text)" }}>
+              {monthGrowth >= 0 ? "↑" : "↓"} {Math.abs(monthGrowth)}% গত মাসের তুলনায়
+            </p>
+          ) : (
+            <p className="text-[11px] mt-1" style={{ color: S.muted }}>{monthOrderCount}টি অর্ডার</p>
+          )}
+        </div>
+
+        {/* Pending অর্ডার */}
+        <div className="rounded-2xl p-4 border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#FFF3DC" }}>
+              <ShoppingBag size={15} style={{ color: "#EF9F27" }} />
+            </div>
+            <p className="text-[11px] font-medium" style={{ color: S.muted }}>Pending অর্ডার</p>
+          </div>
+          <p className="text-xl font-bold" style={{ color: "#EF9F27" }}>{pendingCount}টি</p>
+          <p className="text-[11px] mt-1" style={{ color: S.muted }}>২০২৫ সালের বর্তমান</p>
+        </div>
+
+        {/* বাকি পাওনা */}
+        <div className="rounded-2xl p-4 border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#FEE2E2" }}>
+              <Users size={15} style={{ color: "#EF4444" }} />
+            </div>
+            <p className="text-[11px] font-medium" style={{ color: S.muted }}>বাকি পাওনা</p>
+          </div>
+          <p className="text-xl font-bold" style={{ color: "#EF4444" }}>{formatBDT(totalDue)}</p>
+          <p className="text-[11px] mt-1" style={{ color: S.muted }}>২০২৫ সালের বর্তমান</p>
+        </div>
+
+        {/* নতুন গ্রাহক */}
+        <div className="rounded-2xl p-4 border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#EFF6FF" }}>
+              <Calendar size={15} style={{ color: "#3B82F6" }} />
+            </div>
+            <p className="text-[11px] font-medium" style={{ color: S.muted }}>নতুন গ্রাহক</p>
+          </div>
+          <p className="text-xl font-bold" style={{ color: "#3B82F6" }}>{newCustomersMonth}জন</p>
+          <p className="text-[11px] mt-1" style={{ color: S.muted }}>২০২৫ সালের বর্তমান</p>
+        </div>
       </div>
 
       {/* ── Sales Target ─────────────────────────────────────────── */}
@@ -388,32 +402,36 @@ export default async function DashboardPage() {
         const pct = Math.min(100, Math.round((monthSales / salesTarget) * 100));
         const remaining = Math.max(0, salesTarget - monthSales);
         return (
-          <div className="rounded-2xl p-5 border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: pct >= 100 ? "var(--bg-success-soft)" : "var(--bg-warning-soft)" }}>
-                  <Target size={17} style={{ color: pct >= 100 ? "var(--bg-success-text)" : "var(--bg-warning-text)" }} />
-                </div>
-                <div>
-                  <p className="text-sm font-bold" style={{ color: S.text }}>মাসিক বিক্রির লক্ষ্যমাত্রা</p>
-                  <p className="text-xs" style={{ color: S.muted }}>{formatBDT(monthSales)} অর্জিত, লক্ষ্য {formatBDT(salesTarget)}</p>
-                </div>
+          <div className="rounded-2xl p-5 relative overflow-hidden" style={{ backgroundColor: "#E8F5F0", borderColor: S.border }}>
+            {/* wave decoration */}
+            <svg className="absolute bottom-0 left-0 w-full opacity-30" viewBox="0 0 600 60" preserveAspectRatio="none" style={{ height: 60 }}>
+              <path d="M0,30 C80,5 160,55 240,30 C320,5 400,55 480,30 C540,12 570,40 600,30 L600,60 L0,60 Z" fill="#0F6E56" />
+            </svg>
+            <svg className="absolute bottom-0 left-0 w-full opacity-15" viewBox="0 0 600 60" preserveAspectRatio="none" style={{ height: 60 }}>
+              <path d="M0,40 C100,15 200,55 300,35 C400,15 500,50 600,35 L600,60 L0,60 Z" fill="#0F6E56" />
+            </svg>
+
+            <div className="relative flex items-start justify-between mb-3">
+              <div>
+                <p className="text-sm font-bold" style={{ color: "#0A4033" }}>মাসিক বিক্রির লক্ষ্যমাত্রা</p>
+                <p className="text-xs mt-0.5" style={{ color: "#2D7A65" }}>{formatBDT(monthSales)} বিক্রি, লক্ষ্য {formatBDT(salesTarget)}</p>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold" style={{ color: pct >= 100 ? "#0F6E56" : S.text }}>{pct}%</p>
-                <p className="text-xs" style={{ color: S.muted }}>{pct >= 100 ? "🎉 লক্ষ্য অর্জিত!" : `আরো ${formatBDT(remaining)}`}</p>
+                <p className="text-3xl font-bold" style={{ color: pct >= 100 ? "#0F6E56" : "#0A4033" }}>{pct}%</p>
+                <p className="text-[11px] font-medium" style={{ color: "#2D7A65" }}>{pct >= 100 ? "লক্ষ্য পূর্ণ হয়েছে" : "লক্ষ্য পূর্ণ হার"}</p>
               </div>
             </div>
-            <div className="h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--c-border)" }}>
+
+            <div className="relative h-3 rounded-full overflow-hidden mb-2" style={{ backgroundColor: "rgba(255,255,255,0.5)" }}>
               <div
-                className="h-2.5 rounded-full"
-                style={{ width: `${pct}%`, background: pct >= 100 ? "linear-gradient(90deg,#0F6E56,#13A67E)" : pct >= 75 ? "linear-gradient(90deg,#EF9F27,#F5BD5D)" : "linear-gradient(90deg,#2B7CE9,#60A5FA)" }}
+                className="h-3 rounded-full transition-all duration-700"
+                style={{ width: `${pct}%`, background: pct >= 100 ? "linear-gradient(90deg,#0F6E56,#13A67E)" : pct >= 75 ? "linear-gradient(90deg,#EF9F27,#F5BD5D)" : "linear-gradient(90deg,#0F6E56,#4BB896)" }}
               />
             </div>
-            <div className="flex justify-between mt-2">
-              <span className="text-[10px]" style={{ color: S.muted }}>৳ ০</span>
-              <Link href="/settings?tab=account" className="text-[10px] hover:underline" style={{ color: S.muted }}>লক্ষ্য পরিবর্তন →</Link>
-              <span className="text-[10px]" style={{ color: S.muted }}>{formatBDT(salesTarget)}</span>
+            <div className="relative flex justify-between">
+              <span className="text-[10px]" style={{ color: "#2D7A65" }}>৳ ০</span>
+              <Link href="/settings?tab=account" className="text-[10px] hover:underline" style={{ color: "#2D7A65" }}>লক্ষ্য পরিবর্তন →</Link>
+              <span className="text-[10px]" style={{ color: "#2D7A65" }}>{pct >= 100 ? "🎉 অর্জিত!" : `আরো ${formatBDT(remaining)}`}</span>
             </div>
           </div>
         );
@@ -422,11 +440,14 @@ export default async function DashboardPage() {
       {/* ── Chart + Today Hisab ──────────────────────────────────── */}
       <div className="grid lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 rounded-2xl p-5 border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-sm" style={{ color: S.text }}>গত ৭ দিনের বিক্রি</h3>
+          <div className="flex items-center justify-between mb-1">
+            <div>
+              <h3 className="font-bold text-sm" style={{ color: S.text }}>মাসিক বিক্রির লক্ষ্যমাত্রা</h3>
+              <p className="text-[11px] mt-0.5" style={{ color: S.muted }}>{formatBDT(monthSales)} বিক্রি, লক্ষ্য {formatBDT(salesTarget > 0 ? salesTarget : monthSales)}</p>
+            </div>
             <Link href="/reports" className="text-xs font-medium" style={{ color: S.primary }}>বিস্তারিত →</Link>
           </div>
-          <SalesBarChart data={chartData} />
+          <SalesBarChart data={chartData} height={210} />
         </div>
 
         <div className="rounded-2xl p-5 border flex flex-col" style={{ backgroundColor: S.surface, borderColor: S.border }}>
@@ -470,7 +491,7 @@ export default async function DashboardPage() {
         {/* Recent orders */}
         <div className="lg:col-span-2 rounded-2xl p-5 border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-sm" style={{ color: S.text }}>সাম্প্রতিক অর্ডার</h3>
+            <h3 className="font-bold text-sm" style={{ color: S.text }}>গত ৭ দিনের বিক্রি</h3>
             <Link href="/orders" className="text-xs font-semibold" style={{ color: S.primary }}>সব দেখুন →</Link>
           </div>
 
