@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, Pencil, TrendingUp, TrendingDown, RotateCcw, Package, Plus, Minus, X, Printer } from "lucide-react";
+import Image from "next/image";
 import { formatBDT, formatBanglaDate } from "@/lib/utils";
 
 interface Product {
@@ -178,7 +179,9 @@ export default function InventoryDetailPage() {
       <div className="rounded-2xl border p-5 mb-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
         <div className="flex gap-4">
           {product.imageUrl ? (
-            <img src={product.imageUrl} alt={product.name} className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />
+            <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 relative">
+              <Image src={product.imageUrl} alt={product.name} fill className="object-cover" sizes="80px" />
+            </div>
           ) : (
             <div className="w-20 h-20 rounded-xl flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: "var(--c-bg)" }}>
               <Package size={28} style={{ color: S.muted }} />
