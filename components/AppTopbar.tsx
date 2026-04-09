@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, Package, MessageSquare, Check, Trash2, X } from "lucide-react";
+import { Bell, Package, MessageSquare, Check, Trash2, X, ShoppingBag } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import FeedbackWidget from "@/components/FeedbackWidget";
 
@@ -25,6 +25,14 @@ const PAGE_TITLES: Record<string, string> = {
 interface LowStockProduct { id: string; name: string; stockQty: number; lowStockAt: number; }
 interface SuggestedOrderItem { id: string; commenterName: string; commentText: string; }
 interface NotifItem { id: string; type: string; title: string; body: string | null; link: string | null; read: boolean; createdAt: string; }
+
+function timeAgo(dateStr: string): string {
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (diff < 60) return "এইমাত্র";
+  if (diff < 3600) return `${Math.floor(diff / 60)} মিনিট আগে`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} ঘণ্টা আগে`;
+  return `${Math.floor(diff / 86400)} দিন আগে`;
+}
 
 export default function AppTopbar() {
   const pathname = usePathname();
@@ -70,8 +78,9 @@ export default function AppTopbar() {
   }, []);
 
   async function openPanel() {
-    setOpen(o => !o);
-    if (!open) {
+    const willOpen = !open;
+    setOpen(willOpen);
+    if (willOpen) {
       setLoading(true);
       try {
         const d = await fetch("/api/notifications").then(r => r.json());
@@ -82,6 +91,16 @@ export default function AppTopbar() {
       } catch {}
       setLoading(false);
     }
+  }
+
+  async function markRead(id: string) {
+    await fetch("/api/notifications", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    }).catch(() => {});
+    setNotifications(p => p.map(n => n.id === id ? { ...n, read: true } : n));
+    setUnread(p => Math.max(0, p - 1));
   }
 
   async function markAllRead() {
@@ -95,7 +114,7 @@ export default function AppTopbar() {
     setNotifications(p => p.filter(n => !n.read));
   }
 
-  const totalAlerts = unread + lowStock.length + suggested.length;
+  const isEmpty = lowStock.length === 0 && suggested.length === 0 && notifications.length === 0;
 
   return (
     <header
@@ -109,96 +128,185 @@ export default function AppTopbar() {
       <div className="flex items-center gap-3">
         {/* Notification Bell */}
         <div ref={ref} className="relative">
-          <button onClick={openPanel} className="relative p-2 rounded-lg hover:bg-gray-50 transition-colors">
-            <Bell size={18} style={{ color: "var(--c-text-sub)" }} />
-            {totalAlerts > 0 && (
-              <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-white text-[10px] font-bold" style={{ backgroundColor: "#E24B4A" }}>
-                {totalAlerts > 9 ? "9+" : totalAlerts}
+          <button
+            onClick={openPanel}
+            className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:scale-105"
+            style={{ backgroundColor: open ? "var(--c-primary-light)" : "var(--c-bg)", border: `1px solid ${open ? "var(--c-primary)" : "var(--c-border)"}` }}
+          >
+            <Bell size={17} style={{ color: open ? "var(--c-primary)" : "var(--c-text-sub)" }} />
+            {unread > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center text-white text-[10px] font-extrabold shadow-md"
+                style={{ backgroundColor: "#EF4444", border: "2px solid var(--shell-bg)" }}>
+                {unread > 9 ? "9+" : unread}
               </span>
             )}
           </button>
 
           {open && (
-            <div className="absolute right-0 top-full mt-2 w-80 rounded-2xl border shadow-xl overflow-hidden z-50" style={{ backgroundColor: "var(--c-surface)", borderColor: "var(--c-border)" }}>
-              <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--c-border)", backgroundColor: "var(--c-surface)" }}>
-                <span className="font-semibold text-sm" style={{ color: "var(--c-text)" }}>নোটিফিকেশন</span>
-                <div className="flex items-center gap-2">
+            <div
+              className="absolute right-0 top-full mt-2 rounded-2xl border shadow-2xl overflow-hidden z-50"
+              style={{ width: 360, backgroundColor: "var(--c-surface)", borderColor: "var(--c-border)" }}
+            >
+              {/* Panel Header */}
+              <div className="flex items-center justify-between px-5 py-3.5 border-b"
+                style={{ borderColor: "var(--c-border)", background: "linear-gradient(135deg, var(--c-bg), var(--c-surface))" }}>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #0F6E56, #0A5442)" }}>
+                    <Bell size={13} color="#fff" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold" style={{ color: "var(--c-text)" }}>নোটিফিকেশন</p>
+                    {unread > 0 && (
+                      <p className="text-[10px] font-semibold" style={{ color: "#EF4444" }}>{unread}টি অপঠিত</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
                   {unread > 0 && (
-                    <button onClick={markAllRead} title="সব পড়া হিসেবে চিহ্নিত করুন" className="p-1 rounded-lg hover:bg-gray-100">
-                      <Check size={14} style={{ color: "var(--c-primary)" }} />
+                    <button onClick={markAllRead}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all hover:opacity-80"
+                      style={{ backgroundColor: "#E8F5F0", color: "#0F6E56" }}>
+                      <Check size={10} /> সব পড়া
                     </button>
                   )}
-                  <button onClick={clearRead} title="পড়া notification মুছুন" className="p-1 rounded-lg hover:bg-gray-100">
-                    <Trash2 size={14} style={{ color: "var(--c-text-muted)" }} />
+                  <button onClick={clearRead}
+                    className="p-1.5 rounded-xl transition-colors hover:bg-gray-100"
+                    title="পড়া notification মুছুন">
+                    <Trash2 size={13} style={{ color: "var(--c-text-muted)" }} />
                   </button>
-                  <button onClick={() => setOpen(false)} className="p-1 rounded-lg hover:bg-gray-100">
-                    <X size={14} style={{ color: "var(--c-text-muted)" }} />
+                  <button onClick={() => setOpen(false)}
+                    className="p-1.5 rounded-xl transition-colors hover:bg-gray-100">
+                    <X size={13} style={{ color: "var(--c-text-muted)" }} />
                   </button>
                 </div>
               </div>
 
-              <div className="max-h-96 overflow-y-auto">
+              <div className="max-h-[420px] overflow-y-auto">
                 {loading ? (
                   <div className="p-4 space-y-3 animate-pulse">
-                    {[1,2,3].map(i => <div key={i} className="h-10 bg-gray-100 rounded-xl" />)}
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl flex-shrink-0" style={{ backgroundColor: "var(--c-bg)" }} />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-3 rounded-full w-40" style={{ backgroundColor: "var(--c-bg)" }} />
+                          <div className="h-2.5 rounded-full w-28" style={{ backgroundColor: "var(--c-bg)" }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : isEmpty ? (
+                  <div className="py-14 text-center px-6">
+                    <div className="w-16 h-16 rounded-3xl mx-auto mb-4 flex items-center justify-center"
+                      style={{ background: "linear-gradient(135deg, #E8F5F0, #C8EDE3)" }}>
+                      <Bell size={26} style={{ color: "#0F6E56" }} />
+                    </div>
+                    <p className="text-sm font-bold mb-1" style={{ color: "var(--c-text)" }}>সব ঠিকঠাক!</p>
+                    <p className="text-xs" style={{ color: "var(--c-text-muted)" }}>কোনো নতুন নোটিফিকেশন নেই।</p>
                   </div>
                 ) : (
                   <>
-                    {/* Low Stock */}
-                    {lowStock.map(p => (
-                      <button key={p.id} onClick={() => { router.push(`/inventory/${p.id}/edit`); setOpen(false); }}
-                        className="w-full flex items-start gap-3 px-4 py-3 hover:bg-gray-50 border-b text-left"
-                        style={{ borderColor: "var(--c-border)" }}>
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#FFE8E8" }}>
-                          <Package size={15} style={{ color: "#E24B4A" }} />
+                    {/* Low Stock Section */}
+                    {lowStock.length > 0 && (
+                      <>
+                        <div className="px-4 pt-3 pb-1">
+                          <p className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: "#EF4444" }}>⚠ কম স্টক</p>
                         </div>
-                        <div>
-                          <p className="text-xs font-semibold" style={{ color: "var(--c-text)" }}>কম স্টক: {p.name}</p>
-                          <p className="text-xs" style={{ color: "var(--c-text-muted)" }}>মাত্র {p.stockQty} টি বাকি আছে</p>
-                        </div>
-                      </button>
-                    ))}
+                        {lowStock.map(p => (
+                          <button key={p.id}
+                            onClick={() => { router.push(`/inventory/${p.id}/edit`); setOpen(false); }}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-left transition-all hover:brightness-95"
+                            style={{ backgroundColor: "#FFF5F5" }}>
+                            <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm"
+                              style={{ background: "linear-gradient(135deg, #FEE2E2, #FECACA)" }}>
+                              <Package size={16} style={{ color: "#EF4444" }} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold truncate" style={{ color: "var(--c-text)" }}>কম স্টক: {p.name}</p>
+                              <p className="text-[10px] font-medium mt-0.5" style={{ color: "#EF4444" }}>মাত্র {p.stockQty} টি বাকি আছে</p>
+                            </div>
+                            <span className="text-[10px] font-bold px-2 py-1 rounded-xl flex-shrink-0"
+                              style={{ backgroundColor: "#FEE2E2", color: "#EF4444" }}>{p.stockQty}</span>
+                          </button>
+                        ))}
+                      </>
+                    )}
 
-                    {/* Suggested Orders */}
-                    {suggested.map(s => (
-                      <button key={s.id} onClick={() => { router.push(`/orders/new?suggestId=${s.id}&customerName=${encodeURIComponent(s.commenterName)}`); setOpen(false); }}
-                        className="w-full flex items-start gap-3 px-4 py-3 hover:bg-gray-50 border-b text-left"
-                        style={{ borderColor: "var(--c-border)" }}>
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#E1F5EE" }}>
-                          <MessageSquare size={15} style={{ color: "var(--c-primary)" }} />
+                    {/* Suggested Orders Section */}
+                    {suggested.length > 0 && (
+                      <>
+                        <div className="px-4 pt-3 pb-1">
+                          <p className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: "#1877F2" }}>💬 সম্ভাব্য অর্ডার</p>
                         </div>
-                        <div>
-                          <p className="text-xs font-semibold" style={{ color: "var(--c-text)" }}>নতুন comment: {s.commenterName}</p>
-                          <p className="text-xs truncate max-w-[200px]" style={{ color: "var(--c-text-muted)" }}>{s.commentText}</p>
-                        </div>
-                      </button>
-                    ))}
+                        {suggested.map(s => (
+                          <button key={s.id}
+                            onClick={() => { router.push(`/orders/new?suggestId=${s.id}&customerName=${encodeURIComponent(s.commenterName)}`); setOpen(false); }}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-left transition-all hover:brightness-95"
+                            style={{ backgroundColor: "#F0F6FF" }}>
+                            <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm"
+                              style={{ background: "linear-gradient(135deg, #DBEAFE, #BFDBFE)" }}>
+                              <MessageSquare size={16} style={{ color: "#1877F2" }} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold" style={{ color: "var(--c-text)" }}>{s.commenterName}</p>
+                              <p className="text-[10px] truncate mt-0.5" style={{ color: "var(--c-text-muted)" }}>{s.commentText}</p>
+                            </div>
+                            <span className="text-[10px] font-bold px-2 py-1 rounded-xl flex-shrink-0"
+                              style={{ backgroundColor: "#DBEAFE", color: "#1877F2" }}>অর্ডার</span>
+                          </button>
+                        ))}
+                      </>
+                    )}
 
                     {/* System Notifications */}
-                    {notifications.map(n => (
-                      <button key={n.id} onClick={() => { if (n.link) { router.push(n.link); setOpen(false); } }}
-                        className="w-full flex items-start gap-3 px-4 py-3 hover:bg-gray-50 border-b text-left"
-                        style={{ borderColor: "var(--c-border)", backgroundColor: n.read ? "transparent" : "#F0FDF7" }}>
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#E1F5EE" }}>
-                          <Bell size={15} style={{ color: "var(--c-primary)" }} />
+                    {notifications.length > 0 && (
+                      <>
+                        <div className="px-4 pt-3 pb-1">
+                          <p className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: "var(--c-text-muted)" }}>🔔 নোটিফিকেশন</p>
                         </div>
-                        <div>
-                          <p className="text-xs font-semibold" style={{ color: "var(--c-text)" }}>{n.title}</p>
-                          {n.body && <p className="text-xs" style={{ color: "var(--c-text-muted)" }}>{n.body}</p>}
-                        </div>
-                        {!n.read && <div className="ml-auto w-2 h-2 rounded-full flex-shrink-0 mt-1" style={{ backgroundColor: "var(--c-primary)" }} />}
-                      </button>
-                    ))}
-
-                    {lowStock.length === 0 && suggested.length === 0 && notifications.length === 0 && (
-                      <div className="py-10 text-center">
-                        <Bell size={24} className="mx-auto mb-2" style={{ color: "var(--c-border)" }} />
-                        <p className="text-xs" style={{ color: "var(--c-text-muted)" }}>কোনো notification নেই</p>
-                      </div>
+                        {notifications.map(n => (
+                          <button key={n.id}
+                            onClick={() => {
+                              if (!n.read) markRead(n.id);
+                              if (n.link) { router.push(n.link); setOpen(false); }
+                            }}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-left transition-all"
+                            style={{
+                              backgroundColor: n.read ? "transparent" : "#F0FDF7",
+                              borderLeft: n.read ? "none" : "3px solid #0F6E56",
+                            }}
+                            onMouseEnter={e => { if (n.read) (e.currentTarget as HTMLElement).style.backgroundColor = "var(--c-bg)"; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = n.read ? "transparent" : "#F0FDF7"; }}
+                          >
+                            <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm"
+                              style={{ background: n.read ? "linear-gradient(135deg, var(--c-bg), var(--c-border))" : "linear-gradient(135deg, #E8F5F0, #C8EDE3)" }}>
+                              <Bell size={16} style={{ color: n.read ? "var(--c-text-muted)" : "#0F6E56" }} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold" style={{ color: n.read ? "var(--c-text-sub)" : "var(--c-text)" }}>{n.title}</p>
+                              {n.body && <p className="text-[10px] truncate mt-0.5" style={{ color: "var(--c-text-muted)" }}>{n.body}</p>}
+                              <p className="text-[10px] mt-0.5" style={{ color: "var(--c-text-muted)" }}>{timeAgo(n.createdAt)}</p>
+                            </div>
+                            {!n.read && (
+                              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: "#0F6E56", boxShadow: "0 0 0 3px #C8EDE3" }} />
+                            )}
+                          </button>
+                        ))}
+                      </>
                     )}
                   </>
                 )}
               </div>
+
+              {/* Footer */}
+              {!isEmpty && !loading && (
+                <div className="px-4 py-3 border-t text-center" style={{ borderColor: "var(--c-border)", backgroundColor: "var(--c-bg)" }}>
+                  <button onClick={() => { router.push("/activity-log"); setOpen(false); }}
+                    className="text-xs font-bold transition-colors hover:underline"
+                    style={{ color: "var(--c-primary)" }}>
+                    সব activity দেখুন →
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -207,10 +315,11 @@ export default function AppTopbar() {
 
         <button
           onClick={() => router.push("/orders/new")}
-          className="hidden sm:flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-lg text-white"
-          style={{ backgroundColor: "var(--c-primary)" }}
+          className="hidden sm:flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl text-white shadow-md hover:opacity-90 transition-opacity active:scale-95"
+          style={{ background: "linear-gradient(135deg, #0F6E56, #0A5442)" }}
         >
-          + নতুন অর্ডার
+          <ShoppingBag size={14} />
+          নতুন অর্ডার
         </button>
       </div>
     </header>
