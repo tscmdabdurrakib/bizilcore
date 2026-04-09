@@ -374,51 +374,83 @@ export default function FCommerceOrders() {
       {/* ── Page Header ──────────────────────────── */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}>
-            <ShoppingBag size={18} color="#fff" />
+          <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md" style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}>
+            <ShoppingBag size={20} color="#fff" />
           </div>
           <div>
-            <h1 className="text-lg font-bold" style={{ color: S.text }}>অর্ডার</h1>
+            <h1 className="text-xl font-bold" style={{ color: S.text }}>অর্ডার</h1>
             <p className="text-xs" style={{ color: S.muted }}>Facebook সেলের সব অর্ডার ট্র্যাক করুন</p>
           </div>
         </div>
-        <Link href="/orders/new" className="flex items-center gap-2 px-4 h-10 rounded-xl text-white text-sm font-semibold flex-shrink-0" style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}>
+        <Link href="/orders/new"
+          className="flex items-center gap-2 px-5 h-10 rounded-2xl text-white text-sm font-semibold flex-shrink-0 shadow-md hover:opacity-90 transition-opacity active:scale-95"
+          style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}>
           <Plus size={16} /> নতুন অর্ডার
         </Link>
       </div>
+
+      {/* ── Mini Stats Bar ───────────────────────── */}
+      {!loading && orders.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: "মোট অর্ডার",   value: `${data.total}টি`,                                                                         color: "#0F6E56", bg: "#E8F5F0" },
+            { label: "Pending",       value: `${orders.filter(o => o.status === "pending").length}টি`,                                  color: "#EF9F27", bg: "#FFF3DC" },
+            { label: "COD বাকি",     value: `${codPendingCount}টি`,                                                                    color: "#3B82F6", bg: "#EFF6FF" },
+            { label: "মোট বিক্রি",  value: `৳${orders.reduce((s, o) => s + o.totalAmount, 0).toLocaleString("en-IN")}`,               color: "#8B5CF6", bg: "#F5F3FF" },
+          ].map(s => (
+            <div key={s.label} className="rounded-2xl px-4 py-3 flex items-center gap-3" style={{ backgroundColor: s.bg }}>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: s.color }}>{s.label}</p>
+                <p className="text-lg font-bold" style={{ color: s.color }}>{s.value}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── Search + Export ──────────────────────────── */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: S.muted }} />
-          <input type="text" placeholder="অর্ডার, কাস্টমার বা Tracking ID..."
+          <input type="text" placeholder="কাস্টমার, অর্ডার ID বা Tracking..."
             value={search} onChange={e => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 h-10 rounded-xl border text-sm outline-none"
+            className="w-full pl-9 pr-3 h-11 rounded-2xl border text-sm outline-none focus:ring-2 transition-all"
             style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
         </div>
         <button onClick={exportToExcel} disabled={loading || filtered.length === 0}
-          className="flex items-center gap-2 px-3 h-10 rounded-xl border text-sm font-medium flex-shrink-0 hover:bg-gray-50 disabled:opacity-40 transition-colors"
-          style={{ borderColor: S.border, color: S.secondary }}>
+          className="flex items-center gap-2 px-4 h-11 rounded-2xl border text-sm font-semibold flex-shrink-0 hover:bg-gray-50 disabled:opacity-40 transition-all active:scale-95"
+          style={{ borderColor: S.border, color: S.secondary, backgroundColor: S.surface }}>
           <Download size={15} /> Excel
         </button>
       </div>
 
       {/* ── Status Tabs ────────────────────────────── */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
         {STATUS_TABS.map(t => {
           const isCodTab = t.key === "cod_pending";
+          const isActive = tab === t.key;
+          const tabColors: Record<string, string> = {
+            all: "#0F6E56", pending: "#EF9F27", confirmed: "#1D9E75",
+            shipped: "#3B82F6", delivered: "#059669", returned: "#EF4444", cod_pending: "#EF9F27",
+          };
+          const tabBgs: Record<string, string> = {
+            all: "#E8F5F0", pending: "#FFF3DC", confirmed: "#D1FAE5",
+            shipped: "#EFF6FF", delivered: "#D1FAE5", returned: "#FEE2E2", cod_pending: "#FFF3DC",
+          };
           return (
             <button key={t.key} onClick={() => setTab(t.key)}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium border flex-shrink-0 transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-2xl text-sm font-semibold flex-shrink-0 transition-all active:scale-95"
               style={{
-                backgroundColor: tab === t.key ? (isCodTab ? "#EF9F27" : S.primary) : S.surface,
-                color: tab === t.key ? "var(--c-surface)" : S.secondary,
-                borderColor: tab === t.key ? (isCodTab ? "#EF9F27" : S.primary) : S.border,
+                backgroundColor: isActive ? tabColors[t.key] : S.surface,
+                color: isActive ? "#fff" : S.secondary,
+                border: `1.5px solid ${isActive ? tabColors[t.key] : S.border}`,
+                boxShadow: isActive ? `0 4px 12px ${tabColors[t.key]}40` : "none",
               }}>
+              {isActive && <span className="w-1.5 h-1.5 rounded-full bg-white opacity-80" />}
               {t.label}
               {isCodTab && codPendingCount > 0 && (
-                <span className="text-xs font-bold px-1.5 py-0.5 rounded-full leading-none"
-                  style={{ backgroundColor: tab === t.key ? "rgba(255,255,255,0.3)" : "var(--bg-warning-soft)", color: tab === t.key ? "#FFF" : "var(--bg-warning-text)" }}>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none"
+                  style={{ backgroundColor: isActive ? "rgba(255,255,255,0.25)" : tabBgs[t.key], color: isActive ? "#FFF" : tabColors[t.key] }}>
                   {codPendingCount}
                 </span>
               )}
@@ -430,41 +462,52 @@ export default function FCommerceOrders() {
       {/* ── Orders Table ───────────────────────────── */}
       <div className="rounded-2xl border overflow-hidden" style={{ borderColor: S.border, backgroundColor: S.surface }}>
         {loading ? (
-          <div className="p-5 space-y-3 animate-pulse">
-            {[1,2,3,4,5].map(i => <div key={i} className="h-[68px] rounded-xl" style={{ backgroundColor: "var(--c-bg)" }} />)}
+          <div className="p-4 space-y-2.5 animate-pulse">
+            {[1,2,3,4,5,6].map(i => (
+              <div key={i} className="flex items-center gap-4 px-4 py-3 rounded-2xl" style={{ backgroundColor: "var(--c-bg)" }}>
+                <div className="w-9 h-9 rounded-xl flex-shrink-0" style={{ backgroundColor: S.border }} />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 rounded-full w-32" style={{ backgroundColor: S.border }} />
+                  <div className="h-2.5 rounded-full w-20" style={{ backgroundColor: S.border }} />
+                </div>
+                <div className="h-3 rounded-full w-16" style={{ backgroundColor: S.border }} />
+                <div className="h-6 rounded-full w-20" style={{ backgroundColor: S.border }} />
+              </div>
+            ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{ backgroundColor: "var(--c-primary-light)" }}>
-              <ShoppingBag size={28} style={{ color: S.primary }} />
+          <div className="text-center py-20 px-6">
+            <div className="w-20 h-20 rounded-3xl mx-auto mb-5 flex items-center justify-center" style={{ background: "linear-gradient(135deg, #E8F5F0, #C8EDE3)" }}>
+              <ShoppingBag size={32} style={{ color: "#0F6E56" }} />
             </div>
-            <p className="text-sm font-medium mb-1" style={{ color: S.text }}>
-              {tab === "cod_pending" ? "COD pending কোনো অর্ডার নেই।" : "এখনো কোনো অর্ডার নেই।"}
+            <p className="text-base font-bold mb-1" style={{ color: S.text }}>
+              {tab === "cod_pending" ? "কোনো COD pending নেই" : "কোনো অর্ডার পাওয়া যায়নি"}
             </p>
-            {tab === "all" && <Link href="/orders/new" className="text-sm font-semibold" style={{ color: S.primary }}>+ নতুন অর্ডার তৈরি করুন</Link>}
+            <p className="text-sm mb-5" style={{ color: S.muted }}>
+              {tab === "all" ? "এখনো কোনো অর্ডার নেই। প্রথম অর্ডারটি যোগ করুন!" : `"${STATUS_TABS.find(t => t.key === tab)?.label}" স্ট্যাটাসে কোনো অর্ডার নেই।`}
+            </p>
+            {tab === "all" && (
+              <Link href="/orders/new"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-white text-sm font-semibold shadow-md hover:opacity-90 transition-opacity"
+                style={{ background: "linear-gradient(135deg, #0F6E56, #0A5442)" }}>
+                <Plus size={15} /> নতুন অর্ডার তৈরি করুন
+              </Link>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
           <table className="w-full min-w-[720px]">
             <thead>
               <tr style={{ backgroundColor: "var(--c-bg)", borderBottom: `1px solid ${S.border}` }}>
-                <th className="pl-4 pr-2 py-3 w-9">
+                <th className="pl-4 pr-2 py-3.5 w-9">
                   <input type="checkbox"
                     checked={filtered.length > 0 && selectedIds.size === filtered.length}
                     onChange={toggleSelectAll}
                     className="w-4 h-4 rounded cursor-pointer accent-green-700"
                   />
                 </th>
-                {[
-                  { label: "কাস্টমার", cls: "" },
-                  { label: "পণ্য", cls: "" },
-                  { label: "পরিমাণ", cls: "" },
-                  { label: "স্ট্যাটাস", cls: "" },
-                  { label: "Courier", cls: "" },
-                  { label: "তারিখ", cls: "" },
-                  { label: "", cls: "w-10" },
-                ].map(h => (
-                  <th key={h.label} className={`text-left px-4 py-3 text-xs font-semibold uppercase tracking-wide ${h.cls}`} style={{ color: S.muted }}>{h.label}</th>
+                {["কাস্টমার", "পণ্য", "পরিমাণ", "স্ট্যাটাস", "Courier", "তারিখ", ""].map(h => (
+                  <th key={h} className="text-left px-4 py-3.5 text-[11px] font-bold uppercase tracking-widest" style={{ color: S.muted }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -482,6 +525,8 @@ export default function FCommerceOrders() {
                 }).join("") + (o.items.length > 1 ? ` +${o.items.length - 1}টি` : "");
                 const isSelected = selectedIds.has(o.id);
                 const initials = (o.customer?.name ?? "?")[0].toUpperCase();
+                const AVATAR_COLORS = ["#0F6E56","#3B82F6","#8B5CF6","#EF4444","#EF9F27","#EC4899","#06B6D4","#14B8A6"];
+                const avatarBg = AVATAR_COLORS[(o.customer?.name ?? "?").charCodeAt(0) % AVATAR_COLORS.length];
                 return (
                   <tr key={o.id}
                     className="border-b last:border-0 cursor-pointer transition-colors"
@@ -497,19 +542,19 @@ export default function FCommerceOrders() {
                     </td>
 
                     {/* Customer + Order ID */}
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-3.5">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-                          style={{ background: "linear-gradient(135deg, var(--c-primary) 0%, #0A5442 100%)" }}>
+                        <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm"
+                          style={{ backgroundColor: avatarBg }}>
                           {initials}
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-semibold truncate" style={{ color: S.text }}>{o.customer?.name ?? "অজানা"}</p>
                           <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                            <span className="text-xs font-mono font-medium px-1.5 py-0.5 rounded-md" style={{ backgroundColor: "var(--c-bg)", color: S.muted }}>#{o.id.slice(-6).toUpperCase()}</span>
-                            {o.customer?.phone && <span className="text-xs" style={{ color: S.muted }}>{o.customer.phone}</span>}
+                            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg" style={{ backgroundColor: "var(--c-bg)", color: S.muted }}>#{o.id.slice(-6).toUpperCase()}</span>
+                            {o.customer?.phone && <span className="text-[11px]" style={{ color: S.muted }}>{o.customer.phone}</span>}
                             {o.storeOrderId && (
-                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md" style={{ backgroundColor: "#E1F5EE", color: "#0F6E56" }}>স্টোর অর্ডার</span>
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg" style={{ backgroundColor: "#E1F5EE", color: "#0F6E56" }}>🛍 স্টোর</span>
                             )}
                           </div>
                         </div>
@@ -517,57 +562,61 @@ export default function FCommerceOrders() {
                     </td>
 
                     {/* Product */}
-                    <td className="px-4 py-4 max-w-[160px]">
-                      <p className="text-xs font-medium truncate" style={{ color: S.secondary }}>{summary}</p>
+                    <td className="px-4 py-3.5 max-w-[160px]">
+                      <p className="text-xs font-semibold truncate" style={{ color: S.text }}>{summary}</p>
+                      <p className="text-[10px] mt-0.5" style={{ color: S.muted }}>{o.items.length} আইটেম</p>
                     </td>
 
-                    {/* Amount (total + due badge) */}
-                    <td className="px-4 py-4">
+                    {/* Amount */}
+                    <td className="px-4 py-3.5">
                       <p className="text-sm font-bold font-mono" style={{ color: S.text }}>{formatBDT(o.totalAmount)}</p>
                       {o.dueAmount > 0 ? (
-                        <span className="inline-block text-xs font-semibold px-1.5 py-0.5 rounded-md mt-0.5"
-                          style={{ backgroundColor: "var(--status-returned-bg)", color: "var(--status-returned-text)" }}>
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg mt-0.5"
+                          style={{ backgroundColor: "#FEE2E2", color: "#DC2626" }}>
                           বাকি {formatBDT(o.dueAmount)}
                         </span>
                       ) : (
-                        <span className="text-xs" style={{ color: S.muted }}>পরিশোধিত</span>
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-lg mt-0.5"
+                          style={{ backgroundColor: "#D1FAE5", color: "#059669" }}>
+                          ✓ পরিশোধিত
+                        </span>
                       )}
                     </td>
 
-                    {/* Status (clickable) */}
-                    <td className="px-4 py-4" onClick={e => e.stopPropagation()}>
+                    {/* Status */}
+                    <td className="px-4 py-3.5" onClick={e => e.stopPropagation()}>
                       <button
                         onClick={e => openMenu(e, "status", o.id)}
-                        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all hover:opacity-80 active:scale-95"
+                        className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-2xl transition-all hover:opacity-80 active:scale-95 shadow-sm"
                         style={{ backgroundColor: st.bg, color: st.text }}
                         title="স্ট্যাটাস পরিবর্তন করুন"
                       >
                         {updatingIds.has(o.id)
                           ? <Loader2 size={10} className="animate-spin" />
-                          : <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60" />
+                          : <span className="w-1.5 h-1.5 rounded-full bg-current" />
                         }
                         {st.label}
                       </button>
                     </td>
 
                     {/* Courier */}
-                    <td className="px-4 py-4" onClick={e => e.stopPropagation()}>
+                    <td className="px-4 py-3.5" onClick={e => e.stopPropagation()}>
                       {o.courierTrackId ? (
                         <div>
-                          <p className="text-xs font-semibold" style={{ color: S.secondary }}>{COURIER_LABEL[o.courierName ?? ""] ?? o.courierName}</p>
+                          <p className="text-xs font-bold" style={{ color: S.text }}>{COURIER_LABEL[o.courierName ?? ""] ?? o.courierName}</p>
                           {courierSt ? (
-                            <span className="text-xs font-medium px-1.5 py-0.5 rounded-md mt-0.5 inline-block" style={{ backgroundColor: courierSt.bg, color: courierSt.text }}>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg mt-0.5 inline-block" style={{ backgroundColor: courierSt.bg, color: courierSt.text }}>
                               {courierSt.label}
                             </span>
                           ) : (
-                            <span className="text-xs" style={{ color: S.muted }}>{o.courierTrackId.slice(0, 10)}…</span>
+                            <span className="text-[10px]" style={{ color: S.muted }}>ID: {o.courierTrackId.slice(0, 8)}…</span>
                           )}
                         </div>
                       ) : (
                         <button
-                          onClick={e => { setInlineTrackInput(""); openMenu(e, "status", o.id); }}
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all hover:opacity-80 active:scale-95"
-                          style={{ backgroundColor: "var(--c-primary-light)", color: S.primary, border: `1.5px dashed var(--c-primary)` }}
+                          onClick={e => { setInlineTrackInput(""); openMenu(e, "courier", o.id); }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold transition-all hover:opacity-80 active:scale-95"
+                          style={{ backgroundColor: "#EFF6FF", color: "#3B82F6", border: "1.5px dashed #93C5FD" }}
                         >
                           <Truck size={11} /> বুক করুন
                         </button>
@@ -575,19 +624,19 @@ export default function FCommerceOrders() {
                     </td>
 
                     {/* Date */}
-                    <td className="px-4 py-4">
-                      <p className="text-xs font-medium" style={{ color: S.secondary }}>{formatRelativeDate(o.createdAt)}</p>
+                    <td className="px-4 py-3.5">
+                      <p className="text-xs font-semibold" style={{ color: S.secondary }}>{formatRelativeDate(o.createdAt)}</p>
                     </td>
 
                     {/* Actions */}
-                    <td className="px-4 py-4 w-10" onClick={e => e.stopPropagation()}>
+                    <td className="px-4 py-3.5 w-10" onClick={e => e.stopPropagation()}>
                       <button
                         onClick={e => openMenu(e, "actions", o.id)}
-                        className="p-1.5 rounded-lg transition-colors hover:bg-gray-100"
+                        className="p-2 rounded-xl transition-colors hover:bg-gray-100"
                         style={{ color: S.muted }}
                         title="দ্রুত কাজ"
                       >
-                        <MoreHorizontal size={16} />
+                        <MoreHorizontal size={15} />
                       </button>
                     </td>
                   </tr>
