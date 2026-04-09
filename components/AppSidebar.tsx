@@ -65,7 +65,7 @@ const storeSubItems: NavItem[] = [
   { href: "/dashboard/store/analytics",  icon: BarChart2,   label: "অ্যানালিটিক্স"  },
 ];
 
-function StoreHoverItem() {
+function StoreHoverItem({ collapsed }: { collapsed: boolean }) {
   const pathname = usePathname();
   const storeActive = pathname.startsWith("/store");
   const triggerRef = useRef<HTMLDivElement>(null);
@@ -133,18 +133,25 @@ function StoreHoverItem() {
     <>
       <div ref={triggerRef} onMouseEnter={show} onMouseLeave={hide}>
         <div
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 text-sm font-medium transition-colors cursor-default select-none"
+          className="flex items-center rounded-lg mb-0.5 text-sm font-medium transition-all cursor-default select-none"
           style={{
             backgroundColor: storeActive ? "var(--shell-nav-active-bg)" : "transparent",
             color: storeActive ? "var(--shell-nav-active-color)" : "var(--shell-nav-inactive)",
             borderLeft: storeActive ? "3px solid var(--shell-nav-active-border)" : "3px solid transparent",
+            padding: collapsed ? "10px 0" : "10px 12px",
+            justifyContent: collapsed ? "center" : "flex-start",
+            gap: collapsed ? 0 : 12,
           }}
         >
           <Store size={16} className="flex-shrink-0" />
-          <span className="truncate flex-1">আমার স্টোর</span>
-          <svg width="9" height="9" viewBox="0 0 10 10" fill="none" style={{ flexShrink: 0, opacity: 0.45 }}>
-            <path d="M3 2L7 5L3 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          {!collapsed && (
+            <>
+              <span className="truncate flex-1">আমার স্টোর</span>
+              <svg width="9" height="9" viewBox="0 0 10 10" fill="none" style={{ flexShrink: 0, opacity: 0.45 }}>
+                <path d="M3 2L7 5L3 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </>
+          )}
         </div>
       </div>
       {mounted && flyout ? createPortal(flyout, document.body) : null}
@@ -345,6 +352,18 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
   const [moreOpen, setMoreOpen] = useState(false);
   const [overdueCount, setOverdueCount] = useState(0);
   const [tipsCount, setTipsCount] = useState(0);
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    const saved = typeof window !== "undefined" ? localStorage.getItem("sidebar-collapsed") : null;
+    if (saved === "1") setCollapsed(true);
+  }, []);
+
+  const toggleCollapsed = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    if (typeof window !== "undefined") localStorage.setItem("sidebar-collapsed", next ? "1" : "0");
+  };
 
   useEffect(() => {
     if (plan === "free") return;
@@ -387,7 +406,8 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
     return (
       <Link
         href={item.href}
-        className="flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 text-sm font-medium transition-colors relative"
+        title={collapsed ? item.label : undefined}
+        className="flex items-center rounded-lg mb-0.5 text-sm font-medium transition-all relative"
         style={{
           backgroundColor: active ? "var(--shell-nav-active-bg)" : "transparent",
           color: locked
@@ -395,24 +415,34 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
             : active ? "var(--shell-nav-active-color)" : "var(--shell-nav-inactive)",
           borderLeft: active ? "3px solid var(--shell-nav-active-border)" : "3px solid transparent",
           opacity: locked ? 0.6 : 1,
+          padding: collapsed ? "10px 0" : "10px 12px",
+          justifyContent: collapsed ? "center" : "flex-start",
+          gap: collapsed ? 0 : 12,
         }}
       >
         <item.icon size={16} className="flex-shrink-0" />
-        <span className="truncate flex-1">{item.label}</span>
-        {showOverdueBadge && (
-          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: "#E24B4A", color: "#fff" }}>
-            {overdueCount > 9 ? "9+" : overdueCount}
-          </span>
+        {!collapsed && (
+          <>
+            <span className="truncate flex-1">{item.label}</span>
+            {showOverdueBadge && (
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: "#E24B4A", color: "#fff" }}>
+                {overdueCount > 9 ? "9+" : overdueCount}
+              </span>
+            )}
+            {showTipsBadge && (
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: "#D97706", color: "#fff" }}>
+                {tipsCount > 99 ? "99+" : tipsCount}
+              </span>
+            )}
+            {locked && (
+              <span className="text-[9px] font-bold px-1 py-0.5 rounded" style={{ backgroundColor: "#FFF3DC", color: "#EF9F27" }}>
+                PRO
+              </span>
+            )}
+          </>
         )}
-        {showTipsBadge && (
-          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: "#D97706", color: "#fff" }}>
-            {tipsCount > 99 ? "99+" : tipsCount}
-          </span>
-        )}
-        {locked && (
-          <span className="text-[9px] font-bold px-1 py-0.5 rounded" style={{ backgroundColor: "#FFF3DC", color: "#EF9F27" }}>
-            PRO
-          </span>
+        {collapsed && showOverdueBadge && (
+          <span className="absolute top-1 right-1 w-2 h-2 rounded-full" style={{ backgroundColor: "#E24B4A" }} />
         )}
       </Link>
     );
@@ -422,20 +452,49 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
     <>
       {/* Desktop sidebar */}
       <aside
-        className="hidden md:flex flex-col w-[210px] flex-shrink-0 border-r h-full"
-        style={{ backgroundColor: "var(--shell-bg)", borderColor: "var(--shell-border)" }}
+        className="hidden md:flex flex-col flex-shrink-0 border-r h-full transition-all duration-200"
+        style={{
+          width: collapsed ? 52 : 210,
+          backgroundColor: "var(--shell-bg)",
+          borderColor: "var(--shell-border)",
+        }}
       >
-        {/* Logo */}
-        <div className="flex items-center gap-2 px-4 h-[52px] border-b flex-shrink-0" style={{ borderColor: "var(--shell-border)" }}>
-          <img src="/logo.svg" alt="BizilCore" className="w-7 h-7 flex-shrink-0" />
-          <span className="font-semibold text-sm" style={{ color: "var(--shell-text)" }}>BizilCore</span>
+        {/* Logo + collapse toggle */}
+        <div
+          className="flex items-center h-[52px] border-b flex-shrink-0"
+          style={{
+            borderColor: "var(--shell-border)",
+            padding: collapsed ? "0 6px" : "0 8px 0 16px",
+            justifyContent: collapsed ? "center" : "space-between",
+          }}
+        >
+          {!collapsed && (
+            <div className="flex items-center gap-2 min-w-0">
+              <img src="/logo.svg" alt="BizilCore" className="w-7 h-7 flex-shrink-0" />
+              <span className="font-semibold text-sm truncate" style={{ color: "var(--shell-text)" }}>BizilCore</span>
+            </div>
+          )}
+          <button
+            onClick={toggleCollapsed}
+            title={collapsed ? "সাইডবার বড় করুন" : "সাইডবার ছোট করুন"}
+            className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+            style={{ color: "var(--shell-nav-inactive)" }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--shell-nav-active-bg)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
+          >
+            {collapsed ? (
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            )}
+          </button>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 p-2 overflow-y-auto">
+        <nav className="flex-1 p-2 overflow-y-auto overflow-x-hidden">
           {activeNavGroups.map((group, gi) => (
             <div key={gi} className={gi > 0 ? "mt-2" : ""}>
-              {group.label && (
+              {group.label && !collapsed && (
                 <p
                   className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider"
                   style={{ color: "var(--shell-text-muted)" }}
@@ -443,73 +502,107 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
                   {group.label}
                 </p>
               )}
+              {collapsed && gi > 0 && (
+                <div className="my-2 mx-auto" style={{ width: 24, height: 1, backgroundColor: "var(--shell-border)" }} />
+              )}
               {group.items.map((item) => (
                 <NavLink key={item.href} item={item} />
               ))}
-              {/* Store hover submenu after the first (main) group */}
-              {gi === 0 && isFCommerce && <StoreHoverItem />}
+              {gi === 0 && isFCommerce && <StoreHoverItem collapsed={collapsed} />}
             </div>
           ))}
           {isAdmin && (
             <Link
               href="/admin"
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 text-sm font-medium transition-colors mt-2"
+              title={collapsed ? "Admin Panel" : undefined}
+              className="flex items-center rounded-lg mb-0.5 text-sm font-medium transition-all mt-2"
               style={{
                 backgroundColor: pathname.startsWith("/admin") ? "#FFF3DC" : "transparent",
                 color: pathname.startsWith("/admin") ? "#92600A" : "var(--shell-text-muted)",
                 borderLeft: pathname.startsWith("/admin") ? "3px solid #EF9F27" : "3px solid transparent",
+                padding: collapsed ? "10px 0" : "10px 12px",
+                justifyContent: collapsed ? "center" : "flex-start",
+                gap: collapsed ? 0 : 12,
               }}
             >
               <ShieldCheck size={16} className="flex-shrink-0" />
-              Admin Panel
+              {!collapsed && <span>Admin Panel</span>}
             </Link>
           )}
         </nav>
 
         {/* Shop info + Logout */}
-        <div className="p-3 border-t" style={{ borderColor: "var(--shell-border)" }}>
-          <div className="flex items-center gap-2.5">
-            <div
-              className="w-8 h-8 rounded-lg flex-shrink-0 overflow-hidden"
-              style={{ backgroundColor: logoUrl ? "transparent" : "#0F6E56" }}
-            >
-              {logoUrl ? (
-                <img src={logoUrl} alt={shopName} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-white font-bold text-sm">
-                  {shopName?.[0]?.toUpperCase() ?? "S"}
-                </div>
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold truncate" style={{ color: "var(--shell-text)" }}>{shopName}</p>
-              <span
-                className="text-xs font-bold px-1.5 py-0.5 rounded uppercase tracking-wide"
-                style={{
-                  backgroundColor:
-                    plan === "business" ? "#FFF3DC" :
-                    plan === "pro"      ? "#E1F5EE" :
-                                         "#F3F4F6",
-                  color:
-                    plan === "business" ? "#EF9F27" :
-                    plan === "pro"      ? "#0F6E56" :
-                                         "#6B7280",
-                }}
+        <div className="p-2 border-t" style={{ borderColor: "var(--shell-border)" }}>
+          {collapsed ? (
+            <div className="flex flex-col items-center gap-2">
+              <div
+                className="w-8 h-8 rounded-lg flex-shrink-0 overflow-hidden"
+                style={{ backgroundColor: logoUrl ? "transparent" : "#0F6E56" }}
+                title={shopName}
               >
-                {plan === "business" ? "👑 Business" : plan === "pro" ? "⚡ Pro" : "Free"}
-              </span>
+                {logoUrl ? (
+                  <img src={logoUrl} alt={shopName} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white font-bold text-sm">
+                    {shopName?.[0]?.toUpperCase() ?? "S"}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={async () => { await signOut({ redirect: false }); window.location.replace("/login"); }}
+                title="লগআউট"
+                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors hover:bg-red-50"
+                style={{ color: "#9CA3AF" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#EF4444"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "#9CA3AF"; }}
+              >
+                <LogOut size={14} />
+              </button>
             </div>
-            <button
-              onClick={async () => { await signOut({ redirect: false }); window.location.replace("/login"); }}
-              title="লগআউট"
-              className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors hover:bg-red-50"
-              style={{ color: "#9CA3AF" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#EF4444"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "#9CA3AF"; }}
-            >
-              <LogOut size={14} />
-            </button>
-          </div>
+          ) : (
+            <div className="flex items-center gap-2.5 px-1">
+              <div
+                className="w-8 h-8 rounded-lg flex-shrink-0 overflow-hidden"
+                style={{ backgroundColor: logoUrl ? "transparent" : "#0F6E56" }}
+              >
+                {logoUrl ? (
+                  <img src={logoUrl} alt={shopName} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white font-bold text-sm">
+                    {shopName?.[0]?.toUpperCase() ?? "S"}
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold truncate" style={{ color: "var(--shell-text)" }}>{shopName}</p>
+                <span
+                  className="text-xs font-bold px-1.5 py-0.5 rounded uppercase tracking-wide"
+                  style={{
+                    backgroundColor:
+                      plan === "business" ? "#FFF3DC" :
+                      plan === "pro"      ? "#E1F5EE" :
+                                           "#F3F4F6",
+                    color:
+                      plan === "business" ? "#EF9F27" :
+                      plan === "pro"      ? "#0F6E56" :
+                                           "#6B7280",
+                  }}
+                >
+                  {plan === "business" ? "👑 Business" : plan === "pro" ? "⚡ Pro" : "Free"}
+                </span>
+              </div>
+              <button
+                onClick={async () => { await signOut({ redirect: false }); window.location.replace("/login"); }}
+                title="লগআউট"
+                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors hover:bg-red-50"
+                style={{ color: "#9CA3AF" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#EF4444"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "#9CA3AF"; }}
+              >
+                <LogOut size={14} />
+              </button>
+            </div>
+          )}
         </div>
       </aside>
 
