@@ -214,6 +214,15 @@ function SignupContent() {
     const data = await res.json();
     setLoading(false);
     if (!res.ok) { showToast("error", data.error ?? "কিছু একটা সমস্যা হয়েছে।"); return; }
+
+    // Existing unverified account — resent OTP, move to step 2
+    if (data.needsVerification) {
+      showToast("success", "নতুন Verification code পাঠানো হয়েছে ✓");
+      setResendCooldown(60);
+      setStep(2);
+      return;
+    }
+
     showToast("success", "Verification code পাঠানো হয়েছে ✓");
     setResendCooldown(60);
     setStep(2);
