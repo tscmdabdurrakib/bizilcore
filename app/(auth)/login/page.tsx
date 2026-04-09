@@ -11,6 +11,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [resendingOtp, setResendingOtp] = useState(false);
 
   function showToast(type: "success" | "error", message: string) {
     setToast({ type, message });
@@ -20,13 +22,18 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setUnverifiedEmail(null);
 
     const result = await loginAction(email, password);
 
     setLoading(false);
 
     if (!result.success) {
-      showToast("error", result.error || "কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করুন।");
+      if (result.needsVerification) {
+        setUnverifiedEmail(email);
+      } else {
+        showToast("error", result.error || "কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করুন।");
+      }
       return;
     }
 
@@ -37,6 +44,23 @@ export default function LoginPage() {
       router.push("/dashboard");
     } else {
       router.push("/onboarding");
+    }
+  }
+
+  async function handleResendOtp() {
+    if (!unverifiedEmail || resendingOtp) return;
+    setResendingOtp(true);
+    const res = await fetch("/api/auth/resend-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: unverifiedEmail }),
+    });
+    setResendingOtp(false);
+    if (res.ok) {
+      showToast("success", "Verification code পাঠানো হয়েছে ✓");
+      router.push("/signup");
+    } else {
+      showToast("error", "কোড পাঠানো যায়নি। আবার চেষ্টা করুন।");
     }
   }
 
@@ -82,6 +106,22 @@ export default function LoginPage() {
               আপনার অ্যাকাউন্টে লগইন করুন
             </p>
           </div>
+
+          {/* Unverified email banner */}
+          {unverifiedEmail && (
+            <div className="mb-4 p-4 rounded-xl border text-sm" style={{ backgroundColor: "#FFF8E6", borderColor: "#FCD34D" }}>
+              <p className="font-semibold mb-1" style={{ color: "#92400E" }}>📧 ইমেইল Verify করা হয়নি</p>
+              <p className="text-xs mb-3" style={{ color: "#78350F" }}>
+                <span className="font-medium">{unverifiedEmail}</span>-এ verification code পাঠানো হয়নি।
+                লগইন করতে আগে ইমেইল verify করুন।
+              </p>
+              <button onClick={handleResendOtp} disabled={resendingOtp}
+                className="text-xs font-bold px-3 py-1.5 rounded-lg transition-opacity disabled:opacity-60"
+                style={{ backgroundColor: "#F59E0B", color: "#fff" }}>
+                {resendingOtp ? "পাঠাচ্ছে..." : "✉ Verification Code পাঠান"}
+              </button>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

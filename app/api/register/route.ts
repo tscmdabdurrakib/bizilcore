@@ -20,6 +20,20 @@ export async function POST(req: NextRequest) {
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
+      // If account exists but email is NOT verified, resend OTP and ask to verify
+      if (!existingUser.emailVerified) {
+        const otp = generateOTP();
+        const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+        await prisma.user.update({
+          where: { id: existingUser.id },
+          data: { verifyToken: otp, verifyTokenExpiry: otpExpiry },
+        });
+        sendOTPVerificationEmail(existingUser.email, existingUser.name, otp).catch(() => {});
+        return NextResponse.json(
+          { needsVerification: true, message: "নতুন verification code পাঠানো হয়েছে" },
+          { status: 200 }
+        );
+      }
       return NextResponse.json({ error: "এই ইমেইল দিয়ে আগেই একটি অ্যাকাউন্ট আছে" }, { status: 409 });
     }
 

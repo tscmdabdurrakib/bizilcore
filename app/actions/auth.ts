@@ -12,8 +12,18 @@ export async function loginAction(email: string, password: string) {
     });
     return { success: true };
   } catch (error) {
-    // Check for disabled account (thrown from authorize)
     const msg = error instanceof Error ? error.message : "";
+
+    // Unverified email
+    if (msg === "email_not_verified") {
+      return {
+        success: false,
+        error: "ইমেইল verify করা হয়নি। প্রথমে আপনার ইমেইল verify করুন।",
+        needsVerification: true,
+      };
+    }
+
+    // Disabled account
     if (msg.startsWith("account_disabled:")) {
       const reason = msg.replace("account_disabled:", "").trim();
       return {
@@ -24,6 +34,7 @@ export async function loginAction(email: string, password: string) {
         disabled: true,
       };
     }
+
     if (error instanceof AuthError) {
       return { success: false, error: "ইমেইল বা পাসওয়ার্ড সঠিক নয়।" };
     }
