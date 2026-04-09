@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  ComposedChart, BarChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from "recharts";
 import { TrendingUp, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
@@ -193,16 +193,50 @@ export default function TaskReports() {
 
           {/* Charts row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Weekly completion bar chart */}
+            {/* Weekly completion bar chart — dashboard-style gradient + line overlay */}
             <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-              <h3 className="text-sm font-semibold mb-4" style={{ color: S.text }}>সাপ্তাহিক সম্পন্ন টাস্ক</h3>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-sm font-bold" style={{ color: S.text }}>সাপ্তাহিক সম্পন্ন টাস্ক</h3>
+                  <p className="text-[11px] mt-0.5 font-medium" style={{ color: S.muted }}>
+                    মোট {data.weeklyCompletion.reduce((s, w) => s + w.count, 0)}টি সম্পন্ন
+                  </p>
+                </div>
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                  style={{ background: "linear-gradient(135deg, #0F6E56, #1BAA78)" }}>
+                  <TrendingUp size={15} color="#fff" />
+                </div>
+              </div>
               <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={data.weeklyCompletion} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+                <ComposedChart data={data.weeklyCompletion} margin={{ top: 10, right: 4, left: -16, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="taskBarGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#0F6E56" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#A8DFD0" stopOpacity={0.55} />
+                    </linearGradient>
+                  </defs>
                   <XAxis dataKey="week" tick={{ fontSize: 10, fill: S.muted }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 10, fill: S.muted }} axisLine={false} tickLine={false} allowDecimals={false} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="count" fill={S.primary} radius={[4, 4, 0, 0]} name="সম্পন্ন" />
-                </BarChart>
+                  <Tooltip
+                    formatter={(v) => [`${Number(v) || 0}টি`, "সম্পন্ন"]}
+                    contentStyle={{
+                      border: "1px solid #E8E6DF",
+                      borderRadius: 10,
+                      fontSize: 12,
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                    }}
+                    cursor={{ fill: "rgba(15,110,86,0.05)" }}
+                  />
+                  <Bar dataKey="count" radius={[7, 7, 0, 0]} fill="url(#taskBarGrad)" maxBarSize={42} name="সম্পন্ন" />
+                  <Line
+                    type="monotone"
+                    dataKey="count"
+                    stroke="#0F6E56"
+                    strokeWidth={2.5}
+                    dot={{ r: 3, fill: "#fff", stroke: "#0F6E56", strokeWidth: 2 }}
+                    activeDot={{ r: 5, fill: "#0F6E56" }}
+                  />
+                </ComposedChart>
               </ResponsiveContainer>
             </div>
 
