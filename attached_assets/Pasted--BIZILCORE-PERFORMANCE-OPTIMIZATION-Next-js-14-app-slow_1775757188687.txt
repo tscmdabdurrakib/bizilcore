@@ -1,0 +1,396 @@
+=== BIZILCORE PERFORMANCE OPTIMIZATION ===
+আমার Next.js 14 app অনেক slow। 
+নিচের সব optimization apply করো।
+
+━━━ 1. DATA FETCHING & CACHING ━━━
+
+Install: npm install swr
+
+প্রতিটা dashboard page এ SWR দিয়ে 
+data fetch করো যাতে page change এ 
+reload না হয়:
+
+// /lib/fetcher.ts
+export const fetcher = (url: string) =>
+  fetch(url).then(res => res.json())
+
+// Example — Dashboard stats:
+import useSWR from 'swr'
+import { fetcher } from '@/lib/fetcher'
+
+export function useDashboardStats() {
+  const { data, isLoading } = useSWR(
+    '/api/dashboard/stats',
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 30000, // 30 seconds cache
+    }
+  )
+  return { data, isLoading }
+}
+
+একই pattern সব page এ apply করো:
+  useOrders() → '/api/orders'
+  useProducts() → '/api/products'
+  useCustomers() → '/api/customers'
+  useHisab() → '/api/transactions'
+
+━━━ 2. DATABASE QUERY OPTIMIZATION ━━━
+
+Prisma তে সব query তে শুধু 
+দরকারী fields select করো:
+
+// ❌ BAD — সব fields নিচ্ছে
+const orders = await prisma.order.findMany()
+
+// ✅ GOOD — শুধু দরকারী fields
+const orders = await prisma.order.findMany({
+  select: {
+    id: true,
+    orderNumber: true,
+    status: true,
+    totalAmount: true,
+    createdAt: true,
+    customer: {
+      select: {
+        name: true,
+        phone: true,
+      }
+    }
+  },
+  orderBy: { createdAt: 'desc' },
+  take: 20, // pagination — একবারে max 20
+})
+
+সব API route এ এই pattern apply করো:
+  /api/orders
+  /api/products  
+  /api/customers
+  /api/transactions
+  /api/dashboard/stats
+
+Dashboard stats এ আলাদা আলাদা query 
+না করে একটা query তে সব আনো:
+
+// /api/dashboard/stats/route.ts
+const [
+  todaySales,
+  pendingOrders,
+  totalDue,
+  lowStock,
+  recentOrders
+] = await Promise.all([
+  prisma.order.aggregate({...}),
+  prisma.order.count({where: {status: 'pending'}}),
+  prisma.customer.aggregate({...}),
+  prisma.product.count({where: {...}}),
+  prisma.order.findMany({take: 5, ...})
+])
+
+// সব একসাথে return করো
+return NextResponse.json({
+  todaySales,
+  pendingOrders,
+  totalDue,
+  lowStock,
+  recentOrders
+})
+
+━━━ 3. IMAGE OPTIMIZATION ━━━
+
+সব <img> tag খুঁজে বের করো এবং 
+next/image দিয়ে replace করো:
+
+// ❌ BAD
+<img src={product.imageUrl} alt={product.name} />
+
+// ✅ GOOD
+import Image from 'next/image'
+<Image
+  src={product.imageUrl}
+  alt={product.name}
+  width={300}
+  height={300}
+  loading="lazy"
+  placeholder="blur"
+  blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRg=="
+/>
+
+next.config.js এ image domains add করো:
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.supabase.co',
+      },
+    ],
+  },
+}
+module.exports = nextConfig
+
+━━━ 4. LOADING STATES — SKELETON UI ━━━
+
+প্রতিটা page এ proper skeleton 
+loader add করো যাতে slow মনে না হয়:
+
+// /components/ui/Skeleton.tsx
+export function Skeleton({ 
+  className 
+}: { className?: string }) {
+  return (
+    <div
+      className={`animate-pulse bg-gray-200 
+        rounded ${className}`}
+    />
+  )
+}
+
+// Dashboard skeleton:
+export function DashboardSkeleton() {
+  return (
+    <div className="space-y-6">
+      {/* Stats cards */}
+      <div className="grid grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="p-4 border rounded-lg">
+            <Skeleton className="h-4 w-24 mb-2" />
+            <Skeleton className="h-8 w-16" />
+          </div>
+        ))}
+      </div>
+      {/* Chart */}
+      <Skeleton className="h-64 w-full" />
+      {/* Recent orders */}
+      <div className="space-y-2">
+        {[...Array(5)].map((_, i) => (
+          <Skeleton key={i} className="h-14 w-full" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+প্রতিটা page এ isLoading check করো:
+if (isLoading) return <DashboardSkeleton />
+
+━━━ 5. LAZY LOADING — HEAVY COMPONENTS ━━━
+
+Charts এবং heavy components 
+dynamic import করো:
+
+// ❌ BAD — সব upfront load হচ্ছে
+import { BarChart } from '@/components/Charts'
+
+// ✅ GOOD — শুধু দরকার হলে load হবে
+import dynamic from 'next/dynamic'
+
+const BarChart = dynamic(
+  () => import('@/components/Charts').then(m => m.BarChart),
+  { 
+    loading: () => <Skeleton className="h-64 w-full" />,
+    ssr: false 
+  }
+)
+
+এই pattern apply করো এই components এ:
+  - সব chart components (Recharts)
+  - Invoice/PDF generator
+  - QR code generator
+  - Barcode component
+  - Heavy modal components
+
+━━━ 6. CLIENT-SIDE NAVIGATION ━━━
+
+সব <a href="..."> এবং router.push() 
+next/link দিয়ে replace করো:
+
+// ❌ BAD
+<a href="/dashboard/orders">অর্ডার</a>
+
+// ✅ GOOD
+import Link from 'next/link'
+<Link href="/dashboard/orders" prefetch={true}>
+  অর্ডার
+</Link>
+
+Sidebar navigation এ সব links এ 
+prefetch={true} add করো যাতে 
+hover করলেই preload শুরু হয়।
+
+━━━ 7. API ROUTE OPTIMIZATION ━━━
+
+সব API route এ response caching 
+add করো:
+
+// Static data (categories, settings):
+return NextResponse.json(data, {
+  headers: {
+    'Cache-Control': 'private, max-age=300', // 5 min
+  }
+})
+
+// Dynamic data (orders, products):
+return NextResponse.json(data, {
+  headers: {
+    'Cache-Control': 'private, no-cache',
+  }
+})
+
+━━━ 8. PAGINATION ━━━
+
+বড় lists এ pagination add করো 
+(একবারে সব load না করে):
+
+// Orders list — একবারে 20টা
+const page = Number(searchParams.get('page')) || 1
+const limit = 20
+const skip = (page - 1) * limit
+
+const [orders, total] = await Promise.all([
+  prisma.order.findMany({
+    skip,
+    take: limit,
+    orderBy: { createdAt: 'desc' },
+    where: { shopId }
+  }),
+  prisma.order.count({ where: { shopId } })
+])
+
+return NextResponse.json({
+  orders,
+  total,
+  pages: Math.ceil(total / limit),
+  currentPage: page
+})
+
+UI তে "আরো দেখুন" button অথবা 
+page numbers add করো।
+
+━━━ 9. PRISMA CONNECTION OPTIMIZATION ━━━
+
+/lib/prisma.ts এ connection pooling 
+ঠিক করো:
+
+import { PrismaClient } from '@prisma/client'
+
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined
+}
+
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: process.env.NODE_ENV === 'development' 
+      ? ['error'] 
+      : [],
+  })
+
+if (process.env.NODE_ENV !== 'production')
+  globalForPrisma.prisma = prisma
+
+━━━ 10. BUNDLE SIZE REDUCTION ━━━
+
+package.json check করো এবং 
+unused packages remove করো।
+
+date-fns এর বদলে শুধু দরকারী 
+functions import করো:
+
+// ❌ BAD
+import * as dateFns from 'date-fns'
+
+// ✅ GOOD
+import { format, formatDistance } from 'date-fns'
+
+Icons এর ক্ষেত্রে:
+// ❌ BAD
+import * as Icons from 'lucide-react'
+
+// ✅ GOOD
+import { ShoppingCart, Package } from 'lucide-react'
+
+━━━ 11. LOADING PAGE TRANSITION ━━━
+
+Page change এ smooth transition 
+এর জন্য loading.tsx add করো:
+
+// /app/dashboard/loading.tsx
+export default function Loading() {
+  return (
+    <div className="flex items-center 
+      justify-center h-64">
+      <div className="flex gap-2">
+        <div className="w-2 h-2 bg-green-600 
+          rounded-full animate-bounce 
+          [animation-delay:-0.3s]" />
+        <div className="w-2 h-2 bg-green-600 
+          rounded-full animate-bounce 
+          [animation-delay:-0.15s]" />
+        <div className="w-2 h-2 bg-green-600 
+          rounded-full animate-bounce" />
+      </div>
+    </div>
+  )
+}
+
+প্রতিটা major route এ 
+loading.tsx file add করো:
+  /app/dashboard/loading.tsx
+  /app/dashboard/orders/loading.tsx
+  /app/dashboard/inventory/loading.tsx
+  /app/dashboard/customers/loading.tsx
+  /app/dashboard/hisab/loading.tsx
+
+━━━ 12. OPTIMISTIC UPDATES ━━━
+
+Order status change এ 
+optimistic update করো:
+
+// Status change করলে 
+// server response এর আগেই UI update হবে
+async function updateStatus(orderId, newStatus) {
+  // UI তে তাৎক্ষণিক update
+  mutate(
+    '/api/orders',
+    orders.map(o => 
+      o.id === orderId 
+        ? {...o, status: newStatus} 
+        : o
+    ),
+    false // revalidate করবে না এখনই
+  )
+  
+  // তারপর server এ save
+  await fetch(`/api/orders/${orderId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: newStatus })
+  })
+  
+  // Server থেকে fresh data নাও
+  mutate('/api/orders')
+}
+
+━━━ PRIORITY ORDER ━━━
+
+এই order এ করো (সবচেয়ে 
+বেশি impact আগে):
+
+1. Prisma connection fix (#9)
+2. Dashboard stats — Promise.all (#2)
+3. SWR caching (#1)  
+4. Skeleton loading UI (#4)
+5. Lazy loading charts (#5)
+6. next/link prefetch (#6)
+7. Pagination (#8)
+8. next/image (#3)
+9. Bundle size (#10)
+10. Loading.tsx (#11)
+11. Optimistic updates (#12)
+12. API caching (#7)
