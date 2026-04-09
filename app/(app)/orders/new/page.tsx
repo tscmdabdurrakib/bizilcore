@@ -239,39 +239,71 @@ export default function NewOrderPage() {
       )}
 
       {/* Header */}
-      <div className="flex items-center gap-3 mb-7">
-        <Link href="/orders" className="p-2 rounded-xl hover:bg-gray-100 transition-colors flex-shrink-0">
+      <div className="flex items-center gap-3 mb-6">
+        <Link href="/orders"
+          className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 border transition-colors hover:bg-gray-50"
+          style={{ borderColor: S.border, backgroundColor: S.surface }}>
           <ChevronLeft size={20} style={{ color: S.secondary }} />
         </Link>
-        <div>
+        <div className="flex-1 min-w-0">
           <h2 className="font-bold text-xl" style={{ color: S.text }}>নতুন অর্ডার</h2>
-          <p className="text-xs mt-0.5" style={{ color: S.muted }}>অর্ডারের সব তথ্য পূরণ করুন</p>
+          <p className="text-xs mt-0.5" style={{ color: S.muted }}>সব তথ্য পূরণ করুন ও অর্ডার সেভ করুন</p>
         </div>
-        <div className="ml-auto flex items-center gap-2 px-3 py-1.5 rounded-xl" style={{ backgroundColor: "var(--c-primary-light)" }}>
-          <ShoppingCart size={14} style={{ color: S.primary }} />
-          <span className="text-xs font-semibold" style={{ color: S.primary }}>{formatBDT(totalAmount)}</span>
+        <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl shadow-sm flex-shrink-0"
+          style={{ background: "linear-gradient(135deg, #E8F5F0, #C8EDE3)", border: "1px solid #A3D9C9" }}>
+          <ShoppingCart size={16} style={{ color: "#0F6E56" }} />
+          <div>
+            <p className="text-[9px] font-bold uppercase tracking-wide" style={{ color: "#0F6E56" }}>মোট</p>
+            <p className="text-sm font-extrabold leading-none" style={{ color: "#0F6E56" }}>{formatBDT(totalAmount)}</p>
+          </div>
         </div>
+      </div>
+
+      {/* Progress Steps */}
+      <div className="flex items-center gap-1 mb-6 overflow-x-auto pb-1">
+        {[
+          { num: "১", label: "কাস্টমার" },
+          { num: "২", label: "পণ্য" },
+          { num: "৩", label: "পেমেন্ট" },
+          { num: "৪", label: "ট্যাগ" },
+          { num: "৫", label: "কুরিয়ার" },
+        ].map((step, i) => (
+          <div key={step.num} className="flex items-center gap-1 flex-shrink-0">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+              style={{ backgroundColor: "var(--c-primary-light)", border: "1.5px solid var(--c-primary)" }}>
+              <span className="text-[11px] font-black" style={{ color: "var(--c-primary)" }}>{step.num}</span>
+              <span className="text-[11px] font-bold" style={{ color: "var(--c-primary)" }}>{step.label}</span>
+            </div>
+            {i < 4 && <div className="w-4 h-px flex-shrink-0" style={{ backgroundColor: "var(--c-border)" }} />}
+          </div>
+        ))}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
 
         {/* ── 1. Customer Card ────────────────────── */}
         <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-          <div className="px-5 py-3.5 border-b flex items-center gap-2.5" style={{ borderColor: S.border, backgroundColor: "var(--c-bg)" }}>
-            <div className="w-5 h-5 rounded-md flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ backgroundColor: S.primary }}>১</div>
-            <h3 className="font-semibold text-sm" style={{ color: S.text }}>কাস্টমার</h3>
+          <div className="px-5 py-4 border-b flex items-center gap-3" style={{ borderColor: S.border, backgroundColor: "var(--c-bg)" }}>
+            <div className="w-7 h-7 rounded-xl flex items-center justify-center text-white text-xs font-black flex-shrink-0 shadow-sm" style={{ background: "linear-gradient(135deg, #0F6E56, #0A5442)" }}>১</div>
+            <h3 className="font-bold text-sm" style={{ color: S.text }}>কাস্টমার</h3>
+            <span className="ml-auto text-[10px] font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: "#E8F5F0", color: "#0F6E56" }}>ধাপ ১/৫</span>
           </div>
           <div className="p-5">
             {/* Mode Toggle */}
-            <div className="flex gap-1 p-1 rounded-xl mb-4" style={{ backgroundColor: "var(--c-bg)" }}>
-              {[{ key: "existing", label: "বিদ্যমান কাস্টমার" }, { key: "new", label: "নতুন কাস্টমার" }].map((m) => (
+            <div className="flex gap-2 mb-5">
+              {[
+                { key: "existing", label: "বিদ্যমান কাস্টমার", emoji: "👤" },
+                { key: "new", label: "নতুন কাস্টমার", emoji: "✨" },
+              ].map((m) => (
                 <button key={m.key} type="button" onClick={() => setCustomerMode(m.key as "existing" | "new")}
-                  className="flex-1 py-2 rounded-lg text-xs font-semibold transition-all"
+                  className="flex-1 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 border"
                   style={{
-                    backgroundColor: customerMode === m.key ? S.surface : "transparent",
-                    color: customerMode === m.key ? S.primary : S.muted,
-                    boxShadow: customerMode === m.key ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+                    backgroundColor: customerMode === m.key ? "#0F6E56" : S.surface,
+                    color: customerMode === m.key ? "#fff" : S.secondary,
+                    borderColor: customerMode === m.key ? "#0F6E56" : S.border,
+                    boxShadow: customerMode === m.key ? "0 4px 12px #0F6E5640" : "none",
                   }}>
+                  <span>{m.emoji}</span>
                   {m.label}
                 </button>
               ))}
@@ -346,11 +378,11 @@ export default function NewOrderPage() {
 
         {/* ── 2. Products Card ───────────────────── */}
         <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-          <div className="px-5 py-3.5 border-b flex items-center gap-2.5" style={{ borderColor: S.border, backgroundColor: "var(--c-bg)" }}>
-            <div className="w-5 h-5 rounded-md flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ backgroundColor: S.primary }}>২</div>
-            <h3 className="font-semibold text-sm" style={{ color: S.text }}>পণ্য</h3>
-            <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: "var(--c-primary-light)", color: S.primary }}>
-              {items.filter(i => i.productId || i.comboId).length} টি পণ্য
+          <div className="px-5 py-4 border-b flex items-center gap-3" style={{ borderColor: S.border, backgroundColor: "var(--c-bg)" }}>
+            <div className="w-7 h-7 rounded-xl flex items-center justify-center text-white text-xs font-black flex-shrink-0 shadow-sm" style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)" }}>২</div>
+            <h3 className="font-bold text-sm" style={{ color: S.text }}>পণ্য</h3>
+            <span className="ml-auto text-[10px] font-bold px-2.5 py-1 rounded-full" style={{ backgroundColor: "#EFF6FF", color: "#3B82F6" }}>
+              {items.filter(i => i.productId || i.comboId).length} টি পণ্য যোগ
             </span>
           </div>
           <div className="p-5 space-y-3">
@@ -438,9 +470,12 @@ export default function NewOrderPage() {
 
         {/* ── 3. Payment Card ───────────────────── */}
         <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-          <div className="px-5 py-3.5 border-b flex items-center gap-2.5" style={{ borderColor: S.border, backgroundColor: "var(--c-bg)" }}>
-            <div className="w-5 h-5 rounded-md flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ backgroundColor: S.primary }}>৩</div>
-            <h3 className="font-semibold text-sm" style={{ color: S.text }}>পেমেন্ট</h3>
+          <div className="px-5 py-4 border-b flex items-center gap-3" style={{ borderColor: S.border, backgroundColor: "var(--c-bg)" }}>
+            <div className="w-7 h-7 rounded-xl flex items-center justify-center text-white text-xs font-black flex-shrink-0 shadow-sm" style={{ background: "linear-gradient(135deg, #8B5CF6, #6D28D9)" }}>৩</div>
+            <h3 className="font-bold text-sm" style={{ color: S.text }}>পেমেন্ট</h3>
+            <span className="ml-auto text-[10px] font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: due > 0 ? "#FEE2E2" : "#D1FAE5", color: due > 0 ? "#DC2626" : "#059669" }}>
+              {due > 0 ? `বাকি ${formatBDT(due)}` : "সম্পূর্ণ পরিশোধিত"}
+            </span>
           </div>
           <div className="p-5 space-y-4">
             <div>
@@ -452,27 +487,24 @@ export default function NewOrderPage() {
                 onFocus={() => setFocused("delivery")} onBlur={() => setFocused(null)} />
             </div>
 
+            {/* Payment Summary Cards */}
             <div className="grid grid-cols-3 gap-3">
-              {[
-                { label: "মোট", value: formatBDT(totalAmount), bg: "var(--c-primary-light)", color: S.primary, input: false },
-                { label: "পরিশোধিত", value: null, bg: "transparent", color: S.text, input: true },
-                { label: "বাকি", value: formatBDT(due), bg: due > 0 ? "#FFE8E8" : "var(--c-primary-light)", color: due > 0 ? "#E24B4A" : S.primary, input: false },
-              ].map((col, ci) => (
-                <div key={ci}>
-                  <p className="text-xs font-semibold mb-1.5" style={{ color: S.muted }}>{col.label}</p>
-                  {col.input ? (
-                    <input type="number" value={paidAmount} min="0" onChange={(e) => setPaidAmount(e.target.value)}
-                      placeholder="০"
-                      className="w-full h-10 px-3 rounded-xl border text-sm outline-none"
-                      style={inputCls("paid") as React.CSSProperties}
-                      onFocus={() => setFocused("paid")} onBlur={() => setFocused(null)} />
-                  ) : (
-                    <div className="h-10 flex items-center px-3 rounded-xl text-sm font-bold" style={{ backgroundColor: col.bg, color: col.color }}>
-                      {col.value}
-                    </div>
-                  )}
-                </div>
-              ))}
+              <div className="rounded-2xl p-3.5" style={{ background: "linear-gradient(135deg, #E8F5F0, #C8EDE3)" }}>
+                <p className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "#0F6E56" }}>মোট</p>
+                <p className="text-lg font-extrabold" style={{ color: "#0F6E56" }}>{formatBDT(totalAmount)}</p>
+              </div>
+              <div className="rounded-2xl p-3.5" style={{ border: `2px solid ${focused === "paid" ? "#0F6E56" : S.border}`, backgroundColor: S.surface }}>
+                <p className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: S.muted }}>পরিশোধিত</p>
+                <input type="number" value={paidAmount} min="0" onChange={(e) => setPaidAmount(e.target.value)}
+                  placeholder="০"
+                  className="w-full text-lg font-extrabold outline-none bg-transparent border-none p-0"
+                  style={{ color: S.text }}
+                  onFocus={() => setFocused("paid")} onBlur={() => setFocused(null)} />
+              </div>
+              <div className="rounded-2xl p-3.5" style={{ background: due > 0 ? "linear-gradient(135deg, #FEE2E2, #FECACA)" : "linear-gradient(135deg, #D1FAE5, #A7F3D0)" }}>
+                <p className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: due > 0 ? "#DC2626" : "#059669" }}>বাকি</p>
+                <p className="text-lg font-extrabold" style={{ color: due > 0 ? "#DC2626" : "#059669" }}>{formatBDT(due)}</p>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -497,10 +529,10 @@ export default function NewOrderPage() {
 
         {/* ── 4. Tags Card ──────────────────────── */}
         <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-          <div className="px-5 py-3.5 border-b flex items-center gap-2.5" style={{ borderColor: S.border, backgroundColor: "var(--c-bg)" }}>
-            <Tag size={13} style={{ color: S.primary }} />
-            <h3 className="font-semibold text-sm" style={{ color: S.text }}>ট্যাগ</h3>
-            <span className="text-xs" style={{ color: S.muted }}>(ঐচ্ছিক)</span>
+          <div className="px-5 py-4 border-b flex items-center gap-3" style={{ borderColor: S.border, backgroundColor: "var(--c-bg)" }}>
+            <div className="w-7 h-7 rounded-xl flex items-center justify-center text-white text-xs font-black flex-shrink-0 shadow-sm" style={{ background: "linear-gradient(135deg, #EF9F27, #D97706)" }}>৪</div>
+            <h3 className="font-bold text-sm" style={{ color: S.text }}>ট্যাগ</h3>
+            <span className="ml-auto text-[10px] font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: "#FFF3DC", color: "#EF9F27" }}>ঐচ্ছিক</span>
           </div>
           <div className="p-5">
             <div className="flex gap-2 mb-3">
@@ -542,21 +574,22 @@ export default function NewOrderPage() {
         </div>
 
         {/* ── 5. Courier Card (optional) ─────────── */}
-        <div className="rounded-2xl border overflow-hidden transition-colors"
-          style={{ borderColor: wantCourier ? "var(--c-primary)" : S.border }}>
+        <div className="rounded-2xl border overflow-hidden transition-all"
+          style={{ borderColor: wantCourier ? "#3B82F6" : S.border, borderWidth: wantCourier ? 2 : 1 }}>
           <button type="button" onClick={() => setWantCourier(v => !v)}
             className="w-full flex items-center justify-between px-5 py-4 transition-colors"
-            style={{ backgroundColor: wantCourier ? "var(--c-primary-light)" : "var(--c-bg)" }}>
-            <div className="flex items-center gap-2.5">
-              <Truck size={15} style={{ color: wantCourier ? S.primary : S.muted }} />
-              <span className="text-sm font-semibold" style={{ color: wantCourier ? S.primary : S.secondary }}>
+            style={{ backgroundColor: wantCourier ? "#EFF6FF" : "var(--c-bg)" }}>
+            <div className="flex items-center gap-3">
+              <div className="w-7 h-7 rounded-xl flex items-center justify-center text-white text-xs font-black flex-shrink-0 shadow-sm"
+                style={{ background: wantCourier ? "linear-gradient(135deg, #3B82F6, #1D4ED8)" : "linear-gradient(135deg, #9CA3AF, #6B7280)" }}>৫</div>
+              <span className="text-sm font-bold" style={{ color: wantCourier ? "#3B82F6" : S.secondary }}>
                 কুরিয়ার বুক করুন
               </span>
-              <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: S.border, color: S.muted }}>ঐচ্ছিক</span>
+              <span className="text-[10px] font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: wantCourier ? "#DBEAFE" : S.border, color: wantCourier ? "#3B82F6" : S.muted }}>ঐচ্ছিক</span>
             </div>
-            <div className={`w-10 h-6 rounded-full flex-shrink-0 flex items-center px-0.5 transition-colors ${wantCourier ? "justify-end" : "justify-start"}`}
-              style={{ backgroundColor: wantCourier ? S.primary : S.border }}>
-              <div className="w-5 h-5 bg-white rounded-full shadow transition-transform" />
+            <div className={`w-11 h-6 rounded-full flex-shrink-0 flex items-center px-0.5 transition-all ${wantCourier ? "justify-end" : "justify-start"}`}
+              style={{ backgroundColor: wantCourier ? "#3B82F6" : S.border }}>
+              <div className="w-5 h-5 bg-white rounded-full shadow-md transition-transform" />
             </div>
           </button>
           {wantCourier && (
@@ -599,13 +632,42 @@ export default function NewOrderPage() {
           )}
         </div>
 
+        {/* ── Order Summary Bar ─────────────────── */}
+        <div className="rounded-2xl p-4 border" style={{ backgroundColor: "var(--c-bg)", borderColor: S.border }}>
+          <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: S.muted }}>অর্ডার সারাংশ</p>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-4">
+              <div>
+                <p className="text-[10px]" style={{ color: S.muted }}>পণ্য</p>
+                <p className="text-sm font-bold" style={{ color: S.text }}>{items.filter(i => i.productId || i.comboId).length}টি</p>
+              </div>
+              <div className="w-px h-8" style={{ backgroundColor: S.border }} />
+              <div>
+                <p className="text-[10px]" style={{ color: S.muted }}>ডেলিভারি</p>
+                <p className="text-sm font-bold" style={{ color: S.text }}>{formatBDT(delivery)}</p>
+              </div>
+              <div className="w-px h-8" style={{ backgroundColor: S.border }} />
+              <div>
+                <p className="text-[10px]" style={{ color: S.muted }}>মোট</p>
+                <p className="text-sm font-extrabold" style={{ color: "#0F6E56" }}>{formatBDT(totalAmount)}</p>
+              </div>
+            </div>
+            {due > 0 && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl" style={{ backgroundColor: "#FEE2E2" }}>
+                <span className="text-xs font-bold" style={{ color: "#DC2626" }}>বাকি: {formatBDT(due)}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* ── Submit ────────────────────────────── */}
         <button type="submit" disabled={submitting || bookingCourier}
-          className="w-full py-4 rounded-2xl text-white font-bold text-base disabled:opacity-60 transition-opacity hover:opacity-90 flex items-center justify-center gap-2.5 shadow-lg"
-          style={{ background: "linear-gradient(135deg, var(--c-primary) 0%, #0A5442 100%)" }}>
+          className="w-full py-4 rounded-2xl text-white font-bold text-base disabled:opacity-60 transition-all hover:opacity-90 active:scale-[0.98] flex items-center justify-center gap-2.5 shadow-xl"
+          style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}>
           {(submitting || bookingCourier) && <Loader2 size={18} className="animate-spin" />}
           {bookingCourier ? "কুরিয়ার বুক হচ্ছে..." : submitting ? "সেভ হচ্ছে..." : wantCourier ? "অর্ডার সেভ ও কুরিয়ার বুক করুন" : "অর্ডার সেভ করুন"}
         </button>
+        <div className="h-4" />
 
       </form>
     </div>
