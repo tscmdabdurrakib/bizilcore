@@ -314,20 +314,47 @@ html.dark input[type="radio"] {
   color-scheme: dark;
 }
 
-/* ── Dark mode scrollbar ───────────────────────────── */
-html.dark ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* ── Custom scrollbar — light mode ────────────────── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
 }
-html.dark ::-webkit-scrollbar-track {
-  background: var(--c-bg);
+::-webkit-scrollbar-track {
+  background: transparent;
 }
+::-webkit-scrollbar-thumb {
+  background: #C8C5BC;
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #0F6E56;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox — light mode */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #C8C5BC transparent;
+}
+*:hover {
+  scrollbar-color: #0F6E56 transparent;
+}
+
+/* ── Custom scrollbar — dark mode ─────────────────── */
 html.dark ::-webkit-scrollbar-thumb {
-  background: var(--c-border);
-  border-radius: 3px;
+  background: #3A3A38;
 }
 html.dark ::-webkit-scrollbar-thumb:hover {
-  background: var(--c-text-muted);
+  background: #34D399;
+}
+
+html.dark * {
+  scrollbar-color: #3A3A38 transparent;
+}
+html.dark *:hover {
+  scrollbar-color: #34D399 transparent;
 }
 
 /* Smooth color transitions for dark mode switching */
