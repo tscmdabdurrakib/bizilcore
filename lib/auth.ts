@@ -28,6 +28,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         );
         if (!isValid) return null;
 
+        // Block unverified accounts from logging in
+        if (!user.emailVerified) {
+          throw new Error("email_not_verified");
+        }
+
         // Block disabled accounts from logging in
         if (user.accountStatus === "disabled") {
           throw new Error("account_disabled:" + (user.statusReason ?? ""));
