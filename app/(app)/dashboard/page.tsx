@@ -406,7 +406,7 @@ export default async function DashboardPage() {
             className="rounded-2xl relative overflow-hidden"
             style={{
               background: "linear-gradient(135deg, #E8F5F0 0%, #D0EDE3 100%)",
-              minHeight: 88,
+              minHeight: 130,
             }}
           >
             {/* Area chart fills full card */}
