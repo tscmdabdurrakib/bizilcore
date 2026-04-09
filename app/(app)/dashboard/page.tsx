@@ -401,33 +401,43 @@ export default async function DashboardPage() {
       {/* ── Sales Target ─────────────────────────────────────────── */}
       {salesTarget > 0 && (() => {
         const pct = Math.min(100, Math.round((monthSales / salesTarget) * 100));
-        const remaining = Math.max(0, salesTarget - monthSales);
         return (
-          <div className="rounded-2xl p-5 relative overflow-hidden" style={{ backgroundColor: "#E8F5F0", borderColor: S.border }}>
-            {/* real data wave */}
+          <div
+            className="rounded-2xl relative overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg, #E8F5F0 0%, #D0EDE3 100%)",
+              minHeight: 88,
+            }}
+          >
+            {/* Area chart fills full card */}
             <SalesTargetWave data={chartData} />
 
-            <div className="relative flex items-start justify-between mb-3">
+            {/* Content on top */}
+            <div className="relative flex items-center justify-between px-5 py-4 h-full">
               <div>
-                <p className="text-sm font-bold" style={{ color: "#0A4033" }}>মাসিক বিক্রির লক্ষ্যমাত্রা</p>
-                <p className="text-xs mt-0.5" style={{ color: "#2D7A65" }}>{formatBDT(monthSales)} বিক্রি, লক্ষ্য {formatBDT(salesTarget)}</p>
+                <p className="text-sm font-bold leading-tight" style={{ color: "#0A4033" }}>মাসিক বিক্রির লক্ষ্যমাত্রা</p>
+                <p className="text-xs mt-1" style={{ color: "#2D7A65" }}>
+                  {formatBDT(monthSales)} বিক্রি, লক্ষ্য {formatBDT(salesTarget)}
+                </p>
+                <Link href="/settings?tab=account" className="text-[10px] mt-1.5 inline-block hover:underline" style={{ color: "#4CA98B" }}>
+                  লক্ষ্য পরিবর্তন →
+                </Link>
               </div>
               <div className="text-right">
-                <p className="text-3xl font-bold" style={{ color: pct >= 100 ? "#0F6E56" : "#0A4033" }}>{pct}%</p>
-                <p className="text-[11px] font-medium" style={{ color: "#2D7A65" }}>{pct >= 100 ? "লক্ষ্য পূর্ণ হয়েছে" : "লক্ষ্য পূর্ণ হার"}</p>
+                <p
+                  className="font-black leading-none"
+                  style={{
+                    fontSize: 36,
+                    color: pct >= 100 ? "#0F6E56" : "#0A4033",
+                    textShadow: "0 1px 8px rgba(255,255,255,0.5)",
+                  }}
+                >
+                  {pct}%
+                </p>
+                <p className="text-[11px] font-semibold mt-1" style={{ color: "#2D7A65" }}>
+                  {pct >= 100 ? "লক্ষ্য পূর্ণ হয়েছে 🎉" : "লক্ষ্য পূরণের হার"}
+                </p>
               </div>
-            </div>
-
-            <div className="relative h-3 rounded-full overflow-hidden mb-2" style={{ backgroundColor: "rgba(255,255,255,0.5)" }}>
-              <div
-                className="h-3 rounded-full transition-all duration-700"
-                style={{ width: `${pct}%`, background: pct >= 100 ? "linear-gradient(90deg,#0F6E56,#13A67E)" : pct >= 75 ? "linear-gradient(90deg,#EF9F27,#F5BD5D)" : "linear-gradient(90deg,#0F6E56,#4BB896)" }}
-              />
-            </div>
-            <div className="relative flex justify-between">
-              <span className="text-[10px]" style={{ color: "#2D7A65" }}>৳ ০</span>
-              <Link href="/settings?tab=account" className="text-[10px] hover:underline" style={{ color: "#2D7A65" }}>লক্ষ্য পরিবর্তন →</Link>
-              <span className="text-[10px]" style={{ color: "#2D7A65" }}>{pct >= 100 ? "🎉 অর্জিত!" : `আরো ${formatBDT(remaining)}`}</span>
             </div>
           </div>
         );
