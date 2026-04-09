@@ -310,63 +310,99 @@ export default function NewOrderPage() {
             </div>
 
             {customerMode === "existing" ? (
-              <select value={selectedCustomerId} onChange={(e) => setSelectedCustomerId(e.target.value)}
-                className="w-full h-11 px-3 rounded-xl border text-sm outline-none"
-                style={{ ...inputCls("customer"), appearance: "auto" } as React.CSSProperties}
-                onFocus={() => setFocused("customer")} onBlur={() => setFocused(null)}>
-                <option value="">কাস্টমার বেছে নিন...</option>
-                {customers.map((c) => <option key={c.id} value={c.id}>{c.name}{c.phone ? ` — ${c.phone}` : ""}</option>)}
-              </select>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-lg pointer-events-none">👤</div>
+                <select value={selectedCustomerId} onChange={(e) => setSelectedCustomerId(e.target.value)}
+                  className="w-full h-13 pl-10 pr-4 rounded-2xl border text-sm font-medium outline-none"
+                  style={{
+                    height: "52px",
+                    borderColor: focused === "customer" ? "#0F6E56" : S.border,
+                    color: selectedCustomerId ? S.text : S.muted,
+                    backgroundColor: S.surface,
+                    appearance: "auto",
+                    borderWidth: focused === "customer" ? 2 : 1,
+                  } as React.CSSProperties}
+                  onFocus={() => setFocused("customer")} onBlur={() => setFocused(null)}>
+                  <option value="">কাস্টমার বেছে নিন...</option>
+                  {customers.map((c) => <option key={c.id} value={c.id}>{c.name}{c.phone ? ` — ${c.phone}` : ""}</option>)}
+                </select>
+                {customers.length === 0 && (
+                  <p className="text-xs mt-2 text-center" style={{ color: S.muted }}>কোনো কাস্টমার নেই। নতুন কাস্টমার যোগ করুন।</p>
+                )}
+              </div>
             ) : (
               <div className="space-y-3">
+                {/* Name + Phone */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>নাম *</label>
-                    <input type="text" placeholder="কাস্টমারের নাম" value={newCustomerName}
-                      onChange={(e) => setNewCustomerName(e.target.value)}
-                      className="w-full h-10 px-3 rounded-xl border text-sm outline-none"
-                      style={inputCls("newname") as React.CSSProperties}
-                      onFocus={() => setFocused("newname")} onBlur={() => setFocused(null)} />
+                    <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wide" style={{ color: S.muted }}>নাম *</label>
+                    <div className="flex items-center rounded-2xl border overflow-hidden transition-all"
+                      style={{ borderColor: focused === "newname" ? "#0F6E56" : S.border, borderWidth: focused === "newname" ? 2 : 1 }}>
+                      <span className="pl-3 text-base flex-shrink-0">🧑</span>
+                      <input type="text" placeholder="পুরো নাম" value={newCustomerName}
+                        onChange={(e) => setNewCustomerName(e.target.value)}
+                        className="flex-1 h-12 px-3 text-sm font-medium outline-none bg-transparent"
+                        style={{ color: S.text }}
+                        onFocus={() => setFocused("newname")} onBlur={() => setFocused(null)} />
+                    </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>ফোন নম্বর</label>
-                    <input type="tel" placeholder="01XXXXXXXXX" value={newCustomerPhone}
-                      onChange={(e) => setNewCustomerPhone(e.target.value)}
-                      className="w-full h-10 px-3 rounded-xl border text-sm outline-none"
-                      style={inputCls("newphone") as React.CSSProperties}
-                      onFocus={() => setFocused("newphone")} onBlur={() => setFocused(null)} />
+                    <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wide" style={{ color: S.muted }}>ফোন</label>
+                    <div className="flex items-center rounded-2xl border overflow-hidden transition-all"
+                      style={{ borderColor: focused === "newphone" ? "#0F6E56" : S.border, borderWidth: focused === "newphone" ? 2 : 1 }}>
+                      <span className="pl-3 text-base flex-shrink-0">📱</span>
+                      <input type="tel" placeholder="01XXXXXXXXX" value={newCustomerPhone}
+                        onChange={(e) => setNewCustomerPhone(e.target.value)}
+                        className="flex-1 h-12 px-3 text-sm font-medium outline-none bg-transparent"
+                        style={{ color: S.text }}
+                        onFocus={() => setFocused("newphone")} onBlur={() => setFocused(null)} />
+                    </div>
                   </div>
                 </div>
+
+                {/* Address */}
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>ঠিকানা</label>
-                  <input type="text" placeholder="বিস্তারিত ঠিকানা" value={newCustomerAddress}
-                    onChange={(e) => setNewCustomerAddress(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl border text-sm outline-none"
-                    style={inputCls("address") as React.CSSProperties}
-                    onFocus={() => setFocused("address")} onBlur={() => setFocused(null)} />
+                  <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wide" style={{ color: S.muted }}>ঠিকানা</label>
+                  <div className="flex items-center rounded-2xl border overflow-hidden transition-all"
+                    style={{ borderColor: focused === "address" ? "#0F6E56" : S.border, borderWidth: focused === "address" ? 2 : 1 }}>
+                    <span className="pl-3 text-base flex-shrink-0">📍</span>
+                    <input type="text" placeholder="বিস্তারিত ঠিকানা" value={newCustomerAddress}
+                      onChange={(e) => setNewCustomerAddress(e.target.value)}
+                      className="flex-1 h-12 px-3 text-sm font-medium outline-none bg-transparent"
+                      style={{ color: S.text }}
+                      onFocus={() => setFocused("address")} onBlur={() => setFocused(null)} />
+                  </div>
                 </div>
+
+                {/* Facebook */}
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>Facebook Profile URL</label>
-                  <input type="url" placeholder="https://facebook.com/..." value={newCustomerFacebook}
-                    onChange={(e) => setNewCustomerFacebook(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl border text-sm outline-none"
-                    style={inputCls("fb") as React.CSSProperties}
-                    onFocus={() => setFocused("fb")} onBlur={() => setFocused(null)} />
+                  <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wide" style={{ color: S.muted }}>Facebook Profile URL</label>
+                  <div className="flex items-center rounded-2xl border overflow-hidden transition-all"
+                    style={{ borderColor: focused === "fb" ? "#1877F2" : S.border, borderWidth: focused === "fb" ? 2 : 1 }}>
+                    <span className="pl-3 text-base flex-shrink-0">🔵</span>
+                    <input type="url" placeholder="https://facebook.com/username" value={newCustomerFacebook}
+                      onChange={(e) => setNewCustomerFacebook(e.target.value)}
+                      className="flex-1 h-12 px-3 text-sm font-medium outline-none bg-transparent"
+                      style={{ color: S.text }}
+                      onFocus={() => setFocused("fb")} onBlur={() => setFocused(null)} />
+                  </div>
                 </div>
+
+                {/* Customer Group */}
                 <div>
-                  <label className="block text-xs font-semibold mb-2" style={{ color: S.muted }}>Customer Group</label>
+                  <label className="block text-[11px] font-bold mb-2 uppercase tracking-wide" style={{ color: S.muted }}>Customer Group</label>
                   <div className="grid grid-cols-3 gap-2">
                     {CUSTOMER_GROUPS.map(g => (
                       <button key={g.key} type="button" onClick={() => setNewCustomerGroup(g.key)}
-                        className="flex flex-col items-center gap-1 py-3 px-2 rounded-xl border text-center transition-all"
+                        className="flex flex-col items-center gap-1.5 py-4 px-2 rounded-2xl border-2 text-center transition-all active:scale-95"
                         style={{
-                          borderColor: newCustomerGroup === g.key ? "var(--c-primary)" : S.border,
-                          backgroundColor: newCustomerGroup === g.key ? "var(--c-primary-light)" : "transparent",
-                          color: newCustomerGroup === g.key ? S.primary : S.secondary,
+                          borderColor: newCustomerGroup === g.key ? "#0F6E56" : S.border,
+                          backgroundColor: newCustomerGroup === g.key ? "#E8F5F0" : S.surface,
+                          boxShadow: newCustomerGroup === g.key ? "0 4px 12px #0F6E5630" : "none",
                         }}>
-                        <span className="text-xl">{g.emoji}</span>
-                        <span className="text-xs font-bold">{g.label}</span>
-                        <span className="text-xs" style={{ color: newCustomerGroup === g.key ? S.primary : S.muted }}>{g.desc}</span>
+                        <span className="text-2xl">{g.emoji}</span>
+                        <span className="text-xs font-black" style={{ color: newCustomerGroup === g.key ? "#0F6E56" : S.text }}>{g.label}</span>
+                        <span className="text-[10px]" style={{ color: newCustomerGroup === g.key ? "#0F6E56" : S.muted }}>{g.desc}</span>
                       </button>
                     ))}
                   </div>
@@ -391,15 +427,43 @@ export default function NewOrderPage() {
               const selectedCombo = combos.find(c => c.id === it.comboId);
               const isCombo = !!it.comboId;
               return (
-                <div key={idx} className="rounded-xl border p-3.5 space-y-3"
-                  style={{ borderColor: isCombo ? "#F59E0B" : S.border, backgroundColor: isCombo ? "#FFFBEB" : "var(--c-bg)" }}>
-                  <div className="flex items-center gap-2">
+                <div key={idx} className="rounded-2xl border overflow-hidden"
+                  style={{ borderColor: isCombo ? "#F59E0B" : S.border }}>
+                  {/* Item Header */}
+                  <div className="flex items-center justify-between px-4 py-2.5"
+                    style={{ backgroundColor: isCombo ? "#FFFBEB" : "var(--c-bg)" }}>
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black text-white flex-shrink-0"
+                        style={{ backgroundColor: isCombo ? "#F59E0B" : "#3B82F6" }}>
+                        {idx + 1}
+                      </span>
+                      <span className="text-xs font-semibold" style={{ color: isCombo ? "#92400E" : S.secondary }}>
+                        {isCombo ? "📦 কমবো প্যাক" : "🛍 পণ্য"} #{idx + 1}
+                      </span>
+                      {it.unitPrice > 0 && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                          style={{ backgroundColor: isCombo ? "#FEF3C7" : "#EFF6FF", color: isCombo ? "#92400E" : "#3B82F6" }}>
+                          {formatBDT(it.unitPrice)} প্রতিটি
+                        </span>
+                      )}
+                    </div>
+                    {items.length > 1 && (
+                      <button type="button" onClick={() => removeItem(idx)}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold transition-colors hover:bg-red-100"
+                        style={{ color: "#EF4444", backgroundColor: "#FEE2E2" }}>
+                        <Trash2 size={10} /> মুছুন
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Item Body */}
+                  <div className="p-4 space-y-3" style={{ backgroundColor: isCombo ? "#FFFBEB" : S.surface }}>
                     <select
                       value={it.comboId ? `combo:${it.comboId}` : it.productId}
                       onChange={(e) => handleProductSelect(idx, e.target.value)}
-                      className="flex-1 h-10 px-3 rounded-xl border text-sm outline-none"
-                      style={{ borderColor: S.border, color: S.text, backgroundColor: isCombo ? "#FFFBEB" : S.surface, appearance: "auto" } as React.CSSProperties}>
-                      <option value="">পণ্য বা কমবো বেছে নিন</option>
+                      className="w-full h-12 px-4 rounded-2xl border text-sm font-medium outline-none"
+                      style={{ borderColor: S.border, color: it.productId || it.comboId ? S.text : S.muted, backgroundColor: S.surface, appearance: "auto" } as React.CSSProperties}>
+                      <option value="">🔍 পণ্য বা কমবো বেছে নিন...</option>
                       {products.length > 0 && (
                         <optgroup label="━━ পণ্য ━━">
                           {products.map(p => <option key={p.id} value={p.id}>{p.name} — {formatBDT(p.sellPrice)} (স্টক: {p.stockQty})</option>)}
@@ -411,59 +475,77 @@ export default function NewOrderPage() {
                         </optgroup>
                       )}
                     </select>
-                    {items.length > 1 && (
-                      <button type="button" onClick={() => removeItem(idx)} className="p-2 rounded-lg hover:bg-red-50 flex-shrink-0 transition-colors">
-                        <Trash2 size={15} style={{ color: "#E24B4A" }} />
-                      </button>
+
+                    {isCombo && selectedCombo && (
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ backgroundColor: "#FEF3C7" }}>
+                        <span className="text-sm">📦</span>
+                        <span className="text-xs font-semibold" style={{ color: "#92400E" }}>
+                          কমবো প্যাক · স্টক: {selectedCombo.availableStock} সেট
+                        </span>
+                      </div>
                     )}
-                  </div>
-                  {isCombo && selectedCombo && (
-                    <div className="text-xs px-2.5 py-1.5 rounded-lg font-medium" style={{ backgroundColor: "#FEF3C7", color: "#92400E" }}>
-                      📦 কমবো প্যাক · স্টক: {selectedCombo.availableStock} সেট
-                    </div>
-                  )}
-                  {!isCombo && selectedProduct?.hasVariants && selectedProduct.variants.length > 0 && (
-                    <div>
-                      <p className="text-xs font-semibold mb-1.5" style={{ color: S.muted }}>Variant বেছে নিন *</p>
+
+                    {!isCombo && selectedProduct?.hasVariants && selectedProduct.variants.length > 0 && (
                       <select value={it.variantId ?? ""} onChange={e => handleVariantSelect(idx, e.target.value)}
-                        className="w-full h-10 px-3 rounded-xl border text-sm outline-none"
-                        style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface, appearance: "auto" } as React.CSSProperties}>
-                        <option value="">-- Variant বেছে নিন --</option>
+                        className="w-full h-11 px-4 rounded-2xl border text-sm outline-none"
+                        style={{ borderColor: "#8B5CF6", color: S.text, backgroundColor: "#F5F3FF", appearance: "auto" } as React.CSSProperties}>
+                        <option value="">🎨 Variant বেছে নিন...</option>
                         {selectedProduct.variants.map(v => (
                           <option key={v.id} value={v.id}>
                             {v.name}{v.price != null ? ` — ${formatBDT(v.price)}` : ""} (স্টক: {v.stockQty})
                           </option>
                         ))}
                       </select>
-                    </div>
-                  )}
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <p className="text-xs font-semibold mb-1" style={{ color: S.muted }}>পরিমাণ</p>
-                      <input type="number" value={it.quantity} min="1" onChange={(e) => handleQtyChange(idx, parseInt(e.target.value) || 1)}
-                        className="w-full h-9 px-3 rounded-xl border text-sm outline-none"
-                        style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold mb-1" style={{ color: S.muted }}>একক মূল্য</p>
-                      <div className="h-9 flex items-center px-3 rounded-xl text-sm" style={{ backgroundColor: "var(--c-surface)", color: S.secondary, border: `1px solid ${S.border}` }}>
-                        {formatBDT(it.unitPrice)}
+                    )}
+
+                    {/* Quantity + Price row */}
+                    <div className="flex items-end gap-3">
+                      {/* Stepper */}
+                      <div className="flex-shrink-0">
+                        <p className="text-[10px] font-bold uppercase tracking-wide mb-2" style={{ color: S.muted }}>পরিমাণ</p>
+                        <div className="flex items-center rounded-2xl border overflow-hidden" style={{ borderColor: S.border }}>
+                          <button type="button"
+                            onClick={() => handleQtyChange(idx, Math.max(1, it.quantity - 1))}
+                            className="w-10 h-10 flex items-center justify-center text-lg font-bold transition-colors hover:bg-gray-100"
+                            style={{ color: "#3B82F6", backgroundColor: "#EFF6FF" }}>−</button>
+                          <div className="w-12 h-10 flex items-center justify-center text-sm font-extrabold"
+                            style={{ color: S.text, backgroundColor: S.surface }}>
+                            {it.quantity}
+                          </div>
+                          <button type="button"
+                            onClick={() => handleQtyChange(idx, it.quantity + 1)}
+                            className="w-10 h-10 flex items-center justify-center text-lg font-bold transition-colors hover:bg-gray-100"
+                            style={{ color: "#3B82F6", backgroundColor: "#EFF6FF" }}>+</button>
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold mb-1" style={{ color: S.muted }}>মোট</p>
-                      <div className="h-9 flex items-center px-3 rounded-xl text-sm font-bold" style={{ backgroundColor: "var(--c-primary-light)", color: S.primary }}>
-                        {formatBDT(it.subtotal)}
+
+                      {/* Unit price */}
+                      <div className="flex-1">
+                        <p className="text-[10px] font-bold uppercase tracking-wide mb-2" style={{ color: S.muted }}>একক মূল্য</p>
+                        <div className="h-10 flex items-center px-4 rounded-2xl text-sm font-semibold border"
+                          style={{ backgroundColor: "var(--c-bg)", color: S.secondary, borderColor: S.border }}>
+                          {formatBDT(it.unitPrice)}
+                        </div>
+                      </div>
+
+                      {/* Subtotal */}
+                      <div className="flex-1">
+                        <p className="text-[10px] font-bold uppercase tracking-wide mb-2" style={{ color: "#0F6E56" }}>সাবটোটাল</p>
+                        <div className="h-10 flex items-center px-4 rounded-2xl text-sm font-extrabold"
+                          style={{ background: "linear-gradient(135deg, #E8F5F0, #C8EDE3)", color: "#0F6E56" }}>
+                          {formatBDT(it.subtotal)}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               );
             })}
+
             <button type="button" onClick={addItem}
-              className="flex items-center gap-2 text-sm font-semibold px-3 py-2.5 rounded-xl border w-full justify-center transition-colors hover:bg-gray-50"
-              style={{ borderColor: S.border, color: S.secondary, borderStyle: "dashed" }}>
-              <Plus size={15} /> পণ্য বা কমবো যোগ করুন
+              className="flex items-center gap-2.5 text-sm font-bold px-4 py-3.5 rounded-2xl border-2 w-full justify-center transition-all hover:bg-blue-50 active:scale-[0.98]"
+              style={{ borderColor: "#3B82F6", color: "#3B82F6", borderStyle: "dashed", backgroundColor: "#F8FBFF" }}>
+              <Plus size={16} /> পণ্য বা কমবো যোগ করুন
             </button>
           </div>
         </div>
@@ -479,12 +561,17 @@ export default function NewOrderPage() {
           </div>
           <div className="p-5 space-y-4">
             <div>
-              <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>ডেলিভারি চার্জ (৳)</label>
-              <input type="number" value={deliveryCharge} min="0" onChange={(e) => setDeliveryCharge(e.target.value)}
-                placeholder="০"
-                className="w-full h-10 px-3 rounded-xl border text-sm outline-none"
-                style={inputCls("delivery") as React.CSSProperties}
-                onFocus={() => setFocused("delivery")} onBlur={() => setFocused(null)} />
+              <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wide" style={{ color: S.muted }}>ডেলিভারি চার্জ</label>
+              <div className="flex items-center rounded-2xl border overflow-hidden transition-all"
+                style={{ borderColor: focused === "delivery" ? "#8B5CF6" : S.border, borderWidth: focused === "delivery" ? 2 : 1 }}>
+                <div className="h-12 px-4 flex items-center text-sm font-bold flex-shrink-0"
+                  style={{ backgroundColor: "#F5F3FF", color: "#8B5CF6", borderRight: `1px solid ${S.border}` }}>৳</div>
+                <input type="number" value={deliveryCharge} min="0" onChange={(e) => setDeliveryCharge(e.target.value)}
+                  placeholder="০"
+                  className="flex-1 h-12 px-4 text-sm font-semibold outline-none bg-transparent"
+                  style={{ color: S.text }}
+                  onFocus={() => setFocused("delivery")} onBlur={() => setFocused(null)} />
+              </div>
             </div>
 
             {/* Payment Summary Cards */}
@@ -509,19 +596,31 @@ export default function NewOrderPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>অর্ডার সোর্স</label>
-                <select value={source} onChange={(e) => setSource(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl border text-sm outline-none"
-                  style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface, appearance: "auto" } as React.CSSProperties}>
-                  {["facebook", "whatsapp", "direct", "referral"].map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
+                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wide" style={{ color: S.muted }}>অর্ডার সোর্স</label>
+                <div className="relative">
+                  <select value={source} onChange={(e) => setSource(e.target.value)}
+                    className="w-full h-12 pl-10 pr-4 rounded-2xl border text-sm font-semibold outline-none"
+                    style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface, appearance: "auto" } as React.CSSProperties}>
+                    <option value="facebook">📘 Facebook</option>
+                    <option value="whatsapp">💬 WhatsApp</option>
+                    <option value="direct">🏪 Direct</option>
+                    <option value="referral">🔗 Referral</option>
+                  </select>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-base">
+                    {source === "facebook" ? "📘" : source === "whatsapp" ? "💬" : source === "direct" ? "🏪" : "🔗"}
+                  </span>
+                </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>নোট (ঐচ্ছিক)</label>
-                <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="অতিরিক্ত তথ্য..."
-                  className="w-full h-10 px-3 rounded-xl border text-sm outline-none"
-                  style={inputCls("note") as React.CSSProperties}
-                  onFocus={() => setFocused("note")} onBlur={() => setFocused(null)} />
+                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wide" style={{ color: S.muted }}>নোট</label>
+                <div className="flex items-center rounded-2xl border overflow-hidden transition-all"
+                  style={{ borderColor: focused === "note" ? "#0F6E56" : S.border, borderWidth: focused === "note" ? 2 : 1 }}>
+                  <span className="pl-3 text-base flex-shrink-0">📝</span>
+                  <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="অতিরিক্ত তথ্য..."
+                    className="flex-1 h-12 px-3 text-sm font-medium outline-none bg-transparent"
+                    style={{ color: S.text }}
+                    onFocus={() => setFocused("note")} onBlur={() => setFocused(null)} />
+                </div>
               </div>
             </div>
           </div>
@@ -534,38 +633,64 @@ export default function NewOrderPage() {
             <h3 className="font-bold text-sm" style={{ color: S.text }}>ট্যাগ</h3>
             <span className="ml-auto text-[10px] font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: "#FFF3DC", color: "#EF9F27" }}>ঐচ্ছিক</span>
           </div>
-          <div className="p-5">
-            <div className="flex gap-2 mb-3">
-              <input type="text" value={tagInput} onChange={e => setTagInput(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
-                placeholder="ট্যাগ লিখুন ও Enter চাপুন"
-                className="flex-1 h-9 px-3 rounded-xl border text-sm outline-none"
-                style={inputCls("tag") as React.CSSProperties}
-                onFocus={() => setFocused("tag")} onBlur={() => setFocused(null)} />
+          <div className="p-5 space-y-3">
+            {/* Preset tags */}
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wide mb-2" style={{ color: S.muted }}>দ্রুত ট্যাগ যোগ করুন</p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { label: "urgent", emoji: "🔥", color: "#EF4444", bg: "#FEE2E2" },
+                  { label: "vip", emoji: "⭐", color: "#D97706", bg: "#FEF3C7" },
+                  { label: "gift-wrap", emoji: "🎁", color: "#8B5CF6", bg: "#F5F3FF" },
+                  { label: "prepaid", emoji: "✅", color: "#059669", bg: "#D1FAE5" },
+                  { label: "cod", emoji: "💰", color: "#0F6E56", bg: "#E8F5F0" },
+                ].map(pt => {
+                  const isActive = tags.includes(pt.label);
+                  return (
+                    <button key={pt.label} type="button"
+                      onClick={() => { if (!isActive) setTags(prev => [...prev, pt.label]); else removeTag(pt.label); }}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold border-2 transition-all active:scale-95"
+                      style={{
+                        borderColor: isActive ? pt.color : S.border,
+                        backgroundColor: isActive ? pt.bg : S.surface,
+                        color: isActive ? pt.color : S.secondary,
+                        boxShadow: isActive ? `0 2px 8px ${pt.color}30` : "none",
+                      }}>
+                      <span>{pt.emoji}</span> {pt.label}
+                      {isActive && <span className="ml-0.5 text-[10px] font-black">✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Custom tag input */}
+            <div className="flex gap-2">
+              <div className="flex items-center rounded-2xl border overflow-hidden flex-1 transition-all"
+                style={{ borderColor: focused === "tag" ? "#EF9F27" : S.border, borderWidth: focused === "tag" ? 2 : 1 }}>
+                <span className="pl-3 text-base flex-shrink-0">#</span>
+                <input type="text" value={tagInput} onChange={e => setTagInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
+                  placeholder="কাস্টম ট্যাগ লিখুন..."
+                  className="flex-1 h-11 px-2 text-sm font-medium outline-none bg-transparent"
+                  style={{ color: S.text }}
+                  onFocus={() => setFocused("tag")} onBlur={() => setFocused(null)} />
+              </div>
               <button type="button" onClick={addTag}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors"
-                style={{ backgroundColor: "var(--c-primary-light)", color: S.primary }}>যোগ</button>
+                className="px-4 h-11 rounded-2xl text-sm font-bold transition-all active:scale-95"
+                style={{ backgroundColor: "#FFF3DC", color: "#EF9F27", border: "2px solid #EF9F27" }}>
+                + যোগ
+              </button>
             </div>
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {["urgent", "vip", "gift-wrap", "prepaid", "cod"].map(pt => (
-                <button key={pt} type="button" onClick={() => { if (!tags.includes(pt)) setTags(prev => [...prev, pt]); }}
-                  className="text-xs px-2.5 py-1 rounded-full border font-medium transition-colors"
-                  style={{
-                    borderColor: tags.includes(pt) ? S.primary : S.border,
-                    color: tags.includes(pt) ? S.primary : S.muted,
-                    backgroundColor: tags.includes(pt) ? "var(--c-primary-light)" : "transparent",
-                  }}>
-                  {pt}
-                </button>
-              ))}
-            </div>
-            {tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {tags.map(t => (
-                  <span key={t} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-semibold"
-                    style={{ backgroundColor: "var(--c-primary-light)", color: S.primary }}>
-                    {t}
-                    <button type="button" onClick={() => removeTag(t)}><X size={10} /></button>
+
+            {/* Active custom tags */}
+            {tags.filter(t => !["urgent","vip","gift-wrap","prepaid","cod"].includes(t)).length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {tags.filter(t => !["urgent","vip","gift-wrap","prepaid","cod"].includes(t)).map(t => (
+                  <span key={t} className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-2xl"
+                    style={{ backgroundColor: "#E8F5F0", color: "#0F6E56", border: "1.5px solid #A3D9C9" }}>
+                    #{t}
+                    <button type="button" onClick={() => removeTag(t)} className="hover:text-red-500 transition-colors"><X size={10} /></button>
                   </span>
                 ))}
               </div>
