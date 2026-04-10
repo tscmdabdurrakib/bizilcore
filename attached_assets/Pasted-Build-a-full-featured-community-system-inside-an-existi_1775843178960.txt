@@ -1,0 +1,92 @@
+Build a full-featured community system inside an existing Next.js (App Router) web application.
+
+Goal:
+Create a Fiverr-style community where only logged-in users can post, comment, react, and interact.
+
+Core Requirements:
+
+1. Authentication:
+
+* Only logged-in users can access community
+* Use existing auth system (or Supabase Auth if needed)
+
+2. Community Feed Page:
+   Route: /community
+
+* Show all posts in a clean feed (like Fiverr community / Facebook group style)
+* Each post shows:
+
+  * User name + avatar
+  * Post content (text, optional image)
+  * Time ago
+  * Like count, comment count
+
+3. Create Post:
+
+* Input box at top (“What’s on your mind?”)
+* Allow text + image upload
+* Submit creates a new post
+
+4. Comments System:
+
+* Users can comment on posts
+* Nested comments (1 level is enough)
+* Real-time update (or auto refresh)
+
+5. Reactions:
+
+* Like / Unlike system
+* Show total likes
+
+6. User Profiles (basic):
+
+* Click user → see their posts
+
+7. Database Schema (Supabase):
+
+* users (id, name, avatar)
+* posts (id, user_id, content, image_url, created_at)
+* comments (id, post_id, user_id, content, created_at)
+* likes (id, post_id, user_id)
+
+8. API Routes:
+
+* POST /api/posts
+* GET /api/posts
+* POST /api/comments
+* POST /api/like
+
+9. UI Design:
+
+* Match existing website theme (colors, font, spacing)
+* Clean, modern card layout
+* Mobile responsive
+* Sidebar optional (Trending / Latest)
+
+10. Performance:
+
+* Pagination or infinite scroll
+* Optimistic UI updates for likes/comments
+
+11. Security:
+
+* Validate user input
+* Only logged-in users can post/comment
+* Prevent spam (basic rate limit)
+
+12. Optional (if possible):
+
+* Trending posts (based on likes)
+* “My Posts” filter
+* Notification (when someone comments)
+
+Folder Structure:
+
+* /app/community/page.tsx
+* /components/community/PostCard.tsx
+* /components/community/CreatePost.tsx
+* /lib/db.ts
+* /app/api/posts/route.ts
+
+Goal:
+Build a production-ready MVP community system that feels like Fiverr Community, not a basic blog.
