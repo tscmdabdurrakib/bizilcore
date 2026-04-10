@@ -1,0 +1,162 @@
+Build a modern full-featured eCommerce website using Next.js (App Router), Tailwind CSS, and Supabase (Auth + Database + Storage).
+
+The design should be clean, minimal, and conversion-focused like Shopify or Daraz.
+
+========================================
+CORE PAGES & STRUCTURE
+========================================
+
+1. Home Page (/)
+Components:
+- Navbar (logo, search bar, categories dropdown, cart icon, user profile)
+- Hero Banner (offer/discount slider)
+- Featured Categories (grid with icons/images)
+- Flash Sale Section (countdown timer + products)
+- Trending Products (grid layout)
+- Best Selling Products
+- Promotional Banner (mid-page)
+- New Arrivals
+- Customer Reviews / Testimonials
+- Newsletter Subscription
+- Footer (links, contact, social icons)
+
+----------------------------------------
+
+2. Shop Page (/shop)
+Components:
+- Sidebar Filters (price, category, brand, rating)
+- Sort Options (price low-high, popularity, newest)
+- Product Grid
+- Pagination / Infinite Scroll
+
+----------------------------------------
+
+3. Product Details Page (/product/[id])
+Components:
+- Product Images (gallery + zoom)
+- Product Info (name, price, discount, stock)
+- Add to Cart Button
+- Buy Now Button
+- Product Variants (size, color)
+- Description Tabs (description, reviews, specs)
+- Ratings & Reviews Section
+- Related Products
+
+----------------------------------------
+
+4. Cart Page (/cart)
+Components:
+- Cart Items List
+- Quantity Update
+- Remove Item
+- Price Summary
+- Apply Coupon
+- Checkout Button
+
+----------------------------------------
+
+5. Checkout Page (/checkout)
+Components:
+- Shipping Address Form
+- Payment Method (COD, Stripe, SSLCommerz)
+- Order Summary
+- Place Order Button
+
+----------------------------------------
+
+6. User Dashboard (/account)
+Components:
+- Profile Info
+- Order History
+- Wishlist
+- Address Book
+- Logout
+
+----------------------------------------
+
+7. Auth Pages
+- Login (/login)
+- Register (/register)
+Components:
+- Form (email, password)
+- Social login (Google optional)
+
+----------------------------------------
+
+8. Category Page (/category/[slug])
+Components:
+- Category Banner
+- Filter + Product Grid
+
+----------------------------------------
+
+9. Search Page (/search)
+Components:
+- Search Results
+- Filter + Sorting
+
+----------------------------------------
+
+10. Wishlist Page (/wishlist)
+
+----------------------------------------
+
+11. Order Success Page (/order-success)
+
+----------------------------------------
+
+12. Static Pages
+- About Us
+- Contact Us
+- Privacy Policy
+- Terms & Conditions
+
+========================================
+CORE FEATURES
+========================================
+
+- Authentication (Supabase Auth)
+- Add to Cart (local storage + DB sync)
+- Wishlist system
+- Product Reviews system
+- Order Management
+
+========================================
+DATABASE STRUCTURE (Supabase)
+========================================
+
+Tables:
+- users
+- products
+- categories
+- orders
+- order_items
+- cart
+- wishlist
+- reviews
+
+========================================
+UI/UX RULES
+========================================
+
+- Mobile responsive
+- Fast loading
+- Clean spacing
+- Smooth hover effects
+- Skeleton loading
+- Toast notifications
+
+========================================
+BONUS FEATURES (Optional but recommended)
+========================================
+
+- Live chat support
+- Abandoned cart recovery
+- Push notifications
+- Analytics dashboard
+- Multi-vendor system (future upgrade)
+
+========================================
+
+Generate full folder structure + reusable components.
+Use best practices and scalable architecture.
