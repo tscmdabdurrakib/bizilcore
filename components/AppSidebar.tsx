@@ -198,6 +198,7 @@ const navGroups: NavGroup[] = [
     items: [
       { href: "/shops",           icon: Store,       label: "Multi-Shop" },
       { href: "/affiliate",       icon: TrendingUp,  label: "Affiliate" },
+      { href: "/community",       icon: Users,       label: "কমিউনিটি" },
       { href: "/community-tips",  icon: Lightbulb,   label: "Community টিপস" },
     ],
   },
@@ -303,8 +304,10 @@ const moreMenuGroups = [
     accent: "#10B981",
     iconBg: "#ECFDF5",
     items: [
-      { href: "/shops",     icon: Store,      label: "Multi-Shop" },
-      { href: "/affiliate", icon: TrendingUp, label: "Affiliate" },
+      { href: "/shops",          icon: Store,      label: "Multi-Shop"      },
+      { href: "/affiliate",      icon: TrendingUp, label: "Affiliate"       },
+      { href: "/community",      icon: Users,      label: "কমিউনিটি"       },
+      { href: "/community-tips", icon: Lightbulb,  label: "Community টিপস" },
     ],
   },
   {

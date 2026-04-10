@@ -64,6 +64,9 @@ model User {
   affiliate                  Affiliate?
   tipReactions               TipReaction[]
   affiliateClicks            AffiliateClick[]
+  communityPosts             CommunityPost[]
+  communityComments          CommunityComment[]
+  communityLikes             CommunityLike[]
 }
 
 model Notification {
@@ -1549,4 +1552,46 @@ model Category {
 
   @@unique([shopId, name])
   @@index([shopId])
+}
+
+model CommunityPost {
+  id        String             @id @default(cuid())
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String
+  imageUrl  String?
+  imageId   String?
+  createdAt DateTime           @default(now())
+  comments  CommunityComment[]
+  likes     CommunityLike[]
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model CommunityComment {
+  id        String        @id @default(cuid())
+  postId    String
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime      @default(now())
+
+  @@index([postId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model CommunityLike {
+  id        String        @id @default(cuid())
+  postId    String
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
 }
