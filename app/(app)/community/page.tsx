@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Users, RefreshCw } from "lucide-react";
 import { useSession } from "next-auth/react";
 import PostCard, { type PostData } from "@/components/community/PostCard";
@@ -47,7 +47,7 @@ export default function CommunityPage() {
   const [tab, setTab]          = useState("all");
   const cursorRef = useRef<string | null>(null);
 
-  const doFetch = async (reset: boolean, currentTab: string) => {
+  const doFetch = useCallback(async (reset: boolean, currentTab: string) => {
     const cursorParam = !reset && cursorRef.current ? `&cursor=${cursorRef.current}` : "";
     const mineParam   = currentTab === "mine" ? "&mine=1" : "";
     const res  = await fetch(`/api/community/posts?${mineParam}${cursorParam}`);
@@ -62,14 +62,17 @@ export default function CommunityPage() {
     cursorRef.current = data.nextCursor ?? null;
     setCursor(data.nextCursor ?? null);
     setHasMore(!!data.nextCursor);
-  };
+  }, []);
 
   useEffect(() => {
     cursorRef.current = null;
     setCursor(null);
     setLoading(true);
     doFetch(true, tab).finally(() => setLoading(false));
-  }, [tab]);
+
+    const timer = setInterval(() => { doFetch(true, tab); }, 30_000);
+    return () => clearInterval(timer);
+  }, [tab, doFetch]);
 
   const loadMore = async () => {
     setMore(true);
