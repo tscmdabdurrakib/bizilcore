@@ -1,24 +1,23 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { ShoppingBag, ChevronDown, ChevronUp } from "lucide-react";
+import { ShoppingBag, ChevronDown, ChevronUp, ArrowRight, Grid3X3, List } from "lucide-react";
 import { DynamicHero } from "@/components/store/DynamicHero";
 import { DynamicProductCard } from "@/components/store/DynamicProductCard";
 import { useStoreTheme } from "@/components/store/ThemeProvider";
 
-function ProductCardSkeleton({ cardStyle }: { cardStyle: string }) {
-  if (cardStyle === "image_overlay") {
-    return (
-      <div className="animate-pulse overflow-hidden" style={{ aspectRatio: "2/3", backgroundColor: "#E5E7EB" }} />
-    );
-  }
+function ProductSkeleton() {
   return (
-    <div className="rounded-xl overflow-hidden border animate-pulse" style={{ backgroundColor: "#F3F4F6" }}>
-      <div className="aspect-square bg-gray-200" />
-      <div className="p-3 space-y-2">
-        <div className="h-4 bg-gray-200 rounded w-3/4" />
-        <div className="h-3 bg-gray-200 rounded w-1/2" />
-        <div className="h-4 bg-gray-200 rounded w-1/3" />
+    <div className="rounded-2xl overflow-hidden border border-gray-100 bg-white animate-pulse">
+      <div className="aspect-square bg-gray-100" />
+      <div className="p-3.5 space-y-2.5">
+        <div className="h-3 bg-gray-100 rounded-full w-16" />
+        <div className="h-4 bg-gray-100 rounded-full w-4/5" />
+        <div className="h-3 bg-gray-100 rounded-full w-3/5" />
+        <div className="flex justify-between mt-1">
+          <div className="h-5 bg-gray-100 rounded-full w-20" />
+          <div className="h-5 bg-gray-100 rounded-full w-16" />
+        </div>
       </div>
     </div>
   );
@@ -50,6 +49,10 @@ interface Shop {
   storePrimaryColor: string | null;
   storeAccentColor: string | null;
   storeTheme: string;
+  storeFreeShipping: boolean | null;
+  storeCODEnabled: boolean | null;
+  storeBkashNumber: string | null;
+  storeNagadNumber: string | null;
 }
 
 interface Props {
@@ -66,14 +69,28 @@ const SORT_OPTIONS = [
   { value: "featured", label: "জনপ্রিয়" },
 ];
 
-const GRID_COLS: Record<number, string> = {
-  2: "grid-cols-2",
-  3: "grid-cols-2 sm:grid-cols-3",
-  4: "grid-cols-2 sm:grid-cols-3 md:grid-cols-4",
+const CATEGORY_ICONS: Record<string, string> = {
+  পোশাক: "👗", ড্রেস: "👗", ফ্রক: "👗",
+  জুতা: "👟", স্যান্ডেল: "👡",
+  খাবার: "🍱", ফুড: "🍱",
+  ইলেকট্রনিক্স: "📱", গ্যাজেট: "💻",
+  বিউটি: "💄", কসমেটিক: "💄",
+  গহনা: "💍", অ্যাক্সেসরিজ: "👜",
+  শিশু: "🧸", বাচ্চা: "🧸",
+  ঘর: "🏠", হোম: "🏠",
+  বই: "📚",
+  স্বাস্থ্য: "💊",
 };
 
+function getCategoryIcon(cat: string): string {
+  for (const [key, icon] of Object.entries(CATEGORY_ICONS)) {
+    if (cat.toLowerCase().includes(key.toLowerCase())) return icon;
+  }
+  return "🏷️";
+}
+
 export function StoreHomeClient({ shop, products, categories, totalOrders }: Props) {
-  const { primary, theme, defaults } = useStoreTheme();
+  const { primary } = useStoreTheme();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [sort, setSort] = useState("newest");
   const [showAll, setShowAll] = useState(false);
@@ -81,7 +98,7 @@ export function StoreHomeClient({ shop, products, categories, totalOrders }: Pro
   const slug = shop.storeSlug;
 
   useEffect(() => {
-    const t = setTimeout(() => setMounted(true), 150);
+    const t = setTimeout(() => setMounted(true), 100);
     return () => clearTimeout(t);
   }, []);
 
@@ -98,190 +115,182 @@ export function StoreHomeClient({ shop, products, categories, totalOrders }: Pro
 
   const visible = showAll ? filtered : filtered.slice(0, 12);
 
-  const distinctCategoriesInFiltered = useMemo(() => {
-    const cats = new Set<string>();
-    for (const p of filtered) {
-      if (p.category) cats.add(p.category);
-    }
-    return [...cats].sort();
-  }, [filtered]);
+  return (
+    <div className="bg-gray-50 min-h-screen">
+      <DynamicHero
+        shop={shop}
+        productCount={products.length}
+        totalOrders={totalOrders}
+      />
 
-  const showGrouped = !selectedCategory && distinctCategoriesInFiltered.length > 2;
+      {categories.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 py-10">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">ক্যাটাগরি</h2>
+              <p className="text-sm text-gray-500 mt-0.5">আপনার পছন্দের ক্যাটাগরি বেছে নিন</p>
+            </div>
+          </div>
 
-  const groupedProducts = useMemo(() => {
-    const map: Record<string, Product[]> = {};
-    for (const p of filtered) {
-      const key = p.category ?? "__other__";
-      if (!map[key]) map[key] = [];
-      map[key].push(p);
-    }
-    const groups: { cat: string; label: string; prods: Product[] }[] = [];
-    for (const cat of distinctCategoriesInFiltered) {
-      if (map[cat]) groups.push({ cat, label: cat, prods: map[cat] });
-    }
-    if (map["__other__"]) {
-      groups.push({ cat: "__other__", label: "অন্যান্য পণ্য", prods: map["__other__"] });
-    }
-    return groups;
-  }, [filtered, distinctCategoriesInFiltered]);
-
-  const surface = defaults.surface;
-  const text = defaults.text;
-  const muted = defaults.muted;
-  const border = defaults.border;
-  const bg = defaults.bg;
-
-  const cardStyle = theme.layout.productCardStyle;
-  const gridCols = theme.layout.productGridCols;
-  const colsClass = GRID_COLS[gridCols] ?? GRID_COLS[3];
-  const sectionOrder = theme.layout.sectionOrder;
-
-  const SECTIONS: Record<string, React.ReactNode> = {
-    hero: (
-      <DynamicHero shop={shop} />
-    ),
-
-    categories: categories.length > 0 ? (
-      <div className="max-w-6xl mx-auto px-4 mt-8">
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-          <button
-            onClick={() => setSelectedCategory(null)}
-            className="flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold border transition-all"
-            style={{
-              backgroundColor: !selectedCategory ? primary : "transparent",
-              color: !selectedCategory ? "white" : muted,
-              borderColor: !selectedCategory ? primary : border,
-            }}
-          >
-            সব পণ্য
-          </button>
-          {categories.map(cat => (
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
             <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)}
-              className="flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold border transition-all"
-              style={{
-                backgroundColor: selectedCategory === cat ? primary : "transparent",
-                color: selectedCategory === cat ? "white" : muted,
-                borderColor: selectedCategory === cat ? primary : border,
+              onClick={() => setSelectedCategory(null)}
+              className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all font-medium text-sm"
+              style={!selectedCategory ? {
+                backgroundColor: primary + "12",
+                borderColor: primary,
+                color: primary,
+              } : {
+                backgroundColor: "#fff",
+                borderColor: "#e5e7eb",
+                color: "#6b7280",
               }}
             >
-              {cat}
+              <span className="text-2xl">🛍️</span>
+              <span className="text-xs">সব পণ্য</span>
             </button>
-          ))}
-        </div>
-      </div>
-    ) : null,
 
-    featured: featured.length > 0 && !selectedCategory ? (
-      <div className="max-w-6xl mx-auto px-4 mt-10">
-        <h2 className="text-lg font-bold mb-4" style={{ color: text }}>জনপ্রিয় পণ্য</h2>
-        <div className={`grid ${colsClass} gap-4`}>
-          {featured.slice(0, gridCols).map(p => (
-            <DynamicProductCard key={p.id} product={p} slug={slug} />
-          ))}
-        </div>
-      </div>
-    ) : null,
+            {categories.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)}
+                className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all font-medium text-sm"
+                style={selectedCategory === cat ? {
+                  backgroundColor: primary + "12",
+                  borderColor: primary,
+                  color: primary,
+                } : {
+                  backgroundColor: "#fff",
+                  borderColor: "#e5e7eb",
+                  color: "#6b7280",
+                }}
+              >
+                <span className="text-2xl">{getCategoryIcon(cat)}</span>
+                <span className="text-xs leading-tight text-center">{cat}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
-    all_products: (
-      <div className="max-w-6xl mx-auto px-4 mt-10">
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <h2 className="text-lg font-bold" style={{ color: text }}>
-            {selectedCategory ? selectedCategory : "সব পণ্য"}
-            <span className="ml-2 text-sm font-normal" style={{ color: muted }}>({filtered.length})</span>
-          </h2>
+      {featured.length > 0 && !selectedCategory && (
+        <section className="max-w-7xl mx-auto px-4 pb-10">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">⭐ জনপ্রিয় পণ্য</h2>
+              <p className="text-sm text-gray-500 mt-0.5">ক্রেতাদের পছন্দের পণ্যগুলো</p>
+            </div>
+            <a
+              href={`/store/${slug}/products`}
+              className="flex items-center gap-1 text-sm font-semibold transition-colors hover:opacity-80"
+              style={{ color: primary }}
+            >
+              সব দেখুন <ArrowRight size={14} />
+            </a>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {featured.slice(0, 4).map(p => (
+              <DynamicProductCard key={p.id} product={p} slug={slug} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="max-w-7xl mx-auto px-4 pb-16">
+        <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">
+              {selectedCategory ? selectedCategory : "🛒 সব পণ্য"}
+              <span className="ml-2 text-base font-normal text-gray-400">({filtered.length})</span>
+            </h2>
+            {!selectedCategory && (
+              <p className="text-sm text-gray-500 mt-0.5">আমাদের সম্পূর্ণ কালেকশন</p>
+            )}
+          </div>
+
           <select
             value={sort}
             onChange={e => setSort(e.target.value)}
-            className="text-sm border rounded-xl px-3 py-1.5 outline-none"
-            style={{ borderColor: border, backgroundColor: surface, color: text }}
+            className="text-sm border border-gray-200 rounded-xl px-3 py-2 outline-none bg-white text-gray-700 cursor-pointer"
           >
             {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
 
         {!mounted ? (
-          <div className={`grid ${colsClass} gap-4`}>
-            {Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} cardStyle={cardStyle} />)}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => <ProductSkeleton key={i} />)}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-16">
-            <ShoppingBag size={48} style={{ color: muted, margin: "0 auto 12px" }} />
-            <p style={{ color: muted }}>কোনো পণ্য পাওয়া যায়নি</p>
-          </div>
-        ) : showGrouped ? (
-          <div className="space-y-10">
-            {groupedProducts.map(group => (
-              <div key={group.cat}>
-                <div className="flex items-center gap-3 mb-4">
-                  <h3 className="font-bold text-base shrink-0" style={{ color: text }}>{group.label}</h3>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0" style={{ backgroundColor: primary + "18", color: primary }}>
-                    {group.prods.length}টি পণ্য
-                  </span>
-                  <div className="flex-1 h-px" style={{ backgroundColor: border }} />
-                </div>
-                <div className={`grid ${colsClass} gap-4`}>
-                  {group.prods.slice(0, gridCols * 2).map(p => (
-                    <DynamicProductCard key={p.id} product={p} slug={slug} />
-                  ))}
-                </div>
-              </div>
-            ))}
+          <div className="text-center py-20 bg-white rounded-2xl border border-gray-100">
+            <ShoppingBag size={52} className="mx-auto mb-4 text-gray-300" />
+            <p className="text-gray-500 font-medium">কোনো পণ্য পাওয়া যায়নি</p>
+            {selectedCategory && (
+              <button onClick={() => setSelectedCategory(null)} className="mt-3 text-sm font-semibold underline" style={{ color: primary }}>
+                সব পণ্য দেখুন
+              </button>
+            )}
           </div>
         ) : (
           <>
-            <div className={`grid ${colsClass} gap-4`}>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {visible.map(p => <DynamicProductCard key={p.id} product={p} slug={slug} />)}
             </div>
             {filtered.length > 12 && (
-              <div className="text-center mt-8">
+              <div className="text-center mt-10">
                 <button
                   onClick={() => setShowAll(!showAll)}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full border font-semibold text-sm"
+                  className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full border-2 font-bold text-sm transition-all hover:bg-gray-50"
                   style={{ borderColor: primary, color: primary }}
                 >
-                  {showAll ? <><ChevronUp size={16} /> কম দেখুন</> : <><ChevronDown size={16} /> আরো দেখুন ({filtered.length - 12}+)</>}
+                  {showAll
+                    ? <><ChevronUp size={16} /> কম দেখুন</>
+                    : <><ChevronDown size={16} /> আরো দেখুন ({filtered.length - 12}+ পণ্য)</>}
                 </button>
               </div>
             )}
           </>
         )}
-      </div>
-    ),
+      </section>
 
-    about: shop.storeAbout ? (
-      <div className="max-w-6xl mx-auto px-4 mt-16">
-        <section className="py-10 rounded-2xl px-6 text-center" style={{ backgroundColor: surface, border: `1px solid ${border}` }}>
-          <h2 className="text-lg font-bold mb-3" style={{ color: text }}>আমাদের সম্পর্কে</h2>
-          <p className="text-sm leading-relaxed max-w-xl mx-auto mb-6" style={{ color: muted }}>{shop.storeAbout}</p>
-          <div className="flex justify-center gap-8">
-            <div className="text-center">
-              <p className="text-2xl font-bold" style={{ color: primary }}>{products.length}+</p>
-              <p className="text-xs" style={{ color: muted }}>মোট পণ্য</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold" style={{ color: primary }}>{totalOrders}+</p>
-              <p className="text-xs" style={{ color: muted }}>সন্তুষ্ট ক্রেতা</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold" style={{ color: primary }}>⭐</p>
-              <p className="text-xs" style={{ color: muted }}>বিশ্বস্ত স্টোর</p>
+      {shop.storeAbout && (
+        <section className="bg-white border-t border-gray-100">
+          <div className="max-w-7xl mx-auto px-4 py-16">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-widest mb-3" style={{ color: primary }}>
+                  আমাদের সম্পর্কে
+                </p>
+                <h2 className="text-3xl font-black text-gray-900 mb-4">{shop.name}</h2>
+                <p className="text-gray-600 leading-relaxed mb-6">{shop.storeAbout}</p>
+                <a
+                  href={`/store/${slug}/products`}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-white text-sm font-bold transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: primary }}
+                >
+                  <ShoppingBag size={15} /> আমাদের পণ্য দেখুন
+                </a>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  { value: `${products.length}+`, label: "মোট পণ্য", icon: "📦" },
+                  { value: `${totalOrders}+`, label: "সফল অর্ডার", icon: "✅" },
+                  { value: "5.0⭐", label: "গড় রেটিং", icon: "⭐" },
+                  { value: "24/7", label: "কাস্টমার সাপোর্ট", icon: "🤝" },
+                ].map(({ value, label, icon }) => (
+                  <div key={label} className="rounded-2xl p-5 text-center" style={{ backgroundColor: primary + "08", border: `1px solid ${primary}20` }}>
+                    <p className="text-2xl mb-1">{icon}</p>
+                    <p className="text-2xl font-black" style={{ color: primary }}>{value}</p>
+                    <p className="text-xs text-gray-500 mt-1">{label}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
-      </div>
-    ) : null,
-  };
-
-  return (
-    <div style={{ backgroundColor: bg }}>
-      {sectionOrder.map(section => {
-        const node = SECTIONS[section];
-        if (!node) return null;
-        return <div key={section}>{node}</div>;
-      })}
-      <div className="h-10" />
+      )}
     </div>
   );
 }
