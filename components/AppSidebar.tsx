@@ -166,6 +166,7 @@ const navGroups: NavGroup[] = [
       { href: "/dashboard",   icon: LayoutDashboard, label: "ড্যাশবোর্ড" },
       { href: "/orders",      icon: ShoppingBag,     label: "অর্ডার" },
       { href: "/fb-orders",   icon: MessageSquare,   label: "FB কমেন্ট অর্ডার" },
+      { href: "/messenger",   icon: MessageCircle,   label: "Messenger Reply" },
       { href: "/delivery",    icon: Navigation,      label: "ডেলিভারি" },
       { href: "/returns",     icon: RotateCcw,       label: "রিটার্ন" },
       { href: "/inventory",   icon: Package,         label: "পণ্য ও স্টক" },
@@ -252,6 +253,7 @@ const moreMenuGroups = [
     iconBg: "#EFF6FF",
     items: [
       { href: "/fb-orders",  icon: MessageSquare, label: "FB অর্ডার" },
+      { href: "/messenger",  icon: MessageCircle, label: "Messenger" },
       { href: "/returns",    icon: RotateCcw,    label: "রিটার্ন" },
       { href: "/delivery",   icon: Navigation,   label: "ডেলিভারি" },
       { href: "/suppliers",  icon: Truck,        label: "Supplier" },
