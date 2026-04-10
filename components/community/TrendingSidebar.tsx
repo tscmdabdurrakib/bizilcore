@@ -10,25 +10,14 @@ interface TrendingPost {
   user:      { id: string; name: string };
 }
 
-function timeAgo(iso: string) {
-  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} ঘণ্টা আগে`;
-  return `${Math.floor(diff / 86400)} দিন আগে`;
-}
-
 export default function TrendingSidebar() {
-  const [posts, setPosts]   = useState<TrendingPost[]>([]);
+  const [posts, setPosts]     = useState<TrendingPost[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/community/posts?trending=1")
       .then((r) => r.json())
-      .then((d) => {
-        const all: TrendingPost[] = (d?.posts ?? [])
-          .sort((a: TrendingPost, b: TrendingPost) => b.likeCount - a.likeCount)
-          .slice(0, 5);
-        setPosts(all);
-      })
+      .then((d) => { setPosts(d?.posts ?? []); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -50,7 +39,7 @@ export default function TrendingSidebar() {
 
       <div className="p-2">
         {loading ? (
-          <div className="space-y-2 p-2">
+          <div className="space-y-3 p-2">
             {[1, 2, 3].map((i) => (
               <div key={i} className="animate-pulse space-y-1.5">
                 <div className="h-3 rounded w-4/5" style={{ backgroundColor: "var(--c-bg)" }} />
@@ -66,12 +55,14 @@ export default function TrendingSidebar() {
           posts.map((p, i) => (
             <div
               key={p.id}
-              className="flex items-start gap-2.5 px-2 py-2.5 rounded-xl transition-colors hover:bg-opacity-50"
-              style={{ cursor: "default" }}
+              className="flex items-start gap-2.5 px-2 py-2.5 rounded-xl"
             >
               <span
                 className="text-xs font-bold w-5 h-5 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-                style={{ backgroundColor: i === 0 ? "#FFF3DC" : "var(--c-bg)", color: i === 0 ? "#EF9F27" : "var(--c-text-muted)" }}
+                style={{
+                  backgroundColor: i === 0 ? "#FFF3DC" : "var(--c-bg)",
+                  color:           i === 0 ? "#EF9F27" : "var(--c-text-muted)",
+                }}
               >
                 {i + 1}
               </span>
