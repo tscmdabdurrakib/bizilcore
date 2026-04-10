@@ -1,9 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ShoppingBag } from "lucide-react";
-import { useState, useEffect } from "react";
-import type { ThemeConfig } from "@/lib/themes";
+import { ShoppingBag, ArrowRight, Star, Shield, Truck, Headphones } from "lucide-react";
 import { useStoreTheme } from "./ThemeProvider";
 
 interface HeroShop {
@@ -13,257 +11,150 @@ interface HeroShop {
   storeTagline: string | null;
   storeAbout: string | null;
   logoUrl: string | null;
-}
-
-interface HeroDefaults {
-  bg: string;
-  surface: string;
-  text: string;
-  muted: string;
-  border: string;
-  primary: string;
-  accent: string;
+  storeFreeShipping: boolean | null;
+  storeCODEnabled: boolean | null;
+  storeBkashNumber: string | null;
+  storeNagadNumber: string | null;
 }
 
 interface Props {
   shop: HeroShop;
+  productCount: number;
+  totalOrders: number;
 }
 
-function FullwidthImageHero({ shop, primary, accent, theme }: { shop: HeroShop; primary: string; accent: string; theme: ThemeConfig }) {
+const TRUST_BADGES = [
+  { icon: Truck, label: "দ্রুত ডেলিভারি", sub: "সারাদেশে" },
+  { icon: Shield, label: "নিরাপদ পেমেন্ট", sub: "বিকাশ / নগদ / COD" },
+  { icon: Star, label: "বিশ্বস্ত স্টোর", sub: "হাজারো সন্তুষ্ট ক্রেতা" },
+  { icon: Headphones, label: "কাস্টমার সাপোর্ট", sub: "সবসময় পাশে আছি" },
+];
+
+export function DynamicHero({ shop, productCount, totalOrders }: Props) {
+  const { primary, accent } = useStoreTheme();
   const slug = shop.storeSlug;
+  const hasBanner = !!shop.storeBannerUrl;
 
   return (
-    <div
-      className="relative w-full flex items-end overflow-hidden"
-      style={{ minHeight: theme.layout.heroHeight, height: theme.layout.heroHeight, maxHeight: "100vh" }}
-    >
-      {shop.storeBannerUrl ? (
-        <img
-          src={shop.storeBannerUrl}
-          alt={shop.name}
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-      ) : (
-        <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${primary}, ${primary}cc)` }} />
-      )}
-      <div className="absolute inset-0 bg-black/60" />
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-6 pb-16 pt-20">
-        <p
-          className={`${theme.typography.heroSize} font-black text-white leading-none mb-4 uppercase`}
-          style={{ fontFamily: `"${theme.typography.fontHeading}"`, fontWeight: theme.typography.headingWeight }}
-        >
-          {shop.storeTagline || shop.name}
-        </p>
-        {shop.storeTagline && (
-          <p className="text-white/70 text-lg mb-8 max-w-md">{shop.name}</p>
+    <div>
+      <section
+        className="relative w-full overflow-hidden"
+        style={{ minHeight: "420px" }}
+      >
+        {hasBanner ? (
+          <>
+            <img
+              src={shop.storeBannerUrl!}
+              alt={shop.name}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.30) 60%, rgba(0,0,0,0.10) 100%)" }} />
+          </>
+        ) : (
+          <div
+            className="absolute inset-0"
+            style={{ background: `linear-gradient(135deg, ${primary} 0%, ${primary}cc 50%, ${accent}88 100%)` }}
+          />
         )}
-        <div className="flex gap-3 flex-wrap">
-          <Link
-            href={`/store/${slug}/products`}
-            className={`inline-flex items-center gap-2 px-8 py-4 text-white font-bold text-base ${theme.components.buttonRadius}`}
-            style={{ backgroundColor: accent }}
-          >
-            <ShoppingBag size={18} /> এখনই কিনুন
-          </Link>
-          <Link
-            href={`/store/${slug}/products`}
-            className={`inline-flex items-center gap-2 px-8 py-4 border-2 border-white text-white font-bold text-base ${theme.components.buttonRadius}`}
-          >
-            সব পণ্য দেখুন
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
 
-function SplitTextImageHero({ shop, primary, theme, defaults }: { shop: HeroShop; primary: string; theme: ThemeConfig; defaults: HeroDefaults }) {
-  const slug = shop.storeSlug;
+        <div className="relative z-10 max-w-7xl mx-auto px-4 py-16 flex flex-col justify-center" style={{ minHeight: "420px" }}>
+          <div className="max-w-xl">
+            {shop.storeTagline ? (
+              <>
+                <p className="text-sm font-semibold uppercase tracking-widest text-white/70 mb-3">
+                  {shop.name}
+                </p>
+                <h1 className="text-4xl sm:text-5xl font-black text-white leading-tight mb-4">
+                  {shop.storeTagline}
+                </h1>
+              </>
+            ) : (
+              <h1 className="text-4xl sm:text-5xl font-black text-white leading-tight mb-4">
+                {shop.name}
+              </h1>
+            )}
 
-  return (
-    <div
-      className="w-full flex items-center overflow-hidden"
-      style={{ minHeight: theme.layout.heroHeight, backgroundColor: theme.colors.background }}
-    >
-      <div className="max-w-6xl mx-auto px-6 w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-center py-16">
-        <div>
-          <p
-            className={`${theme.typography.heroSize} font-bold leading-tight mb-4`}
-            style={{ fontFamily: `"${theme.typography.fontHeading}"`, fontWeight: theme.typography.headingWeight, color: defaults.text }}
-          >
-            {shop.storeTagline || shop.name}
-          </p>
-          {shop.storeTagline && (
-            <p className="text-lg mb-6" style={{ color: defaults.muted }}>{shop.name}</p>
-          )}
-          <div className="flex gap-3 flex-wrap">
-            <Link
-              href={`/store/${slug}/products`}
-              className={`inline-flex items-center gap-2 px-6 py-3 text-white font-semibold ${theme.components.buttonRadius}`}
-              style={{ backgroundColor: primary }}
-            >
-              <ShoppingBag size={16} /> এখনই কিনুন
-            </Link>
-            <Link
-              href={`/store/${slug}/products`}
-              className={`inline-flex items-center gap-2 px-6 py-3 border-2 font-semibold ${theme.components.buttonRadius}`}
-              style={{ borderColor: primary, color: primary }}
-            >
-              সব পণ্য
-            </Link>
-          </div>
-        </div>
-        <div
-          className="relative aspect-square max-h-[480px] overflow-hidden"
-          style={{ borderRadius: theme.components.borderRadius !== "rounded-none" ? "16px" : "0" }}
-        >
-          {shop.storeBannerUrl ? (
-            <img src={shop.storeBannerUrl} alt={shop.name} className="w-full h-full object-cover" />
-          ) : shop.logoUrl ? (
-            <img src={shop.logoUrl} alt={shop.name} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${primary}22, ${primary}55)` }}>
-              <p className="text-6xl font-black" style={{ fontFamily: `"${theme.typography.fontHeading}"`, color: primary }}>
-                {shop.name[0]?.toUpperCase()}
+            {shop.storeAbout && (
+              <p className="text-white/75 text-base leading-relaxed mb-6 max-w-md line-clamp-3">
+                {shop.storeAbout}
               </p>
+            )}
+
+            <div className="flex items-center gap-3 flex-wrap mb-8">
+              {shop.storeFreeShipping && (
+                <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-white/20 text-white backdrop-blur-sm">
+                  <Truck size={13} /> ফ্রি ডেলিভারি
+                </span>
+              )}
+              {shop.storeCODEnabled && (
+                <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-white/20 text-white backdrop-blur-sm">
+                  ✅ ক্যাশ অন ডেলিভারি
+                </span>
+              )}
+              {(shop.storeBkashNumber || shop.storeNagadNumber) && (
+                <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-white/20 text-white backdrop-blur-sm">
+                  💳 বিকাশ / নগদ
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3 flex-wrap">
+              <Link
+                href={`/store/${slug}/products`}
+                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-bold transition-all hover:scale-105 active:scale-95"
+                style={{ backgroundColor: accent || "#ffffff", color: hasBanner ? "#000" : "#fff" }}
+              >
+                <ShoppingBag size={16} /> এখনই কিনুন
+              </Link>
+              <Link
+                href={`/store/${slug}/products`}
+                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-bold border-2 border-white text-white transition-all hover:bg-white/10 active:scale-95"
+              >
+                সব পণ্য দেখুন <ArrowRight size={14} />
+              </Link>
+            </div>
+          </div>
+
+          {(productCount > 0 || totalOrders > 0) && (
+            <div className="flex items-center gap-6 mt-10 flex-wrap">
+              {productCount > 0 && (
+                <div className="text-center">
+                  <p className="text-2xl font-black text-white">{productCount}+</p>
+                  <p className="text-xs text-white/60">পণ্য</p>
+                </div>
+              )}
+              {totalOrders > 0 && (
+                <div className="text-center">
+                  <p className="text-2xl font-black text-white">{totalOrders}+</p>
+                  <p className="text-xs text-white/60">অর্ডার</p>
+                </div>
+              )}
+              <div className="text-center">
+                <p className="text-2xl font-black text-white">⭐ 5.0</p>
+                <p className="text-xs text-white/60">রেটিং</p>
+              </div>
             </div>
           )}
         </div>
-      </div>
+      </section>
+
+      <section className="border-b border-gray-100" style={{ backgroundColor: "#fff" }}>
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-gray-100">
+            {TRUST_BADGES.map(({ icon: Icon, label, sub }) => (
+              <div key={label} className="flex items-center gap-3 px-4 py-4">
+                <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: primary + "15" }}>
+                  <Icon size={18} style={{ color: primary }} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-gray-800 leading-tight">{label}</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5 truncate">{sub}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
     </div>
   );
-}
-
-function BannerSliderHero({ shop, primary, theme, defaults }: { shop: HeroShop; primary: string; theme: ThemeConfig; defaults: HeroDefaults }) {
-  const slug = shop.storeSlug;
-  const [slide, setSlide] = useState(0);
-
-  const slides = [
-    {
-      title: shop.name,
-      subtitle: shop.storeTagline || "সেরা পণ্য, সেরা দামে",
-      cta: "এখনই কিনুন",
-      bg: shop.storeBannerUrl,
-    },
-    {
-      title: "বিশেষ অফার",
-      subtitle: "আজকেই অর্ডার করুন এবং দ্রুত ডেলিভারি পান",
-      cta: "অফার দেখুন",
-      bg: null,
-    },
-    {
-      title: "সব পণ্য দেখুন",
-      subtitle: "আমাদের সম্পূর্ণ কালেকশন ব্রাউজ করুন",
-      cta: "কালেকশন দেখুন",
-      bg: null,
-    },
-  ];
-
-  useEffect(() => {
-    const t = setInterval(() => setSlide(s => (s + 1) % slides.length), 4000);
-    return () => clearInterval(t);
-  }, [slides.length]);
-
-  const current = slides[slide];
-
-  return (
-    <div
-      className="relative w-full overflow-hidden flex items-center justify-center"
-      style={{ minHeight: theme.layout.heroHeight, backgroundColor: primary + "22" }}
-    >
-      {current.bg ? (
-        <>
-          <img src={current.bg} alt="" className="absolute inset-0 w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-black/40" />
-        </>
-      ) : (
-        <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${primary}33, ${primary}66)` }} />
-      )}
-      <div className="relative z-10 text-center px-6 py-16 max-w-2xl">
-        <p
-          className={`${theme.typography.heroSize} font-bold leading-tight mb-3 transition-all duration-500`}
-          style={{
-            fontFamily: `"${theme.typography.fontHeading}"`,
-            fontWeight: theme.typography.headingWeight,
-            color: current.bg ? "#fff" : defaults.text,
-          }}
-        >
-          {current.title}
-        </p>
-        <p className="text-lg mb-8" style={{ color: current.bg ? "rgba(255,255,255,0.85)" : defaults.muted }}>
-          {current.subtitle}
-        </p>
-        <Link
-          href={`/store/${slug}/products`}
-          className={`inline-flex items-center gap-2 px-8 py-3 font-semibold text-white ${theme.components.buttonRadius}`}
-          style={{ backgroundColor: primary }}
-        >
-          <ShoppingBag size={16} /> {current.cta}
-        </Link>
-      </div>
-      <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 z-10">
-        {slides.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setSlide(i)}
-            className="h-2 rounded-full transition-all duration-300"
-            style={{
-              backgroundColor: i === slide ? primary : "rgba(255,255,255,0.5)",
-              width: i === slide ? "24px" : "8px",
-            }}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function TextOnlyCenteredHero({ shop, primary, theme, defaults }: { shop: HeroShop; primary: string; theme: ThemeConfig; defaults: HeroDefaults }) {
-  const slug = shop.storeSlug;
-
-  return (
-    <div
-      className="w-full flex items-center justify-center text-center"
-      style={{ minHeight: theme.layout.heroHeight, backgroundColor: theme.colors.background }}
-    >
-      <div className="px-6 py-16 max-w-2xl">
-        <p
-          className={`${theme.typography.heroSize} font-bold leading-tight mb-4`}
-          style={{
-            fontFamily: `"${theme.typography.fontHeading}"`,
-            fontWeight: theme.typography.headingWeight,
-            color: defaults.text,
-          }}
-        >
-          {shop.storeTagline || shop.name}
-        </p>
-        {shop.storeTagline && (
-          <p className="text-lg mb-8" style={{ color: defaults.muted }}>{shop.name}</p>
-        )}
-        <Link
-          href={`/store/${slug}/products`}
-          className={`inline-flex items-center gap-2 px-6 py-3 text-white font-semibold ${theme.components.buttonRadius}`}
-          style={{ backgroundColor: primary }}
-        >
-          <ShoppingBag size={16} /> কেনাকাটা শুরু করুন
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-export function DynamicHero({ shop }: Props) {
-  const { primary, accent, theme, defaults } = useStoreTheme();
-  const heroStyle = theme.layout.heroStyle;
-
-  if (heroStyle === "fullwidth_image") {
-    return <FullwidthImageHero shop={shop} primary={primary} accent={accent} theme={theme} />;
-  }
-  if (heroStyle === "split_text_image") {
-    return <SplitTextImageHero shop={shop} primary={primary} theme={theme} defaults={defaults} />;
-  }
-  if (heroStyle === "banner_slider") {
-    return <BannerSliderHero shop={shop} primary={primary} theme={theme} defaults={defaults} />;
-  }
-  return <TextOnlyCenteredHero shop={shop} primary={primary} theme={theme} defaults={defaults} />;
 }
