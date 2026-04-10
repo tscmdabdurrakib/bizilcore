@@ -150,6 +150,7 @@ model Shop {
   coupons                Coupon[]
   storePageViews         StorePageView[]
   categories             Category[]          @relation("ShopCategories")
+  messengerConversations MessengerConversation[]
 
   storeSlug         String? @unique
   storeEnabled      Boolean @default(false)
@@ -535,9 +536,32 @@ model FacebookPage {
   followers   Int?
   connectedAt DateTime @default(now())
   isActive    Boolean  @default(true)
+  autoReply   Boolean  @default(false)
+  replyMessage String? @default("আপনার বার্তার জন্য ধন্যবাদ! আমরা শীঘ্রই যোগাযোগ করব। 🙏")
+
+  messengerConversations MessengerConversation[]
 
   @@unique([shopId, pageId])
   @@index([shopId])
+}
+
+model MessengerConversation {
+  id             String       @id @default(cuid())
+  shopId         String
+  shop           Shop         @relation(fields: [shopId], references: [id])
+  facebookPageId String
+  facebookPage   FacebookPage @relation(fields: [facebookPageId], references: [id])
+  fbPageId       String
+  senderId       String
+  senderName     String?
+  message        String
+  reply          String?
+  repliedAt      DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([shopId])
+  @@index([facebookPageId])
+  @@index([createdAt])
 }
 
 model SuggestedOrder {
