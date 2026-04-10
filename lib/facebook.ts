@@ -53,4 +53,66 @@ export function verifyWebhook(mode: string, token: string, challenge: string): s
   return null;
 }
 
+export async function sendFacebookMessage(
+  recipientId: string,
+  messageText: string,
+  pageAccessToken: string,
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  try {
+    const res = await fetch(
+      `${GRAPH_URL}/me/messages?access_token=${pageAccessToken}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipient: { id: recipientId },
+          message: { text: messageText },
+          messaging_type: "RESPONSE",
+        }),
+      },
+    );
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      console.error("[FB] send error:", data?.error?.message ?? data);
+      return { success: false, error: data?.error?.message ?? "Send failed" };
+    }
+    return { success: true, messageId: data.message_id };
+  } catch (err) {
+    return { success: false, error: String(err) };
+  }
+}
+
+export async function getMessengerUserProfile(
+  fbUserId: string,
+  pageAccessToken: string,
+): Promise<{ name?: string } | null> {
+  try {
+    const res = await fetch(
+      `${GRAPH_URL}/${fbUserId}?fields=name&access_token=${pageAccessToken}`,
+    );
+    const data = await res.json();
+    return data?.error ? null : { name: data.name };
+  } catch {
+    return null;
+  }
+}
+
+export async function subscribePageToWebhook(pageId: string, pageAccessToken: string) {
+  try {
+    const res = await fetch(
+      `${GRAPH_URL}/${pageId}/subscribed_apps`,
+      {
+        method: "POST",
+        body: new URLSearchParams({
+          subscribed_fields: "messages,messaging_postbacks,feed",
+          access_token: pageAccessToken,
+        }),
+      },
+    );
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 export { VERIFY_TOKEN };
