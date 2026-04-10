@@ -2,8 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ShoppingCart, Star, ChevronLeft, Package, Minus, Plus, Zap, ImageIcon } from "lucide-react";
+import {
+  ShoppingCart, Star, ChevronLeft, Package, Minus, Plus, Zap,
+  ImageIcon, Heart, Share2, MessageCircle, CheckCircle
+} from "lucide-react";
 import { useCart } from "@/lib/store/cart";
+import { useWishlist } from "@/lib/store/wishlist";
 import { useStoreTheme } from "@/components/store/ThemeProvider";
 import { useRouter } from "next/navigation";
 
@@ -16,6 +20,11 @@ interface Review {
   id: string; reviewerName: string; rating: number; comment: string | null; createdAt: string;
 }
 
+interface RelatedProduct {
+  id: string; name: string; sellPrice: number; imageUrl: string | null;
+  stockQty: number; hasVariants: boolean; storeFeatured: boolean;
+}
+
 interface Product {
   id: string; name: string; description: string | null; category: string | null;
   sellPrice: number; stockQty: number; imageUrl: string | null; images: unknown;
@@ -25,7 +34,12 @@ interface Product {
 
 interface Props {
   product: Product;
-  shop: { id: string; name: string; storeSlug: string; storeShowStock: boolean; storeShowReviews: boolean };
+  shop: {
+    id: string; name: string; storeSlug: string;
+    storeShowStock: boolean; storeShowReviews: boolean;
+    storeSocialWA: string | null; phone: string | null;
+  };
+  relatedProducts: RelatedProduct[];
 }
 
 function StarRating({ rating }: { rating: number }) {
@@ -38,17 +52,47 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
-export function ProductDetailClient({ product, shop }: Props) {
+function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [hover, setHover] = useState(0);
+  return (
+    <span className="flex gap-1">
+      {[1,2,3,4,5].map(i => (
+        <button
+          key={i} type="button"
+          onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(0)}
+          onClick={() => onChange(i)}
+        >
+          <Star size={22}
+            fill={(hover || value) >= i ? "#F59E0B" : "none"}
+            stroke={(hover || value) >= i ? "#F59E0B" : "#D1D5DB"}
+          />
+        </button>
+      ))}
+    </span>
+  );
+}
+
+export function ProductDetailClient({ product, shop, relatedProducts }: Props) {
   const { primary, theme, accent, defaults } = useStoreTheme();
   const addItem = useCart((s) => s.addItem);
+  const { toggle, isWishlisted } = useWishlist();
   const router = useRouter();
   const slug = shop.storeSlug;
+  const wishlisted = isWishlisted(product.id);
 
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(
     product.variants.length === 1 ? product.variants[0] : null
   );
   const [qty, setQty] = useState(1);
   const [mainImage, setMainImage] = useState(product.imageUrl);
+  const [addedToCart, setAddedToCart] = useState(false);
+
+  const [reviewName, setReviewName] = useState("");
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewSuccess, setReviewSuccess] = useState("");
+  const [reviewError, setReviewError] = useState("");
 
   const images: string[] = (() => {
     try {
@@ -69,8 +113,7 @@ export function ProductDetailClient({ product, shop }: Props) {
   const canAddToCart = inStock && variantSelected;
 
   function addToCart(): boolean {
-    if (!inStock) return false;
-    if (!variantSelected) return false;
+    if (!inStock || !variantSelected) return false;
     addItem({
       productId: product.id,
       productName: product.name,
@@ -80,12 +123,55 @@ export function ProductDetailClient({ product, shop }: Props) {
       unitPrice: effectivePrice,
       quantity: qty,
     }, slug);
+    setAddedToCart(true);
+    setTimeout(() => setAddedToCart(false), 2500);
     return true;
   }
 
   function buyNow() {
     if (!addToCart()) return;
     router.push(`/store/${slug}/checkout`);
+  }
+
+  function handleWishlist() {
+    toggle({
+      productId: product.id,
+      productName: product.name,
+      productImage: product.imageUrl,
+      sellPrice: product.sellPrice,
+      slug,
+    });
+  }
+
+  function handleShare() {
+    if (navigator.share) {
+      navigator.share({ title: product.name, url: window.location.href });
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+    }
+  }
+
+  const waNumber = shop.storeSocialWA || shop.phone;
+  const waLink = waNumber
+    ? `https://wa.me/${waNumber.replace(/[^0-9]/g, "").replace(/^0/, "880")}?text=${encodeURIComponent(`${product.name} সম্পর্কে জানতে চাই।`)}`
+    : null;
+
+  async function submitReview(e: React.FormEvent) {
+    e.preventDefault();
+    setReviewError(""); setReviewSuccess(""); setReviewLoading(true);
+    const r = await fetch("/api/store/reviews/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slug, productId: product.id, reviewerName: reviewName, rating: reviewRating, comment: reviewComment }),
+    });
+    const d = await r.json();
+    if (r.ok) {
+      setReviewSuccess(d.message);
+      setReviewName(""); setReviewComment(""); setReviewRating(5);
+    } else {
+      setReviewError(d.error || "রিভিউ জমা করা যায়নি।");
+    }
+    setReviewLoading(false);
   }
 
   const text = defaults.text;
@@ -99,25 +185,48 @@ export function ProductDetailClient({ product, shop }: Props) {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6">
-      <Link href={`/store/${slug}/products`} className="inline-flex items-center gap-1 text-sm mb-6" style={{ color: muted }}>
-        <ChevronLeft size={14} /> সব পণ্য
-      </Link>
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-2 text-xs mb-5" style={{ color: muted }}>
+        <Link href={`/store/${slug}`} className="hover:underline">হোম</Link>
+        <span>/</span>
+        <Link href={`/store/${slug}/products`} className="hover:underline">সব পণ্য</Link>
+        {product.category && (
+          <>
+            <span>/</span>
+            <Link href={`/store/${slug}/products?category=${encodeURIComponent(product.category)}`} className="hover:underline">
+              {product.category}
+            </Link>
+          </>
+        )}
+        <span>/</span>
+        <span className="truncate max-w-[160px]" style={{ color: text }}>{product.name}</span>
+      </nav>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Image gallery */}
         <div>
-          <div className="aspect-square rounded-2xl overflow-hidden border mb-3" style={{ borderColor: border, backgroundColor: surface }}>
+          <div className="aspect-square rounded-2xl overflow-hidden border mb-3 relative group" style={{ borderColor: border, backgroundColor: surface }}>
             {mainImage ? (
-              <img src={mainImage} alt={product.name} className="w-full h-full object-cover" />
+              <img
+                src={mainImage} alt={product.name}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
             ) : (
               <div className="w-full h-full flex items-center justify-center"><ImageIcon size={48} style={{ color: muted }} /></div>
             )}
+            <button
+              onClick={handleWishlist}
+              className="absolute top-3 right-3 w-9 h-9 rounded-full shadow-md flex items-center justify-center backdrop-blur-sm transition-transform hover:scale-110"
+              style={{ backgroundColor: "rgba(255,255,255,0.9)" }}
+            >
+              <Heart size={16} fill={wishlisted ? "#EF4444" : "none"} stroke={wishlisted ? "#EF4444" : "#9CA3AF"} />
+            </button>
           </div>
           {images.length > 1 && (
             <div className="flex gap-2 overflow-x-auto">
               {images.map((img, i) => (
                 <button key={i} onClick={() => setMainImage(img)}
-                  className="w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden border-2"
+                  className="w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden border-2 transition-all"
                   style={{ borderColor: mainImage === img ? primary : border }}>
                   <img src={img} alt="" className="w-full h-full object-cover" />
                 </button>
@@ -129,9 +238,16 @@ export function ProductDetailClient({ product, shop }: Props) {
         {/* Product info */}
         <div>
           {product.category && (
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: muted }}>{product.category}</p>
+            <Link href={`/store/${slug}/products?category=${encodeURIComponent(product.category)}`}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-2 hover:underline" style={{ color: primary }}>{product.category}</p>
+            </Link>
           )}
-          <h1 className="text-2xl font-bold mb-2" style={{ color: text }}>{product.name}</h1>
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <h1 className="text-2xl font-bold leading-tight" style={{ color: text }}>{product.name}</h1>
+            <button onClick={handleShare} className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-xl border" style={{ borderColor: border, color: muted }}>
+              <Share2 size={14} />
+            </button>
+          </div>
 
           {avgRating !== null && (
             <div className="flex items-center gap-2 mb-3">
@@ -144,16 +260,14 @@ export function ProductDetailClient({ product, shop }: Props) {
             <span className="text-3xl font-bold" style={{ color: primary }}>৳{effectivePrice.toLocaleString()}</span>
           </div>
 
-          {shop.storeShowStock && (
-            <p className="text-sm mb-4 font-medium" style={{ color: inStock ? "#10B981" : "#EF4444" }}>
-              {inStock ? `✓ স্টক আছে${effectiveStock < 10 ? ` (মাত্র ${effectiveStock}টি)` : ""}` : "✗ স্টক শেষ"}
-            </p>
-          )}
-          {!shop.storeShowStock && (
-            <p className="text-sm mb-4 font-medium" style={{ color: inStock ? "#10B981" : "#EF4444" }}>
-              {inStock ? "✓ স্টক আছে" : "✗ স্টক শেষ"}
-            </p>
-          )}
+          <p className="text-sm mb-4 font-medium" style={{ color: inStock ? "#10B981" : "#EF4444" }}>
+            {inStock
+              ? shop.storeShowStock && effectiveStock < 10
+                ? `✓ স্টক আছে (মাত্র ${effectiveStock}টি)`
+                : "✓ স্টক আছে"
+              : "✗ স্টক শেষ"
+            }
+          </p>
 
           {/* Size variants */}
           {sizeVariants.length > 0 && (
@@ -197,7 +311,7 @@ export function ProductDetailClient({ product, shop }: Props) {
           )}
 
           {/* Qty */}
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-3 mb-5">
             <p className="text-sm font-semibold" style={{ color: text }}>পরিমাণ</p>
             <div className="flex items-center gap-0 border rounded-xl overflow-hidden" style={{ borderColor: border }}>
               <button onClick={() => setQty(q => Math.max(1, q - 1))} className="w-9 h-9 flex items-center justify-center" style={{ color: text }}>
@@ -216,11 +330,16 @@ export function ProductDetailClient({ product, shop }: Props) {
             </div>
           )}
 
-          <div className="flex gap-3 mb-6">
+          <div className="flex gap-3 mb-4">
             <button onClick={() => addToCart()} disabled={!canAddToCart}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm border-2 disabled:opacity-40"
-              style={{ borderColor: primary, color: primary }}>
-              <ShoppingCart size={16} /> কার্টে যোগ
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm border-2 transition-all disabled:opacity-40"
+              style={{
+                borderColor: primary, color: addedToCart ? "white" : primary,
+                backgroundColor: addedToCart ? "#10B981" : "transparent",
+                borderColor: addedToCart ? "#10B981" : primary,
+              }}>
+              {addedToCart ? <CheckCircle size={16} /> : <ShoppingCart size={16} />}
+              {addedToCart ? "কার্টে যোগ হয়েছে!" : "কার্টে যোগ"}
             </button>
             <button onClick={buyNow} disabled={!canAddToCart}
               className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm text-white disabled:opacity-40"
@@ -229,30 +348,157 @@ export function ProductDetailClient({ product, shop }: Props) {
             </button>
           </div>
 
+          {/* WhatsApp Order */}
+          {waLink && (
+            <a href={waLink} target="_blank" rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl font-semibold text-sm text-white mb-4"
+              style={{ backgroundColor: "#25D366" }}>
+              <MessageCircle size={15} />
+              WhatsApp এ অর্ডার করুন
+            </a>
+          )}
+
+          {/* Wishlist */}
+          <button onClick={handleWishlist}
+            className="flex items-center gap-2 text-sm font-semibold mb-5"
+            style={{ color: wishlisted ? "#EF4444" : muted }}>
+            <Heart size={15} fill={wishlisted ? "#EF4444" : "none"} stroke={wishlisted ? "#EF4444" : muted} />
+            {wishlisted ? "পছন্দের তালিকায় যোগ হয়েছে" : "পছন্দের তালিকায় যোগ করুন"}
+          </button>
+
           {product.description && (
             <div className="border-t pt-5 mt-2" style={{ borderColor: border }}>
               <p className="text-sm font-bold mb-3 uppercase tracking-wide" style={{ color: text }}>পণ্যের বিবরণ</p>
               <p className="text-sm leading-7 whitespace-pre-line" style={{ color: muted }}>{product.description}</p>
             </div>
           )}
+
+          {/* Trust badges */}
+          <div className="mt-5 grid grid-cols-3 gap-2 text-center text-[10px] font-semibold" style={{ color: muted }}>
+            <div className="p-2 rounded-xl border" style={{ borderColor: border }}>🔒 নিরাপদ পেমেন্ট</div>
+            <div className="p-2 rounded-xl border" style={{ borderColor: border }}>🚚 দ্রুত ডেলিভারি</div>
+            <div className="p-2 rounded-xl border" style={{ borderColor: border }}>↩️ সহজ রিটার্ন</div>
+          </div>
         </div>
       </div>
 
-      {/* Reviews */}
-      {product.storeReviews && product.storeReviews.length > 0 && (
-        <section className="mt-12">
-          <h2 className="text-lg font-bold mb-6" style={{ color: text }}>কাস্টমার রিভিউ ({product.storeReviews.length})</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {product.storeReviews.map(review => (
-              <div key={review.id} className="p-4 rounded-2xl border" style={{ borderColor: border, backgroundColor: surface }}>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="font-semibold text-sm" style={{ color: text }}>{review.reviewerName}</p>
-                  <StarRating rating={review.rating} />
+      {/* Related products */}
+      {relatedProducts.length > 0 && (
+        <section className="mt-14">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-lg font-bold" style={{ color: text }}>একই ক্যাটাগরির পণ্য</h2>
+            <Link href={`/store/${slug}/products?category=${encodeURIComponent(product.category ?? "")}`}
+              className="text-sm font-semibold" style={{ color: primary }}>
+              সব দেখুন →
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {relatedProducts.map(p => (
+              <Link key={p.id} href={`/store/${slug}/products/${p.id}`}
+                className="group rounded-2xl border overflow-hidden hover:shadow-md transition-all"
+                style={{ borderColor: border, backgroundColor: surface }}>
+                <div className="aspect-square overflow-hidden" style={{ backgroundColor: defaults.bg }}>
+                  {p.imageUrl ? (
+                    <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center"><Package size={24} style={{ color: muted }} /></div>
+                  )}
                 </div>
-                {review.comment && <p className="text-sm" style={{ color: muted }}>{review.comment}</p>}
-                <p className="text-xs mt-2" style={{ color: muted }}>{new Date(review.createdAt).toLocaleDateString("bn-BD")}</p>
-              </div>
+                <div className="p-2">
+                  <p className="text-xs font-semibold line-clamp-2 mb-1" style={{ color: text }}>{p.name}</p>
+                  <p className="text-xs font-bold" style={{ color: primary }}>৳{p.sellPrice.toLocaleString()}</p>
+                </div>
+              </Link>
             ))}
+          </div>
+        </section>
+      )}
+
+      {/* Reviews section */}
+      {shop.storeShowReviews && (
+        <section className="mt-14">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-lg font-bold" style={{ color: text }}>
+              কাস্টমার রিভিউ
+              {product.storeReviews && product.storeReviews.length > 0 && (
+                <span className="ml-2 text-sm font-normal" style={{ color: muted }}>({product.storeReviews.length}টি)</span>
+              )}
+            </h2>
+            {avgRating !== null && (
+              <div className="flex items-center gap-2">
+                <StarRating rating={Math.round(avgRating)} />
+                <span className="text-sm font-bold" style={{ color: text }}>{avgRating.toFixed(1)}</span>
+              </div>
+            )}
+          </div>
+
+          {product.storeReviews && product.storeReviews.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+              {product.storeReviews.map(review => (
+                <div key={review.id} className="p-4 rounded-2xl border" style={{ borderColor: border, backgroundColor: surface }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" style={{ backgroundColor: primary + "18", color: primary }}>
+                        {review.reviewerName.charAt(0).toUpperCase()}
+                      </div>
+                      <p className="font-semibold text-sm" style={{ color: text }}>{review.reviewerName}</p>
+                    </div>
+                    <StarRating rating={review.rating} />
+                  </div>
+                  {review.comment && <p className="text-sm leading-6" style={{ color: muted }}>{review.comment}</p>}
+                  <p className="text-xs mt-2" style={{ color: muted }}>{new Date(review.createdAt).toLocaleDateString("bn-BD")}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 mb-6 rounded-2xl border" style={{ borderColor: border }}>
+              <Star size={32} style={{ color: "#D1D5DB", margin: "0 auto 8px" }} />
+              <p className="text-sm" style={{ color: muted }}>এখনো কোনো রিভিউ নেই। প্রথম রিভিউ দিন!</p>
+            </div>
+          )}
+
+          {/* Review submission form */}
+          <div className="p-5 rounded-2xl border" style={{ borderColor: border, backgroundColor: surface }}>
+            <h3 className="font-bold mb-4" style={{ color: text }}>রিভিউ দিন</h3>
+            {reviewSuccess ? (
+              <div className="flex items-center gap-3 p-4 rounded-xl" style={{ backgroundColor: "#ECFDF5" }}>
+                <CheckCircle size={20} color="#10B981" />
+                <p className="text-sm font-semibold text-green-700">{reviewSuccess}</p>
+              </div>
+            ) : (
+              <form onSubmit={submitReview} className="space-y-4">
+                <div>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: muted }}>রেটিং *</label>
+                  <StarPicker value={reviewRating} onChange={setReviewRating} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: muted }}>আপনার নাম *</label>
+                  <input
+                    required value={reviewName} onChange={e => setReviewName(e.target.value)}
+                    placeholder="আপনার নাম লিখুন"
+                    className="w-full border rounded-xl px-3 py-2.5 text-sm outline-none"
+                    style={{ borderColor: border, backgroundColor: defaults.bg, color: text }}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: muted }}>মন্তব্য (ঐচ্ছিক)</label>
+                  <textarea
+                    value={reviewComment} onChange={e => setReviewComment(e.target.value)}
+                    rows={3} placeholder="আপনার অভিজ্ঞতা শেয়ার করুন..."
+                    className="w-full border rounded-xl px-3 py-2.5 text-sm outline-none"
+                    style={{ borderColor: border, backgroundColor: defaults.bg, color: text, resize: "none" }}
+                  />
+                </div>
+                {reviewError && <p className="text-xs text-red-500">{reviewError}</p>}
+                <button
+                  type="submit" disabled={reviewLoading || !reviewName}
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-white font-semibold text-sm disabled:opacity-50"
+                  style={{ backgroundColor: primary }}
+                >
+                  {reviewLoading ? "জমা হচ্ছে..." : "রিভিউ জমা দিন"}
+                </button>
+              </form>
+            )}
           </div>
         </section>
       )}

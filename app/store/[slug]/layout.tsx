@@ -5,6 +5,7 @@ import { StoreThemeProvider } from "@/components/store/ThemeProvider";
 import { DynamicNav } from "@/components/store/DynamicNav";
 import { StoreFooter } from "@/components/store/StoreFooter";
 import { StoreVisitTracker } from "@/components/store/StoreVisitTracker";
+import { FloatingWhatsApp } from "@/components/store/FloatingWhatsApp";
 
 async function getStoreShop(slug: string) {
   return prisma.shop.findUnique({
@@ -30,6 +31,7 @@ async function getStoreShop(slug: string) {
       storeMinOrder: true,
       storeFreeShipping: true,
       storeShippingFee: true,
+      storeDhakaFee: true,
       storeSocialFB: true,
       storeSocialIG: true,
       storeSocialWA: true,
@@ -60,6 +62,8 @@ export default async function StoreLayout({
     ].filter(Boolean))
   );
 
+  const waNumber = shop.storeSocialWA || shop.phone;
+
   return (
     <>
       {fontUrls.map(url => (
@@ -78,6 +82,7 @@ export default async function StoreLayout({
           <DynamicNav shop={{ ...shop, storeSlug: shop.storeSlug! }} />
           <main className="flex-1">{children}</main>
           <StoreFooter shop={{ ...shop, storeSlug: shop.storeSlug! }} />
+          <FloatingWhatsApp whatsappNumber={waNumber} shopName={shop.name} primary={primary} />
         </div>
       </StoreThemeProvider>
     </>

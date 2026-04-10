@@ -189,6 +189,7 @@ export function DynamicNav({ shop }: Props) {
           <nav className="hidden md:flex items-center gap-1 pb-2 text-sm font-medium text-gray-600">
             <Link href={`/store/${slug}`} className="px-3 py-1.5 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors">হোম</Link>
             <Link href={`/store/${slug}/products`} className="px-3 py-1.5 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors">সব পণ্য</Link>
+            <Link href={`/store/${slug}/wishlist`} className="px-3 py-1.5 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors">❤️ পছন্দ</Link>
             <Link href={`/store/${slug}/track`} className="px-3 py-1.5 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors">অর্ডার ট্র্যাক</Link>
             {shop.storeSocialWA && (
               <a
@@ -230,6 +231,7 @@ export function DynamicNav({ shop }: Props) {
               {[
                 { href: `/store/${slug}`, label: "🏠 হোম" },
                 { href: `/store/${slug}/products`, label: "🛍️ সব পণ্য" },
+                { href: `/store/${slug}/wishlist`, label: "❤️ পছন্দের তালিকা" },
                 { href: `/store/${slug}/cart`, label: "🛒 কার্ট" },
                 { href: `/store/${slug}/track`, label: "📍 অর্ডার ট্র্যাক" },
               ].map(({ href, label }) => (

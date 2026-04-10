@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { ShoppingCart, ImageIcon, Eye, Star } from "lucide-react";
+import { ShoppingCart, ImageIcon, Eye, Star, Heart } from "lucide-react";
 import { useCart } from "@/lib/store/cart";
+import { useWishlist } from "@/lib/store/wishlist";
 import { useStoreTheme } from "./ThemeProvider";
 
 export interface ProductCardProduct {
@@ -44,7 +45,21 @@ function useAddToCart(product: ProductCardProduct, slug: string) {
 export function DynamicProductCard({ product, slug }: Props) {
   const { primary } = useStoreTheme();
   const handleAddToCart = useAddToCart(product, slug);
+  const { toggle, isWishlisted } = useWishlist();
   const inStock = product.stockQty > 0;
+  const wishlisted = isWishlisted(product.id);
+
+  function handleWishlist(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    toggle({
+      productId: product.id,
+      productName: product.name,
+      productImage: product.imageUrl,
+      sellPrice: product.sellPrice,
+      slug,
+    });
+  }
 
   return (
     <Link
@@ -70,6 +85,19 @@ export function DynamicProductCard({ product, slug }: Props) {
             <Star size={9} fill="white" /> জনপ্রিয়
           </span>
         )}
+
+        {/* Wishlist heart button */}
+        <button
+          onClick={handleWishlist}
+          className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full flex items-center justify-center shadow-md backdrop-blur-sm transition-transform hover:scale-110"
+          style={{ backgroundColor: "rgba(255,255,255,0.92)" }}
+        >
+          <Heart
+            size={13}
+            fill={wishlisted ? "#EF4444" : "none"}
+            stroke={wishlisted ? "#EF4444" : "#9CA3AF"}
+          />
+        </button>
 
         {!inStock && (
           <div className="absolute inset-0 bg-white/80 flex items-center justify-center">

@@ -21,7 +21,11 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
 
   const shop = await prisma.shop.findUnique({
     where: { storeSlug: slug },
-    select: { id: true, name: true, storeSlug: true, storeEnabled: true, storeShowStock: true, storeShowReviews: true },
+    select: {
+      id: true, name: true, storeSlug: true, storeEnabled: true,
+      storeShowStock: true, storeShowReviews: true,
+      storeSocialWA: true, phone: true,
+    },
   });
   if (!shop || !shop.storeEnabled) notFound();
 
@@ -41,5 +45,26 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   });
   if (!product) notFound();
 
-  return <ProductDetailClient product={{ ...product, storeReviews: (product.storeReviews || []).map(r => ({ ...r, createdAt: r.createdAt.toISOString() })) }} shop={{ ...shop, storeSlug: shop.storeSlug! }} />;
+  const relatedProducts = product.category ? await prisma.product.findMany({
+    where: {
+      shopId: shop.id,
+      storeVisible: true,
+      category: product.category,
+      id: { not: productId },
+    },
+    select: { id: true, name: true, sellPrice: true, imageUrl: true, stockQty: true, hasVariants: true, storeFeatured: true },
+    take: 6,
+    orderBy: { storeFeatured: "desc" },
+  }) : [];
+
+  return (
+    <ProductDetailClient
+      product={{
+        ...product,
+        storeReviews: (product.storeReviews || []).map(r => ({ ...r, createdAt: r.createdAt.toISOString() })),
+      }}
+      shop={{ ...shop, storeSlug: shop.storeSlug! }}
+      relatedProducts={relatedProducts}
+    />
+  );
 }
