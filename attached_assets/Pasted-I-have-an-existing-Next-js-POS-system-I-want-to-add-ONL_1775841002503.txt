@@ -1,0 +1,224 @@
+I have an existing Next.js POS system. I want to add ONLY the Facebook Comment-to-Order feature to it. Do not touch or rebuild any existing code. Only add new files and new API routes.
+
+---
+
+## What to add:
+
+### 1. New Prisma Models (add to existing schema.prisma):
+model ConnectedPage {
+  id          String   @id @default(cuid())
+  pageId      String   @unique
+  pageName    String
+  accessToken String
+  connectedAt DateTime @default(now())
+  orders      FacebookOrder[]
+}
+
+model FacebookOrder {
+  id            String        @id @default(cuid())
+  source        String        @default("facebook")
+  pageId        String
+  page          ConnectedPage @relation(fields: [pageId], references: [pageId])
+  commenterName String
+  commenterFbId String
+  postId        String
+  commentId     String        @unique
+  commentText   String
+  status        String        @default("pending")
+  createdAt     DateTime      @default(now())
+}
+
+Run: npx prisma migrate dev --name add_facebook_orders
+
+---
+
+### 2. New Environment Variables (add to existing .env.local):
+FACEBOOK_APP_ID=
+FACEBOOK_APP_SECRET=
+FACEBOOK_VERIFY_TOKEN=mySecretVerifyToken123
+NEXTAUTH_SECRET=        ← only if not already present
+
+---
+
+### 3. New Files to Create:
+
+/lib/facebook-keywords.ts
+/app/api/webhook/facebook/route.ts
+/app/api/facebook-orders/route.ts
+/app/api/connect-page/route.ts
+/app/api/sse/route.ts
+/app/(dashboard)/facebook-orders/page.tsx
+/app/(dashboard)/connect-facebook/page.tsx
+/components/facebook-orders/OrdersTable.tsx
+/components/facebook-orders/NewOrderToast.tsx
+/components/facebook-orders/ConnectPageButton.tsx
+
+Do NOT modify any existing files except:
+- schema.prisma (only add new models)
+- .env.local (only add new variables)
+- existing sidebar/nav component: only ADD a new menu item "Facebook Orders" linking to /facebook-orders
+
+---
+
+### 4. /lib/facebook-keywords.ts
+export const KEYWORDS = [
+  "order", "অর্ডার", "কিনতে চাই", "নিব", "দেন",
+  "buy", "want", "নিতে চাই", "কিনব", "পাঠান",
+  "price", "দাম", "কত", "পাইকারি", "চাই", "লাগবে"
+]
+
+export function hasOrderKeyword(text: string): boolean {
+  const lower = text.toLowerCase()
+  return KEYWORDS.some(kw => lower.includes(kw.toLowerCase()))
+}
+
+---
+
+### 5. /app/api/webhook/facebook/route.ts
+GET handler:
+- Read: hub.mode, hub.verify_token, hub.challenge from searchParams
+- If verify_token matches FACEBOOK_VERIFY_TOKEN → return hub.challenge as plain text 200
+- Else → return 403
+
+POST handler:
+- Parse body from Facebook
+- Loop: body.entry[].changes[]
+- Filter: change.field === "feed" && change.value.item === "comment"
+- Extract from change.value:
+    comment_id, message, from.name, from.id, post_id
+- Run hasOrderKeyword(message)
+- If true:
+    prisma.facebookOrder.create({
+      data: {
+        pageId: change.value.recipient_id,
+        commentId: comment_id,
+        commentText: message,
+        commenterName: from.name,
+        commenterFbId: from.id,
+        postId: post_id,
+        status: "pending"
+      }
+    })
+    → call broadcast(newOrder) for SSE
+- Always return NextResponse.json({ ok: true }, { status: 200 })
+
+---
+
+### 6. /app/api/facebook-orders/route.ts
+GET:
+- Query all FacebookOrder, include page, orderBy createdAt desc
+- Support ?status= filter
+- Return JSON array
+
+PATCH:
+- Body: { id: string, status: string }
+- Valid statuses: "pending" | "confirmed" | "cancelled" | "delivered"
+- Update and return updated order
+
+---
+
+### 7. /app/api/connect-page/route.ts
+POST:
+- Body: { pageId, pageName, accessToken }
+- Upsert into ConnectedPage table
+- Call Facebook API:
+  fetch(`https://graph.facebook.com/v18.0/${pageId}/subscribed_apps`, {
+    method: "POST",
+    body: new URLSearchParams({
+      subscribed_fields: "feed,comments",
+      access_token: accessToken
+    })
+  })
+- Return { success: true } or error message
+
+GET:
+- Return all ConnectedPage records from DB
+
+---
+
+### 8. /app/api/sse/route.ts
+- Module-level Set: activeConnections = new Set<ReadableStreamDefaultController>()
+- Export broadcast(order) function that sends to all active connections:
+  controller.enqueue(`data: ${JSON.stringify({ type: "NEW_ORDER", order })}\n\n`)
+- GET handler:
+  - Create ReadableStream, add controller to activeConnections
+  - On cancel, remove from activeConnections
+  - Return Response with headers:
+    Content-Type: text/event-stream
+    Cache-Control: no-cache
+    Connection: keep-alive
+
+---
+
+### 9. /app/(dashboard)/connect-facebook/page.tsx
+- Page title: "Connect Facebook Page"
+- Button: "Login with Facebook"
+  → onClick: redirect to Facebook OAuth URL:
+  https://www.facebook.com/v18.0/dialog/oauth?
+    client_id=${FACEBOOK_APP_ID}
+    &redirect_uri=${NEXTAUTH_URL}/api/auth/facebook/callback
+    &scope=pages_read_engagement,pages_manage_metadata,pages_show_list,pages_read_user_content
+
+- After OAuth callback (handle in /api/auth/facebook/callback/route.ts):
+  - Exchange code for user access token via:
+    https://graph.facebook.com/v18.0/oauth/access_token
+  - Fetch user's pages:
+    https://graph.facebook.com/v18.0/me/accounts?access_token=...
+  - Show list of pages with "Connect" button for each
+  - On Connect → POST /api/connect-page
+
+- Show already connected pages list fetched from GET /api/connect-page
+
+---
+
+### 10. /app/(dashboard)/facebook-orders/page.tsx
+- "use client"
+- Fetch initial orders from GET /api/facebook-orders on load
+- SSE useEffect:
+  const es = new EventSource("/api/sse")
+  es.onmessage = (e) => {
+    const data = JSON.parse(e.data)
+    if (data.type === "NEW_ORDER") {
+      setOrders(prev => [data.order, ...prev])
+      showToast("নতুন অর্ডার এসেছে!")
+    }
+  }
+  return () => es.close()
+
+- Stats row (4 cards): Total, Pending, Confirmed, Cancelled
+  → calculate from orders array client-side
+
+- Render <OrdersTable orders={orders} onStatusChange={handleStatusChange} />
+- Render <NewOrderToast /> for notifications
+
+---
+
+### 11. /components/facebook-orders/OrdersTable.tsx
+Columns:
+- Customer Name
+- Comment (truncate at 60 chars, show full on hover title)
+- Page Name
+- Status badge (color coded)
+- Time (relative: "2 minutes ago" using Intl.RelativeTimeFormat or date-fns)
+- Actions: dropdown or buttons → Confirm / Cancel / Delivered
+  → onClick: PATCH /api/facebook-orders with { id, status }
+  → update local state optimistically
+
+---
+
+### 12. /components/facebook-orders/NewOrderToast.tsx
+- Fixed top-right toast notification
+- Shows for 4 seconds then auto-dismisses
+- Shows: "নতুন অর্ডার! [commenter name] কমেন্ট করেছেন"
+- Use React state + setTimeout for auto-dismiss
+- Style with Tailwind: bg-green-500, text-white, rounded, shadow
+
+---
+
+## Important Notes:
+- Use the existing prisma client from /lib/prisma.ts (do not create a new one)
+- Use existing Tailwind config and design system already in the project
+- Match existing UI patterns: same button styles, same card styles, same color scheme
+- Do not install new packages unless absolutely necessary
+- If date-fns is already installed, use it. If not, use Intl API instead.
+- Keep all new code in clearly separated files so it is easy to remove later if needed
