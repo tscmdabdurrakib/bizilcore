@@ -69,20 +69,21 @@ export default function PostCard({
   const [submitting, setSubmitting] = useState(false);
 
   const toggleLike = async () => {
-    const optimistic: PostData = {
-      ...post,
-      liked:     !post.liked,
-      likeCount: post.likeCount + (post.liked ? -1 : 1),
-    };
-    setPost(optimistic);
+    const prev = { liked: post.liked, likeCount: post.likeCount };
+    setPost((p) => ({ ...p, liked: !p.liked, likeCount: p.likeCount + (p.liked ? -1 : 1) }));
 
-    const res  = await fetch("/api/community/like", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ postId: post.id }),
-    });
-    const data = await res.json();
-    setPost((p) => ({ ...p, liked: data.liked, likeCount: data.count }));
+    try {
+      const res  = await fetch("/api/community/like", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ postId: post.id }),
+      });
+      if (!res.ok) throw new Error("like failed");
+      const data = await res.json();
+      setPost((p) => ({ ...p, liked: data.liked, likeCount: data.count }));
+    } catch {
+      setPost((p) => ({ ...p, ...prev }));
+    }
   };
 
   const loadComments = useCallback(async () => {
