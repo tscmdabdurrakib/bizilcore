@@ -39,7 +39,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
 
   if (!shop || !shop.storeEnabled) notFound();
 
-  const [products, categories] = await Promise.all([
+  const [products, categoryRows, totalOrders, reviewRows] = await Promise.all([
     prisma.product.findMany({
       where: { shopId: shop.id, storeVisible: true },
       orderBy: { createdAt: "desc" },
@@ -55,16 +55,26 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
       distinct: ["category"],
       select: { category: true },
     }),
+    prisma.storeOrder.count({ where: { shopId: shop.id } }),
+    shop.storeShowReviews
+      ? prisma.storeReview.findMany({
+          where: { shopId: shop.id, isApproved: true, comment: { not: null } },
+          orderBy: { createdAt: "desc" },
+          take: 10,
+          select: { id: true, reviewerName: true, rating: true, comment: true, createdAt: true },
+        })
+      : Promise.resolve([]),
   ]);
 
-  const totalOrders = await prisma.storeOrder.count({ where: { shopId: shop.id } });
+  const reviews = reviewRows.map(r => ({ ...r, createdAt: r.createdAt.toISOString() }));
 
   return (
     <StoreHomeClient
       shop={{ ...shop, storeSlug: shop.storeSlug! }}
       products={products}
-      categories={categories.map(c => c.category!)}
+      categories={categoryRows.map(c => c.category!)}
       totalOrders={totalOrders}
+      reviews={reviews}
     />
   );
 }
