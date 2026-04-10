@@ -10,6 +10,36 @@ export async function GET(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
+  const trending = searchParams.get("trending") === "1";
+
+  if (trending) {
+    const posts = await prisma.communityPost.findMany({
+      orderBy: [
+        { likes: { _count: "desc" } },
+        { createdAt: "desc" },
+      ],
+      take: 5,
+      include: {
+        user:   { select: { id: true, name: true } },
+        _count: { select: { likes: true, comments: true } },
+      },
+    });
+
+    return NextResponse.json({
+      posts: posts.map((p) => ({
+        id:           p.id,
+        content:      p.content,
+        imageUrl:     p.imageUrl,
+        createdAt:    p.createdAt,
+        user:         p.user,
+        likeCount:    p._count.likes,
+        commentCount: p._count.comments,
+        liked:        false,
+      })),
+      nextCursor: null,
+    });
+  }
+
   const cursor  = searchParams.get("cursor");
   const mine    = searchParams.get("mine") === "1";
   const limit   = 10;
@@ -20,14 +50,14 @@ export async function GET(req: NextRequest) {
     take: limit + 1,
     ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
     include: {
-      user: { select: { id: true, name: true } },
+      user:   { select: { id: true, name: true } },
       _count: { select: { comments: true, likes: true } },
-      likes: { where: { userId: session.user.id }, select: { id: true } },
+      likes:  { where: { userId: session.user.id }, select: { id: true } },
     },
   });
 
-  const hasMore = posts.length > limit;
-  const items   = posts.slice(0, limit);
+  const hasMore    = posts.length > limit;
+  const items      = posts.slice(0, limit);
   const nextCursor = hasMore ? items[items.length - 1].id : null;
 
   return NextResponse.json({
