@@ -69,8 +69,8 @@ export default async function StoreLayout({
         <div
           className="min-h-screen flex flex-col"
           style={{
-            backgroundColor: theme.colors.background,
-            color: theme.colors.text,
+            backgroundColor: "#f9fafb",
+            color: "#111827",
             fontFamily: `"${theme.typography.fontBody}", sans-serif`,
           }}
         >
