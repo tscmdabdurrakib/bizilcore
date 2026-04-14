@@ -55,6 +55,32 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(transaction, { status: 201 });
 }
 
+export async function PATCH(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
+
+  const body = await req.json();
+  const taxRate = parseFloat(body.taxRate || "0");
+  const taxAmount = parseFloat(body.taxAmount || "0");
+  const transaction = await prisma.transaction.update({
+    where: { id },
+    data: {
+      type: body.type,
+      amount: parseFloat(body.amount),
+      category: body.category || null,
+      note: body.note || null,
+      date: body.date ? new Date(body.date) : undefined,
+      taxRate,
+      taxAmount,
+    },
+  });
+  return NextResponse.json(transaction);
+}
+
 export async function DELETE(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
