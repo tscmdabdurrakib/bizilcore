@@ -10,7 +10,13 @@ export default function CartPage() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
 
-  const { items, removeItem, updateQty, getTotal } = useCart();
+  const { items: allItems, removeItem, updateQty, clearCart } = useCart();
+
+  // Filter out any malformed items (old localStorage structure)
+  const items = allItems.filter(
+    i => i.productId && typeof i.unitPrice === "number" && !isNaN(i.unitPrice)
+  );
+
   const [couponCode, setCouponCode] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponDiscount, setCouponDiscount] = useState(0);
@@ -18,7 +24,7 @@ export default function CartPage() {
   const [couponSuccess, setCouponSuccess] = useState("");
   const [appliedCode, setAppliedCode] = useState("");
 
-  const subtotal = getTotal();
+  const subtotal = items.reduce((sum, i) => sum + (i.unitPrice * i.quantity), 0);
   const shipping = 60;
   const discount = couponDiscount;
   const total = subtotal + shipping - discount;

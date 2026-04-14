@@ -33,7 +33,18 @@ export function DynamicProductCard({ product: p, slug, showDiscount, fullWidth }
     e.preventDefault();
     e.stopPropagation();
     setAdding(true);
-    addItem({ id: p.id, name: p.name, price: p.sellPrice, image: p.imageUrl || "", quantity: 1 });
+    addItem(
+      {
+        productId: p.id,
+        productName: p.name,
+        productImage: p.imageUrl || null,
+        variantId: null,
+        variantName: null,
+        unitPrice: p.sellPrice,
+        quantity: 1,
+      },
+      slug
+    );
     setTimeout(() => setAdding(false), 800);
   }
 
