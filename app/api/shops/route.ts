@@ -71,6 +71,31 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(branch, { status: 201 });
 }
 
+export async function PATCH(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { searchParams } = new URL(req.url);
+  const branchId = searchParams.get("branchId");
+  if (!branchId) return NextResponse.json({ error: "branchId required" }, { status: 400 });
+
+  const mainShop = await prisma.shop.findUnique({ where: { userId: session.user.id } });
+  if (!mainShop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+
+  const branch = await prisma.shopBranch.findFirst({ where: { id: branchId, shopId: mainShop.id } });
+  if (!branch) return NextResponse.json({ error: "Branch not found" }, { status: 404 });
+
+  const { name, category, phone, address } = await req.json();
+  if (!name?.trim()) return NextResponse.json({ error: "শপের নাম দিন" }, { status: 400 });
+
+  const updated = await prisma.shopBranch.update({
+    where: { id: branchId },
+    data: { name: name.trim(), category: category || null, phone: phone || null, address: address || null },
+  });
+
+  return NextResponse.json(updated);
+}
+
 export async function DELETE(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
