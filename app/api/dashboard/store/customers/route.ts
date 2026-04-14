@@ -12,21 +12,30 @@ export async function GET(req: NextRequest) {
   });
   if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
 
-  const customers = await prisma.storeCustomer.findMany({
-    where: { shopId: shop.id },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      phone: true,
-      avatar: true,
-      emailVerified: true,
-      googleId: true,
-      createdAt: true,
-    },
-    orderBy: { createdAt: "desc" },
-    take: 500,
-  });
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  return NextResponse.json({ customers });
+  const [customers, thisMonthCount] = await Promise.all([
+    prisma.storeCustomer.findMany({
+      where: { shopId: shop.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        address: true,
+        avatar: true,
+        emailVerified: true,
+        googleId: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 1000,
+    }),
+    prisma.storeCustomer.count({
+      where: { shopId: shop.id, createdAt: { gte: startOfMonth } },
+    }),
+  ]);
+
+  return NextResponse.json({ customers, thisMonthCount });
 }
