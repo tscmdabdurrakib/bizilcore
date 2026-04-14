@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { DynamicProductCard } from "@/components/store/DynamicProductCard";
-import { useStoreTheme } from "@/components/store/ThemeProvider";
-import { Search, SlidersHorizontal, X, Grid3X3, List, Tag } from "lucide-react";
+import { ChevronDown, ChevronUp, SlidersHorizontal, X, Check } from "lucide-react";
 
 interface Product {
   id: string; name: string; description: string | null; category: string | null;
@@ -20,282 +19,406 @@ interface Props {
 }
 
 const SORT_OPTIONS = [
-  { value: "newest", label: "নতুন আগে" },
-  { value: "price_asc", label: "কম দাম" },
-  { value: "price_desc", label: "বেশি দাম" },
+  { value: "newest",     label: "Most Popular" },
+  { value: "price_asc",  label: "Price: Low to High" },
+  { value: "price_desc", label: "Price: High to Low" },
+  { value: "name_asc",   label: "Name: A–Z" },
 ];
 
-function ProductSkeleton() {
+const COLORS = [
+  { name: "Green",  hex: "#00C12B" },
+  { name: "Red",    hex: "#F50606" },
+  { name: "Yellow", hex: "#F5DD06" },
+  { name: "Orange", hex: "#F57906" },
+  { name: "Cyan",   hex: "#06CAF5" },
+  { name: "Blue",   hex: "#063AF5" },
+  { name: "Purple", hex: "#7D06F5" },
+  { name: "Pink",   hex: "#F506A4" },
+  { name: "White",  hex: "#FFFFFF" },
+  { name: "Black",  hex: "#000000" },
+];
+
+const SIZES = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"];
+
+const ITEMS_PER_PAGE = 9;
+
+function FilterSection({ title, children, defaultOpen = true }: {
+  title: string; children: React.ReactNode; defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="rounded-2xl border overflow-hidden animate-pulse" style={{ backgroundColor: "#F3F4F6" }}>
-      <div className="aspect-square bg-gray-200" />
-      <div className="p-3 space-y-2">
-        <div className="h-4 bg-gray-200 rounded w-3/4" />
-        <div className="h-3 bg-gray-200 rounded w-1/2" />
-        <div className="h-4 bg-gray-200 rounded w-1/3" />
-      </div>
+    <div className="border-b border-gray-200 py-4">
+      <button
+        className="w-full flex items-center justify-between text-left"
+        onClick={() => setOpen(!open)}
+      >
+        <span className="font-semibold text-black text-sm">{title}</span>
+        {open ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+      </button>
+      {open && <div className="mt-4">{children}</div>}
     </div>
   );
 }
 
 export function ProductsPageClient({ shop, products, categories, initialQ, initialCategory }: Props) {
-  const { primary, theme, defaults } = useStoreTheme();
-  const [q, setQ] = useState(initialQ || "");
-  const [category, setCategory] = useState(initialCategory || "");
-  const [sort, setSort] = useState("newest");
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"grid" | "list" | "category">("grid");
-  const [loading, setLoading] = useState(true);
-  const filterPanelRef = useRef<HTMLDivElement>(null);
   const slug = shop.storeSlug;
-  const text = defaults.text;
-  const muted = defaults.muted;
-  const border = defaults.border;
-  const surface = defaults.surface;
 
-  const cols = theme.layout.productGridCols;
-  const gridClass =
-    cols === 2 ? "grid grid-cols-2 gap-4" :
-    cols === 4 ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4" :
-    "grid grid-cols-2 sm:grid-cols-3 gap-4";
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(
+    initialCategory ? [initialCategory] : []
+  );
+  const [minPrice, setMinPrice] = useState(0);
+  const [maxPrice, setMaxPrice] = useState(10000);
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [sort, setSort] = useState("newest");
+  const [page, setPage] = useState(1);
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+
+  // Price range from products
+  const allPrices = products.map(p => p.sellPrice);
+  const priceMin = allPrices.length ? Math.min(...allPrices) : 0;
+  const priceMax = allPrices.length ? Math.max(...allPrices) : 10000;
 
   useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 200);
-    return () => clearTimeout(t);
-  }, []);
+    setMinPrice(priceMin);
+    setMaxPrice(priceMax);
+  }, [priceMin, priceMax]);
+
+  function toggleCategory(cat: string) {
+    setSelectedCategories(prev =>
+      prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+    );
+    setPage(1);
+  }
+
+  function toggleColor(color: string) {
+    setSelectedColors(prev =>
+      prev.includes(color) ? prev.filter(c => c !== color) : [...prev, color]
+    );
+    setPage(1);
+  }
+
+  function toggleSize(size: string) {
+    setSelectedSizes(prev =>
+      prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]
+    );
+    setPage(1);
+  }
+
+  function clearAll() {
+    setSelectedCategories([]);
+    setMinPrice(priceMin);
+    setMaxPrice(priceMax);
+    setSelectedColors([]);
+    setSelectedSizes([]);
+    setPage(1);
+  }
 
   const filtered = useMemo(() => {
     let list = [...products];
-    if (q) list = list.filter(p => p.name.toLowerCase().includes(q.toLowerCase()) || p.description?.toLowerCase().includes(q.toLowerCase()));
-    if (category) list = list.filter(p => p.category === category);
-    if (minPrice) list = list.filter(p => p.sellPrice >= parseFloat(minPrice));
-    if (maxPrice) list = list.filter(p => p.sellPrice <= parseFloat(maxPrice));
+    if (selectedCategories.length > 0)
+      list = list.filter(p => p.category && selectedCategories.includes(p.category));
+    list = list.filter(p => p.sellPrice >= minPrice && p.sellPrice <= maxPrice);
     if (sort === "price_asc") list.sort((a, b) => a.sellPrice - b.sellPrice);
     else if (sort === "price_desc") list.sort((a, b) => b.sellPrice - a.sellPrice);
+    else if (sort === "name_asc") list.sort((a, b) => a.name.localeCompare(b.name));
     return list;
-  }, [products, q, category, minPrice, maxPrice, sort]);
+  }, [products, selectedCategories, minPrice, maxPrice, sort]);
 
-  const grouped = useMemo(() => {
-    const map: Record<string, Product[]> = {};
-    for (const p of filtered) {
-      const key = p.category ?? "__other__";
-      if (!map[key]) map[key] = [];
-      map[key].push(p);
-    }
-    const catKeys = Object.keys(map).filter(k => k !== "__other__").sort();
-    const groups: { cat: string; label: string; prods: Product[] }[] = catKeys.map(cat => ({ cat, label: cat, prods: map[cat] }));
-    if (map["__other__"]) groups.push({ cat: "__other__", label: "অন্যান্য পণ্য", prods: map["__other__"] });
-    return groups;
-  }, [filtered]);
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
-  function clearFilters() {
-    setCategory(""); setMinPrice(""); setMaxPrice(""); setQ("");
-  }
+  const hasActiveFilters =
+    selectedCategories.length > 0 ||
+    selectedColors.length > 0 ||
+    selectedSizes.length > 0 ||
+    minPrice !== priceMin ||
+    maxPrice !== priceMax;
 
-  const hasActiveFilters = !!category || !!minPrice || !!maxPrice || !!q;
+  const sortLabel = SORT_OPTIONS.find(o => o.value === sort)?.label ?? "Most Popular";
 
-  return (
-    <div className="max-w-6xl mx-auto px-4 py-6">
-      {/* Search + controls */}
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
-        <div className="flex-1 flex items-center gap-2 rounded-full border px-3 py-2 text-sm min-w-[180px]" style={{ borderColor: border, backgroundColor: surface }}>
-          <Search size={14} style={{ color: muted }} />
-          <input
-            type="text" value={q} onChange={e => setQ(e.target.value)}
-            placeholder="পণ্য খুঁজুন..." className="flex-1 bg-transparent outline-none text-sm" style={{ color: text }}
-          />
-          {q && <button onClick={() => setQ("")}><X size={13} style={{ color: muted }} /></button>}
-        </div>
-        <select value={sort} onChange={e => setSort(e.target.value)}
-          className="text-sm border rounded-xl px-3 py-2 outline-none" style={{ borderColor: border, backgroundColor: surface, color: text }}>
-          {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-
-        {/* Grid/List/Category toggle */}
-        <div className="flex border rounded-xl overflow-hidden" style={{ borderColor: border }}>
-          <button onClick={() => setViewMode("grid")}
-            className="px-3 py-2"
-            style={{ backgroundColor: viewMode === "grid" ? primary : surface, color: viewMode === "grid" ? "white" : muted }}>
-            <Grid3X3 size={14} />
-          </button>
-          <button onClick={() => setViewMode("list")}
-            className="px-3 py-2 border-x" style={{ borderColor: border, backgroundColor: viewMode === "list" ? primary : surface, color: viewMode === "list" ? "white" : muted }}>
-            <List size={14} />
-          </button>
-          <button onClick={() => setViewMode("category")}
-            className="px-3 py-2"
-            style={{ backgroundColor: viewMode === "category" ? primary : surface, color: viewMode === "category" ? "white" : muted }}>
-            <Tag size={14} />
+  function Sidebar() {
+    return (
+      <div className="w-full">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-1 pb-4 border-b border-gray-200">
+          <h2 className="font-bold text-black text-base">Filters</h2>
+          <button onClick={clearAll} className="text-gray-400 hover:text-gray-600">
+            <SlidersHorizontal size={16} />
           </button>
         </div>
 
-        {/* Filter button */}
-        <button onClick={() => setFilterOpen(!filterOpen)}
-          className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-xl border font-medium"
-          style={{ borderColor: filterOpen ? primary : border, color: filterOpen ? primary : muted }}>
-          <SlidersHorizontal size={14} />
-          ফিল্টার
-          {hasActiveFilters && <span className="w-2 h-2 rounded-full ml-0.5" style={{ backgroundColor: primary }} />}
+        {/* Category */}
+        {categories.length > 0 && (
+          <FilterSection title="Categories">
+            <div className="space-y-2.5">
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => toggleCategory(cat)}
+                  className="w-full flex items-center justify-between text-sm text-gray-600 hover:text-black"
+                >
+                  <span className={selectedCategories.includes(cat) ? "text-black font-semibold" : ""}>{cat}</span>
+                  <ChevronDown size={14} className="text-gray-400" />
+                </button>
+              ))}
+            </div>
+          </FilterSection>
+        )}
+
+        {/* Price */}
+        <FilterSection title="Price">
+          <div className="space-y-3">
+            <input
+              type="range"
+              min={priceMin}
+              max={priceMax}
+              value={maxPrice}
+              onChange={e => { setMaxPrice(Number(e.target.value)); setPage(1); }}
+              className="w-full accent-black"
+            />
+            <div className="flex items-center gap-2">
+              <div className="flex-1 border border-gray-200 rounded-full px-3 py-1.5 text-sm text-center font-medium">
+                ৳{minPrice.toLocaleString()}
+              </div>
+              <span className="text-gray-400">–</span>
+              <div className="flex-1 border border-gray-200 rounded-full px-3 py-1.5 text-sm text-center font-medium">
+                ৳{maxPrice.toLocaleString()}
+              </div>
+            </div>
+          </div>
+        </FilterSection>
+
+        {/* Colors */}
+        <FilterSection title="Colors">
+          <div className="flex flex-wrap gap-2">
+            {COLORS.map(c => (
+              <button
+                key={c.name}
+                onClick={() => toggleColor(c.name)}
+                title={c.name}
+                className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
+                  selectedColors.includes(c.name)
+                    ? "border-black scale-110"
+                    : "border-transparent"
+                }`}
+                style={{ backgroundColor: c.hex, boxShadow: c.hex === "#FFFFFF" ? "inset 0 0 0 1px #e5e7eb" : "none" }}
+              >
+                {selectedColors.includes(c.name) && (
+                  <Check size={12} className={c.hex === "#FFFFFF" || c.hex === "#F5DD06" ? "text-black" : "text-white"} strokeWidth={3} />
+                )}
+              </button>
+            ))}
+          </div>
+        </FilterSection>
+
+        {/* Size */}
+        <FilterSection title="Size">
+          <div className="flex flex-wrap gap-2">
+            {SIZES.map(s => (
+              <button
+                key={s}
+                onClick={() => toggleSize(s)}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                  selectedSizes.includes(s)
+                    ? "bg-black text-white border-black"
+                    : "bg-[#F0F0F0] text-gray-600 border-transparent hover:border-gray-300"
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </FilterSection>
+
+        {/* Dress Style */}
+        <FilterSection title="Dress Style">
+          <div className="space-y-2.5">
+            {["Casual", "Formal", "Party", "Gym"].map(style => (
+              <button
+                key={style}
+                className="w-full flex items-center justify-between text-sm text-gray-600 hover:text-black"
+              >
+                <span>{style}</span>
+                <ChevronDown size={14} className="text-gray-400" />
+              </button>
+            ))}
+          </div>
+        </FilterSection>
+
+        {/* Apply button */}
+        <button
+          onClick={() => setMobileFilterOpen(false)}
+          className="w-full mt-4 bg-black text-white font-semibold py-3.5 rounded-full text-sm hover:bg-gray-900 transition-colors"
+        >
+          Apply Filter
         </button>
       </div>
+    );
+  }
 
-      {/* Filter panel — desktop inline */}
-      {filterOpen && (
-        <div ref={filterPanelRef} className="mb-4 p-4 rounded-2xl border hidden sm:block" style={{ borderColor: border, backgroundColor: surface }}>
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="text-xs font-semibold mb-1 block" style={{ color: muted }}>ক্যাটাগরি</label>
-              <select value={category} onChange={e => setCategory(e.target.value)}
-                className="w-full text-sm border rounded-xl px-3 py-2 outline-none" style={{ borderColor: border, backgroundColor: defaults.bg, color: text }}>
-                <option value="">সব ক্যাটাগরি</option>
-                {categories.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold mb-1 block" style={{ color: muted }}>ন্যূনতম দাম (৳)</label>
-              <input type="number" value={minPrice} onChange={e => setMinPrice(e.target.value)} placeholder="০"
-                className="w-full text-sm border rounded-xl px-3 py-2 outline-none" style={{ borderColor: border, backgroundColor: defaults.bg, color: text }} />
-            </div>
-            <div>
-              <label className="text-xs font-semibold mb-1 block" style={{ color: muted }}>সর্বোচ্চ দাম (৳)</label>
-              <input type="number" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} placeholder="∞"
-                className="w-full text-sm border rounded-xl px-3 py-2 outline-none" style={{ borderColor: border, backgroundColor: defaults.bg, color: text }} />
-            </div>
-          </div>
-          {hasActiveFilters && (
-            <button onClick={clearFilters} className="mt-3 text-xs underline" style={{ color: muted }}>সব ফিল্টার মুছুন</button>
-          )}
-        </div>
-      )}
+  return (
+    <div className="bg-white min-h-screen">
+      <div className="max-w-7xl mx-auto px-4 py-8">
 
-      {/* Mobile bottom-sheet filter */}
-      {filterOpen && (
-        <div className="sm:hidden fixed inset-0 z-50 flex flex-col justify-end">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setFilterOpen(false)} />
-          <div className="relative rounded-t-3xl p-5 space-y-4" style={{ backgroundColor: defaults.bg, maxHeight: "80vh", overflowY: "auto" }}>
-            <div className="flex items-center justify-between mb-2">
-              <p className="font-bold text-base" style={{ color: text }}>ফিল্টার</p>
-              <button onClick={() => setFilterOpen(false)}>
-                <X size={20} style={{ color: muted }} />
-              </button>
-            </div>
-            <div>
-              <label className="text-xs font-semibold mb-1 block" style={{ color: muted }}>ক্যাটাগরি</label>
-              <select value={category} onChange={e => setCategory(e.target.value)}
-                className="w-full text-sm border rounded-xl px-3 py-2.5 outline-none" style={{ borderColor: border, backgroundColor: surface, color: text }}>
-                <option value="">সব ক্যাটাগরি</option>
-                {categories.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-semibold mb-1 block" style={{ color: muted }}>ন্যূনতম দাম</label>
-                <input type="number" value={minPrice} onChange={e => setMinPrice(e.target.value)} placeholder="০"
-                  className="w-full text-sm border rounded-xl px-3 py-2.5 outline-none" style={{ borderColor: border, backgroundColor: surface, color: text }} />
-              </div>
-              <div>
-                <label className="text-xs font-semibold mb-1 block" style={{ color: muted }}>সর্বোচ্চ দাম</label>
-                <input type="number" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} placeholder="∞"
-                  className="w-full text-sm border rounded-xl px-3 py-2.5 outline-none" style={{ borderColor: border, backgroundColor: surface, color: text }} />
-              </div>
-            </div>
-            <div className="flex gap-3 pt-2">
-              {hasActiveFilters && (
-                <button onClick={clearFilters} className="flex-1 py-3 rounded-xl border text-sm font-semibold" style={{ borderColor: border, color: muted }}>
-                  মুছুন
-                </button>
-              )}
-              <button onClick={() => setFilterOpen(false)}
-                className="flex-1 py-3 rounded-xl text-white text-sm font-bold"
-                style={{ backgroundColor: primary }}>
-                প্রয়োগ করুন
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Category pills */}
-      {categories.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
-          <button onClick={() => setCategory("")}
-            className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border"
-            style={{ backgroundColor: !category ? primary : "transparent", color: !category ? "white" : muted, borderColor: !category ? primary : border }}>
-            সব
+        {/* Mobile filter toggle */}
+        <div className="flex items-center justify-between mb-4 lg:hidden">
+          <h1 className="font-bold text-xl text-black">পণ্য</h1>
+          <button
+            onClick={() => setMobileFilterOpen(true)}
+            className="flex items-center gap-2 border border-gray-200 rounded-full px-4 py-2 text-sm font-medium"
+          >
+            <SlidersHorizontal size={14} />
+            Filters
+            {hasActiveFilters && (
+              <span className="w-2 h-2 bg-black rounded-full" />
+            )}
           </button>
-          {categories.map(c => (
-            <button key={c} onClick={() => setCategory(c === category ? "" : c)}
-              className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border"
-              style={{ backgroundColor: category === c ? primary : "transparent", color: category === c ? "white" : muted, borderColor: category === c ? primary : border }}>
-              {c}
-            </button>
-          ))}
         </div>
-      )}
 
-      <p className="text-sm mb-4" style={{ color: muted }}>{filtered.length}টি পণ্য</p>
+        {/* Main layout */}
+        <div className="flex gap-8">
 
-      {loading ? (
-        <div className={viewMode === "grid" ? gridClass : "flex flex-col gap-3"}>
-          {Array.from({ length: 8 }).map((_, i) => <ProductSkeleton key={i} />)}
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-20" style={{ color: muted }}>
-          <p className="text-lg font-semibold mb-2">কোনো পণ্য পাওয়া যায়নি।</p>
-          {hasActiveFilters && (
-            <button onClick={clearFilters} className="text-sm underline" style={{ color: primary }}>ফিল্টার সরিয়ে দেখুন</button>
-          )}
-        </div>
-      ) : viewMode === "grid" ? (
-        <div className={gridClass}>
-          {filtered.map(p => <DynamicProductCard key={p.id} product={p} slug={slug} />)}
-        </div>
-      ) : viewMode === "list" ? (
-        <div className="flex flex-col gap-3">
-          {filtered.map(p => (
-            <a key={p.id} href={`/store/${slug}/products/${p.id}`}
-              className="flex gap-4 p-3 rounded-2xl border items-center"
-              style={{ borderColor: border, backgroundColor: surface }}>
-              <div className="w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden" style={{ backgroundColor: defaults.bg }}>
-                {p.imageUrl ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" /> :
-                  <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: defaults.surface }}>
-                    <span style={{ color: muted, fontSize: 20 }}>📦</span>
-                  </div>}
+          {/* --- LEFT SIDEBAR (desktop) --- */}
+          <aside className="hidden lg:block w-[295px] flex-shrink-0">
+            <Sidebar />
+          </aside>
+
+          {/* --- RIGHT CONTENT --- */}
+          <div className="flex-1 min-w-0">
+
+            {/* Top bar */}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="font-bold text-2xl text-black leading-tight">
+                  {selectedCategories.length === 1
+                    ? selectedCategories[0]
+                    : selectedCategories.length > 1
+                    ? `${selectedCategories.length} Categories`
+                    : "All Products"}
+                </h1>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  Showing {Math.min((page - 1) * ITEMS_PER_PAGE + 1, filtered.length)}–{Math.min(page * ITEMS_PER_PAGE, filtered.length)} of {filtered.length} Products
+                </p>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm truncate" style={{ color: text }}>{p.name}</p>
-                {p.category && <p className="text-xs" style={{ color: muted }}>{p.category}</p>}
-                {p.description && <p className="text-xs truncate mt-0.5" style={{ color: muted }}>{p.description}</p>}
+
+              {/* Sort */}
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-gray-500 hidden sm:block">Sort by:</span>
+                <div className="relative">
+                  <select
+                    value={sort}
+                    onChange={e => { setSort(e.target.value); setPage(1); }}
+                    className="appearance-none border border-gray-200 rounded-full pl-3 pr-8 py-2 text-sm font-semibold bg-white outline-none cursor-pointer"
+                  >
+                    {SORT_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" />
+                </div>
               </div>
-              <div className="flex-shrink-0 text-right">
-                <p className="font-bold text-sm" style={{ color: primary }}>৳{p.sellPrice.toLocaleString()}</p>
-                {!p.hasVariants && p.stockQty > 0 && <p className="text-[10px] text-green-600">স্টক আছে</p>}
+            </div>
+
+            {/* Active filter tags */}
+            {hasActiveFilters && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {selectedCategories.map(c => (
+                  <span key={c} className="flex items-center gap-1 bg-black text-white text-xs font-medium px-3 py-1.5 rounded-full">
+                    {c}
+                    <button onClick={() => toggleCategory(c)}><X size={10} /></button>
+                  </span>
+                ))}
+                {selectedColors.map(c => (
+                  <span key={c} className="flex items-center gap-1 bg-black text-white text-xs font-medium px-3 py-1.5 rounded-full">
+                    {c}
+                    <button onClick={() => toggleColor(c)}><X size={10} /></button>
+                  </span>
+                ))}
+                {selectedSizes.map(s => (
+                  <span key={s} className="flex items-center gap-1 bg-black text-white text-xs font-medium px-3 py-1.5 rounded-full">
+                    {s}
+                    <button onClick={() => toggleSize(s)}><X size={10} /></button>
+                  </span>
+                ))}
+                <button onClick={clearAll} className="text-xs text-gray-500 underline hover:text-black px-1">
+                  Clear all
+                </button>
               </div>
-            </a>
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-8">
-          {grouped.map(group => (
-            <div key={group.cat}>
-              <div className="flex items-center gap-3 mb-3">
-                <h3 className="font-bold text-base shrink-0" style={{ color: text }}>{group.label}</h3>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0" style={{ backgroundColor: primary + "18", color: primary }}>
-                  {group.prods.length}টি পণ্য
-                </span>
-                <div className="flex-1 h-px" style={{ backgroundColor: border }} />
+            )}
+
+            {/* Product grid */}
+            {filtered.length === 0 ? (
+              <div className="text-center py-24">
+                <p className="text-lg font-semibold text-gray-400 mb-2">No products found</p>
+                {hasActiveFilters && (
+                  <button onClick={clearAll} className="text-sm text-black underline">Clear filters</button>
+                )}
               </div>
-              <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-hide">
-                {group.prods.map(p => (
-                  <div key={p.id} className="flex-shrink-0 w-44">
-                    <DynamicProductCard product={p} slug={slug} />
-                  </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-5">
+                {paginated.map(p => (
+                  <DynamicProductCard key={p.id} product={p} slug={slug} fullWidth />
                 ))}
               </div>
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-10 pt-6 border-t border-gray-100">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="flex items-center gap-2 px-5 py-2.5 border border-gray-200 rounded-full text-sm font-medium disabled:opacity-40 hover:border-black transition-colors"
+                >
+                  ← Previous
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(pg => (
+                    <button
+                      key={pg}
+                      onClick={() => setPage(pg)}
+                      className={`w-9 h-9 rounded-full text-sm font-medium transition-colors ${
+                        pg === page
+                          ? "bg-black text-white"
+                          : "text-gray-600 hover:bg-gray-100"
+                      }`}
+                    >
+                      {pg}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="flex items-center gap-2 px-5 py-2.5 border border-gray-200 rounded-full text-sm font-medium disabled:opacity-40 hover:border-black transition-colors"
+                >
+                  Next →
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile filter drawer */}
+      {mobileFilterOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setMobileFilterOpen(false)}
+          />
+          <div className="relative w-80 max-w-[85vw] bg-white h-full overflow-y-auto p-5 ml-0">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold text-black text-base">Filters</h2>
+              <button onClick={() => setMobileFilterOpen(false)}>
+                <X size={20} className="text-gray-500" />
+              </button>
             </div>
-          ))}
+            <Sidebar />
+          </div>
         </div>
       )}
     </div>

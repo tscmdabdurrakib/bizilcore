@@ -13,8 +13,8 @@ interface Product {
   hasVariants: boolean; storeVisible: boolean; storeFeatured: boolean;
 }
 
-export function DynamicProductCard({ product: p, slug, showDiscount }: {
-  product: Product; slug: string; showDiscount?: boolean;
+export function DynamicProductCard({ product: p, slug, showDiscount, fullWidth }: {
+  product: Product; slug: string; showDiscount?: boolean; fullWidth?: boolean;
 }) {
   const { primary } = useStoreTheme();
   const { addItem } = useCart();
@@ -39,7 +39,7 @@ export function DynamicProductCard({ product: p, slug, showDiscount }: {
 
   return (
     <Link href={`/store/${slug}/products/${p.id}`}
-      className="group flex-shrink-0 w-[220px] sm:w-[250px]">
+      className={`group ${fullWidth ? "w-full" : "flex-shrink-0 w-[220px] sm:w-[250px]"}`}>
       {/* Image */}
       <div className="relative bg-[#F0EEED] rounded-2xl overflow-hidden mb-3"
         style={{ aspectRatio: "3/4" }}>
