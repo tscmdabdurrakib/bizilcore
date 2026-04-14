@@ -100,11 +100,13 @@ export default function ProductEditPanel({ productId, onClose, onSaved }: Props)
       setVisible(false);
       return;
     }
+    // Open panel instantly, show skeleton while data loads
     setLoading(true);
     setAiPriceSuggestion(null);
     setImages([]);
     setVariants([]);
     setForm({ name: "", category: "", sku: "", buyPrice: "", sellPrice: "", stockQty: "", lowStockAt: "5", description: "" });
+    setVisible(true);
 
     Promise.all([
       fetch("/api/user/plan").then(r => r.json()).catch(() => ({})),
@@ -128,7 +130,6 @@ export default function ProductEditPanel({ productId, onClose, onSaved }: Props)
       if (p.variants?.length > 0) setVariants(p.variants.map(variantFromDb));
       else setVariants([newVariant()]);
       setLoading(false);
-      requestAnimationFrame(() => setVisible(true));
     }).catch(() => setLoading(false));
   }, [productId]);
 
