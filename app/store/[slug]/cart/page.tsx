@@ -4,11 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { Trash2, Plus, Minus, Tag, ChevronRight, ShoppingBag, ImageIcon } from "lucide-react";
 import { useCart } from "@/lib/store/cart";
-import { useStoreTheme } from "@/components/store/ThemeProvider";
 import { useParams } from "next/navigation";
 
 export default function CartPage() {
-  const { primary, theme, defaults } = useStoreTheme();
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
 
@@ -20,15 +18,10 @@ export default function CartPage() {
   const [couponSuccess, setCouponSuccess] = useState("");
   const [appliedCode, setAppliedCode] = useState("");
 
-  const text = defaults.text;
-  const muted = defaults.muted;
-  const border = defaults.border;
-  const surface = defaults.surface;
-  const bg = defaults.bg;
-
   const subtotal = getTotal();
   const shipping = 60;
-  const total = subtotal + shipping - couponDiscount;
+  const discount = couponDiscount;
+  const total = subtotal + shipping - discount;
 
   async function applyCoupon() {
     setCouponLoading(true);
@@ -52,103 +45,206 @@ export default function CartPage() {
     setCouponLoading(false);
   }
 
+  /* ── Empty state ── */
   if (items.length === 0) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-20 text-center">
-        <ShoppingBag size={64} style={{ color: muted, margin: "0 auto 16px" }} />
-        <p className="text-lg font-semibold mb-2" style={{ color: text }}>কার্ট খালি</p>
-        <p className="text-sm mb-6" style={{ color: muted }}>কেনাকাটা শুরু করুন</p>
-        <Link href={`/store/${slug}/products`} className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-white font-semibold" style={{ backgroundColor: primary }}>
-          কেনাকাটা করুন
-        </Link>
+      <div className="bg-white min-h-screen">
+        <div className="max-w-7xl mx-auto px-4 py-20 text-center">
+          <ShoppingBag size={72} className="text-gray-200 mx-auto mb-6" />
+          <h2 className="font-extrabold text-2xl text-black mb-2">Your cart is empty</h2>
+          <p className="text-gray-500 mb-8">Looks like you haven&apos;t added anything yet.</p>
+          <Link
+            href={`/store/${slug}/products`}
+            className="inline-flex items-center gap-2 bg-black text-white font-semibold px-8 py-3.5 rounded-full hover:bg-gray-900 transition-colors"
+          >
+            Continue Shopping <ChevronRight size={16} />
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6">
-      <h1 className="text-xl font-bold mb-6" style={{ color: text }}>কার্ট ({items.length})</h1>
+    <div className="bg-white min-h-screen">
+      <div className="max-w-7xl mx-auto px-4 py-8">
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 space-y-4">
-          {items.map(item => (
-            <div key={`${item.productId}-${item.variantId}`} className="flex gap-4 p-4 rounded-2xl border" style={{ borderColor: border, backgroundColor: surface }}>
-              <div className="w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden" style={{ backgroundColor: bg }}>
-                {item.productImage ? (
-                  <img src={item.productImage} alt={item.productName} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center"><ImageIcon size={24} style={{ color: muted }} /></div>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm truncate" style={{ color: text }}>{item.productName}</p>
-                {item.variantName && <p className="text-xs" style={{ color: muted }}>{item.variantName}</p>}
-                <p className="text-sm font-bold mt-1" style={{ color: primary }}>৳{item.unitPrice.toLocaleString()}</p>
-                <div className="flex items-center gap-3 mt-2">
-                  <div className="flex items-center gap-0 border rounded-lg overflow-hidden" style={{ borderColor: border }}>
-                    <button onClick={() => updateQty(item.productId, item.variantId, item.quantity - 1)} className="w-8 h-8 flex items-center justify-center" style={{ color: text }}>
-                      <Minus size={12} />
-                    </button>
-                    <span className="w-8 text-center text-sm font-bold" style={{ color: text }}>{item.quantity}</span>
-                    <button onClick={() => updateQty(item.productId, item.variantId, item.quantity + 1)} className="w-8 h-8 flex items-center justify-center" style={{ color: text }}>
-                      <Plus size={12} />
-                    </button>
+        {/* Breadcrumb */}
+        <nav className="flex items-center gap-2 text-sm text-gray-400 mb-6">
+          <Link href={`/store/${slug}`} className="hover:text-black transition-colors">Home</Link>
+          <ChevronRight size={14} />
+          <span className="text-black font-medium">Cart</span>
+        </nav>
+
+        <h1 className="font-extrabold text-3xl sm:text-4xl text-black mb-8 tracking-tight">YOUR CART</h1>
+
+        <div className="flex flex-col lg:flex-row gap-5">
+
+          {/* ── LEFT: Cart items ── */}
+          <div className="flex-1 min-w-0">
+            <div className="border border-gray-200 rounded-2xl divide-y divide-gray-100 overflow-hidden">
+              {items.map((item, idx) => (
+                <div key={`${item.productId}-${item.variantId}-${idx}`}
+                  className="flex gap-4 p-5">
+
+                  {/* Product image */}
+                  <div className="w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 rounded-xl overflow-hidden bg-[#F0EEED]">
+                    {item.productImage ? (
+                      <img
+                        src={item.productImage}
+                        alt={item.productName}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <ImageIcon size={28} className="text-gray-300" />
+                      </div>
+                    )}
                   </div>
-                  <p className="text-xs font-semibold" style={{ color: muted }}>= ৳{(item.unitPrice * item.quantity).toLocaleString()}</p>
-                  <button onClick={() => removeItem(item.productId, item.variantId)} className="ml-auto" style={{ color: "#EF4444" }}>
-                    <Trash2 size={15} />
-                  </button>
+
+                  {/* Details */}
+                  <div className="flex-1 min-w-0 flex flex-col justify-between">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h3 className="font-bold text-black text-base leading-tight line-clamp-2">
+                          {item.productName}
+                        </h3>
+                        {item.variantName && (
+                          <p className="text-sm text-gray-500 mt-0.5">
+                            Variant: <span className="font-medium text-black">{item.variantName}</span>
+                          </p>
+                        )}
+                      </div>
+                      {/* Delete */}
+                      <button
+                        onClick={() => removeItem(item.productId, item.variantId)}
+                        className="flex-shrink-0 text-red-500 hover:text-red-600 transition-colors mt-0.5"
+                        aria-label="Remove item"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between mt-3">
+                      {/* Price */}
+                      <span className="font-bold text-xl text-black">
+                        ৳{(item.unitPrice * item.quantity).toLocaleString()}
+                      </span>
+
+                      {/* Quantity stepper */}
+                      <div className="flex items-center gap-0 bg-[#F0F0F0] rounded-full overflow-hidden">
+                        <button
+                          onClick={() => updateQty(item.productId, item.variantId, item.quantity - 1)}
+                          className="w-9 h-9 flex items-center justify-center hover:bg-gray-200 transition-colors rounded-full"
+                        >
+                          <Minus size={14} className="text-black" />
+                        </button>
+                        <span className="w-8 text-center font-semibold text-sm text-black">
+                          {item.quantity}
+                        </span>
+                        <button
+                          onClick={() => updateQty(item.productId, item.variantId, item.quantity + 1)}
+                          className="w-9 h-9 flex items-center justify-center hover:bg-gray-200 transition-colors rounded-full"
+                        >
+                          <Plus size={14} className="text-black" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── RIGHT: Order Summary ── */}
+          <div className="w-full lg:w-[400px] flex-shrink-0">
+            <div className="border border-gray-200 rounded-2xl p-6">
+              <h2 className="font-bold text-xl text-black mb-5">Order Summary</h2>
+
+              {/* Summary rows */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500">Subtotal</span>
+                  <span className="font-semibold text-black">৳{subtotal.toLocaleString()}</span>
+                </div>
+
+                {discount > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-500">
+                      Discount{appliedCode ? ` (${appliedCode})` : ""}
+                    </span>
+                    <span className="font-semibold text-red-500">-৳{discount.toLocaleString()}</span>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500">Delivery Fee</span>
+                  <span className="font-semibold text-black">৳{shipping}</span>
+                </div>
+
+                <div className="border-t border-dashed border-gray-200 pt-3 flex items-center justify-between">
+                  <span className="font-bold text-black">Total</span>
+                  <span className="font-bold text-xl text-black">৳{total.toLocaleString()}</span>
                 </div>
               </div>
-            </div>
-          ))}
 
-          {/* Coupon */}
-          <div className="p-4 rounded-2xl border" style={{ borderColor: border, backgroundColor: surface }}>
-            <div className="flex items-center gap-2 mb-3">
-              <Tag size={14} style={{ color: muted }} />
-              <p className="text-sm font-semibold" style={{ color: text }}>কুপন কোড</p>
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="text" value={couponCode} onChange={e => setCouponCode(e.target.value.toUpperCase())}
-                placeholder="কোড লিখুন..."
-                className="flex-1 text-sm border rounded-xl px-3 py-2 outline-none"
-                style={{ borderColor: border, backgroundColor: bg, color: text }}
-              />
-              <button onClick={applyCoupon} disabled={!couponCode || couponLoading}
-                className="px-4 py-2 rounded-xl text-white text-sm font-semibold disabled:opacity-50"
-                style={{ backgroundColor: primary }}>
-                {couponLoading ? "..." : "প্রয়োগ"}
-              </button>
-            </div>
-            {couponSuccess && <p className="text-xs mt-2 font-semibold text-green-600">✓ {couponSuccess}</p>}
-            {couponError && <p className="text-xs mt-2 text-red-500">{couponError}</p>}
-          </div>
-        </div>
-
-        {/* Order summary */}
-        <div>
-          <div className="p-4 rounded-2xl border sticky top-20" style={{ borderColor: border, backgroundColor: surface }}>
-            <h2 className="font-bold mb-4" style={{ color: text }}>অর্ডার সারসংক্ষেপ</h2>
-            <div className="space-y-2 text-sm" style={{ color: muted }}>
-              <div className="flex justify-between"><span>সাবটোটাল</span><span>৳{subtotal.toLocaleString()}</span></div>
-              <div className="flex justify-between"><span>ডেলিভারি <span className="text-[10px]">(আনুমানিক)</span></span><span>৳{shipping}+</span></div>
-              {couponDiscount > 0 && <div className="flex justify-between text-green-600"><span>ছাড় ({appliedCode})</span><span>-৳{couponDiscount.toLocaleString()}</span></div>}
-              <div className="flex justify-between font-bold text-base border-t pt-2 mt-2" style={{ borderColor: border, color: text }}>
-                <span>আনুমানিক মোট</span><span style={{ color: primary }}>৳{total.toLocaleString()}+</span>
+              {/* Promo code */}
+              <div className="mt-5">
+                <div className="flex gap-2">
+                  <div className="flex-1 flex items-center gap-2 border border-gray-200 rounded-full px-4 py-2.5">
+                    <Tag size={14} className="text-gray-400 flex-shrink-0" />
+                    <input
+                      type="text"
+                      value={couponCode}
+                      onChange={e => setCouponCode(e.target.value.toUpperCase())}
+                      placeholder="Add promo code"
+                      className="flex-1 bg-transparent outline-none text-sm text-black placeholder:text-gray-400 min-w-0"
+                      onKeyDown={e => e.key === "Enter" && couponCode && applyCoupon()}
+                    />
+                  </div>
+                  <button
+                    onClick={applyCoupon}
+                    disabled={!couponCode || couponLoading}
+                    className="px-5 py-2.5 rounded-full border border-black text-sm font-semibold text-black hover:bg-black hover:text-white transition-colors disabled:opacity-40 whitespace-nowrap"
+                  >
+                    {couponLoading ? "..." : "Apply"}
+                  </button>
+                </div>
+                {couponSuccess && (
+                  <p className="text-xs mt-2 text-green-600 font-medium pl-2">✓ {couponSuccess}</p>
+                )}
+                {couponError && (
+                  <p className="text-xs mt-2 text-red-500 pl-2">{couponError}</p>
+                )}
               </div>
-              <p className="text-[10px] mt-1" style={{ color: muted }}>চেকআউটে সঠিক ডেলিভারি চার্জ নির্ধারিত হবে।</p>
+
+              {/* Checkout button */}
+              <Link
+                href={`/store/${slug}/checkout${appliedCode ? `?coupon=${appliedCode}&discount=${couponDiscount}` : ""}`}
+                className="mt-4 flex items-center justify-center gap-2 w-full bg-black text-white font-bold py-4 rounded-full text-sm hover:bg-gray-900 transition-colors"
+              >
+                Go to Checkout <ChevronRight size={16} />
+              </Link>
+
+              {/* Continue shopping */}
+              <Link
+                href={`/store/${slug}/products`}
+                className="mt-3 block text-center text-xs text-gray-400 hover:text-black transition-colors"
+              >
+                ← Continue Shopping
+              </Link>
             </div>
-            <Link
-              href={`/store/${slug}/checkout${appliedCode ? `?coupon=${appliedCode}&discount=${couponDiscount}` : ""}`}
-              className="mt-4 flex items-center justify-center gap-2 w-full py-3 rounded-xl text-white font-bold"
-              style={{ backgroundColor: primary }}>
-              চেকআউট করুন <ChevronRight size={16} />
-            </Link>
-            <Link href={`/store/${slug}/products`} className="mt-2 block text-center text-xs" style={{ color: muted }}>
-              কেনাকাটা চালিয়ে যান
-            </Link>
+
+            {/* Trust badges */}
+            <div className="mt-4 flex items-center justify-center gap-4 flex-wrap">
+              {["VISA", "Mastercard", "bKash", "Nagad", "COD"].map(badge => (
+                <span
+                  key={badge}
+                  className="text-[10px] font-bold text-gray-400 border border-gray-200 px-2.5 py-1 rounded-md"
+                >
+                  {badge}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </div>
