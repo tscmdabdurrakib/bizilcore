@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Search, Plus, Download, Facebook, CheckCircle, XCircle, ExternalLink, ChevronLeft, ChevronRight, ShoppingBag, Loader2, MoreHorizontal, Printer, Truck } from "lucide-react";
 import { formatBDT, formatRelativeDate, getStatusStyle } from "@/lib/utils";
 import { downloadExcel } from "@/lib/excel";
+import OrderCreatePanel from "./OrderCreatePanel";
 
 interface Order {
   id: string; status: string; totalAmount: number; paidAmount: number; dueAmount: number;
@@ -90,6 +91,9 @@ export default function FCommerceOrders() {
   const [inlineCourier, setInlineCourier] = useState("steadfast");
   const [inlineTrackInput, setInlineTrackInput] = useState("");
   const [bookingInline, setBookingInline] = useState(false);
+  const [createPanelOpen, setCreatePanelOpen] = useState(false);
+  const [panelPrefillName, setPanelPrefillName] = useState<string | undefined>(undefined);
+  const [panelPrefillSuggestId, setPanelPrefillSuggestId] = useState<string | undefined>(undefined);
 
   function showToast(type: "success" | "error", msg: string) {
     setToast({ type, msg });
@@ -238,12 +242,9 @@ export default function FCommerceOrders() {
   }
 
   function convertSuggestion(s: SuggestedOrder) {
-    const params = new URLSearchParams({
-      customerName: s.commenterName,
-      fbProfile: s.fbProfile ?? "",
-      suggestId: s.id,
-    });
-    window.location.href = `/orders/new?${params}`;
+    setPanelPrefillName(s.commenterName);
+    setPanelPrefillSuggestId(s.id);
+    setCreatePanelOpen(true);
   }
 
   const orders = data.orders;
@@ -382,11 +383,12 @@ export default function FCommerceOrders() {
             <p className="text-xs" style={{ color: S.muted }}>Facebook সেলের সব অর্ডার ট্র্যাক করুন</p>
           </div>
         </div>
-        <Link href="/orders/new"
+        <button
+          onClick={() => { setPanelPrefillName(undefined); setPanelPrefillSuggestId(undefined); setCreatePanelOpen(true); }}
           className="flex items-center gap-2 px-5 h-10 rounded-2xl text-white text-sm font-semibold flex-shrink-0 shadow-md hover:opacity-90 transition-opacity active:scale-95"
           style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}>
           <Plus size={16} /> নতুন অর্ডার
-        </Link>
+        </button>
       </div>
 
       {/* ── Mini Stats Bar ───────────────────────── */}
@@ -487,11 +489,12 @@ export default function FCommerceOrders() {
               {tab === "all" ? "এখনো কোনো অর্ডার নেই। প্রথম অর্ডারটি যোগ করুন!" : `"${STATUS_TABS.find(t => t.key === tab)?.label}" স্ট্যাটাসে কোনো অর্ডার নেই।`}
             </p>
             {tab === "all" && (
-              <Link href="/orders/new"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-white text-sm font-semibold shadow-md hover:opacity-90 transition-opacity"
+              <button
+                onClick={() => { setPanelPrefillName(undefined); setPanelPrefillSuggestId(undefined); setCreatePanelOpen(true); }}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-white text-sm font-semibold shadow-md hover:opacity-90 transition-opacity active:scale-95"
                 style={{ background: "linear-gradient(135deg, #0F6E56, #0A5442)" }}>
                 <Plus size={15} /> নতুন অর্ডার তৈরি করুন
-              </Link>
+              </button>
             )}
           </div>
         ) : (
@@ -839,6 +842,16 @@ export default function FCommerceOrders() {
             </div>
           )}
         </>
+      )}
+
+      {/* ── Order Create Panel ── */}
+      {createPanelOpen && (
+        <OrderCreatePanel
+          onClose={() => { setCreatePanelOpen(false); setPanelPrefillName(undefined); setPanelPrefillSuggestId(undefined); }}
+          onCreated={() => { loadOrders(1); setPage(1); }}
+          prefillCustomerName={panelPrefillName}
+          prefillSuggestId={panelPrefillSuggestId}
+        />
       )}
     </div>
   );

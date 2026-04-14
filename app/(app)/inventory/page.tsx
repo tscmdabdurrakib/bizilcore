@@ -9,6 +9,7 @@ import dynamic from "next/dynamic";
 import Papa from "papaparse";
 import { downloadExcel } from "@/lib/excel";
 import ProductEditPanel from "@/components/inventory/ProductEditPanel";
+import ProductCreatePanel from "@/components/inventory/ProductCreatePanel";
 
 const BarcodeScanner = dynamic(() => import("@/components/BarcodeScanner"), { ssr: false });
 
@@ -77,6 +78,7 @@ export default function InventoryPage() {
   const [adjReason, setAdjReason] = useState("");
   const [adjSaving, setAdjSaving] = useState(false);
   const [editProductId, setEditProductId] = useState<string | null>(null);
+  const [createProductPanelOpen, setCreateProductPanelOpen] = useState(false);
   const [showAiPanel, setShowAiPanel] = useState(false);
   const [aiPredLoading, setAiPredLoading] = useState(false);
   const [aiPredData, setAiPredData] = useState<{ predictions: Array<{ productName: string; currentStock: number; daysUntilStockout: number; urgency: "urgent" | "warning" | "ok"; action: string }>; summary: string; cached?: boolean } | null>(null);
@@ -480,9 +482,9 @@ export default function InventoryPage() {
               <Plus size={16} /> কমবো যোগ
             </Link>
           ) : (
-            <Link href="/inventory/new" className="flex items-center gap-1.5 px-4 h-10 rounded-xl text-white text-sm font-bold transition-colors hover:opacity-90" style={{ background: "linear-gradient(135deg, var(--c-primary), #0A5442)" }}>
+            <button onClick={() => setCreateProductPanelOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl text-white text-sm font-bold transition-colors hover:opacity-90 active:scale-95" style={{ background: "linear-gradient(135deg, var(--c-primary), #0A5442)" }}>
               <Plus size={16} /> পণ্য যোগ
-            </Link>
+            </button>
           )}
         </div>
       </div>
@@ -668,9 +670,9 @@ export default function InventoryPage() {
                 <Package size={28} className="text-gray-400" />
               </div>
               <p className="text-gray-500 text-sm font-medium mb-2">কোনো পণ্য নেই</p>
-              <Link href="/inventory/new" className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:underline">
+              <button onClick={() => setCreateProductPanelOpen(true)} className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:underline">
                 <Plus size={14} /> পণ্য যোগ করুন
-              </Link>
+              </button>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -746,6 +748,14 @@ export default function InventoryPage() {
         onClose={() => setEditProductId(null)}
         onSaved={() => fetchProducts()}
       />
+
+      {/* ── Create Product Panel ── */}
+      {createProductPanelOpen && (
+        <ProductCreatePanel
+          onClose={() => setCreateProductPanelOpen(false)}
+          onCreated={() => fetchProducts()}
+        />
+      )}
     </div>
   );
 }
