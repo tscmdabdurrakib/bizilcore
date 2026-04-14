@@ -150,6 +150,7 @@ model Shop {
   tailorOrders           TailorOrder[]
   storeOrders            StoreOrder[]
   storeReviews           StoreReview[]
+  storeCustomers         StoreCustomer[]
   coupons                Coupon[]
   storePageViews         StorePageView[]
   categories             Category[]          @relation("ShopCategories")
@@ -1594,4 +1595,24 @@ model CommunityLike {
   @@unique([postId, userId])
   @@index([postId])
   @@index([userId])
+}
+
+model StoreCustomer {
+  id            String   @id @default(cuid())
+  shopId        String
+  shop          Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name          String
+  email         String
+  password      String?
+  avatar        String?
+  googleId      String?
+  phone         String?
+  address       String?
+  emailVerified Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([shopId, email])
+  @@index([shopId])
+  @@index([createdAt])
 }

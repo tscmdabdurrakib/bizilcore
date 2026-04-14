@@ -2,9 +2,10 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { Search, ShoppingCart, User, X, Heart, ChevronDown, Menu } from "lucide-react";
+import { Search, ShoppingCart, User, X, Heart, ChevronDown, Menu, LogOut, Package } from "lucide-react";
 import { useCart } from "@/lib/store/cart";
 import { useWishlist } from "@/lib/store/wishlist";
+import { useStoreCustomer } from "@/lib/store/store-customer";
 
 interface NavShop {
   name: string;
@@ -24,10 +25,26 @@ export function DynamicNav({ shop, categories }: Props) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchVal, setSearchVal] = useState("");
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const { items } = useCart();
   const { items: wishItems } = useWishlist();
+  const { customer, signOut, fetchCustomer } = useStoreCustomer();
   const cartCount = items.reduce((s, i) => s + i.quantity, 0);
   const slug = shop.storeSlug;
+
+  useEffect(() => {
+    fetchCustomer();
+  }, [fetchCustomer]);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node))
+        setUserMenuOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   return (
     <>
@@ -120,9 +137,55 @@ export function DynamicNav({ shop, categories }: Props) {
                   </span>
                 )}
               </Link>
-              <Link href={`/store/${slug}/orders`} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-                <User size={20} />
-              </Link>
+              {/* Customer user menu */}
+              <div className="relative" ref={userMenuRef}>
+                {customer ? (
+                  <>
+                    <button
+                      onClick={() => setUserMenuOpen(!userMenuOpen)}
+                      className="w-9 h-9 rounded-full bg-black text-white flex items-center justify-center font-bold text-sm hover:bg-gray-800 transition-colors"
+                    >
+                      {customer.avatar
+                        ? <img src={customer.avatar} alt={customer.name} className="w-9 h-9 rounded-full object-cover" />
+                        : customer.name.charAt(0).toUpperCase()
+                      }
+                    </button>
+                    {userMenuOpen && (
+                      <div className="absolute right-0 top-full mt-2 w-52 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden">
+                        <div className="px-4 py-3 border-b border-gray-50">
+                          <p className="font-semibold text-black text-sm truncate">{customer.name}</p>
+                          <p className="text-gray-400 text-xs truncate">{customer.email}</p>
+                        </div>
+                        <div className="py-1">
+                          <Link href={`/store/${slug}/account`}
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-black">
+                            <User size={14} /> আমার প্রোফাইল
+                          </Link>
+                          <Link href={`/store/${slug}/orders`}
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-black">
+                            <Package size={14} /> আমার অর্ডার
+                          </Link>
+                        </div>
+                        <div className="border-t border-gray-50 py-1">
+                          <button
+                            onClick={async () => { await signOut(); setUserMenuOpen(false); }}
+                            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50"
+                          >
+                            <LogOut size={14} /> সাইন আউট
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <Link href={`/store/${slug}/auth/signin`}
+                    className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                    <User size={20} />
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
 

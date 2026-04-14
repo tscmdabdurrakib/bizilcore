@@ -64,6 +64,7 @@ const storeSubItems: NavItem[] = [
   { href: "/store/reviews",              icon: Star,        label: "রিভিউ"           },
   { href: "/store/settings",             icon: Settings2,   label: "সেটিংস"          },
   { href: "/dashboard/store/analytics",  icon: BarChart2,   label: "অ্যানালিটিক্স"  },
+  { href: "/dashboard/store/customers",  icon: Users,       label: "কাস্টমার"        },
 ];
 
 function StoreHoverItem({ collapsed }: { collapsed: boolean }) {
@@ -297,6 +298,7 @@ const moreMenuGroups = [
       { href: "/store/coupons",    icon: Tag,        label: "কুপন"       },
       { href: "/store/reviews",    icon: Star,       label: "রিভিউ"     },
       { href: "/dashboard/store/analytics",  icon: BarChart2,  label: "অ্যানালিটিক্স" },
+      { href: "/dashboard/store/customers",  icon: Users,      label: "কাস্টমার"       },
     ],
   },
   {

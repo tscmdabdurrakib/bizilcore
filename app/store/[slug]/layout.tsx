@@ -6,6 +6,7 @@ import { DynamicNav } from "@/components/store/DynamicNav";
 import { StoreFooter } from "@/components/store/StoreFooter";
 import { StoreVisitTracker } from "@/components/store/StoreVisitTracker";
 import { FloatingWhatsApp } from "@/components/store/FloatingWhatsApp";
+import { StoreCustomerProvider } from "@/components/store/StoreCustomerProvider";
 
 async function getStoreCategories(shopId: string): Promise<string[]> {
   const products = await prisma.product.findMany({
@@ -90,6 +91,7 @@ export default async function StoreLayout({
           }}
         >
           <StoreVisitTracker slug={slug} />
+          <StoreCustomerProvider />
           <DynamicNav shop={{ ...shop, storeSlug: shop.storeSlug! }} categories={categories} />
           <main className="flex-1">{children}</main>
           <StoreFooter shop={{ ...shop, storeSlug: shop.storeSlug! }} />
