@@ -61,7 +61,7 @@ function ProgressBar({ value, max }: { value: number; max: number }) {
 /* ─── Locked / Upgrade State ─────────────────────────────── */
 function LockedState() {
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
           style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}>
@@ -667,7 +667,7 @@ export default function ShopsPage() {
   }
 
   if (loading) return (
-    <div className="max-w-2xl space-y-4 animate-pulse">
+    <div className="max-w-5xl mx-auto space-y-4 animate-pulse">
       <div className="h-10 w-56 rounded-xl bg-gray-100" />
       <div className="grid grid-cols-3 gap-3">
         {[1, 2, 3].map(i => <div key={i} className="h-20 rounded-2xl bg-gray-100" />)}
@@ -684,7 +684,7 @@ export default function ShopsPage() {
   const usagePct = data ? Math.round((data.totalShops / data.maxShops) * 100) : 0;
 
   return (
-    <div className="max-w-2xl space-y-5">
+    <div className="max-w-5xl mx-auto space-y-5">
       {toast && (
         <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-semibold shadow-xl ${toast.type === "success" ? "bg-emerald-600" : "bg-red-500"}`}>
           {toast.msg}
