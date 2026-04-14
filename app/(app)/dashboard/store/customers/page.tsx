@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import {
   Users, Search, UserCheck, UserX, Mail, Phone, Calendar,
-  Pencil, Trash2, X, Save, Loader2, FileDown, Filter,
-  TrendingUp, ShieldCheck, Chrome, UserPlus, MapPin,
+  Pencil, Trash2, X, Save, Loader2, FileDown,
+  ShieldCheck, Chrome, UserPlus, MapPin,
 } from "lucide-react";
 
 interface Customer {
@@ -410,7 +410,7 @@ export default function StoreCustomersPage() {
             <button key={t.key} onClick={() => setTab(t.key)}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all flex-shrink-0"
               style={{
-                backgroundColor: tab === t.key ? "var(--c-primary)" : "transparent",
+                backgroundColor: tab === t.key ? "#111827" : "transparent",
                 color: tab === t.key ? "#fff" : "#6B7280",
               }}>
               {t.label}
