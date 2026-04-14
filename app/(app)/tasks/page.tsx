@@ -15,7 +15,9 @@ import {
   LayoutGrid, List, CalendarDays, BarChart2, Plus, Search,
   SlidersHorizontal, Download, User, BookmarkPlus, X,
   AlertCircle, Clock, CheckCircle2, LayoutTemplate,
-  ChevronDown, ChevronUp, ClipboardList,
+  ChevronDown, ChevronUp, ClipboardList, Zap, Activity,
+  TrendingUp, Users, Tag as TagIcon, Loader2, ArrowRight,
+  Flame,
 } from "lucide-react";
 
 export type TaskStatus = "todo" | "in_progress" | "review" | "done";
@@ -47,7 +49,7 @@ export interface Task {
   assignedTo?: { name: string } | null;
 }
 
-type ViewMode = "kanban" | "list" | "calendar" | "reports";
+type ViewMode = "kanban" | "list" | "calendar" | "reports" | "activity";
 
 interface FilterPreset {
   name: string;
@@ -171,10 +173,18 @@ function TasksContent() {
   const [savingPreset, setSavingPreset] = useState(false);
   const [presetName, setPresetName] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
+  const [tagFilter, setTagFilter] = useState("all");
+  const [focusMode, setFocusMode] = useState(false);
+  const [quickAddTitle, setQuickAddTitle] = useState("");
+  const [quickAdding, setQuickAdding] = useState(false);
+  const [activityFeed, setActivityFeed] = useState<{id:string;title:string;action:string;at:string;by:string;priority:string;status:string}[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
   const presetInputRef = useRef<HTMLInputElement>(null);
+  const quickAddRef = useRef<HTMLInputElement>(null);
 
   const hasActiveFilter = statusFilter !== "all" || priorityFilter !== "all" || categoryFilter !== "all" ||
-    assigneeFilter !== "all" || dueDateFilter !== "all" || myTasksOnly || completedTodayFilter;
+    assigneeFilter !== "all" || dueDateFilter !== "all" || myTasksOnly || completedTodayFilter ||
+    tagFilter !== "all" || focusMode;
 
   useEffect(() => { setPresets(loadPresets()); }, []);
 
@@ -216,6 +226,10 @@ function TasksContent() {
         const today = new Date(); today.setHours(0, 0, 0, 0);
         const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
         params.set("dueDateFrom", today.toISOString()); params.set("dueDateTo", tomorrow.toISOString());
+      } else if (dueDateFilter === "3days") {
+        const from = new Date(); from.setHours(0, 0, 0, 0);
+        const to = new Date(from); to.setDate(to.getDate() + 3);
+        params.set("dueDateFrom", from.toISOString()); params.set("dueDateTo", to.toISOString());
       } else if (dueDateFilter === "week") {
         const from = new Date(); from.setHours(0, 0, 0, 0);
         const to = new Date(from); to.setDate(to.getDate() + 7);
@@ -269,7 +283,56 @@ function TasksContent() {
   const clearFilters = () => {
     setStatusFilter("all"); setPriorityFilter("all"); setCategoryFilter("all");
     setAssigneeFilter("all"); setDueDateFilter("all"); setMyTasksOnly(false); setCompletedTodayFilter(false);
+    setTagFilter("all"); setFocusMode(false);
   };
+
+  const quickAddTask = async () => {
+    const title = quickAddTitle.trim();
+    if (!title) return;
+    setQuickAdding(true);
+    await fetch("/api/tasks", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, status: "todo", priority: "medium", category: "general" }),
+    });
+    setQuickAddTitle("");
+    setQuickAdding(false);
+    fetchTasks(); fetchSummaryStats();
+  };
+
+  const fetchActivityFeed = useCallback(async () => {
+    setActivityLoading(true);
+    try {
+      const res = await fetch("/api/tasks?all=1&limit=50");
+      if (res.ok) {
+        const data: Task[] = await res.json();
+        const recent = [...data]
+          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+          .slice(0, 20)
+          .map(t => ({
+            id: t.id, title: t.title, priority: t.priority, status: t.status,
+            action: t.status === "done" ? "সম্পন্ন করেছেন" : t.status === "in_progress" ? "শুরু করেছেন" : "আপডেট করেছেন",
+            at: t.updatedAt, by: t.assignedTo?.name ?? t.user?.name ?? "আপনি",
+          }));
+        setActivityFeed(recent);
+      }
+    } catch {}
+    setActivityLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (view === "activity") fetchActivityFeed();
+  }, [view, fetchActivityFeed]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+      if (e.key === "n" || e.key === "N") { e.preventDefault(); setCreateInitialData(undefined); setCreateOpen(true); }
+      if (e.key === "f" || e.key === "F") { e.preventDefault(); setFilterOpen(v => !v); }
+      if (e.key === "Escape") { setSelectedTaskId(null); setCreateOpen(false); setTemplateOpen(false); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   const handleTemplateSelect = (template: TaskTemplate) => {
     setCreateInitialData({
@@ -290,7 +353,23 @@ function TasksContent() {
     { mode: "list" as ViewMode, icon: List, label: "লিস্ট", color: "#3B82F6", bg: "#EFF6FF" },
     { mode: "calendar" as ViewMode, icon: CalendarDays, label: "ক্যালেন্ডার", color: "#0F6E56", bg: "#E8F5F0" },
     { mode: "reports" as ViewMode, icon: BarChart2, label: "রিপোর্ট", color: "#EF4444", bg: "#FEF2F2" },
+    { mode: "activity" as ViewMode, icon: Activity, label: "অ্যাক্টিভিটি", color: "#F59E0B", bg: "#FFFBEB" },
   ];
+
+  const allTags = Array.from(new Set(tasks.flatMap(t => t.tags ?? []))).filter(Boolean);
+  const inProgressCount = tasks.filter(t => t.status === "in_progress").length;
+  const urgentCount = tasks.filter(t => t.priority === "urgent" && t.status !== "done").length;
+
+  const workload = staffMembers.map(m => ({
+    name: m.user.name,
+    count: tasks.filter(t => t.assignedToId === m.userId && t.status !== "done").length,
+  })).filter(w => w.count > 0).sort((a, b) => b.count - a.count);
+
+  const displayedTasks = focusMode
+    ? tasks.filter(t => (t.priority === "urgent" || t.priority === "high") && t.status !== "done")
+    : tagFilter !== "all"
+      ? tasks.filter(t => (t.tags ?? []).includes(tagFilter))
+      : tasks;
 
   return (
     <div className="space-y-4 max-w-7xl mx-auto pb-8">
@@ -327,8 +406,8 @@ function TasksContent() {
       </div>
 
       {/* ── Stat Cards ── */}
-      {view !== "reports" && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {view !== "reports" && view !== "activity" && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
 
           {/* Total / Progress */}
           <div className="col-span-2 sm:col-span-1 rounded-2xl p-4 border relative overflow-hidden"
@@ -397,6 +476,40 @@ function TasksContent() {
             <p className="text-2xl font-black leading-none" style={{ color: doneTodayCount > 0 ? "#16A34A" : S.muted }}>{doneTodayCount}</p>
             <p className="text-[11px] font-bold mt-1" style={{ color: doneTodayCount > 0 ? "#16A34A" : S.muted }}>আজ সম্পন্ন</p>
           </button>
+
+          {/* In Progress */}
+          <button onClick={() => { setStatusFilter("in_progress"); setCompletedTodayFilter(false); setDueDateFilter("all"); }}
+            className="rounded-2xl p-4 border text-left transition-all hover:shadow-lg active:scale-95 relative overflow-hidden"
+            style={{
+              borderColor: inProgressCount > 0 ? "#93C5FD" : S.border,
+              background: inProgressCount > 0 ? "linear-gradient(135deg, #EFF6FF, #DBEAFE)" : S.surface,
+            }}>
+            <div className="absolute top-0 right-0 w-16 h-16 rounded-full opacity-10"
+              style={{ backgroundColor: "#3B82F6", transform: "translate(30%, -30%)" }} />
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center mb-2"
+              style={{ backgroundColor: inProgressCount > 0 ? "#DBEAFE" : "#F3F4F6" }}>
+              <TrendingUp size={16} style={{ color: inProgressCount > 0 ? "#3B82F6" : "#9CA3AF" }} />
+            </div>
+            <p className="text-2xl font-black leading-none" style={{ color: inProgressCount > 0 ? "#3B82F6" : S.muted }}>{inProgressCount}</p>
+            <p className="text-[11px] font-bold mt-1" style={{ color: inProgressCount > 0 ? "#3B82F6" : S.muted }}>চলছে</p>
+          </button>
+
+          {/* Urgent */}
+          <button onClick={() => { setPriorityFilter("urgent"); setStatusFilter("all"); setCompletedTodayFilter(false); setDueDateFilter("all"); }}
+            className="rounded-2xl p-4 border text-left transition-all hover:shadow-lg active:scale-95 relative overflow-hidden"
+            style={{
+              borderColor: urgentCount > 0 ? "#FCA5A5" : S.border,
+              background: urgentCount > 0 ? "linear-gradient(135deg, #FFF5F5, #FEE2E2)" : S.surface,
+            }}>
+            <div className="absolute top-0 right-0 w-16 h-16 rounded-full opacity-10"
+              style={{ backgroundColor: "#DC2626", transform: "translate(30%, -30%)" }} />
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center mb-2"
+              style={{ backgroundColor: urgentCount > 0 ? "#FEE2E2" : "#F3F4F6" }}>
+              <Flame size={16} style={{ color: urgentCount > 0 ? "#DC2626" : "#9CA3AF" }} />
+            </div>
+            <p className="text-2xl font-black leading-none" style={{ color: urgentCount > 0 ? "#DC2626" : S.muted }}>{urgentCount}</p>
+            <p className="text-[11px] font-bold mt-1" style={{ color: urgentCount > 0 ? "#DC2626" : S.muted }}>জরুরি</p>
+          </button>
         </div>
       )}
 
@@ -425,47 +538,83 @@ function TasksContent() {
         </div>
 
         {/* Search + filter strip */}
-        {view !== "reports" && (
-          <div className="flex items-center gap-2 px-4 py-2.5">
-            <div className="relative flex-1 min-w-0">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: S.muted }} />
-              <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="টাস্ক খুঁজুন..."
-                className="w-full pl-9 pr-3 h-9 text-sm rounded-xl border outline-none transition-all focus:ring-2"
-                style={{ borderColor: S.border, backgroundColor: S.bg, color: S.text }} />
-            </div>
-            <div className="w-px h-6 flex-shrink-0" style={{ backgroundColor: S.border }} />
-            <button onClick={() => setMyTasksOnly(v => !v)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex-shrink-0"
-              style={{
-                borderColor: myTasksOnly ? "#0F6E56" : S.border,
-                backgroundColor: myTasksOnly ? "#E8F5F0" : "transparent",
-                color: myTasksOnly ? "#0F6E56" : S.muted,
-              }}>
-              <User size={13} /> আমার টাস্ক
-            </button>
-            <button onClick={() => setFilterOpen(v => !v)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex-shrink-0"
-              style={{
-                borderColor: hasActiveFilter ? "#0F6E56" : S.border,
-                backgroundColor: filterOpen || hasActiveFilter ? "#E8F5F0" : "transparent",
-                color: hasActiveFilter || filterOpen ? "#0F6E56" : S.muted,
-              }}>
-              <SlidersHorizontal size={13} />
-              ফিল্টার
-              {hasActiveFilter && (
-                <span className="w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center"
-                  style={{ backgroundColor: "#0F6E56", color: "#fff" }}>!</span>
-              )}
-              {filterOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-            </button>
-            {hasActiveFilter && (
-              <button onClick={clearFilters}
-                className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-xl border transition-opacity hover:opacity-70 flex-shrink-0"
-                style={{ color: "#EF4444", borderColor: "#FCA5A5", backgroundColor: "#FFF1F1" }}>
-                <X size={12} /> রিসেট
+        {view !== "reports" && view !== "activity" && (
+          <div className="space-y-0">
+            <div className="flex items-center gap-2 px-4 py-2.5">
+              <div className="relative flex-1 min-w-0">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: S.muted }} />
+                <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+                  placeholder="টাস্ক খুঁজুন... (N = নতুন টাস্ক, F = ফিল্টার)"
+                  className="w-full pl-9 pr-3 h-9 text-sm rounded-xl border outline-none transition-all focus:ring-2"
+                  style={{ borderColor: S.border, backgroundColor: S.bg, color: S.text }} />
+              </div>
+              <div className="w-px h-6 flex-shrink-0" style={{ backgroundColor: S.border }} />
+              <button onClick={() => setMyTasksOnly(v => !v)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex-shrink-0"
+                style={{
+                  borderColor: myTasksOnly ? "#0F6E56" : S.border,
+                  backgroundColor: myTasksOnly ? "#E8F5F0" : "transparent",
+                  color: myTasksOnly ? "#0F6E56" : S.muted,
+                }}>
+                <User size={13} /> আমার টাস্ক
               </button>
-            )}
+              <button onClick={() => setFocusMode(v => !v)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex-shrink-0"
+                style={{
+                  borderColor: focusMode ? "#DC2626" : S.border,
+                  backgroundColor: focusMode ? "#FEE2E2" : "transparent",
+                  color: focusMode ? "#DC2626" : S.muted,
+                }}
+                title="জরুরি ও হাই priority task দেখান">
+                <Zap size={13} /> ফোকাস
+              </button>
+              <button onClick={() => setFilterOpen(v => !v)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex-shrink-0"
+                style={{
+                  borderColor: hasActiveFilter ? "#0F6E56" : S.border,
+                  backgroundColor: filterOpen || hasActiveFilter ? "#E8F5F0" : "transparent",
+                  color: hasActiveFilter || filterOpen ? "#0F6E56" : S.muted,
+                }}>
+                <SlidersHorizontal size={13} />
+                ফিল্টার
+                {hasActiveFilter && (
+                  <span className="w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center"
+                    style={{ backgroundColor: "#0F6E56", color: "#fff" }}>!</span>
+                )}
+                {filterOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+              </button>
+              {hasActiveFilter && (
+                <button onClick={clearFilters}
+                  className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-xl border transition-opacity hover:opacity-70 flex-shrink-0"
+                  style={{ color: "#EF4444", borderColor: "#FCA5A5", backgroundColor: "#FFF1F1" }}>
+                  <X size={12} /> রিসেট
+                </button>
+              )}
+            </div>
+
+            {/* Quick Add Bar */}
+            <div className="flex items-center gap-2 px-4 pb-2.5 border-t" style={{ borderColor: S.border, paddingTop: "10px" }}>
+              <Plus size={14} style={{ color: S.muted, flexShrink: 0 }} />
+              <input
+                ref={quickAddRef}
+                type="text"
+                value={quickAddTitle}
+                onChange={e => setQuickAddTitle(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") quickAddTask(); }}
+                placeholder="দ্রুত টাস্ক যোগ করুন — শিরোনাম লিখে Enter চাপুন..."
+                className="flex-1 text-sm outline-none bg-transparent"
+                style={{ color: S.text }}
+                disabled={quickAdding}
+              />
+              {quickAddTitle.trim() && (
+                <button onClick={quickAddTask} disabled={quickAdding}
+                  className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition-all disabled:opacity-50 flex-shrink-0"
+                  style={{ background: "linear-gradient(135deg, #0F6E56, #0A5442)", color: "#fff" }}>
+                  {quickAdding ? <Loader2 size={12} className="animate-spin" /> : <ArrowRight size={12} />}
+                  যোগ করুন
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -532,10 +681,60 @@ function TasksContent() {
             options={[
               { value: "all", label: "সব" },
               { value: "today", label: "📅 আজ", color: "#CA8A04", bg: "#FEF3C7" },
+              { value: "3days", label: "📆 ৩ দিন", color: "#8B5CF6", bg: "#F5F3FF" },
               { value: "week", label: "🗓 এই সপ্তাহ", color: "#3B82F6", bg: "#EFF6FF" },
               { value: "overdue", label: "⚠ মেয়াদোত্তীর্ণ", color: "#EF4444", bg: "#FEF2F2" },
             ]}
           />
+
+          {allTags.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10px] font-bold uppercase tracking-widest flex-shrink-0 flex items-center gap-1" style={{ color: S.muted }}>
+                <TagIcon size={10} /> ট্যাগ
+              </span>
+              <div className="flex items-center gap-1 flex-wrap">
+                <button onClick={() => setTagFilter("all")}
+                  className="px-3 py-1 rounded-full text-[11px] font-bold border transition-all"
+                  style={{
+                    backgroundColor: tagFilter === "all" ? "#E8F5F0" : "transparent",
+                    color: tagFilter === "all" ? "#0F6E56" : S.muted,
+                    borderColor: tagFilter === "all" ? "#0F6E56" : S.border,
+                  }}>সব</button>
+                {allTags.map(tag => (
+                  <button key={tag} onClick={() => setTagFilter(tagFilter === tag ? "all" : tag)}
+                    className="px-3 py-1 rounded-full text-[11px] font-bold border transition-all"
+                    style={{
+                      backgroundColor: tagFilter === tag ? "#F5F3FF" : "transparent",
+                      color: tagFilter === tag ? "#8B5CF6" : S.muted,
+                      borderColor: tagFilter === tag ? "#8B5CF6" : S.border,
+                    }}>#{tag}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {workload.length > 0 && (
+            <div className="space-y-2">
+              <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1" style={{ color: S.muted }}>
+                <Users size={10} /> দলের ওয়ার্কলোড
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {workload.map(w => (
+                  <div key={w.name} className="flex items-center gap-2 px-3 py-2 rounded-xl border"
+                    style={{ borderColor: S.border, backgroundColor: S.bg }}>
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black text-white flex-shrink-0"
+                      style={{ backgroundColor: "#0F6E56" }}>
+                      {w.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-semibold truncate" style={{ color: S.text }}>{w.name}</p>
+                      <p className="text-[10px]" style={{ color: S.muted }}>{w.count}টি টাস্ক</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {staffMembers.length > 0 && !myTasksOnly && (
             <div className="flex items-center gap-2 flex-wrap">
@@ -588,6 +787,85 @@ function TasksContent() {
       {/* ── Views ── */}
       {view === "reports" ? (
         <TaskReports />
+      ) : view === "activity" ? (
+        <div className="rounded-2xl border overflow-hidden" style={{ borderColor: S.border, backgroundColor: S.surface }}>
+          <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: S.border }}>
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #FEF3C7, #FDE68A)" }}>
+                <Activity size={14} style={{ color: "#F59E0B" }} />
+              </div>
+              <span className="text-sm font-extrabold" style={{ color: S.text }}>সাম্প্রতিক অ্যাক্টিভিটি</span>
+            </div>
+            <button onClick={fetchActivityFeed} disabled={activityLoading}
+              className="text-xs font-bold px-3 py-1.5 rounded-xl border transition-all hover:opacity-80"
+              style={{ borderColor: S.border, color: S.muted, backgroundColor: S.bg }}>
+              {activityLoading ? "লোড হচ্ছে..." : "🔄 রিফ্রেশ"}
+            </button>
+          </div>
+
+          {activityLoading ? (
+            <div className="p-6 space-y-3 animate-pulse">
+              {[1,2,3,4,5].map(i => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: S.bg }} />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3 rounded-full w-3/4" style={{ backgroundColor: S.bg }} />
+                    <div className="h-2 rounded-full w-1/3" style={{ backgroundColor: S.bg }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : activityFeed.length === 0 ? (
+            <div className="py-16 text-center">
+              <div className="w-14 h-14 rounded-3xl mx-auto mb-3 flex items-center justify-center" style={{ background: "linear-gradient(135deg, #FEF3C7, #FDE68A)" }}>
+                <Activity size={22} style={{ color: "#F59E0B" }} />
+              </div>
+              <p className="text-sm font-bold" style={{ color: S.text }}>কোনো অ্যাক্টিভিটি নেই</p>
+              <p className="text-xs mt-1" style={{ color: S.muted }}>টাস্ক তৈরি বা আপডেট করলে এখানে দেখাবে</p>
+            </div>
+          ) : (
+            <div className="divide-y" style={{ borderColor: S.border }}>
+              {activityFeed.map((item, i) => {
+                const STATUS_COLORS: Record<string, string> = { done: "#16A34A", in_progress: "#3B82F6", review: "#F59E0B", todo: "#6B7280" };
+                const PRIORITY_COLORS_MAP: Record<string, string> = { urgent: "#DC2626", high: "#EA580C", medium: "#CA8A04", low: "#16A34A" };
+                const timeAgo = (() => {
+                  const diff = Date.now() - new Date(item.at).getTime();
+                  const mins = Math.floor(diff / 60000);
+                  if (mins < 1) return "এইমাত্র";
+                  if (mins < 60) return `${mins} মিনিট আগে`;
+                  const hrs = Math.floor(mins / 60);
+                  if (hrs < 24) return `${hrs} ঘণ্টা আগে`;
+                  return `${Math.floor(hrs / 24)} দিন আগে`;
+                })();
+                return (
+                  <div key={item.id} onClick={() => setSelectedTaskId(item.id)}
+                    className="flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors"
+                    style={{ backgroundColor: i % 2 === 0 ? S.surface : S.bg }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.backgroundColor = "#F0FDF7"}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.backgroundColor = i % 2 === 0 ? S.surface : S.bg}>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black text-white flex-shrink-0"
+                      style={{ backgroundColor: STATUS_COLORS[item.status] ?? "#6B7280" }}>
+                      {item.by.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate" style={{ color: S.text }}>
+                        <span style={{ color: "#0F6E56" }}>{item.by}</span> {item.action}
+                      </p>
+                      <p className="text-xs truncate" style={{ color: S.muted }}>{item.title}</p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: PRIORITY_COLORS_MAP[item.priority] + "20", color: PRIORITY_COLORS_MAP[item.priority] }}>
+                        {item.priority === "urgent" ? "🔥" : item.priority === "high" ? "⬆" : item.priority === "medium" ? "➡" : "⬇"}
+                      </span>
+                      <span className="text-[10px]" style={{ color: S.muted }}>{timeAgo}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       ) : loading ? (
         <div className="rounded-2xl border overflow-hidden p-8 space-y-3 animate-pulse"
           style={{ borderColor: S.border, backgroundColor: S.surface }}>
@@ -603,18 +881,31 @@ function TasksContent() {
         </div>
       ) : (
         <>
+          {focusMode && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold"
+              style={{ borderColor: "#FCA5A5", backgroundColor: "#FFF1F1", color: "#DC2626" }}>
+              <Zap size={13} /> ফোকাস মোড চালু — শুধু জরুরি ও হাই প্রায়োরিটি টাস্ক দেখাচ্ছে ({displayedTasks.length}টি)
+            </div>
+          )}
+          {tagFilter !== "all" && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold"
+              style={{ borderColor: "#C4B5FD", backgroundColor: "#F5F3FF", color: "#8B5CF6" }}>
+              <TagIcon size={13} /> ট্যাগ ফিল্টার: #{tagFilter} ({displayedTasks.length}টি টাস্ক)
+              <button onClick={() => setTagFilter("all")} className="ml-auto hover:opacity-70"><X size={12} /></button>
+            </div>
+          )}
           {view === "kanban" && (
-            <TaskKanban tasks={tasks} onTaskClick={setSelectedTaskId}
+            <TaskKanban tasks={displayedTasks} onTaskClick={setSelectedTaskId}
               onStatusChange={handleStatusChange}
               onRefresh={() => { fetchTasks(); fetchSummaryStats(); }} />
           )}
           {view === "list" && (
-            <TaskList tasks={tasks} onTaskClick={setSelectedTaskId}
+            <TaskList tasks={displayedTasks} onTaskClick={setSelectedTaskId}
               onStatusChange={handleStatusChange}
               onRefresh={() => { fetchTasks(); fetchSummaryStats(); }} />
           )}
           {view === "calendar" && (
-            <TaskCalendar tasks={tasks} onTaskClick={setSelectedTaskId} />
+            <TaskCalendar tasks={displayedTasks} onTaskClick={setSelectedTaskId} />
           )}
         </>
       )}
