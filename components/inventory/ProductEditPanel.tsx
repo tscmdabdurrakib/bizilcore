@@ -49,6 +49,7 @@ interface Props {
 
 export default function ProductEditPanel({ productId, onClose, onSaved }: Props) {
   const [visible, setVisible] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
   const [form, setForm] = useState({ name: "", category: "", sku: "", buyPrice: "", sellPrice: "", stockQty: "", lowStockAt: "5", description: "" });
   const [images, setImages] = useState<ProductImage[]>([]);
   const [plan, setPlan] = useState<"free" | "pro" | "business">("free");
@@ -85,6 +86,14 @@ export default function ProductEditPanel({ productId, onClose, onSaved }: Props)
   function set(field: string, value: string) {
     setForm(prev => ({ ...prev, [field]: value }));
   }
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    setIsDesktop(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   useEffect(() => {
     if (!productId) {
@@ -271,30 +280,37 @@ export default function ProductEditPanel({ productId, onClose, onSaved }: Props)
         </div>
       )}
 
-      {/*
-        ── PANEL ──
-        Desktop (lg+): slides in from right, fixed width 560px
-        Mobile/Tablet (<lg): slides up from bottom, 88vh height
-      */}
+      {/* ── PANEL ── */}
       <div
-        className={[
-          "fixed z-50 bg-white flex flex-col",
-          "transition-transform duration-300 ease-out",
-          /* desktop */
-          "lg:inset-y-0 lg:right-0 lg:w-[560px] lg:shadow-2xl lg:border-l lg:border-gray-100",
-          /* mobile/tablet */
-          "inset-x-0 bottom-0 h-[88svh] rounded-t-3xl shadow-2xl",
-          "lg:h-auto lg:rounded-none",
-          /* animation state */
-          visible
-            ? "translate-y-0 lg:translate-x-0 lg:translate-y-0"
-            : "translate-y-full lg:translate-y-0 lg:translate-x-full",
-        ].join(" ")}
+        className="fixed z-50 bg-white flex flex-col"
+        style={isDesktop ? {
+          /* Desktop: right-side drawer */
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: "560px",
+          borderLeft: "1px solid #F3F4F6",
+          boxShadow: "-8px 0 40px rgba(0,0,0,0.12)",
+          transform: visible ? "translateX(0)" : "translateX(100%)",
+          transition: "transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)",
+        } : {
+          /* Mobile/Tablet: bottom sheet */
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: "88svh",
+          borderRadius: "24px 24px 0 0",
+          boxShadow: "0 -8px 40px rgba(0,0,0,0.12)",
+          transform: visible ? "translateY(0)" : "translateY(100%)",
+          transition: "transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)",
+        }}
       >
         {/* Panel Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
           {/* Mobile drag indicator */}
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 bg-gray-200 rounded-full lg:hidden" />
+          {!isDesktop && (
+            <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-10 h-1 bg-gray-200 rounded-full" />
+          )}
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center"
               style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)" }}>
