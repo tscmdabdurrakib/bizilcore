@@ -7,6 +7,15 @@ import { StoreFooter } from "@/components/store/StoreFooter";
 import { StoreVisitTracker } from "@/components/store/StoreVisitTracker";
 import { FloatingWhatsApp } from "@/components/store/FloatingWhatsApp";
 
+async function getStoreCategories(shopId: string): Promise<string[]> {
+  const products = await prisma.product.findMany({
+    where: { shopId, storeVisible: true, category: { not: null } },
+    select: { category: true },
+    distinct: ["category"],
+  });
+  return products.map(p => p.category!).filter(Boolean);
+}
+
 async function getStoreShop(slug: string) {
   return prisma.shop.findUnique({
     where: { storeSlug: slug },
@@ -51,6 +60,8 @@ export default async function StoreLayout({
 
   if (!shop || !shop.storeEnabled) notFound();
 
+  const categories = await getStoreCategories(shop.id);
+
   const theme = getThemeConfig(shop.storeTheme ?? "minimal");
   const primary = shop.storePrimaryColor || theme.colors.primary;
   const accent = shop.storeAccentColor || theme.colors.accent;
@@ -73,13 +84,13 @@ export default async function StoreLayout({
         <div
           className="min-h-screen flex flex-col"
           style={{
-            backgroundColor: "#f9fafb",
+            backgroundColor: "#ffffff",
             color: "#111827",
             fontFamily: `"${theme.typography.fontBody}", sans-serif`,
           }}
         >
           <StoreVisitTracker slug={slug} />
-          <DynamicNav shop={{ ...shop, storeSlug: shop.storeSlug! }} />
+          <DynamicNav shop={{ ...shop, storeSlug: shop.storeSlug! }} categories={categories} />
           <main className="flex-1">{children}</main>
           <StoreFooter shop={{ ...shop, storeSlug: shop.storeSlug! }} />
           <FloatingWhatsApp whatsappNumber={waNumber} shopName={shop.name} primary={primary} />
