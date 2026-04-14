@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Check, MessageSquare, Copy, Trash2, UserPlus, Crown, User, ChevronRight, ChevronLeft, Loader2, ArrowLeft, Facebook, Link2, Unlink, X, Store, FileText, Users, Bell, CreditCard, Settings, Target, Moon, Sun, ShieldCheck, Wifi, WifiOff, Eye, EyeOff, Send, BookOpen, MessageCircle, QrCode, Globe, ExternalLink, Sparkles, RefreshCw, Printer, Truck, RefreshCcw } from "lucide-react";
+import { Check, MessageSquare, Copy, Trash2, Crown, User, ChevronRight, ChevronLeft, Loader2, ArrowLeft, Facebook, Link2, Unlink, X, Store, FileText, Users, Bell, CreditCard, Settings, Target, Moon, Sun, ShieldCheck, Wifi, WifiOff, Eye, EyeOff, Send, BookOpen, MessageCircle, QrCode, Globe, ExternalLink, Sparkles, RefreshCw, Printer, Truck, RefreshCcw } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 import { PLAN_DISPLAY, PLAN_LIMITS } from "@/lib/features";
 import { BUSINESS_TYPES, BUSINESS_TYPE_META, type BusinessType, SALES_CHANNELS, SALES_CHANNEL_META, type SalesChannel, isValidSalesChannel } from "@/lib/modules";
@@ -31,8 +31,6 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
   );
 }
 
-interface StaffMember { id: string; role: string; isActive: boolean; joinedAt: string | null; inviteToken: string | null; user: { name: string; email: string } }
-const ROLE_LABEL: Record<string, string> = { manager: "ম্যানেজার", staff: "স্টাফ" };
 
 /* ─── Upgrade Modal ─────────────────────────────────── */
 const DURATION_OPT = [
@@ -264,11 +262,6 @@ function SettingsContent() {
   const [waGuideOpen, setWaGuideOpen] = useState(false);
   const [waTestPhone, setWaTestPhone] = useState("");
   const [testingWA, setTestingWA] = useState(false);
-  const [staff, setStaff] = useState<StaffMember[]>([]);
-  const [inviteModal, setInviteModal] = useState(false);
-  const [inviteForm, setInviteForm] = useState({ email: "", role: "staff" });
-  const [inviting, setInviting] = useState(false);
-  const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [businessType, setBusinessType] = useState<BusinessType>("fcommerce");
   const [btModalOpen, setBtModalOpen] = useState(false);
@@ -360,9 +353,6 @@ function SettingsContent() {
   }, []);
 
   useEffect(() => {
-    if (tab === "staff") {
-      fetch("/api/staff").then(r => r.json()).then(d => setStaff(Array.isArray(d) ? d : []));
-    }
     if (tab === "facebook") {
       setFbLoading(true); setFbError(null);
       fetch("/api/facebook/disconnect")
@@ -506,20 +496,6 @@ function SettingsContent() {
     }
   }
 
-  async function sendInvite(e: React.FormEvent) {
-    e.preventDefault(); setInviting(true);
-    const r = await fetch("/api/staff", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(inviteForm) });
-    const d = await r.json();
-    setInviting(false);
-    if (r.ok) { setInviteLink(d.inviteUrl); setStaff(prev => [...prev, d]); setInviteForm({ email: "", role: "staff" }); }
-    else showToast("error", d.error ?? "Invite পাঠানো যায়নি।");
-  }
-
-  async function removeStaff(id: string) {
-    const r = await fetch(`/api/staff/${id}`, { method: "DELETE" });
-    if (r.ok) { setStaff(prev => prev.filter(s => s.id !== id)); showToast("success", "Staff সরিয়ে দেওয়া হয়েছে ✓"); }
-  }
-
   const planDisplay = PLAN_DISPLAY[plan] ?? PLAN_DISPLAY.free;
   const planLimits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
 
@@ -661,7 +637,6 @@ function SettingsContent() {
     { key: "shop", label: "Shop তথ্য", desc: "শপের নাম ও ঠিকানা", icon: Store },
     { key: "invoice", label: "Invoice", desc: "কাস্টম invoice সেটিংস", icon: FileText },
     { key: "catalog", label: "ক্যাটালগ", desc: "পাবলিক শপ পেজ", icon: Globe },
-    { key: "staff", label: "Staff", desc: "টিম ম্যানেজমেন্ট", icon: Users },
     { key: "subscription", label: "Subscription", desc: "Plan ও billing", icon: CreditCard },
     { key: "notifications", label: "Notifications", desc: "SMS ও alert সেটিংস", icon: Bell },
     { key: "facebook", label: "Facebook", desc: "Page সংযোগ", icon: Facebook },
@@ -852,46 +827,6 @@ function SettingsContent() {
         </div>
       )}
 
-      {inviteModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="rounded-2xl p-6 max-w-sm w-full" style={{ backgroundColor: "var(--c-surface-raised)" }}>
-            <h3 className="font-semibold text-lg mb-4" style={{ color: S.text }}>Staff Invite করুন</h3>
-            {inviteLink ? (
-              <>
-                <p className="text-sm mb-3" style={{ color: S.secondary }}>Invite link তৈরি হয়েছে:</p>
-                <div className="flex items-center gap-2 p-3 rounded-xl mb-4" style={{ backgroundColor: S.bg }}>
-                  <p className="text-xs font-mono flex-1 break-all" style={{ color: S.text }}>{inviteLink}</p>
-                  <button onClick={() => { navigator.clipboard.writeText(inviteLink); showToast("success", "Copy হয়েছে ✓"); }}
-                    className="p-1.5 rounded-lg hover:bg-gray-200 flex-shrink-0">
-                    <Copy size={14} style={{ color: S.secondary }} />
-                  </button>
-                </div>
-                <button onClick={() => { setInviteModal(false); setInviteLink(null); }} className="w-full py-2.5 rounded-xl text-white font-medium" style={{ backgroundColor: S.primary }}>বন্ধ করুন</button>
-              </>
-            ) : (
-              <form onSubmit={sendInvite} className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: S.text }}>Email</label>
-                  <input type="email" value={inviteForm.email} onChange={e => setInviteForm(p => ({ ...p, email: e.target.value }))} placeholder="staff@example.com" required className="w-full h-10 px-3 rounded-xl border text-sm outline-none" style={{ borderColor: S.border, color: S.text }} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: S.text }}>Role</label>
-                  <select value={inviteForm.role} onChange={e => setInviteForm(p => ({ ...p, role: e.target.value }))} className="w-full h-10 px-3 rounded-xl border text-sm outline-none" style={{ borderColor: S.border, color: S.text }}>
-                    <option value="manager">ম্যানেজার — সব করতে পারবে (settings ছাড়া)</option>
-                    <option value="staff">স্টাফ — শুধু অর্ডার দেখা ও তৈরি করতে পারবে</option>
-                  </select>
-                </div>
-                <div className="flex gap-3 pt-1">
-                  <button type="button" onClick={() => setInviteModal(false)} className="flex-1 py-2.5 rounded-xl border text-sm font-medium" style={{ borderColor: S.border, color: S.text }}>বাতিল</button>
-                  <button type="submit" disabled={inviting} className="flex-1 py-2.5 rounded-xl text-white text-sm font-medium disabled:opacity-60" style={{ backgroundColor: S.primary }}>
-                    {inviting ? "তৈরি হচ্ছে..." : "Invite করুন"}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Mobile menu grid */}
       {mobileView === "menu" && (
@@ -1305,64 +1240,6 @@ function SettingsContent() {
         </div>
       )}
 
-      {/* ─── STAFF ────────────────────────────── */}
-      {tab === "staff" && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <h3 className="font-semibold" style={{ color: S.text }}>Staff সদস্য</h3>
-              <p className="text-xs mt-0.5" style={{ color: S.muted }}>আপনার টিম manage করুন</p>
-            </div>
-            <button onClick={() => setInviteModal(true)} className="flex items-center gap-2 px-3 py-2 rounded-xl text-white text-sm font-medium" style={{ backgroundColor: S.primary }}>
-              <UserPlus size={14} /> Invite করুন
-            </button>
-          </div>
-          <div className="rounded-xl p-4 space-y-2" style={{ backgroundColor: S.bg }}>
-            <p className="text-xs font-semibold mb-2" style={{ color: S.secondary }}>Permission Matrix</p>
-            {[
-              { role: "ম্যানেজার", perms: "Orders, Products, Customers, Reports — সব দেখা ও এডিট। Settings ও Billing ছাড়া।" },
-              { role: "স্টাফ", perms: "শুধু Orders দেখা ও তৈরি করতে পারবে।" },
-            ].map(({ role, perms }) => (
-              <div key={role} className="flex gap-2">
-                <span className="text-xs font-semibold flex-shrink-0 w-20" style={{ color: S.primary }}>{role}:</span>
-                <span className="text-xs" style={{ color: S.secondary }}>{perms}</span>
-              </div>
-            ))}
-          </div>
-          {staff.length === 0 ? (
-            <div className="text-center py-10 rounded-2xl border" style={{ borderColor: S.border }}>
-              <p className="text-sm" style={{ color: S.muted }}>এখনো কোনো staff নেই।</p>
-              <button onClick={() => setInviteModal(true)} className="text-sm font-medium mt-2" style={{ color: S.primary }}>+ প্রথম staff invite করুন</button>
-            </div>
-          ) : (
-            <div className="rounded-2xl border overflow-hidden" style={{ borderColor: S.border }}>
-              {staff.map((m, i) => (
-                <div key={m.id} className="flex items-center gap-3 px-4 py-4 border-b last:border-0"
-                  style={{ borderColor: S.border }}>
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: m.role === "manager" ? "var(--c-primary-light)" : "#F0E8FF" }}>
-                    {m.role === "manager" ? <Crown size={16} style={{ color: S.primary }} /> : <User size={16} style={{ color: "#7C3AED" }} />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold truncate" style={{ color: S.text }}>{m.user.name}</p>
-                      <span className="text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0" style={{ backgroundColor: m.role === "manager" ? "var(--c-primary-light)" : "#F0E8FF", color: m.role === "manager" ? S.primary : "#7C3AED" }}>
-                        {ROLE_LABEL[m.role] ?? m.role}
-                      </span>
-                    </div>
-                    <p className="text-xs mt-0.5 truncate" style={{ color: S.muted }}>{m.user.email}</p>
-                    <p className="text-xs mt-0.5" style={{ color: m.joinedAt ? S.primary : "#EF9F27" }}>
-                      {m.joinedAt ? "✓ যোগ দিয়েছেন" : "⏳ Invite pending"}
-                    </p>
-                  </div>
-                  <button onClick={() => removeStaff(m.id)} className="p-2 rounded-xl hover:bg-red-50 flex-shrink-0">
-                    <Trash2 size={15} style={{ color: "#E24B4A" }} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ─── SUBSCRIPTION ─────────────────────── */}
       {tab === "subscription" && (

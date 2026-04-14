@@ -1,18 +1,25 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Users, X, ChevronDown, Check, X as XIcon, Clock, Calendar, Scissors, DollarSign, Loader2 } from "lucide-react";
+import {
+  Users, X, ChevronDown, Check, X as XIcon, Clock, Calendar, Scissors,
+  DollarSign, Loader2, UserPlus, Crown, User, Copy, Trash2, TrendingUp,
+  ShieldCheck, AlertCircle,
+} from "lucide-react";
 import PlanGate from "@/components/PlanGate";
 import { formatBDT } from "@/lib/utils";
 
-interface Staff {
+/* ─── Types ─────────────────────────────────────────────── */
+interface StaffMember {
   id: string;
   role: string;
   salary: number | null;
   jobTitle: string | null;
   phone: string | null;
   isActive: boolean;
-  user: { name: string };
+  inviteToken: string | null;
+  joinedAt: string | null;
+  user: { name: string; email: string };
 }
 
 interface Attendance {
@@ -22,29 +29,24 @@ interface Attendance {
   checkIn: string | null;
   checkOut: string | null;
   notes: string | null;
-  staff: Staff;
+  staff: StaffMember;
 }
 
-const S = {
-  surface: "var(--c-surface)",
-  border: "var(--c-border)",
-  text: "var(--c-text)",
-  muted: "var(--c-text-muted)",
-  primary: "var(--c-primary)",
-  bg: "var(--c-bg)",
-};
+interface CommissionEntry {
+  staffId: string;
+  staffName: string;
+  totalRevenue: number;
+  totalCommission: number;
+  paidCommission: number;
+  services: { apptId: string; date: string; serviceName: string; revenue: number; commission: number; paid: boolean }[];
+}
 
-const inp = (f: boolean) => ({
-  height: "40px",
-  border: `1px solid ${f ? "var(--c-primary)" : "var(--c-border)"}`,
-  borderRadius: "8px",
-  color: "var(--c-text)",
-  backgroundColor: "var(--c-surface)",
-  padding: "0 12px",
-  fontSize: "14px",
-  outline: "none",
-  width: "100%",
-});
+/* ─── Constants ──────────────────────────────────────────── */
+const ROLE_LABEL: Record<string, string> = { manager: "ম্যানেজার", staff: "স্টাফ" };
+const ROLE_COLOR: Record<string, { bg: string; text: string }> = {
+  manager: { bg: "#DCFCE7", text: "#16A34A" },
+  staff: { bg: "#EDE9FE", text: "#7C3AED" },
+};
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
   present: { label: "উপস্থিত", color: "#10B981", bg: "#ECFDF5", icon: <Check size={12} /> },
@@ -54,14 +56,161 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
   leave: { label: "ছুটি", color: "#3B82F6", bg: "#EFF6FF", icon: <Calendar size={12} /> },
 };
 
-function AttendanceModal({
-  staff,
-  onClose,
-  onSave,
-}: {
-  staff: Staff[];
+const MONTH_NAMES = [
+  "জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন",
+  "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর",
+];
+
+/* ─── Sub-components ──────────────────────────────────────── */
+function StatCard({ label, value, sub, gradient, icon: Icon }: {
+  label: string; value: string | number; sub?: string;
+  gradient: string; icon: React.ElementType;
+}) {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
+      <div className="flex items-center justify-between">
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0`} style={{ background: gradient }}>
+          <Icon size={16} color="#fff" />
+        </div>
+        {sub && (
+          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600">{sub}</span>
+        )}
+      </div>
+      <div>
+        <p className="text-2xl font-black text-gray-900">{value}</p>
+        <p className="text-xs text-gray-400 mt-0.5 font-medium">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function InviteModal({ onClose, onInvited, showToast }: {
   onClose: () => void;
-  onSave: () => void;
+  onInvited: (member: StaffMember) => void;
+  showToast: (type: "success" | "error", msg: string) => void;
+}) {
+  const [form, setForm] = useState({ email: "", role: "staff" });
+  const [inviting, setInviting] = useState(false);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+
+  async function sendInvite(e: React.FormEvent) {
+    e.preventDefault();
+    setInviting(true);
+    const r = await fetch("/api/staff", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    const d = await r.json();
+    setInviting(false);
+    if (r.ok) {
+      setInviteLink(d.inviteUrl);
+      onInvited(d);
+      setForm({ email: "", role: "staff" });
+    } else {
+      showToast("error", d.error ?? "Invite পাঠানো যায়নি।");
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}>
+              <UserPlus size={16} color="#fff" />
+            </div>
+            <h3 className="font-bold text-gray-900">Staff Invite করুন</h3>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
+            <X size={16} className="text-gray-400" />
+          </button>
+        </div>
+
+        {inviteLink ? (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                <Check size={12} className="text-emerald-600" />
+              </div>
+              <p className="text-sm font-semibold text-gray-900">Invite link তৈরি হয়েছে!</p>
+            </div>
+            <p className="text-xs text-gray-500 mb-3">এই link টি staff-কে পাঠান, তিনি এটা দিয়ে অ্যাকাউন্ট তৈরি করবেন।</p>
+            <div className="flex items-center gap-2 p-3 rounded-xl mb-4 bg-gray-50 border border-gray-200">
+              <p className="text-xs font-mono flex-1 break-all text-gray-700">{inviteLink}</p>
+              <button
+                onClick={() => { navigator.clipboard.writeText(inviteLink); showToast("success", "Copy হয়েছে ✓"); }}
+                className="p-1.5 rounded-lg hover:bg-gray-200 flex-shrink-0"
+              >
+                <Copy size={14} className="text-gray-500" />
+              </button>
+            </div>
+            <button
+              onClick={() => { setInviteLink(null); onClose(); }}
+              className="w-full py-2.5 rounded-xl text-white text-sm font-semibold"
+              style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}
+            >
+              সম্পন্ন হয়েছে
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={sendInvite} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">Email ঠিকানা *</label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+                placeholder="staff@example.com"
+                required
+                className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-50 text-gray-900 transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">ভূমিকা (Role)</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { value: "manager", label: "ম্যানেজার", desc: "Settings ছাড়া সব" },
+                  { value: "staff", label: "স্টাফ", desc: "শুধু অর্ডার" },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setForm(p => ({ ...p, role: opt.value }))}
+                    className={`p-3 rounded-xl border text-left transition-all ${form.role === opt.value ? "border-emerald-500 bg-emerald-50" : "border-gray-200 hover:border-gray-300"}`}
+                  >
+                    <p className={`text-sm font-semibold ${form.role === opt.value ? "text-emerald-700" : "text-gray-700"}`}>{opt.label}</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">{opt.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-3 pt-1">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50"
+              >
+                বাতিল
+              </button>
+              <button
+                type="submit"
+                disabled={inviting}
+                className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-60"
+                style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}
+              >
+                {inviting ? <Loader2 size={15} className="animate-spin mx-auto" /> : "Invite করুন"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AttendanceModal({ staff, onClose, onSave }: {
+  staff: StaffMember[]; onClose: () => void; onSave: () => void;
 }) {
   const [form, setForm] = useState({
     staffId: "",
@@ -71,7 +220,6 @@ function AttendanceModal({
     checkOut: "",
     notes: "",
   });
-  const [focused, setFocused] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSave(e: React.FormEvent) {
@@ -90,139 +238,92 @@ function AttendanceModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="rounded-2xl p-6 w-full max-w-sm" style={{ backgroundColor: S.surface }}>
+      <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="font-semibold text-base" style={{ color: S.text }}>
-            উপস্থিতি রেকর্ড
-          </h3>
-          <button onClick={onClose}>
-            <X size={18} style={{ color: S.muted }} />
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)" }}>
+              <Calendar size={16} color="#fff" />
+            </div>
+            <h3 className="font-bold text-gray-900">উপস্থিতি রেকর্ড</h3>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
+            <X size={16} className="text-gray-400" />
           </button>
         </div>
         <form onSubmit={handleSave} className="space-y-3">
           <div>
-            <label className="block text-xs mb-1 font-medium" style={{ color: S.muted }}>
-              কর্মী *
-            </label>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5">কর্মী *</label>
             <div className="relative">
               <select
                 value={form.staffId}
-                onChange={(e) => setForm((p) => ({ ...p, staffId: e.target.value }))}
-                style={{ ...inp(focused === "staff"), appearance: "none", paddingRight: "32px" }}
+                onChange={e => setForm(p => ({ ...p, staffId: e.target.value }))}
                 required
-                onFocus={() => setFocused("staff")}
-                onBlur={() => setFocused(null)}
+                className="w-full h-10 px-3 pr-8 rounded-xl border border-gray-200 text-sm outline-none focus:border-blue-500 text-gray-900 appearance-none"
               >
                 <option value="">-- কর্মী বেছে নিন --</option>
-                {staff.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.user.name}
-                  </option>
+                {staff.filter(s => s.joinedAt).map(s => (
+                  <option key={s.id} value={s.id}>{s.user.name}</option>
                 ))}
               </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: S.muted }} />
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" />
             </div>
           </div>
-
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs mb-1 font-medium" style={{ color: S.muted }}>
-                তারিখ *
-              </label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">তারিখ *</label>
               <input
                 type="date"
                 value={form.date}
-                onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))}
+                onChange={e => setForm(p => ({ ...p, date: e.target.value }))}
                 required
-                style={inp(focused === "date")}
-                onFocus={() => setFocused("date")}
-                onBlur={() => setFocused(null)}
+                className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-blue-500 text-gray-900"
               />
             </div>
             <div>
-              <label className="block text-xs mb-1 font-medium" style={{ color: S.muted }}>
-                অবস্থা *
-              </label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">অবস্থা *</label>
               <div className="relative">
                 <select
                   value={form.status}
-                  onChange={(e) => setForm((p) => ({ ...p, status: e.target.value }))}
-                  style={{ ...inp(focused === "status"), appearance: "none", paddingRight: "32px" }}
-                  onFocus={() => setFocused("status")}
-                  onBlur={() => setFocused(null)}
+                  onChange={e => setForm(p => ({ ...p, status: e.target.value }))}
+                  className="w-full h-10 px-3 pr-8 rounded-xl border border-gray-200 text-sm outline-none focus:border-blue-500 text-gray-900 appearance-none"
                 >
                   {Object.entries(STATUS_CONFIG).map(([v, c]) => (
-                    <option key={v} value={v}>
-                      {c.label}
-                    </option>
+                    <option key={v} value={v}>{c.label}</option>
                   ))}
                 </select>
-                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: S.muted }} />
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" />
               </div>
             </div>
           </div>
-
           {form.status !== "absent" && form.status !== "leave" && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs mb-1 font-medium" style={{ color: S.muted }}>
-                  চেক-ইন
-                </label>
-                <input
-                  type="time"
-                  value={form.checkIn}
-                  onChange={(e) => setForm((p) => ({ ...p, checkIn: e.target.value }))}
-                  style={inp(focused === "ci")}
-                  onFocus={() => setFocused("ci")}
-                  onBlur={() => setFocused(null)}
-                />
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">চেক-ইন</label>
+                <input type="time" value={form.checkIn} onChange={e => setForm(p => ({ ...p, checkIn: e.target.value }))}
+                  className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-blue-500 text-gray-900" />
               </div>
               <div>
-                <label className="block text-xs mb-1 font-medium" style={{ color: S.muted }}>
-                  চেক-আউট
-                </label>
-                <input
-                  type="time"
-                  value={form.checkOut}
-                  onChange={(e) => setForm((p) => ({ ...p, checkOut: e.target.value }))}
-                  style={inp(focused === "co")}
-                  onFocus={() => setFocused("co")}
-                  onBlur={() => setFocused(null)}
-                />
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">চেক-আউট</label>
+                <input type="time" value={form.checkOut} onChange={e => setForm(p => ({ ...p, checkOut: e.target.value }))}
+                  className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-blue-500 text-gray-900" />
               </div>
             </div>
           )}
-
           <div>
-            <label className="block text-xs mb-1 font-medium" style={{ color: S.muted }}>
-              নোট
-            </label>
-            <input
-              value={form.notes}
-              onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5">নোট</label>
+            <input value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
               placeholder="ঐচ্ছিক"
-              style={inp(focused === "notes")}
-              onFocus={() => setFocused("notes")}
-              onBlur={() => setFocused(null)}
-            />
+              className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-blue-500 text-gray-900" />
           </div>
-
           <div className="flex gap-3 pt-1">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl border text-sm font-medium"
-              style={{ borderColor: S.border, color: S.text }}
-            >
+            <button type="button" onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
               বাতিল
             </button>
-            <button
-              type="submit"
-              disabled={loading}
+            <button type="submit" disabled={loading}
               className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-60"
-              style={{ backgroundColor: S.primary }}
-            >
-              {loading ? "সেভ..." : "সেভ করুন"}
+              style={{ background: "linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)" }}>
+              {loading ? <Loader2 size={15} className="animate-spin mx-auto" /> : "সেভ করুন"}
             </button>
           </div>
         </form>
@@ -231,22 +332,16 @@ function AttendanceModal({
   );
 }
 
-interface CommissionEntry {
-  staffId: string;
-  staffName: string;
-  totalRevenue: number;
-  totalCommission: number;
-  paidCommission: number;
-  services: { apptId: string; date: string; serviceName: string; revenue: number; commission: number; paid: boolean }[];
-}
-
+/* ─── Main Page ───────────────────────────────────────────── */
 export default function HRPage() {
-  const [staff, setStaff] = useState<Staff[]>([]);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
   const [attendances, setAttendances] = useState<Attendance[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+  const [showAttModal, setShowAttModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"staff" | "attendance" | "commission">("staff");
   const [isSalon, setIsSalon] = useState(false);
+  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -256,10 +351,15 @@ export default function HRPage() {
   const [commissionLoading, setCommissionLoading] = useState(false);
   const [payingStaffId, setPayingStaffId] = useState<string | null>(null);
 
+  function showToast(type: "success" | "error", msg: string) {
+    setToast({ type, msg });
+    setTimeout(() => setToast(null), 3000);
+  }
+
   async function loadStaff() {
     const res = await fetch("/api/staff");
     const data = await res.json();
-    setStaff(data.staffMembers ?? []);
+    setStaff(Array.isArray(data) ? data : (data.staffMembers ?? []));
   }
 
   async function loadAttendance() {
@@ -288,13 +388,21 @@ export default function HRPage() {
     });
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [month]);
+  useEffect(() => { load(); }, [month]);
 
   useEffect(() => {
     if (activeTab === "commission" && isSalon) loadCommission();
   }, [activeTab, isSalon, loadCommission]);
+
+  async function removeStaff(id: string) {
+    const r = await fetch(`/api/staff/${id}`, { method: "DELETE" });
+    if (r.ok) {
+      setStaff(prev => prev.filter(s => s.id !== id));
+      showToast("success", "Staff সরিয়ে দেওয়া হয়েছে ✓");
+    } else {
+      showToast("error", "সরানো যায়নি।");
+    }
+  }
 
   async function markCommissionPaid(staffId: string) {
     setPayingStaffId(staffId);
@@ -307,349 +415,439 @@ export default function HRPage() {
     setPayingStaffId(null);
   }
 
-  const monthNames = [
-    "জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন",
-    "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর",
-  ];
-
-  const presentCount = attendances.filter((a) => a.status === "present").length;
-  const absentCount = attendances.filter((a) => a.status === "absent").length;
+  const presentCount = attendances.filter(a => a.status === "present").length;
+  const absentCount = attendances.filter(a => a.status === "absent").length;
   const totalSalary = staff.reduce((s, m) => s + (m.salary ?? 0), 0);
+  const activeCount = staff.filter(s => s.isActive && s.joinedAt).length;
+  const pendingCount = staff.filter(s => !s.joinedAt).length;
+
+  const TABS = [
+    { key: "staff" as const, label: "কর্মী তালিকা", show: true },
+    { key: "attendance" as const, label: "উপস্থিতি", show: true },
+    { key: "commission" as const, label: "কমিশন", show: isSalon },
+  ].filter(t => t.show);
 
   return (
     <PlanGate feature="staff">
-    <div className="max-w-5xl mx-auto space-y-5">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg, var(--c-primary) 0%, #0A5442 100%)" }}>
-            <Users size={18} color="#fff" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold" style={{ color: S.text }}>কর্মী ব্যবস্থাপনা</h1>
-            <p className="text-xs" style={{ color: S.muted }}>Staff তালিকা, বেতন ও উপস্থিতি এক জায়গায়</p>
-          </div>
-        </div>
-        {activeTab === "attendance" && (
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 px-4 h-10 rounded-xl text-white text-sm font-semibold transition-all hover:opacity-90"
-            style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}
-          >
-            <Check size={16} /> উপস্থিতি নিন
-          </button>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label: "মোট কর্মী", value: staff.length, color: "var(--c-primary)", bg: "var(--c-primary-light)" },
-          { label: "সক্রিয় কর্মী", value: staff.filter((s) => s.isActive).length, color: "#059669", bg: "#DCFCE7" },
-          { label: `উপস্থিত (${monthNames[month - 1]})`, value: presentCount, color: "var(--c-primary)", bg: "var(--c-primary-light)" },
-          { label: "মোট বেতন", value: `৳${totalSalary.toLocaleString("bn-BD")}`, color: "#D97706", bg: "#FEF3C7" },
-        ].map((stat) => (
-          <div key={stat.label} className="rounded-2xl p-4 border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-3" style={{ backgroundColor: stat.bg }}>
-              <Users size={15} style={{ color: stat.color }} />
-            </div>
-            <p className="text-2xl font-bold" style={{ color: stat.color }}>{stat.value}</p>
-            <p className="text-xs mt-1 font-medium" style={{ color: S.muted }}>{stat.label}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex gap-1 p-1 rounded-xl w-fit overflow-x-auto" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
-        {[
-          { key: "staff" as const, label: "কর্মী তালিকা", show: true },
-          { key: "attendance" as const, label: "উপস্থিতি", show: true },
-          { key: "commission" as const, label: "কমিশন", show: isSalon },
-        ].filter(t => t.show).map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className="px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
-            style={{
-              backgroundColor: activeTab === tab.key ? S.primary : "transparent",
-              color: activeTab === tab.key ? "#fff" : S.muted,
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === "staff" && (
-        <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${S.border}` }}>
-          {loading ? (
-            <div className="p-5 space-y-3 animate-pulse">
-              {[1,2,3,4].map(i => <div key={i} className="h-14 rounded-xl" style={{ backgroundColor: S.bg }} />)}
-            </div>
-          ) : staff.length === 0 ? (
-            <div className="py-16 flex flex-col items-center justify-center" style={{ backgroundColor: S.surface }}>
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ backgroundColor: "var(--c-primary-light)" }}>
-                <Users size={28} style={{ color: "var(--c-primary)" }} />
-              </div>
-              <p className="font-semibold text-sm" style={{ color: S.text }}>কোনো কর্মী নেই</p>
-              <p className="text-xs mt-1.5" style={{ color: S.muted }}>Settings থেকে কর্মী আমন্ত্রণ জানান</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-            <table className="w-full min-w-[500px]">
-              <thead>
-                <tr style={{ backgroundColor: S.surface, borderBottom: `1px solid ${S.border}` }}>
-                  {["নাম", "পদবী", "ভূমিকা", "ফোন", "বেতন", "অবস্থা"].map((h) => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold" style={{ color: S.muted }}>
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {staff.map((member) => (
-                  <tr key={member.id} className="transition-colors" style={{ borderBottom: `1px solid ${S.border}` }} onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--c-primary-light)")} onMouseLeave={e => (e.currentTarget.style.backgroundColor = "")}>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                          style={{ backgroundColor: S.primary }}
-                        >
-                          {member.user.name[0]}
-                        </div>
-                        <span className="text-sm font-medium" style={{ color: S.text }}>
-                          {member.user.name}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm" style={{ color: S.muted }}>
-                      {member.jobTitle || "—"}
-                    </td>
-                    <td className="px-4 py-3 text-sm" style={{ color: S.text }}>
-                      {member.role}
-                    </td>
-                    <td className="px-4 py-3 text-sm" style={{ color: S.muted }}>
-                      {member.phone || "—"}
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium" style={{ color: S.text }}>
-                      {member.salary ? `৳${member.salary.toLocaleString("bn-BD")}` : "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className="px-2 py-0.5 rounded-full text-xs font-medium"
-                        style={{
-                          color: member.isActive ? "#10B981" : "#EF4444",
-                          backgroundColor: member.isActive ? "#ECFDF5" : "#FEF2F2",
-                        }}
-                      >
-                        {member.isActive ? "সক্রিয়" : "নিষ্ক্রিয়"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            </div>
-          )}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg ${toast.type === "success" ? "bg-emerald-600" : "bg-red-500"}`}>
+          {toast.msg}
         </div>
       )}
 
-      {activeTab === "attendance" && (
-        <div>
-          <div className="flex items-center gap-3 mb-4">
-            <select
-              value={month}
-              onChange={(e) => setMonth(parseInt(e.target.value))}
-              style={{ ...inp(false), width: "auto" }}
-            >
-              {monthNames.map((name, idx) => (
-                <option key={idx} value={idx + 1}>
-                  {name} {year}
-                </option>
-              ))}
-            </select>
-            <div className="flex gap-4 text-sm" style={{ color: S.muted }}>
-              <span>উপস্থিত: <strong style={{ color: "#10B981" }}>{presentCount}</strong></span>
-              <span>অনুপস্থিত: <strong style={{ color: "#EF4444" }}>{absentCount}</strong></span>
+      <div className="max-w-5xl mx-auto space-y-6">
+        {/* ─── Header ──────────────────────── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}>
+              <Users size={18} color="#fff" />
+            </div>
+            <div>
+              <h1 className="text-lg font-black text-gray-900">কর্মী ব্যবস্থাপনা</h1>
+              <p className="text-xs text-gray-400 font-medium">Staff তালিকা, বেতন ও উপস্থিতি এক জায়গায়</p>
             </div>
           </div>
-
-          <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${S.border}` }}>
-            {loading ? (
-              <div className="p-12 text-center" style={{ color: S.muted }}>
-                লোড হচ্ছে...
-              </div>
-            ) : attendances.length === 0 ? (
-              <div className="p-12 text-center">
-                <Calendar size={36} style={{ color: S.muted }} className="mx-auto mb-3" />
-                <p className="font-medium" style={{ color: S.text }}>
-                  এই মাসে কোনো উপস্থিতি রেকর্ড নেই
-                </p>
-                <button
-                  onClick={() => setShowModal(true)}
-                  className="mt-3 px-4 py-2 rounded-xl text-white text-sm font-semibold"
-                  style={{ backgroundColor: S.primary }}
-                >
-                  উপস্থিতি নিন
-                </button>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-              <table className="w-full min-w-[560px]">
-                <thead>
-                  <tr style={{ backgroundColor: S.surface, borderBottom: `1px solid ${S.border}` }}>
-                    {["তারিখ", "কর্মী", "অবস্থা", "চেক-ইন", "চেক-আউট", "নোট"].map((h) => (
-                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold" style={{ color: S.muted }}>
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {attendances.map((att) => {
-                    const cfg = STATUS_CONFIG[att.status] ?? STATUS_CONFIG.present;
-                    return (
-                      <tr key={att.id} className="transition-colors" style={{ borderBottom: `1px solid ${S.border}` }} onMouseEnter={e => (e.currentTarget.style.backgroundColor = "var(--c-primary-light)")} onMouseLeave={e => (e.currentTarget.style.backgroundColor = "")}>
-                        <td className="px-4 py-3 text-sm" style={{ color: S.muted }}>
-                          {new Date(att.date).toLocaleDateString("bn-BD")}
-                        </td>
-                        <td className="px-4 py-3 text-sm font-medium" style={{ color: S.text }}>
-                          {att.staff?.user?.name}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style={{ color: cfg.color, backgroundColor: cfg.bg }}>
-                            {cfg.icon}
-                            {cfg.label}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm" style={{ color: S.muted }}>
-                          {att.checkIn ? new Date(att.checkIn).toLocaleTimeString("bn-BD", { hour: "2-digit", minute: "2-digit" }) : "—"}
-                        </td>
-                        <td className="px-4 py-3 text-sm" style={{ color: S.muted }}>
-                          {att.checkOut ? new Date(att.checkOut).toLocaleTimeString("bn-BD", { hour: "2-digit", minute: "2-digit" }) : "—"}
-                        </td>
-                        <td className="px-4 py-3 text-sm" style={{ color: S.muted }}>
-                          {att.notes || "—"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              </div>
+          <div className="flex gap-2">
+            {activeTab === "attendance" && (
+              <button
+                onClick={() => setShowAttModal(true)}
+                className="flex items-center gap-2 px-4 h-9 rounded-xl text-white text-sm font-semibold transition-all hover:opacity-90"
+                style={{ background: "linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)" }}
+              >
+                <Calendar size={14} /> উপস্থিতি নিন
+              </button>
+            )}
+            {activeTab === "staff" && (
+              <button
+                onClick={() => setShowInviteModal(true)}
+                className="flex items-center gap-2 px-4 h-9 rounded-xl text-white text-sm font-semibold transition-all hover:opacity-90"
+                style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}
+              >
+                <UserPlus size={14} /> Invite করুন
+              </button>
             )}
           </div>
         </div>
-      )}
 
-      {activeTab === "commission" && isSalon && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <select
-              value={month}
-              onChange={e => setMonth(parseInt(e.target.value))}
-              style={{ height: "40px", border: `1px solid ${S.border}`, borderRadius: "8px", color: S.text, backgroundColor: S.surface, padding: "0 12px", fontSize: "14px", outline: "none", width: "auto" }}
+        {/* ─── Stat Cards ──────────────────── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <StatCard
+            label="মোট কর্মী"
+            value={staff.length}
+            gradient="linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)"
+            icon={Users}
+          />
+          <StatCard
+            label="সক্রিয় কর্মী"
+            value={activeCount}
+            sub={pendingCount > 0 ? `${pendingCount} pending` : undefined}
+            gradient="linear-gradient(135deg, #059669 0%, #047857 100%)"
+            icon={ShieldCheck}
+          />
+          <StatCard
+            label={`উপস্থিত (${MONTH_NAMES[month - 1]})`}
+            value={presentCount}
+            gradient="linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)"
+            icon={Check}
+          />
+          <StatCard
+            label="মোট বেতন বিল"
+            value={formatBDT(totalSalary)}
+            gradient="linear-gradient(135deg, #D97706 0%, #B45309 100%)"
+            icon={TrendingUp}
+          />
+        </div>
+
+        {/* ─── Pill Tab Bar ─────────────────── */}
+        <div className="flex gap-1 p-1 rounded-2xl w-fit overflow-x-auto bg-gray-100">
+          {TABS.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap"
+              style={{
+                background: activeTab === tab.key ? "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" : "transparent",
+                color: activeTab === tab.key ? "#fff" : "#6B7280",
+              }}
             >
-              {["জানুয়ারি","ফেব্রুয়ারি","মার্চ","এপ্রিল","মে","জুন","জুলাই","আগস্ট","সেপ্টেম্বর","অক্টোবর","নভেম্বর","ডিসেম্বর"].map((name, idx) => (
-                <option key={idx} value={idx + 1}>{name} {year}</option>
-              ))}
-            </select>
-          </div>
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-          {commissionLoading ? (
-            <div className="py-16 flex justify-center">
-              <Loader2 size={28} className="animate-spin" style={{ color: S.muted }} />
-            </div>
-          ) : commissionData.length === 0 ? (
-            <div className="py-16 flex flex-col items-center justify-center rounded-2xl border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ backgroundColor: "#FDF2F8" }}>
-                <Scissors size={28} style={{ color: "#EC4899" }} />
-              </div>
-              <p className="font-semibold text-sm" style={{ color: S.text }}>এই মাসে কোনো কমিশন নেই</p>
-              <p className="text-xs mt-1" style={{ color: S.muted }}>সম্পন্ন অ্যাপয়েন্টমেন্ট থেকে কমিশন হিসাব হবে</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {commissionData.map(entry => {
-                const unpaid = entry.totalCommission - entry.paidCommission;
-                return (
-                  <div key={entry.staffId} className="rounded-2xl border overflow-hidden" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-                    <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: `1px solid ${S.border}` }}>
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{ backgroundColor: "#EC4899" }}>
-                          {entry.staffName[0]}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-sm" style={{ color: S.text }}>{entry.staffName}</p>
-                          <p className="text-xs" style={{ color: S.muted }}>
-                            মোট রাজস্ব: {formatBDT(entry.totalRevenue)} · কমিশন: {formatBDT(entry.totalCommission)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <p className="text-xs" style={{ color: S.muted }}>বাকি</p>
-                          <p className="font-bold text-sm" style={{ color: unpaid > 0 ? "#EF4444" : "#10B981" }}>
-                            {formatBDT(unpaid)}
-                          </p>
-                        </div>
-                        {unpaid > 0 && (
-                          <button
-                            onClick={() => markCommissionPaid(entry.staffId)}
-                            disabled={payingStaffId === entry.staffId}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold disabled:opacity-60"
-                            style={{ backgroundColor: "#ECFDF5", color: "#10B981", border: "1px solid #10B981" }}
-                          >
-                            {payingStaffId === entry.staffId
-                              ? <Loader2 size={12} className="animate-spin" />
-                              : <DollarSign size={12} />
-                            }
-                            Commission দিয়েছি
-                          </button>
-                        )}
-                        {unpaid === 0 && entry.totalCommission > 0 && (
-                          <span className="px-3 py-1.5 rounded-xl text-xs font-semibold" style={{ backgroundColor: "#ECFDF5", color: "#10B981" }}>
-                            ✓ পরিশোধিত
-                          </span>
-                        )}
-                      </div>
+        {/* ─── Staff Tab ────────────────────── */}
+        {activeTab === "staff" && (
+          <div className="space-y-4">
+            {/* Permission Matrix */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+              <p className="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wide">Permission Matrix</p>
+              <div className="grid sm:grid-cols-2 gap-3">
+                {[
+                  { role: "ম্যানেজার", icon: Crown, perms: "Orders, Products, Customers, Reports — সব দেখা ও এডিট। Settings ও Billing ছাড়া।", color: "#16A34A", bg: "#DCFCE7" },
+                  { role: "স্টাফ", icon: User, perms: "শুধু Orders দেখা ও তৈরি করতে পারবে।", color: "#7C3AED", bg: "#EDE9FE" },
+                ].map(({ role, icon: Icon, perms, color, bg }) => (
+                  <div key={role} className="flex items-start gap-3 p-3 rounded-xl" style={{ backgroundColor: bg + "60" }}>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: bg }}>
+                      <Icon size={14} style={{ color }} />
                     </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full min-w-[450px]">
-                        <thead>
-                          <tr style={{ borderBottom: `1px solid ${S.border}` }}>
-                            {["সার্ভিস", "রাজস্ব", "কমিশন", "অবস্থা"].map(h => (
-                              <th key={h} className="px-4 py-2 text-left text-xs font-semibold" style={{ color: S.muted }}>{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {entry.services.map((svc, i) => (
-                            <tr key={i} style={{ borderBottom: `1px solid ${S.border}` }}>
-                              <td className="px-4 py-2.5">
-                                <div className="text-xs font-medium" style={{ color: S.text }}>{svc.serviceName}</div>
-                                <div className="text-[10px]" style={{ color: S.muted }}>{new Date(svc.date).toLocaleDateString("bn-BD")}</div>
-                              </td>
-                              <td className="px-4 py-2.5 text-xs" style={{ color: S.text }}>{formatBDT(svc.revenue)}</td>
-                              <td className="px-4 py-2.5 text-xs font-semibold" style={{ color: "#EC4899" }}>{formatBDT(svc.commission)}</td>
-                              <td className="px-4 py-2.5">
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-medium"
-                                  style={{ backgroundColor: svc.paid ? "#ECFDF5" : "#FEF2F2", color: svc.paid ? "#10B981" : "#EF4444" }}>
-                                  {svc.paid ? "পরিশোধিত" : "বাকি"}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <div>
+                      <p className="text-sm font-bold" style={{ color }}>{role}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{perms}</p>
                     </div>
                   </div>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          )}
-        </div>
-      )}
 
-      {showModal && <AttendanceModal staff={staff} onClose={() => setShowModal(false)} onSave={loadAttendance} />}
-    </div>
+            {/* Staff List */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              {loading ? (
+                <div className="p-5 space-y-3">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="h-16 rounded-xl bg-gray-100 animate-pulse" />
+                  ))}
+                </div>
+              ) : staff.length === 0 ? (
+                <div className="py-16 flex flex-col items-center justify-center">
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 bg-emerald-50">
+                    <Users size={28} className="text-emerald-600" />
+                  </div>
+                  <p className="font-bold text-gray-900">কোনো কর্মী নেই</p>
+                  <p className="text-xs text-gray-400 mt-1 mb-4">উপরের Invite বাটন দিয়ে প্রথম কর্মী যোগ করুন</p>
+                  <button
+                    onClick={() => setShowInviteModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold"
+                    style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}
+                  >
+                    <UserPlus size={14} /> + Invite করুন
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  {staff.map((member, i) => {
+                    const rc = ROLE_COLOR[member.role] ?? { bg: "#F3F4F6", text: "#374151" };
+                    const joined = !!member.joinedAt;
+                    return (
+                      <div
+                        key={member.id}
+                        className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors"
+                        style={{ borderBottom: i < staff.length - 1 ? "1px solid #F3F4F6" : "none" }}
+                      >
+                        <div
+                          className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-black text-white flex-shrink-0"
+                          style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}
+                        >
+                          {member.user.name[0].toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-bold text-gray-900 truncate">{member.user.name}</p>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold flex-shrink-0"
+                              style={{ backgroundColor: rc.bg, color: rc.text }}>
+                              {ROLE_LABEL[member.role] ?? member.role}
+                            </span>
+                            {!joined && (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold flex-shrink-0 bg-amber-50 text-amber-600 flex items-center gap-1">
+                                <AlertCircle size={9} /> Invite pending
+                              </span>
+                            )}
+                            {joined && (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold flex-shrink-0 bg-emerald-50 text-emerald-600">
+                                ✓ যোগ দিয়েছেন
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-400 mt-0.5 truncate">{member.user.email}</p>
+                          {member.jobTitle && <p className="text-xs text-gray-500 truncate">{member.jobTitle}</p>}
+                        </div>
+                        <div className="hidden sm:flex items-center gap-4 flex-shrink-0">
+                          {member.salary ? (
+                            <div className="text-right">
+                              <p className="text-xs text-gray-400">বেতন</p>
+                              <p className="text-sm font-bold text-gray-900">{formatBDT(member.salary)}</p>
+                            </div>
+                          ) : null}
+                        </div>
+                        <button
+                          onClick={() => removeStaff(member.id)}
+                          className="p-2 rounded-xl hover:bg-red-50 flex-shrink-0 transition-colors"
+                        >
+                          <Trash2 size={15} className="text-red-400" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ─── Attendance Tab ───────────────── */}
+        {activeTab === "attendance" && (
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="relative">
+                <select
+                  value={month}
+                  onChange={e => setMonth(parseInt(e.target.value))}
+                  className="h-10 px-3 pr-8 rounded-xl border border-gray-200 text-sm outline-none focus:border-blue-500 text-gray-700 appearance-none bg-white font-medium"
+                >
+                  {MONTH_NAMES.map((name, idx) => (
+                    <option key={idx} value={idx + 1}>{name} {year}</option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" />
+              </div>
+              <div className="flex gap-3">
+                <div className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold">
+                  উপস্থিত: {presentCount}
+                </div>
+                <div className="px-3 py-1.5 rounded-xl bg-red-50 text-red-600 text-xs font-semibold">
+                  অনুপস্থিত: {absentCount}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              {loading ? (
+                <div className="p-12 text-center text-gray-400 text-sm">লোড হচ্ছে...</div>
+              ) : attendances.length === 0 ? (
+                <div className="p-12 text-center">
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 bg-blue-50 mx-auto">
+                    <Calendar size={28} className="text-blue-500" />
+                  </div>
+                  <p className="font-bold text-gray-900">এই মাসে কোনো উপস্থিতি নেই</p>
+                  <p className="text-xs text-gray-400 mt-1 mb-4">উপরের বাটন দিয়ে আজকের উপস্থিতি রেকর্ড করুন</p>
+                  <button
+                    onClick={() => setShowAttModal(true)}
+                    className="px-4 py-2 rounded-xl text-white text-sm font-semibold"
+                    style={{ background: "linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)" }}
+                  >
+                    উপস্থিতি নিন
+                  </button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[560px]">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-100">
+                        {["তারিখ", "কর্মী", "অবস্থা", "চেক-ইন", "চেক-আউট", "নোট"].map(h => (
+                          <th key={h} className="px-5 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-wide">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {attendances.map((att, i) => {
+                        const cfg = STATUS_CONFIG[att.status] ?? STATUS_CONFIG.present;
+                        return (
+                          <tr key={att.id} className="hover:bg-gray-50 transition-colors"
+                            style={{ borderBottom: i < attendances.length - 1 ? "1px solid #F3F4F6" : "none" }}>
+                            <td className="px-5 py-3.5 text-sm text-gray-500">
+                              {new Date(att.date).toLocaleDateString("bn-BD")}
+                            </td>
+                            <td className="px-5 py-3.5">
+                              <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-full bg-emerald-600 flex items-center justify-center text-xs font-black text-white flex-shrink-0">
+                                  {att.staff?.user?.name?.[0]?.toUpperCase()}
+                                </div>
+                                <span className="text-sm font-semibold text-gray-900">{att.staff?.user?.name}</span>
+                              </div>
+                            </td>
+                            <td className="px-5 py-3.5">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
+                                style={{ color: cfg.color, backgroundColor: cfg.bg }}>
+                                {cfg.icon}
+                                {cfg.label}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3.5 text-sm text-gray-500">
+                              {att.checkIn ? new Date(att.checkIn).toLocaleTimeString("bn-BD", { hour: "2-digit", minute: "2-digit" }) : "—"}
+                            </td>
+                            <td className="px-5 py-3.5 text-sm text-gray-500">
+                              {att.checkOut ? new Date(att.checkOut).toLocaleTimeString("bn-BD", { hour: "2-digit", minute: "2-digit" }) : "—"}
+                            </td>
+                            <td className="px-5 py-3.5 text-sm text-gray-400">{att.notes || "—"}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ─── Commission Tab ───────────────── */}
+        {activeTab === "commission" && isSalon && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <select
+                  value={month}
+                  onChange={e => setMonth(parseInt(e.target.value))}
+                  className="h-10 px-3 pr-8 rounded-xl border border-gray-200 text-sm outline-none focus:border-pink-500 text-gray-700 appearance-none bg-white font-medium"
+                >
+                  {MONTH_NAMES.map((name, idx) => (
+                    <option key={idx} value={idx + 1}>{name} {year}</option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" />
+              </div>
+            </div>
+
+            {commissionLoading ? (
+              <div className="py-16 flex justify-center">
+                <Loader2 size={28} className="animate-spin text-gray-400" />
+              </div>
+            ) : commissionData.length === 0 ? (
+              <div className="py-16 flex flex-col items-center justify-center bg-white rounded-2xl border border-gray-100 shadow-sm">
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 bg-pink-50">
+                  <Scissors size={28} className="text-pink-500" />
+                </div>
+                <p className="font-bold text-gray-900">এই মাসে কোনো কমিশন নেই</p>
+                <p className="text-xs text-gray-400 mt-1">সম্পন্ন অ্যাপয়েন্টমেন্ট থেকে কমিশন হিসাব হবে</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {commissionData.map(entry => {
+                  const unpaid = entry.totalCommission - entry.paidCommission;
+                  return (
+                    <div key={entry.staffId} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-black text-white"
+                            style={{ background: "linear-gradient(135deg, #EC4899 0%, #DB2777 100%)" }}>
+                            {entry.staffName[0]}
+                          </div>
+                          <div>
+                            <p className="font-bold text-gray-900 text-sm">{entry.staffName}</p>
+                            <p className="text-xs text-gray-400">
+                              রাজস্ব: {formatBDT(entry.totalRevenue)} · কমিশন: {formatBDT(entry.totalCommission)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className="text-xs text-gray-400">বাকি</p>
+                            <p className="font-black text-sm" style={{ color: unpaid > 0 ? "#EF4444" : "#10B981" }}>
+                              {formatBDT(unpaid)}
+                            </p>
+                          </div>
+                          {unpaid > 0 && (
+                            <button
+                              onClick={() => markCommissionPaid(entry.staffId)}
+                              disabled={payingStaffId === entry.staffId}
+                              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold disabled:opacity-60 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                            >
+                              {payingStaffId === entry.staffId
+                                ? <Loader2 size={12} className="animate-spin" />
+                                : <DollarSign size={12} />}
+                              দিয়েছি
+                            </button>
+                          )}
+                          {unpaid === 0 && entry.totalCommission > 0 && (
+                            <span className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700">
+                              ✓ পরিশোধিত
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[450px]">
+                          <thead>
+                            <tr className="bg-gray-50 border-b border-gray-100">
+                              {["সার্ভিস", "রাজস্ব", "কমিশন", "অবস্থা"].map(h => (
+                                <th key={h} className="px-5 py-2.5 text-left text-xs font-bold text-gray-400 uppercase tracking-wide">{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {entry.services.map((svc, i) => (
+                              <tr key={i} className="hover:bg-gray-50 transition-colors"
+                                style={{ borderBottom: i < entry.services.length - 1 ? "1px solid #F3F4F6" : "none" }}>
+                                <td className="px-5 py-3">
+                                  <div className="text-sm font-medium text-gray-900">{svc.serviceName}</div>
+                                  <div className="text-[11px] text-gray-400">{new Date(svc.date).toLocaleDateString("bn-BD")}</div>
+                                </td>
+                                <td className="px-5 py-3 text-sm text-gray-700">{formatBDT(svc.revenue)}</td>
+                                <td className="px-5 py-3 text-sm font-bold text-pink-600">{formatBDT(svc.commission)}</td>
+                                <td className="px-5 py-3">
+                                  <span className="px-2.5 py-1 rounded-full text-xs font-semibold"
+                                    style={{ backgroundColor: svc.paid ? "#ECFDF5" : "#FEF2F2", color: svc.paid ? "#10B981" : "#EF4444" }}>
+                                    {svc.paid ? "পরিশোধিত" : "বাকি"}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {showInviteModal && (
+        <InviteModal
+          onClose={() => setShowInviteModal(false)}
+          onInvited={member => setStaff(prev => [member, ...prev])}
+          showToast={showToast}
+        />
+      )}
+      {showAttModal && (
+        <AttendanceModal
+          staff={staff}
+          onClose={() => setShowAttModal(false)}
+          onSave={loadAttendance}
+        />
+      )}
     </PlanGate>
   );
 }
