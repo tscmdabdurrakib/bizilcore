@@ -8,6 +8,7 @@ import { formatBDT } from "@/lib/utils";
 import dynamic from "next/dynamic";
 import Papa from "papaparse";
 import { downloadExcel } from "@/lib/excel";
+import ProductEditPanel from "@/components/inventory/ProductEditPanel";
 
 const BarcodeScanner = dynamic(() => import("@/components/BarcodeScanner"), { ssr: false });
 
@@ -75,6 +76,7 @@ export default function InventoryPage() {
   const [adjQty, setAdjQty] = useState("");
   const [adjReason, setAdjReason] = useState("");
   const [adjSaving, setAdjSaving] = useState(false);
+  const [editProductId, setEditProductId] = useState<string | null>(null);
   const [showAiPanel, setShowAiPanel] = useState(false);
   const [aiPredLoading, setAiPredLoading] = useState(false);
   const [aiPredData, setAiPredData] = useState<{ predictions: Array<{ productName: string; currentStock: number; daysUntilStockout: number; urgency: "urgent" | "warning" | "ok"; action: string }>; summary: string; cached?: boolean } | null>(null);
@@ -720,9 +722,9 @@ export default function InventoryPage() {
                               className="p-2 rounded-lg hover:bg-blue-50 transition-colors" title="স্টক সামঞ্জস্য">
                               <Sliders size={14} className="text-blue-500" />
                             </button>
-                            <Link href={`/inventory/${p.id}/edit`} className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                            <button onClick={() => setEditProductId(p.id)} className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
                               <Pencil size={14} className="text-gray-500" />
-                            </Link>
+                            </button>
                             <button onClick={() => setDeleteId(p.id)} className="p-2 rounded-lg hover:bg-red-50 transition-colors">
                               <Trash2 size={14} className="text-red-400" />
                             </button>
@@ -737,6 +739,13 @@ export default function InventoryPage() {
           )
         )}
       </div>
+
+      {/* ── Edit Slide-over Panel ── */}
+      <ProductEditPanel
+        productId={editProductId}
+        onClose={() => setEditProductId(null)}
+        onSaved={() => fetchProducts()}
+      />
     </div>
   );
 }
