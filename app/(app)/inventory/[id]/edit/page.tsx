@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { ChevronLeft, Plus, Trash2, Layers, Sparkles, Loader2, Lightbulb, X } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, Layers, Sparkles, Loader2, Lightbulb, X, Package, Tag, DollarSign, BarChart3, Save } from "lucide-react";
 import ProductImageManager, { ProductImage } from "@/components/ProductImageManager";
 
 const SIZES = ["S", "M", "L", "XL", "XXL", "2XL", "3XL", "Free Size"];
@@ -16,11 +16,6 @@ interface Category {
   description: string | null;
   isDefault: boolean;
 }
-
-const inp = (f: boolean) => ({
-  height: "40px", border: `1px solid ${f ? "var(--c-primary)" : "var(--c-border)"}`, borderRadius: "8px",
-  color: "var(--c-text)", backgroundColor: "var(--c-surface)", padding: "0 12px", fontSize: "14px", outline: "none", width: "100%",
-});
 
 interface Variant { id: string; size: string; color: string; sku: string; buyPrice: string; price: string; stockQty: string; isNew?: boolean; }
 
@@ -36,6 +31,9 @@ function newVariant(): Variant {
   return { id: Math.random().toString(36).slice(2), size: "", color: "", sku: "", buyPrice: "", price: "", stockQty: "", isNew: true };
 }
 
+const fieldCls = "w-full h-11 border border-gray-200 rounded-xl px-4 text-sm text-gray-900 bg-white outline-none focus:border-gray-400 transition-colors placeholder:text-gray-400";
+const labelCls = "block text-sm font-semibold text-gray-700 mb-1.5";
+
 export default function EditInventoryPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -45,7 +43,6 @@ export default function EditInventoryPage() {
   const [plan, setPlan] = useState<"free" | "pro" | "business">("free");
   const [hasVariants, setHasVariants] = useState(false);
   const [variants, setVariants] = useState<Variant[]>([]);
-  const [focused, setFocused] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
@@ -56,11 +53,6 @@ export default function EditInventoryPage() {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [creatingCategory, setCreatingCategory] = useState(false);
-
-  const S = {
-    surface: "var(--c-surface)", border: "var(--c-border)", text: "var(--c-text)",
-    secondary: "var(--c-text-sub)", primary: "var(--c-primary)", muted: "var(--c-text-muted)", bg: "var(--c-bg)",
-  };
 
   function showToast(type: "success" | "error", msg: string) {
     setToast({ type, msg });
@@ -80,19 +72,16 @@ export default function EditInventoryPage() {
   }
 
   useEffect(() => {
-    // Fetch plan
     fetch("/api/user/plan")
       .then(r => r.json())
       .then(d => { if (d.plan) setPlan(d.plan as "free" | "pro" | "business"); })
       .catch(() => {});
 
-    // Fetch categories
     fetch("/api/categories")
       .then(r => r.json())
       .then(data => setCategories(data))
       .catch(() => {});
 
-    // Fetch product
     fetch(`/api/products/${id}`)
       .then(r => r.json())
       .then(p => {
@@ -103,14 +92,11 @@ export default function EditInventoryPage() {
           description: p.description ?? "",
         });
         setHasVariants(!!p.hasVariants);
-
-        // Load images
         if (Array.isArray(p.images) && p.images.length > 0) {
           setImages(p.images as unknown as ProductImage[]);
         } else if (p.imageUrl) {
           setImages([{ id: "legacy", type: "url", src: p.imageUrl, isPrimary: true, order: 0 }]);
         }
-
         if (p.variants?.length > 0) setVariants(p.variants.map(variantFromDb));
         else setVariants([newVariant()]);
       })
@@ -122,22 +108,14 @@ export default function EditInventoryPage() {
   }
 
   async function handleCreateCategory() {
-    if (!newCategoryName.trim()) {
-      showToast("error", "ক্যাটাগরির নাম আবশ্যক");
-      return;
-    }
-
+    if (!newCategoryName.trim()) { showToast("error", "ক্যাটাগরির নাম আবশ্যক"); return; }
     setCreatingCategory(true);
     try {
       const r = await fetch("/api/categories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: newCategoryName.trim(),
-          description: null,
-        }),
+        body: JSON.stringify({ name: newCategoryName.trim(), description: null }),
       });
-
       const data = await r.json();
       if (r.ok) {
         showToast("success", "নতুন ক্যাটাগরি তৈরি হয়েছে ✓");
@@ -148,7 +126,7 @@ export default function EditInventoryPage() {
       } else {
         showToast("error", data.error || "সমস্যা হয়েছে");
       }
-    } catch (error) {
+    } catch {
       showToast("error", "সংযোগ সমস্যা");
     } finally {
       setCreatingCategory(false);
@@ -184,10 +162,7 @@ export default function EditInventoryPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name.trim()) return;
-    if (hasVariants && variants.length === 0) {
-      showToast("error", "কমপক্ষে একটি Variant থাকতে হবে।");
-      return;
-    }
+    if (hasVariants && variants.length === 0) { showToast("error", "কমপক্ষে একটি Variant থাকতে হবে।"); return; }
     setSaving(true);
 
     const variantData = hasVariants ? variants.map(v => ({
@@ -233,358 +208,384 @@ export default function EditInventoryPage() {
   }
 
   if (loading) return (
-    <div className="max-w-2xl animate-pulse space-y-4">
-      {[1, 2, 3, 4].map(i => <div key={i} className="h-12 bg-gray-100 rounded-xl" />)}
+    <div className="max-w-3xl animate-pulse space-y-4 pb-6">
+      <div className="h-12 bg-gray-100 rounded-2xl" />
+      {[1, 2, 3, 4].map(i => <div key={i} className="h-48 bg-gray-100 rounded-2xl" />)}
     </div>
   );
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-3xl pb-10">
+
+      {/* Toast */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg"
-          style={{ backgroundColor: toast.type === "success" ? "#1D9E75" : "#E24B4A" }}>
+        <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-2xl text-white text-sm font-bold shadow-xl"
+          style={{ backgroundColor: toast.type === "success" ? "#10B981" : "#EF4444" }}>
           {toast.msg}
         </div>
       )}
 
+      {/* Category Modal */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className="font-bold text-gray-900 text-lg">নতুন ক্যাটাগরি</h3>
+                <p className="text-xs text-gray-500 mt-0.5">একটি নতুন পণ্য ক্যাটাগরি তৈরি করুন</p>
+              </div>
+              <button onClick={() => { setShowCategoryModal(false); setNewCategoryName(""); }}
+                className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className={labelCls}>ক্যাটাগরির নাম *</label>
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="যেমন: পোশাক, জুয়েলারি, খাবার..."
+                  className={fieldCls}
+                  autoFocus
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleCreateCategory(); } }}
+                />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button type="button" onClick={() => { setShowCategoryModal(false); setNewCategoryName(""); }}
+                  className="flex-1 py-3 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+                  বাতিল
+                </button>
+                <button type="button" onClick={handleCreateCategory} disabled={creatingCategory}
+                  className="flex-1 py-3 rounded-xl text-white text-sm font-bold disabled:opacity-60 transition-colors"
+                  style={{ backgroundColor: "var(--c-primary)" }}>
+                  {creatingCategory ? "তৈরি হচ্ছে..." : "তৈরি করুন"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Header ── */}
       <div className="flex items-center gap-3 mb-6">
-        <Link href="/inventory" className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
-          <ChevronLeft size={20} style={{ color: S.secondary }} />
+        <Link href="/inventory"
+          className="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors text-gray-500">
+          <ChevronLeft size={20} />
         </Link>
-        <h2 className="font-semibold text-lg" style={{ color: S.text }}>পণ্য সম্পাদনা</h2>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)" }}>
+            <Package size={18} color="#fff" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">পণ্য সম্পাদনা</h1>
+            <p className="text-xs text-gray-500">পণ্যের তথ্য আপডেট করুন</p>
+          </div>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Basic Info */}
-        <div className="rounded-2xl border p-6 space-y-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-          <h3 className="text-sm font-semibold" style={{ color: S.text }}>মূল তথ্য</h3>
 
-          {/* Image Manager */}
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: S.text }}>পণ্যের ছবি</label>
-            <ProductImageManager
-              plan={plan}
-              productId={id}
-              images={images}
-              onChange={setImages}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1.5" style={{ color: S.text }}>পণ্যের নাম *</label>
-            <input type="text" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-              required placeholder="পণ্যের নাম লিখুন" style={inp(focused === "name")}
-              onFocus={() => setFocused("name")} onBlur={() => setFocused(null)} />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1.5" style={{ color: S.text }}>SKU / কোড</label>
-            <input type="text" value={form.sku} onChange={e => setForm(p => ({ ...p, sku: e.target.value }))}
-              placeholder="PRD-001" style={inp(focused === "sku")}
-              onFocus={() => setFocused("sku")} onBlur={() => setFocused(null)} />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1.5" style={{ color: S.text }}>ক্যাটাগরি</label>
-            <div className="flex gap-2">
-              <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))}
-                style={{ ...inp(false), appearance: "auto", flex: 1 }}>
-                <option value="">বেছে নিন</option>
-                {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-              </select>
-              <button
-                type="button"
-                onClick={() => setShowCategoryModal(true)}
-                className="flex items-center justify-center px-3 rounded-xl border text-sm font-medium flex-shrink-0 hover:bg-gray-50 transition-colors"
-                style={{ borderColor: S.border, color: S.primary }}
-                title="নতুন ক্যাটাগরি তৈরি করুন"
-              >
-                <Plus size={16} />
-              </button>
+        {/* ── Basic Info Card ── */}
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-50 bg-gray-50/50">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)" }}>
+              <Package size={15} color="#fff" />
             </div>
+            <h3 className="font-bold text-gray-900 text-sm">মূল তথ্য</h3>
           </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-sm font-medium" style={{ color: S.text }}>পণ্যের বিবরণ</label>
-              <button type="button" onClick={askAIDescription} disabled={aiDescLoading}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-                style={{ background: "rgba(15,110,86,0.08)", color: S.primary }}>
-                {aiDescLoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                AI দিয়ে লিখুন
-              </button>
-            </div>
-            <textarea
-              value={form.description}
-              onChange={e => set("description", e.target.value)}
-              placeholder="পণ্যের বিস্তারিত বিবরণ লিখুন অথবা AI দিয়ে স্বয়ংক্রিয়ভাবে তৈরি করুন..."
-              rows={3}
-              onFocus={() => setFocused("desc")} onBlur={() => setFocused(null)}
-              style={{
-                width: "100%", padding: "10px 12px", fontSize: "14px", borderRadius: "8px",
-                border: `1px solid ${focused === "desc" ? "var(--c-primary)" : S.border}`,
-                backgroundColor: S.surface, color: S.text, outline: "none", resize: "vertical",
-                lineHeight: "1.5",
-              }}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
+          <div className="p-6 space-y-5">
+            {/* Image Manager */}
             <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: S.text }}>ক্রয় মূল্য (৳)</label>
-              <input type="number" value={form.buyPrice} onChange={e => setForm(p => ({ ...p, buyPrice: e.target.value }))}
-                placeholder="০" min="0" style={inp(focused === "buy")}
-                onFocus={() => setFocused("buy")} onBlur={() => setFocused(null)} />
+              <label className={labelCls}>পণ্যের ছবি</label>
+              <ProductImageManager plan={plan} productId={id} images={images} onChange={setImages} />
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: S.text }}>বিক্রয় মূল্য (৳) *</label>
-              <input type="number" value={form.sellPrice} onChange={e => setForm(p => ({ ...p, sellPrice: e.target.value }))}
-                placeholder="০" min="0" required style={inp(focused === "sell")}
-                onFocus={() => setFocused("sell")} onBlur={() => setFocused(null)} />
-            </div>
-          </div>
 
-          {/* AI Pricing */}
-          <div>
-            <button type="button" onClick={askAIPricing} disabled={aiPriceLoading}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-sm font-medium transition-colors disabled:opacity-50 hover:bg-gray-50"
-              style={{ borderColor: S.border, color: S.primary }}>
-              {aiPriceLoading ? <Loader2 size={14} className="animate-spin" /> : <Lightbulb size={14} />}
-              AI মূল্য সাজেশন
-            </button>
-            {aiPriceSuggestion && (
-              <div className="mt-2 p-3 rounded-xl" style={{ background: "rgba(15,110,86,0.06)", border: `1px solid rgba(15,110,86,0.2)` }}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-semibold" style={{ color: S.primary }}>
-                    সাজেস্টেড মূল্য: ৳{aiPriceSuggestion.suggestedMin} – ৳{aiPriceSuggestion.suggestedMax}
-                  </span>
-                  <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "rgba(15,110,86,0.12)", color: S.primary }}>
-                    {aiPriceSuggestion.profitMargin} মুনাফা
-                  </span>
+            <div>
+              <label className={labelCls}>পণ্যের নাম *</label>
+              <input type="text" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+                required placeholder="পণ্যের নাম লিখুন" className={fieldCls} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>SKU / কোড</label>
+                <input type="text" value={form.sku} onChange={e => setForm(p => ({ ...p, sku: e.target.value }))}
+                  placeholder="PRD-001" className={fieldCls} />
+              </div>
+              <div>
+                <label className={labelCls}>ক্যাটাগরি</label>
+                <div className="flex gap-2">
+                  <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))}
+                    className={`${fieldCls} flex-1`} style={{ appearance: "auto" }}>
+                    <option value="">বেছে নিন</option>
+                    {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                  </select>
+                  <button type="button" onClick={() => setShowCategoryModal(true)}
+                    className="w-11 h-11 rounded-xl border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors flex-shrink-0"
+                    title="নতুন ক্যাটাগরি">
+                    <Plus size={16} className="text-gray-600" />
+                  </button>
                 </div>
-                <p className="text-xs" style={{ color: S.secondary }}>{aiPriceSuggestion.reasoning}</p>
-                <button type="button" onClick={() => set("sellPrice", String(aiPriceSuggestion.suggestedMax))}
-                  className="mt-1.5 text-xs font-medium underline" style={{ color: S.primary }}>
-                  এই মূল্য ব্যবহার করুন →
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-sm font-semibold text-gray-700">পণ্যের বিবরণ</label>
+                <button type="button" onClick={askAIDescription} disabled={aiDescLoading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors disabled:opacity-50 bg-purple-50 text-purple-700 hover:bg-purple-100">
+                  {aiDescLoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                  AI দিয়ে লিখুন
                 </button>
               </div>
-            )}
-          </div>
-
-          {!hasVariants && (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: S.text }}>স্টক পরিমাণ</label>
-                <input type="number" value={form.stockQty} onChange={e => setForm(p => ({ ...p, stockQty: e.target.value }))}
-                  placeholder="০" min="0" style={inp(focused === "stock")}
-                  onFocus={() => setFocused("stock")} onBlur={() => setFocused(null)} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: S.text }}>Low stock alert</label>
-                <input type="number" value={form.lowStockAt} onChange={e => setForm(p => ({ ...p, lowStockAt: e.target.value }))}
-                  placeholder="৫" min="0" style={inp(focused === "low")}
-                  onFocus={() => setFocused("low")} onBlur={() => setFocused(null)} />
-              </div>
+              <textarea
+                value={form.description}
+                onChange={e => set("description", e.target.value)}
+                placeholder="পণ্যের বিস্তারিত বিবরণ লিখুন অথবা AI দিয়ে স্বয়ংক্রিয়ভাবে তৈরি করুন..."
+                rows={3}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 bg-white outline-none focus:border-gray-400 transition-colors placeholder:text-gray-400 resize-none"
+              />
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Variants Toggle */}
-        <div className="rounded-2xl border p-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: "var(--c-primary-light)" }}>
-                <Layers size={16} style={{ color: S.primary }} />
+        {/* ── Pricing Card ── */}
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-50 bg-gray-50/50">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #10B981, #059669)" }}>
+              <DollarSign size={15} color="#fff" />
+            </div>
+            <h3 className="font-bold text-gray-900 text-sm">মূল্য নির্ধারণ</h3>
+          </div>
+          <div className="p-6 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>ক্রয় মূল্য (৳)</label>
+                <input type="number" value={form.buyPrice} onChange={e => setForm(p => ({ ...p, buyPrice: e.target.value }))}
+                  placeholder="০" min="0" className={fieldCls} />
               </div>
               <div>
-                <p className="text-sm font-semibold" style={{ color: S.text }}>পণ্যের Variants আছে?</p>
-                <p className="text-xs" style={{ color: S.muted }}>Size, Color ভেদে আলাদা stock ও price</p>
+                <label className={labelCls}>বিক্রয় মূল্য (৳) *</label>
+                <input type="number" value={form.sellPrice} onChange={e => setForm(p => ({ ...p, sellPrice: e.target.value }))}
+                  placeholder="০" min="0" required className={fieldCls} />
+              </div>
+            </div>
+
+            {form.buyPrice && form.sellPrice && parseFloat(form.buyPrice) > 0 && (
+              <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                <BarChart3 size={15} className="text-emerald-600 flex-shrink-0" />
+                <div className="flex gap-4 text-xs">
+                  <span className="text-emerald-700 font-semibold">
+                    মুনাফা: ৳{(parseFloat(form.sellPrice) - parseFloat(form.buyPrice)).toFixed(0)}
+                  </span>
+                  <span className="text-emerald-600">
+                    মার্জিন: {(((parseFloat(form.sellPrice) - parseFloat(form.buyPrice)) / parseFloat(form.sellPrice)) * 100).toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <button type="button" onClick={askAIPricing} disabled={aiPriceLoading}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50">
+                {aiPriceLoading ? <Loader2 size={14} className="animate-spin" /> : <Lightbulb size={14} className="text-amber-500" />}
+                AI মূল্য সাজেশন
+              </button>
+              {aiPriceSuggestion && (
+                <div className="mt-3 p-4 rounded-xl bg-amber-50 border border-amber-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-bold text-amber-800">
+                      সাজেস্টেড: ৳{aiPriceSuggestion.suggestedMin} – ৳{aiPriceSuggestion.suggestedMax}
+                    </span>
+                    <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-amber-100 text-amber-700">
+                      {aiPriceSuggestion.profitMargin} মুনাফা
+                    </span>
+                  </div>
+                  <p className="text-xs text-amber-700">{aiPriceSuggestion.reasoning}</p>
+                  <button type="button" onClick={() => set("sellPrice", String(aiPriceSuggestion.suggestedMax))}
+                    className="mt-2 text-xs font-bold text-amber-700 hover:underline">
+                    এই মূল্য ব্যবহার করুন →
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Stock Card ── */}
+        {!hasVariants && (
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-50 bg-gray-50/50">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #F59E0B, #D97706)" }}>
+                <BarChart3 size={15} color="#fff" />
+              </div>
+              <h3 className="font-bold text-gray-900 text-sm">স্টক ব্যবস্থাপনা</h3>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={labelCls}>স্টক পরিমাণ</label>
+                  <input type="number" value={form.stockQty} onChange={e => setForm(p => ({ ...p, stockQty: e.target.value }))}
+                    placeholder="০" min="0" className={fieldCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>কম স্টক সতর্কতা</label>
+                  <input type="number" value={form.lowStockAt} onChange={e => setForm(p => ({ ...p, lowStockAt: e.target.value }))}
+                    placeholder="৫" min="0" className={fieldCls} />
+                  <p className="text-xs text-gray-400 mt-1">এর নিচে গেলে সতর্কতা দেখাবে</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Variants Toggle ── */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-violet-50">
+                <Layers size={18} className="text-violet-600" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-gray-900">পণ্যের Variants আছে?</p>
+                <p className="text-xs text-gray-500">Size, Color ভেদে আলাদা stock ও price</p>
               </div>
             </div>
             <button type="button"
               onClick={() => { setHasVariants(v => !v); if (!hasVariants && variants.length === 0) setVariants([newVariant()]); }}
               className="relative w-12 h-6 rounded-full transition-colors flex-shrink-0"
-              style={{ backgroundColor: hasVariants ? S.primary : S.border }}>
-              <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${hasVariants ? "translate-x-6" : "translate-x-0.5"}`} />
+              style={{ backgroundColor: hasVariants ? "var(--c-primary)" : "#D1D5DB" }}>
+              <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${hasVariants ? "translate-x-6" : "translate-x-0.5"}`} />
             </button>
           </div>
         </div>
 
-        {/* Variants Table */}
+        {/* ── Variants Section ── */}
         {hasVariants && (
-          <div className="rounded-2xl border p-5 space-y-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold" style={{ color: S.text }}>Variants ({variants.length}টি)</h3>
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50 bg-gray-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-violet-100">
+                  <Layers size={15} className="text-violet-600" />
+                </div>
+                <h3 className="font-bold text-gray-900 text-sm">Variants ({variants.length}টি)</h3>
+              </div>
               <button type="button" onClick={addVariant}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                style={{ backgroundColor: "var(--c-primary-light)", color: S.primary }}>
-                <Plus size={12} /> নতুন যোগ করুন
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors">
+                <Plus size={13} /> নতুন যোগ
               </button>
             </div>
 
-            <div className="space-y-3">
+            <div className="p-5 space-y-4">
               {variants.map((v, idx) => (
-                <div key={v.id} className="border rounded-xl p-3 space-y-3" style={{ borderColor: S.border }}>
+                <div key={v.id} className="border border-gray-100 rounded-xl p-4 space-y-4 bg-gray-50/30">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium" style={{ color: S.muted }}>
+                    <span className="text-xs font-bold text-gray-500 bg-white border border-gray-200 px-2.5 py-1 rounded-lg">
                       Variant {idx + 1}{autoFillVariantName(v) !== "নতুন ভেরিয়েন্ট" ? ` — ${autoFillVariantName(v)}` : ""}
                     </span>
                     {variants.length > 1 && (
                       <button type="button" onClick={() => removeVariant(v.id)}
-                        className="p-1 rounded-lg hover:bg-red-50 transition-colors">
-                        <Trash2 size={14} className="text-red-500" />
+                        className="p-1.5 rounded-lg hover:bg-red-50 transition-colors">
+                        <Trash2 size={14} className="text-red-400" />
                       </button>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-medium mb-1" style={{ color: S.muted }}>Size</label>
-                      <div className="flex gap-1 flex-wrap mb-1">
+                      <label className="block text-xs font-bold text-gray-500 mb-1.5">Size</label>
+                      <div className="flex gap-1 flex-wrap mb-2">
                         {SIZES.map(s => (
                           <button key={s} type="button"
                             onClick={() => setVariantField(v.id, "size", v.size === s ? "" : s)}
-                            className="px-2 py-0.5 rounded text-xs transition-colors"
+                            className="px-2 py-0.5 rounded-lg text-xs font-semibold transition-colors border"
                             style={{
-                              backgroundColor: v.size === s ? S.primary : "var(--c-bg)",
-                              color: v.size === s ? "white" : S.secondary,
-                              border: `1px solid ${v.size === s ? S.primary : S.border}`,
+                              backgroundColor: v.size === s ? "var(--c-primary)" : "#fff",
+                              color: v.size === s ? "white" : "#6B7280",
+                              borderColor: v.size === s ? "var(--c-primary)" : "#E5E7EB",
                             }}>
                             {s}
                           </button>
                         ))}
                       </div>
                       <input type="text" value={v.size} onChange={e => setVariantField(v.id, "size", e.target.value)}
-                        placeholder="অথবা লিখুন..." style={{ ...inp(false), height: "34px", fontSize: "12px" }} />
+                        placeholder="অথবা লিখুন..." className="w-full h-9 border border-gray-200 rounded-lg px-3 text-xs text-gray-800 bg-white outline-none" />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium mb-1" style={{ color: S.muted }}>রঙ</label>
-                      <div className="flex gap-1 flex-wrap mb-1">
+                      <label className="block text-xs font-bold text-gray-500 mb-1.5">রঙ</label>
+                      <div className="flex gap-1 flex-wrap mb-2">
                         {COLORS.map(c => (
                           <button key={c} type="button"
                             onClick={() => setVariantField(v.id, "color", v.color === c ? "" : c)}
-                            className="px-2 py-0.5 rounded text-xs transition-colors"
+                            className="px-2 py-0.5 rounded-lg text-xs font-semibold transition-colors border"
                             style={{
-                              backgroundColor: v.color === c ? S.primary : "var(--c-bg)",
-                              color: v.color === c ? "white" : S.secondary,
-                              border: `1px solid ${v.color === c ? S.primary : S.border}`,
+                              backgroundColor: v.color === c ? "var(--c-primary)" : "#fff",
+                              color: v.color === c ? "white" : "#6B7280",
+                              borderColor: v.color === c ? "var(--c-primary)" : "#E5E7EB",
                             }}>
                             {c}
                           </button>
                         ))}
                       </div>
                       <input type="text" value={v.color} onChange={e => setVariantField(v.id, "color", e.target.value)}
-                        placeholder="অথবা লিখুন..." style={{ ...inp(false), height: "34px", fontSize: "12px" }} />
+                        placeholder="অথবা লিখুন..." className="w-full h-9 border border-gray-200 rounded-lg px-3 text-xs text-gray-800 bg-white outline-none" />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="block text-xs font-medium mb-1" style={{ color: S.muted }}>SKU</label>
+                      <label className="block text-xs font-bold text-gray-500 mb-1.5">SKU</label>
                       <input type="text" value={v.sku} onChange={e => setVariantField(v.id, "sku", e.target.value)}
-                        placeholder="ঐচ্ছিক" style={{ ...inp(false), height: "34px", fontSize: "12px" }} />
+                        placeholder="ঐচ্ছিক" className="w-full h-9 border border-gray-200 rounded-lg px-3 text-xs text-gray-800 bg-white outline-none" />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium mb-1" style={{ color: S.muted }}>ক্রয় মূল্য (৳)</label>
+                      <label className="block text-xs font-bold text-gray-500 mb-1.5">ক্রয় মূল্য (৳)</label>
                       <input type="number" value={v.buyPrice} onChange={e => setVariantField(v.id, "buyPrice", e.target.value)}
-                        placeholder="ঐচ্ছিক" min="0" style={{ ...inp(false), height: "34px", fontSize: "12px" }} />
+                        placeholder="ঐচ্ছিক" min="0" className="w-full h-9 border border-gray-200 rounded-lg px-3 text-xs text-gray-800 bg-white outline-none" />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium mb-1" style={{ color: S.muted }}>বিক্রয় মূল্য (৳)</label>
+                      <label className="block text-xs font-bold text-gray-500 mb-1.5">বিক্রয় মূল্য (৳)</label>
                       <input type="number" value={v.price} onChange={e => setVariantField(v.id, "price", e.target.value)}
-                        placeholder="ঐচ্ছিক" min="0" style={{ ...inp(false), height: "34px", fontSize: "12px" }} />
+                        placeholder="ঐচ্ছিক" min="0" className="w-full h-9 border border-gray-200 rounded-lg px-3 text-xs text-gray-800 bg-white outline-none" />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium mb-1" style={{ color: S.muted }}>স্টক পরিমাণ</label>
+                    <label className="block text-xs font-bold text-gray-500 mb-1.5">স্টক পরিমাণ</label>
                     <input type="number" value={v.stockQty} onChange={e => setVariantField(v.id, "stockQty", e.target.value)}
-                      placeholder="০" min="0" style={{ ...inp(false), height: "34px", fontSize: "12px" }} />
+                      placeholder="০" min="0" className="w-full h-9 border border-gray-200 rounded-lg px-3 text-xs text-gray-800 bg-white outline-none" />
                   </div>
                 </div>
               ))}
-            </div>
 
-            {variants.length > 0 && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs" style={{ backgroundColor: "var(--c-bg)", color: S.muted }}>
-                <Layers size={12} />
-                মোট স্টক: {variants.reduce((s, v) => s + (parseInt(v.stockQty) || 0), 0)} টি
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Category Creation Modal */}
-        {showCategoryModal && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="rounded-2xl p-6 max-w-md w-full" style={{ backgroundColor: "var(--c-surface-raised)" }}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-lg" style={{ color: S.text }}>নতুন ক্যাটাগরি তৈরি করুন</h3>
-                <button onClick={() => { setShowCategoryModal(false); setNewCategoryName(""); }}>
-                  <X size={18} style={{ color: S.muted }} />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: S.text }}>
-                    ক্যাটাগরির নাম *
-                  </label>
-                  <input
-                    type="text"
-                    value={newCategoryName}
-                    onChange={(e) => setNewCategoryName(e.target.value)}
-                    placeholder="যেমন: পোশাক, জুয়েলারি, খাবার..."
-                    className="w-full px-4 py-2.5 rounded-xl border text-sm outline-none"
-                    style={{ 
-                      backgroundColor: S.surface, 
-                      borderColor: S.border, 
-                      color: S.text,
-                      height: "40px",
-                    }}
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleCreateCategory();
-                      }
-                    }}
-                  />
+              {variants.length > 0 && (
+                <div className="flex items-center gap-2 px-4 py-3 bg-violet-50 rounded-xl border border-violet-100">
+                  <Layers size={14} className="text-violet-600" />
+                  <span className="text-xs font-bold text-violet-700">
+                    মোট স্টক: {variants.reduce((s, v) => s + (parseInt(v.stockQty) || 0), 0)} টি
+                  </span>
                 </div>
-
-                <div className="flex gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => { setShowCategoryModal(false); setNewCategoryName(""); }}
-                    className="flex-1 py-2.5 rounded-xl border text-sm font-medium"
-                    style={{ borderColor: S.border, color: S.text }}
-                  >
-                    বাতিল
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCreateCategory}
-                    disabled={creatingCategory}
-                    className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-60"
-                    style={{ backgroundColor: S.primary }}
-                  >
-                    {creatingCategory ? "তৈরি হচ্ছে..." : "তৈরি করুন"}
-                  </button>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         )}
 
-        <div className="flex gap-3">
-          <Link href="/inventory" className="flex-1 py-3 rounded-xl border text-sm font-semibold text-center transition-colors"
-            style={{ borderColor: S.border, color: S.text }}>
+        {/* ── Save / Cancel ── */}
+        <div className="flex gap-3 pt-2">
+          <Link href="/inventory"
+            className="flex-1 py-3.5 rounded-2xl border border-gray-200 text-sm font-bold text-center text-gray-700 hover:bg-gray-50 transition-colors">
             বাতিল
           </Link>
           <button type="submit" disabled={saving}
-            className="flex-1 py-3 rounded-xl text-white text-sm font-semibold disabled:opacity-60 transition-opacity hover:opacity-90"
-            style={{ backgroundColor: S.primary }}>
-            {saving ? "আপডেট হচ্ছে..." : "পণ্য আপডেট করুন"}
+            className="flex-1 py-3.5 rounded-2xl text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60 hover:opacity-90 transition-opacity"
+            style={{ background: "linear-gradient(135deg, var(--c-primary), #0A5442)" }}>
+            {saving ? (
+              <><Loader2 size={15} className="animate-spin" /> আপডেট হচ্ছে...</>
+            ) : (
+              <><Save size={15} /> পণ্য আপডেট করুন</>
+            )}
           </button>
         </div>
       </form>
