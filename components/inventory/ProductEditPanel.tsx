@@ -482,11 +482,33 @@ export default function ProductEditPanel({ productId, onClose, onSaved }: Props)
                       <p className="text-xs text-gray-500">Size, Color ভেদে আলাদা stock ও price</p>
                     </div>
                   </div>
-                  <button type="button"
+                  <button
+                    type="button"
                     onClick={() => { setHasVariants(v => !v); if (!hasVariants && variants.length === 0) setVariants([newVariant()]); }}
-                    className="relative w-12 h-6 rounded-full transition-colors flex-shrink-0"
-                    style={{ backgroundColor: hasVariants ? "var(--c-primary)" : "#D1D5DB" }}>
-                    <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${hasVariants ? "translate-x-6" : "translate-x-0.5"}`} />
+                    style={{
+                      position: "relative",
+                      flexShrink: 0,
+                      width: 48,
+                      height: 26,
+                      borderRadius: 13,
+                      border: "none",
+                      cursor: "pointer",
+                      backgroundColor: hasVariants ? "var(--c-primary)" : "#D1D5DB",
+                      transition: "background-color 0.2s ease",
+                    }}
+                  >
+                    <span style={{
+                      position: "absolute",
+                      top: 3,
+                      left: hasVariants ? 25 : 3,
+                      width: 20,
+                      height: 20,
+                      borderRadius: "50%",
+                      backgroundColor: "#fff",
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.22)",
+                      transition: "left 0.2s ease",
+                      display: "block",
+                    }} />
                   </button>
                 </div>
               </div>
