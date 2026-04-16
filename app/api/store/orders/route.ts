@@ -320,6 +320,8 @@ export async function POST(req: Request) {
           paidAmount: paymentMethod !== "cod" ? totalAmount : 0,
           dueAmount: paymentMethod !== "cod" ? 0 : totalAmount,
           deliveryCharge: shippingFee,
+          riskScore: storeRiskResult.riskScore > 0 ? storeRiskResult.riskScore : null,
+          riskFlags: storeRiskResult.flags.length > 0 ? JSON.stringify(storeRiskResult.flags) : null,
           note: [
             `📦 স্টোর অর্ডার #${orderNumber}`,
             `👤 ${customerName} | 📞 ${customerPhone}`,

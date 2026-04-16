@@ -75,12 +75,14 @@ export default function OrderCreatePanel({ onClose, onCreated, prefillCustomerNa
   const [trackId, setTrackId] = useState("");
 
   const [expandedSection, setExpandedSection] = useState<"customer" | "products" | "payment" | "tags" | "courier">("customer");
-  const [phoneRisk, setPhoneRisk] = useState<{ riskLevel: string; flags: string[] } | null>(null);
+  const [phoneRisk, setPhoneRisk] = useState<{ riskLevel: string; flags: string[]; action?: string } | null>(null);
   const [checkingPhone, setCheckingPhone] = useState(false);
+  const [confirmRisky, setConfirmRisky] = useState(false);
 
   useEffect(() => {
     if (customerMode !== "new" || newCustomerPhone.replace(/\D/g, "").length < 11) {
       setPhoneRisk(null);
+      setConfirmRisky(false);
       return;
     }
     const timer = setTimeout(() => {
@@ -91,7 +93,7 @@ export default function OrderCreatePanel({ onClose, onCreated, prefillCustomerNa
         body: JSON.stringify({ phone: newCustomerPhone, customerName: newCustomerName }),
       })
         .then(r => r.json())
-        .then(d => setPhoneRisk(d))
+        .then(d => { setPhoneRisk(d); setConfirmRisky(false); })
         .catch(() => setPhoneRisk(null))
         .finally(() => setCheckingPhone(false));
     }, 700);
@@ -168,6 +170,9 @@ export default function OrderCreatePanel({ onClose, onCreated, prefillCustomerNa
     setTagInput("");
   }
 
+  const isPhoneBlocked = phoneRisk?.riskLevel === "blocked" || phoneRisk?.action === "block";
+  const isPhoneRisky = phoneRisk && phoneRisk.riskLevel !== "safe" && !isPhoneBlocked;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const validItems = items.filter(it => it.productId || it.comboId);
@@ -194,8 +199,20 @@ export default function OrderCreatePanel({ onClose, onCreated, prefillCustomerNa
           quantity: it.quantity, unitPrice: it.unitPrice, subtotal: it.subtotal,
         })),
         paidAmount, deliveryCharge, source, note, tags,
+        forceCreate: confirmRisky,
       }),
     });
+
+    if (r.status === 422) {
+      const data = await r.json();
+      if (data.riskWarning) {
+        setPhoneRisk({ riskLevel: data.riskLevel, flags: data.flags, action: "block" });
+        setConfirmRisky(false);
+        showToast("error", `সতর্কতা: ${data.message}`);
+        setSubmitting(false);
+        return;
+      }
+    }
 
     if (r.ok) {
       const newOrder = await r.json();
@@ -371,19 +388,28 @@ export default function OrderCreatePanel({ onClose, onCreated, prefillCustomerNa
                         </div>
                       </div>
                       {phoneRisk && phoneRisk.riskLevel !== "safe" && (
-                        <div className="rounded-xl px-3 py-2 flex items-start gap-2"
-                          style={{ backgroundColor: phoneRisk.riskLevel === "blocked" ? "#FEE2E2" : "#FFF7ED", border: `1px solid ${phoneRisk.riskLevel === "blocked" ? "#FCA5A5" : "#FDBA74"}` }}>
-                          {phoneRisk.riskLevel === "blocked"
-                            ? <ShieldX size={14} style={{ color: "#DC2626", flexShrink: 0, marginTop: 1 }} />
-                            : <ShieldAlert size={14} style={{ color: "#EA580C", flexShrink: 0, marginTop: 1 }} />}
-                          <div>
-                            <p className="text-xs font-bold" style={{ color: phoneRisk.riskLevel === "blocked" ? "#DC2626" : "#EA580C" }}>
-                              {phoneRisk.riskLevel === "blocked" ? "এই নম্বর ব্লক করা আছে!" : "সতর্কতা: সন্দেহজনক নম্বর"}
-                            </p>
-                            {phoneRisk.flags?.length > 0 && (
-                              <p className="text-[10px] mt-0.5" style={{ color: "#92400E" }}>{phoneRisk.flags.join(" • ")}</p>
-                            )}
+                        <div className="rounded-xl px-3 py-2.5 space-y-2"
+                          style={{ backgroundColor: isPhoneBlocked ? "#FEE2E2" : "#FFF7ED", border: `1px solid ${isPhoneBlocked ? "#FCA5A5" : "#FDBA74"}` }}>
+                          <div className="flex items-start gap-2">
+                            {isPhoneBlocked
+                              ? <ShieldX size={14} style={{ color: "#DC2626", flexShrink: 0, marginTop: 1 }} />
+                              : <ShieldAlert size={14} style={{ color: "#EA580C", flexShrink: 0, marginTop: 1 }} />}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold" style={{ color: isPhoneBlocked ? "#DC2626" : "#EA580C" }}>
+                                {isPhoneBlocked ? "উচ্চ-ঝুঁকির নম্বর শনাক্ত হয়েছে!" : "সতর্কতা: সন্দেহজনক নম্বর"}
+                              </p>
+                              {phoneRisk.flags?.length > 0 && (
+                                <p className="text-[10px] mt-0.5" style={{ color: isPhoneBlocked ? "#991B1B" : "#92400E" }}>{phoneRisk.flags.join(" • ")}</p>
+                              )}
+                            </div>
                           </div>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={confirmRisky} onChange={e => setConfirmRisky(e.target.checked)}
+                              className="rounded" style={{ accentColor: isPhoneBlocked ? "#DC2626" : "#EA580C" }} />
+                            <span className="text-[11px] font-semibold" style={{ color: isPhoneBlocked ? "#DC2626" : "#EA580C" }}>
+                              ঝুঁকি জেনেও অর্ডার তৈরি করতে চাই
+                            </span>
+                          </label>
                         </div>
                       )}
                       <input type="text" placeholder="📍 ঠিকানা" value={newCustomerAddress}
@@ -672,12 +698,17 @@ export default function OrderCreatePanel({ onClose, onCreated, prefillCustomerNa
               </>
             )}
           </div>
+          {(isPhoneBlocked || isPhoneRisky) && !confirmRisky && (
+            <p className="text-[11px] text-center mb-2 font-semibold" style={{ color: isPhoneBlocked ? "#DC2626" : "#EA580C" }}>
+              {isPhoneBlocked ? "অর্ডার দিতে নিচের চেকবক্সে টিক দিন" : "ঝুঁকির বিষয়ে নিশ্চিত হয়ে চেকবক্সে টিক দিন"}
+            </p>
+          )}
           <button type="submit" form="order-create-form"
-            disabled={submitting || bookingCourier || dataLoading}
+            disabled={submitting || bookingCourier || dataLoading || ((isPhoneBlocked || isPhoneRisky) && !confirmRisky)}
             className="w-full py-3.5 rounded-2xl text-white font-extrabold text-sm disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg transition-all hover:opacity-90 active:scale-[0.98]"
-            style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}>
+            style={{ background: confirmRisky && isPhoneBlocked ? "linear-gradient(135deg, #DC2626, #991B1B)" : "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}>
             {(submitting || bookingCourier) && <Loader2 size={16} className="animate-spin" />}
-            {bookingCourier ? "কুরিয়ার বুক হচ্ছে..." : submitting ? "সেভ হচ্ছে..." : wantCourier ? "অর্ডার সেভ ও কুরিয়ার বুক" : "✓ অর্ডার সেভ করুন"}
+            {bookingCourier ? "কুরিয়ার বুক হচ্ছে..." : submitting ? "সেভ হচ্ছে..." : confirmRisky && isPhoneBlocked ? "⚠️ ঝুঁকি নিয়ে অর্ডার সেভ" : wantCourier ? "অর্ডার সেভ ও কুরিয়ার বুক" : "✓ অর্ডার সেভ করুন"}
           </button>
         </div>
       </div>

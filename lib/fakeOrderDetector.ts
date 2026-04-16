@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 
 export type RiskLevel = "safe" | "low" | "medium" | "high" | "blocked";
-export type RiskAction = "allow" | "flag" | "block";
+export type RiskAction = "allow" | "warn" | "block";
 
 export interface RiskResult {
   riskScore: number;
@@ -23,6 +23,16 @@ function normalizeBDPhone(phone: string): string {
 function isValidBDPhone(phone: string): boolean {
   const normalized = normalizeBDPhone(phone);
   return BD_PHONE_REGEX.test(normalized);
+}
+
+function isSequentialOrRepeated(phone: string): boolean {
+  const digits = phone.replace(/\D/g, "").slice(-10);
+  if (digits.length < 8) return false;
+  const allSame = /^(\d)\1+$/.test(digits);
+  if (allSame) return true;
+  const ascending = digits.split("").every((d, i, arr) => i === 0 || parseInt(d) === parseInt(arr[i - 1]) + 1);
+  const descending = digits.split("").every((d, i, arr) => i === 0 || parseInt(d) === parseInt(arr[i - 1]) - 1);
+  return ascending || descending;
 }
 
 const SUSPICIOUS_NAME_PATTERNS = [
@@ -64,21 +74,25 @@ export async function detectFakeOrder(params: {
   if (!isValidBDPhone(phone)) {
     flags.push("অবৈধ বাংলাদেশি ফোন নম্বর");
     score += 40;
+  } else if (isSequentialOrRepeated(normalizedPhone)) {
+    flags.push("সিকোয়েন্শিয়াল বা পুনরাবৃত্তি নম্বর");
+    score += 30;
   }
 
-  const [blacklisted, crossStoreReports, recentOrders] = await Promise.all([
+  const [blacklisted, recentOrders, crossStoreShops] = await Promise.all([
     prisma.phoneBlacklist.findFirst({
       where: { shopId, phone: normalizedPhone },
       select: { id: true, reason: true },
-    }),
-    prisma.fakeOrderReport.count({
-      where: { phone: normalizedPhone },
     }),
     prisma.order.count({
       where: {
         customer: { phone: { contains: normalizedPhone.slice(-10) } },
         createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
       },
+    }),
+    prisma.fakeOrderReport.groupBy({
+      by: ["shopId"],
+      where: { phone: normalizedPhone },
     }),
   ]);
 
@@ -92,11 +106,12 @@ export async function detectFakeOrder(params: {
     };
   }
 
-  if (crossStoreReports >= 3) {
-    flags.push(`${crossStoreReports}টি দোকানে ফেক অর্ডারের রিপোর্ট`);
+  const distinctShopCount = crossStoreShops.length;
+  if (distinctShopCount >= 3) {
+    flags.push(`${distinctShopCount}টি আলাদা দোকানে ফেক অর্ডারের রিপোর্ট`);
     score += 50;
-  } else if (crossStoreReports >= 1) {
-    flags.push(`${crossStoreReports}টি ফেক অর্ডারের রিপোর্ট`);
+  } else if (distinctShopCount >= 1) {
+    flags.push(`${distinctShopCount}টি দোকানে ফেক অর্ডারের রিপোর্ট`);
     score += 25;
   }
 
@@ -123,15 +138,15 @@ export async function detectFakeOrder(params: {
   let riskLevel: RiskLevel;
   let action: RiskAction;
 
-  if (clampedScore >= 80 || crossStoreReports >= 3) {
+  if (clampedScore >= 80 || distinctShopCount >= 3) {
     riskLevel = "high";
     action = "block";
   } else if (clampedScore >= 50) {
     riskLevel = "medium";
-    action = "flag";
+    action = "warn";
   } else if (clampedScore >= 20) {
     riskLevel = "low";
-    action = "flag";
+    action = "warn";
   } else {
     riskLevel = "safe";
     action = "allow";
@@ -142,6 +157,6 @@ export async function detectFakeOrder(params: {
     riskLevel,
     flags,
     action,
-    blockReason: action === "block" ? flags[0] : undefined,
+    blockReason: action === "block" ? (flags[0] ?? "উচ্চ-ঝুঁকির নম্বর") : undefined,
   };
 }

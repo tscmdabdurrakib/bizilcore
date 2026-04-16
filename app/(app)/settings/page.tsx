@@ -391,7 +391,7 @@ function SettingsContent() {
 
   async function removeFromBlacklist(id: string) {
     setDeletingBlId(id);
-    await fetch(`/api/fake-order/blacklist?id=${id}`, { method: "DELETE" });
+    await fetch(`/api/fake-order/blacklist/${id}`, { method: "DELETE" });
     setBlacklist(prev => prev.filter(x => x.id !== id));
     setDeletingBlId(null);
     showToast("success", "ব্ল্যাকলিস্ট থেকে সরানো হয়েছে ✓");

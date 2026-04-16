@@ -26,10 +26,10 @@ export async function POST(req: NextRequest) {
   });
 
   if (orderId) {
-    await prisma.order.update({
-      where: { id: orderId },
+    await prisma.order.updateMany({
+      where: { id: orderId, userId: session.user.id },
       data: { fakeReported: true },
-    }).catch(() => {});
+    });
   }
 
   return NextResponse.json(report, { status: 201 });

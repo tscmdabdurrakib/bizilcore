@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, ChevronDown, ChevronRight, RefreshCw, Truck, Download, MessageCircle, Trash2, X, Copy, RotateCcw, Tag, Wallet, Check, Printer } from "lucide-react";
+import RiskBadge from "@/components/orders/RiskBadge";
 import { formatBDT, formatBanglaDate, getStatusStyle, STATUS_MAP } from "@/lib/utils";
 
 interface Order {
@@ -14,6 +15,9 @@ interface Order {
   courierName: string | null; courierTrackId: string | null; courierStatus: string | null;
   totalAmount: number; paidAmount: number; dueAmount: number; deliveryCharge: number; note: string | null;
   tags: string | null;
+  riskScore: number | null;
+  riskFlags: string | null;
+  fakeReported: boolean;
   createdAt: string;
   customer: { id: string; name: string; phone: string | null; address: string | null } | null;
   items: { id: string; quantity: number; unitPrice: number; subtotal: number; productId: string | null; comboId: string | null; comboSnapshot: string | null; product: { id: string; name: string } | null; combo: { id: string; name: string; items: { quantity: number; product: { name: string } }[] } | null }[];
@@ -582,7 +586,22 @@ export default function OrderDetailPage() {
                     {order.customer.name[0].toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold truncate" style={{ color: S.text }}>{order.customer.name}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-semibold truncate" style={{ color: S.text }}>{order.customer.name}</p>
+                      {order.riskScore != null && order.riskScore > 0 && (
+                        <RiskBadge
+                          riskScore={order.riskScore}
+                          riskLevel={
+                            order.fakeReported ? "blocked"
+                            : order.riskScore >= 80 ? "high"
+                            : order.riskScore >= 50 ? "medium"
+                            : order.riskScore >= 20 ? "low"
+                            : "safe"
+                          }
+                          size="sm"
+                        />
+                      )}
+                    </div>
                     {order.customer.phone && <p className="text-sm mt-0.5" style={{ color: S.secondary }}>{order.customer.phone}</p>}
                     {order.customer.address && <p className="text-xs mt-0.5 truncate" style={{ color: S.muted }}>{order.customer.address}</p>}
                   </div>

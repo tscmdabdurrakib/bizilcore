@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { customerId, newCustomerName, newCustomerPhone, newCustomerAddress, newCustomerFacebook, newCustomerGroup, items, paidAmount, source, note, deliveryCharge, tags } = body;
+  const { customerId, newCustomerName, newCustomerPhone, newCustomerAddress, newCustomerFacebook, newCustomerGroup, items, paidAmount, source, note, deliveryCharge, tags, forceCreate } = body;
 
   // Guard: each item must have exactly one of productId or comboId
   for (const item of items as { productId?: string | null; comboId?: string | null }[]) {
@@ -88,10 +88,16 @@ export async function POST(req: NextRequest) {
       customerName: newCustomerName || undefined,
       customerAddress: newCustomerAddress || undefined,
     });
-    if (riskResult.action === "block") {
+    if (riskResult.action === "block" && !forceCreate) {
       return NextResponse.json(
-        { error: `অর্ডার ব্লক হয়েছে: ${riskResult.blockReason ?? "উচ্চ-ঝুঁকির নম্বর"}` },
-        { status: 403 }
+        {
+          riskWarning: true,
+          riskLevel: riskResult.riskLevel,
+          riskScore: riskResult.riskScore,
+          flags: riskResult.flags,
+          message: riskResult.blockReason ?? "উচ্চ-ঝুঁকির নম্বর",
+        },
+        { status: 422 }
       );
     }
   }
