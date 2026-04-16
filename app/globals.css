@@ -32,26 +32,27 @@
 
 /* ── Light mode design tokens ─────────────────────── */
 :root {
-  --background: #F7F6F2;
+  --background: #EEF1F5;
   --foreground: #1A1A18;
 
   /* App shell */
   --shell-bg:               #FFFFFF;
-  --shell-border:           #E8E6DF;
-  --shell-text:             #1A1A18;
-  --shell-text-sub:         #5A5A56;
-  --shell-text-muted:       #A8A69E;
-  --shell-outer-bg:         #F7F6F2;
-  --shell-nav-active-bg:    #E1F5EE;
-  --shell-nav-active-color: #085041;
+  --shell-border:           #E4E7EB;
+  --shell-text:             #111827;
+  --shell-text-sub:         #4B5563;
+  --shell-text-muted:       #9CA3AF;
+  --shell-outer-bg:         #EEF1F5;
+  --shell-nav-active-bg:    #D9F0E7;
+  --shell-nav-active-color: #075040;
   --shell-nav-active-border:#0F6E56;
-  --shell-nav-inactive:     #5A5A56;
+  --shell-nav-inactive:     #4B5563;
+  --shell-surface:          #F8F9FA;
 
   /* Component tokens (used via S object in pages) */
-  --c-bg:           #F7F6F2;
+  --c-bg:           #EEF1F5;
   --c-surface:      #FFFFFF;
   --c-surface-raised:#FFFFFF;
-  --c-border:       #E8E6DF;
+  --c-border:       #E4E7EB;
   --c-text:         #1A1A18;
   --c-text-sub:     #5A5A56;
   --c-text-muted:   #A8A69E;
@@ -143,6 +144,7 @@ html.dark {
   --shell-nav-active-color: #6EE7B7;
   --shell-nav-active-border:#34D399;
   --shell-nav-inactive:     #7A7A76;
+  --shell-surface:          #222220;
 
   /* Component tokens */
   --c-bg:           #111110;

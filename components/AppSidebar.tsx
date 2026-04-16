@@ -135,17 +135,23 @@ function StoreHoverItem({ collapsed }: { collapsed: boolean }) {
     <>
       <div ref={triggerRef} onMouseEnter={show} onMouseLeave={hide}>
         <div
-          className="flex items-center rounded-lg mb-0.5 text-sm font-medium transition-all cursor-default select-none"
+          className="flex items-center rounded-xl mb-px transition-all cursor-default select-none"
           style={{
             backgroundColor: storeActive ? "var(--shell-nav-active-bg)" : "transparent",
             color: storeActive ? "var(--shell-nav-active-color)" : "var(--shell-nav-inactive)",
-            borderLeft: storeActive ? "3px solid var(--shell-nav-active-border)" : "3px solid transparent",
-            padding: collapsed ? "10px 0" : "10px 12px",
+            padding: collapsed ? "8px 0" : "7px 8px",
             justifyContent: collapsed ? "center" : "flex-start",
-            gap: collapsed ? 0 : 12,
+            gap: collapsed ? 0 : 9,
+            fontWeight: storeActive ? 600 : 450,
+            fontSize: "0.8125rem",
           }}
         >
-          <Store size={16} className="flex-shrink-0" />
+          <div
+            className="w-[26px] h-[26px] flex items-center justify-center rounded-lg flex-shrink-0"
+            style={{ backgroundColor: storeActive ? "rgba(15,110,86,0.18)" : "transparent" }}
+          >
+            <Store size={15} style={{ strokeWidth: storeActive ? 2.2 : 1.75 }} />
+          </div>
           {!collapsed && (
             <>
               <span className="truncate flex-1">আমার স্টোর</span>
@@ -417,20 +423,32 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
       <Link
         href={item.href}
         title={collapsed ? item.label : undefined}
-        className="flex items-center rounded-lg mb-0.5 text-sm font-medium transition-all relative"
+        className="flex items-center rounded-xl mb-px transition-all relative"
         style={{
           backgroundColor: active ? "var(--shell-nav-active-bg)" : "transparent",
           color: locked
             ? "var(--shell-nav-inactive)"
             : active ? "var(--shell-nav-active-color)" : "var(--shell-nav-inactive)",
-          borderLeft: active ? "3px solid var(--shell-nav-active-border)" : "3px solid transparent",
-          opacity: locked ? 0.6 : 1,
-          padding: collapsed ? "10px 0" : "10px 12px",
+          opacity: locked ? 0.55 : 1,
+          padding: collapsed ? "8px 0" : "7px 8px",
           justifyContent: collapsed ? "center" : "flex-start",
-          gap: collapsed ? 0 : 12,
+          gap: collapsed ? 0 : 9,
+          fontWeight: active ? 600 : 450,
+          fontSize: "0.8125rem",
         }}
       >
-        <item.icon size={16} className="flex-shrink-0" />
+        <div
+          className="w-[26px] h-[26px] flex items-center justify-center rounded-lg flex-shrink-0 transition-all"
+          style={{
+            backgroundColor: active ? "rgba(15,110,86,0.18)" : "transparent",
+          }}
+        >
+          <item.icon
+            size={15}
+            className="flex-shrink-0"
+            style={{ strokeWidth: active ? 2.2 : 1.75, color: "currentColor" }}
+          />
+        </div>
         {!collapsed && (
           <>
             <span className="truncate flex-1">{item.label}</span>
@@ -464,56 +482,71 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
       <aside
         className="hidden md:flex flex-col flex-shrink-0 border-r h-full transition-all duration-200"
         style={{
-          width: collapsed ? 52 : 210,
+          width: collapsed ? 52 : 224,
           backgroundColor: "var(--shell-bg)",
           borderColor: "var(--shell-border)",
         }}
       >
         {/* Logo + collapse toggle */}
         <div
-          className="flex items-center h-[52px] border-b flex-shrink-0"
+          className="flex items-center h-[56px] border-b flex-shrink-0 gap-2"
           style={{
             borderColor: "var(--shell-border)",
-            padding: collapsed ? "0 6px" : "0 8px 0 16px",
+            padding: collapsed ? "0 10px" : "0 10px 0 14px",
             justifyContent: collapsed ? "center" : "space-between",
           }}
         >
-          {!collapsed && (
-            <div className="flex items-center gap-2 min-w-0">
-              <img src="/logo.svg" alt="BizilCore" className="w-7 h-7 flex-shrink-0" />
-              <span className="font-semibold text-sm truncate" style={{ color: "var(--shell-text)" }}>BizilCore</span>
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div
+              className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
+              style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}
+            >
+              <img src="/logo.svg" alt="BizilCore" className="w-5 h-5 brightness-0 invert" />
             </div>
-          )}
-          <button
-            onClick={toggleCollapsed}
-            title={collapsed ? "সাইডবার বড় করুন" : "সাইডবার ছোট করুন"}
-            className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
-            style={{ color: "var(--shell-nav-inactive)" }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--shell-nav-active-bg)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
-          >
-            {collapsed ? (
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            ) : (
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            {!collapsed && (
+              <span className="font-bold text-[15px] truncate" style={{ color: "var(--shell-text)", letterSpacing: "-0.01em" }}>BizilCore</span>
             )}
-          </button>
+          </div>
+          {!collapsed && (
+            <button
+              onClick={toggleCollapsed}
+              title="সাইডবার ছোট করুন"
+              className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all hover:bg-gray-100"
+              style={{ color: "var(--shell-text-muted)" }}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+          )}
+          {collapsed && (
+            <button
+              onClick={toggleCollapsed}
+              title="সাইডবার বড় করুন"
+              className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all hover:bg-gray-100"
+              style={{ color: "var(--shell-text-muted)" }}
+            >
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+          )}
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 p-2 overflow-y-auto overflow-x-hidden">
+        <nav className="flex-1 px-2 py-3 overflow-y-auto overflow-x-hidden">
           {activeNavGroups.map((group, gi) => (
-            <div key={gi} className={gi > 0 ? "mt-2" : ""}>
+            <div key={gi} className={gi > 0 ? "mt-1" : ""}>
               {group.label && !collapsed && (
-                <p
-                  className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider"
-                  style={{ color: "var(--shell-text-muted)" }}
-                >
-                  {group.label}
-                </p>
+                <div className="flex items-center gap-2 px-2 pt-4 pb-1.5">
+                  <div className="h-px flex-1" style={{ backgroundColor: "var(--shell-border)" }} />
+                  <p
+                    className="text-[10px] font-bold uppercase tracking-widest flex-shrink-0"
+                    style={{ color: "var(--shell-text-muted)" }}
+                  >
+                    {group.label}
+                  </p>
+                  <div className="h-px flex-1" style={{ backgroundColor: "var(--shell-border)" }} />
+                </div>
               )}
               {collapsed && gi > 0 && (
-                <div className="my-2 mx-auto" style={{ width: 24, height: 1, backgroundColor: "var(--shell-border)" }} />
+                <div className="my-2 mx-auto" style={{ width: 20, height: 1, backgroundColor: "var(--shell-border)" }} />
               )}
               {group.items.map((item) => (
                 <NavLink key={item.href} item={item} />
@@ -525,28 +558,34 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
             <Link
               href="/admin"
               title={collapsed ? "Admin Panel" : undefined}
-              className="flex items-center rounded-lg mb-0.5 text-sm font-medium transition-all mt-2"
+              className="flex items-center rounded-xl mb-px transition-all mt-2"
               style={{
                 backgroundColor: pathname.startsWith("/admin") ? "#FFF3DC" : "transparent",
                 color: pathname.startsWith("/admin") ? "#92600A" : "var(--shell-text-muted)",
-                borderLeft: pathname.startsWith("/admin") ? "3px solid #EF9F27" : "3px solid transparent",
-                padding: collapsed ? "10px 0" : "10px 12px",
+                padding: collapsed ? "8px 0" : "7px 8px",
                 justifyContent: collapsed ? "center" : "flex-start",
-                gap: collapsed ? 0 : 12,
+                gap: collapsed ? 0 : 9,
+                fontSize: "0.8125rem",
+                fontWeight: pathname.startsWith("/admin") ? 600 : 450,
               }}
             >
-              <ShieldCheck size={16} className="flex-shrink-0" />
+              <div
+                className="w-[26px] h-[26px] flex items-center justify-center rounded-lg flex-shrink-0"
+                style={{ backgroundColor: pathname.startsWith("/admin") ? "rgba(239,159,39,0.2)" : "transparent" }}
+              >
+                <ShieldCheck size={15} style={{ strokeWidth: pathname.startsWith("/admin") ? 2.2 : 1.75 }} />
+              </div>
               {!collapsed && <span>Admin Panel</span>}
             </Link>
           )}
         </nav>
 
         {/* Shop info + Logout */}
-        <div className="p-2 border-t" style={{ borderColor: "var(--shell-border)" }}>
+        <div className="px-2 pb-2.5 pt-2 border-t" style={{ borderColor: "var(--shell-border)" }}>
           {collapsed ? (
             <div className="flex flex-col items-center gap-2">
               <div
-                className="w-8 h-8 rounded-lg flex-shrink-0 overflow-hidden"
+                className="w-8 h-8 rounded-xl flex-shrink-0 overflow-hidden shadow-sm"
                 style={{ backgroundColor: logoUrl ? "transparent" : "#0F6E56" }}
                 title={shopName}
               >
@@ -561,18 +600,21 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
               <button
                 onClick={async () => { await signOut({ redirect: false }); window.location.replace("/login"); }}
                 title="লগআউট"
-                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors hover:bg-red-50"
+                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all hover:bg-red-50"
                 style={{ color: "#9CA3AF" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#EF4444"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "#9CA3AF"; }}
               >
-                <LogOut size={14} />
+                <LogOut size={13} />
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-2.5 px-1">
+            <div
+              className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl"
+              style={{ backgroundColor: "var(--shell-surface)", border: "1px solid var(--shell-border)" }}
+            >
               <div
-                className="w-8 h-8 rounded-lg flex-shrink-0 overflow-hidden"
+                className="w-8 h-8 rounded-xl flex-shrink-0 overflow-hidden shadow-sm"
                 style={{ backgroundColor: logoUrl ? "transparent" : "#0F6E56" }}
               >
                 {logoUrl ? (
@@ -584,14 +626,14 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold truncate" style={{ color: "var(--shell-text)" }}>{shopName}</p>
+                <p className="text-[12px] font-semibold truncate leading-tight" style={{ color: "var(--shell-text)" }}>{shopName}</p>
                 <span
-                  className="text-xs font-bold px-1.5 py-0.5 rounded uppercase tracking-wide"
+                  className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide"
                   style={{
                     backgroundColor:
                       plan === "business" ? "#FFF3DC" :
-                      plan === "pro"      ? "#E1F5EE" :
-                                           "#F3F4F6",
+                      plan === "pro"      ? "#D9F0E7" :
+                                           "#F0F2F4",
                     color:
                       plan === "business" ? "#EF9F27" :
                       plan === "pro"      ? "#0F6E56" :
@@ -604,12 +646,12 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
               <button
                 onClick={async () => { await signOut({ redirect: false }); window.location.replace("/login"); }}
                 title="লগআউট"
-                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors hover:bg-red-50"
+                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all hover:bg-red-50"
                 style={{ color: "#9CA3AF" }}
                 onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#EF4444"; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "#9CA3AF"; }}
               >
-                <LogOut size={14} />
+                <LogOut size={13} />
               </button>
             </div>
           )}

@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, Package, MessageSquare, Check, Trash2, X, ShoppingBag } from "lucide-react";
+import { Bell, Package, MessageSquare, Check, Trash2, X, ShoppingBag, Settings } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import FeedbackWidget from "@/components/FeedbackWidget";
 
@@ -118,14 +118,18 @@ export default function AppTopbar() {
 
   return (
     <header
-      className="flex items-center justify-between px-5 h-[52px] border-b flex-shrink-0 sticky top-0 z-30"
-      style={{ backgroundColor: "var(--shell-bg)", borderColor: "var(--shell-border)" }}
+      className="flex items-center justify-between px-5 h-14 border-b flex-shrink-0 sticky top-0 z-30"
+      style={{
+        backgroundColor: "var(--shell-bg)",
+        borderColor: "var(--shell-border)",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+      }}
     >
-      <h1 className="font-semibold text-base" style={{ color: "var(--shell-text)" }}>
+      <h1 className="font-bold text-[15px] tracking-tight" style={{ color: "var(--shell-text)" }}>
         {title}
       </h1>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         {/* Notification Bell */}
         <div ref={ref} className="relative">
           <button
@@ -315,11 +319,20 @@ export default function AppTopbar() {
 
         <button
           onClick={() => router.push("/orders/new")}
-          className="hidden sm:flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl text-white shadow-md hover:opacity-90 transition-opacity active:scale-95"
-          style={{ background: "linear-gradient(135deg, #0F6E56, #0A5442)" }}
+          className="hidden sm:flex items-center gap-2 text-[13px] font-semibold px-3.5 py-[7px] rounded-xl text-white hover:opacity-90 transition-all active:scale-95"
+          style={{ background: "linear-gradient(135deg, #0F6E56, #0A5442)", boxShadow: "0 2px 8px rgba(15,110,86,0.35)" }}
         >
-          <ShoppingBag size={14} />
+          <ShoppingBag size={13} />
           নতুন অর্ডার
+        </button>
+
+        <button
+          onClick={() => router.push("/settings")}
+          title="সেটিংস"
+          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:bg-gray-100 flex-shrink-0"
+          style={{ color: "var(--shell-text-muted)", border: "1px solid var(--shell-border)" }}
+        >
+          <Settings size={16} />
         </button>
       </div>
     </header>
