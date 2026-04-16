@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Check, MessageSquare, Copy, Trash2, Crown, User, ChevronRight, ChevronLeft, Loader2, ArrowLeft, Facebook, Link2, Unlink, X, Store, FileText, Users, Bell, CreditCard, Settings, Target, Moon, Sun, ShieldCheck, Wifi, WifiOff, Eye, EyeOff, Send, BookOpen, MessageCircle, QrCode, Globe, ExternalLink, Sparkles, RefreshCw, Printer, Truck, RefreshCcw } from "lucide-react";
+import { Check, MessageSquare, Copy, Trash2, Crown, User, ChevronRight, ChevronLeft, Loader2, ArrowLeft, Facebook, Link2, Unlink, X, Store, FileText, Users, Bell, CreditCard, Settings, Target, Moon, Sun, ShieldCheck, ShieldX, Wifi, WifiOff, Eye, EyeOff, Send, BookOpen, MessageCircle, QrCode, Globe, ExternalLink, Sparkles, RefreshCw, Printer, Truck, RefreshCcw, Plus } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 import { PLAN_DISPLAY, PLAN_LIMITS } from "@/lib/features";
 import { BUSINESS_TYPES, BUSINESS_TYPE_META, type BusinessType, SALES_CHANNELS, SALES_CHANNEL_META, type SalesChannel, isValidSalesChannel } from "@/lib/modules";
@@ -272,6 +272,12 @@ function SettingsContent() {
   const [selectedSc, setSelectedSc] = useState<SalesChannel>("both");
   const [switchingSc, setSwitchingSc] = useState(false);
   const { subscription, payments, daysLeft, plan, isExpiringSoon, refresh: refreshSub } = useSubscription();
+  const [blacklist, setBlacklist] = useState<{ id: string; phone: string; reason: string | null; createdAt: string }[]>([]);
+  const [blacklistLoading, setBlacklistLoading] = useState(false);
+  const [blPhone, setBlPhone] = useState("");
+  const [blReason, setBlReason] = useState("");
+  const [addingBl, setAddingBl] = useState(false);
+  const [deletingBlId, setDeletingBlId] = useState<string | null>(null);
   const [fbConn, setFbConn] = useState<{ connected: boolean; pageName?: string; connectedAt?: string } | null>(null);
   const [fbLoading, setFbLoading] = useState(false);
   const [fbError, setFbError] = useState<string | null>(null);
@@ -351,6 +357,45 @@ function SettingsContent() {
       setWaBusinessId(d.businessAccountId ?? "");
     }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (tab === "blacklist") {
+      setBlacklistLoading(true);
+      fetch("/api/fake-order/blacklist")
+        .then(r => r.json())
+        .then(d => { if (Array.isArray(d)) setBlacklist(d); })
+        .catch(() => {})
+        .finally(() => setBlacklistLoading(false));
+    }
+  }, [tab]);
+
+  async function addToBlacklist(e: React.FormEvent) {
+    e.preventDefault();
+    if (!blPhone.trim()) { showToast("error", "ফোন নম্বর দিন"); return; }
+    setAddingBl(true);
+    const r = await fetch("/api/fake-order/blacklist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: blPhone.trim(), reason: blReason.trim() || null }),
+    });
+    const d = await r.json();
+    setAddingBl(false);
+    if (r.ok) {
+      setBlacklist(prev => [d, ...prev.filter(x => x.phone !== d.phone)]);
+      setBlPhone(""); setBlReason("");
+      showToast("success", "ব্ল্যাকলিস্টে যুক্ত হয়েছে ✓");
+    } else {
+      showToast("error", d.error ?? "কিছু একটা সমস্যা হয়েছে।");
+    }
+  }
+
+  async function removeFromBlacklist(id: string) {
+    setDeletingBlId(id);
+    await fetch(`/api/fake-order/blacklist?id=${id}`, { method: "DELETE" });
+    setBlacklist(prev => prev.filter(x => x.id !== id));
+    setDeletingBlId(null);
+    showToast("success", "ব্ল্যাকলিস্ট থেকে সরানো হয়েছে ✓");
+  }
 
   useEffect(() => {
     if (tab === "facebook") {
@@ -644,6 +689,7 @@ function SettingsContent() {
     { key: "ai", label: "AI সেটিংস", desc: "AI ব্যবহার ও সীমা", icon: Sparkles },
     { key: "slip", label: "অর্ডার স্লিপ", desc: "পেকিং স্লিপ কাস্টমাইজ করুন", icon: Printer },
     { key: "courier", label: "কুরিয়ার", desc: "Pathao, Steadfast, RedX API", icon: Truck },
+    { key: "blacklist", label: "ব্ল্যাকলিস্ট", desc: "ফেক অর্ডার সুরক্ষা", icon: ShieldX },
     { key: "referral", label: "Referral", desc: "বন্ধুকে invite করুন", icon: Target },
   ];
 
@@ -2060,6 +2106,104 @@ function SettingsContent() {
           <SteadfastSettingsPanel />
           <RedxSettingsPanel />
           <EcourierSettingsPanel />
+        </div>
+      )}
+
+      {/* Blacklist Tab */}
+      {tab === "blacklist" && (
+        <div className="space-y-5">
+          <div className="rounded-2xl p-5 border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ backgroundColor: "#FEE2E2" }}>
+                <ShieldX size={18} style={{ color: "#DC2626" }} />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm" style={{ color: S.text }}>ফোন নম্বর ব্ল্যাকলিস্ট</h3>
+                <p className="text-xs" style={{ color: S.muted }}>ব্লক করা নম্বর থেকে অর্ডার নেওয়া হবে না</p>
+              </div>
+            </div>
+
+            <form onSubmit={addToBlacklist} className="flex gap-2 flex-wrap mb-5">
+              <input
+                type="text"
+                value={blPhone}
+                onChange={e => setBlPhone(e.target.value)}
+                placeholder="ফোন নম্বর (যেমন: 01712345678)"
+                style={{ ...inp(focused === "blPhone"), flex: "1 1 180px", minWidth: 0 }}
+                onFocus={() => setFocused("blPhone")}
+                onBlur={() => setFocused(null)}
+              />
+              <input
+                type="text"
+                value={blReason}
+                onChange={e => setBlReason(e.target.value)}
+                placeholder="কারণ (ঐচ্ছিক)"
+                style={{ ...inp(focused === "blReason"), flex: "1 1 180px", minWidth: 0 }}
+                onFocus={() => setFocused("blReason")}
+                onBlur={() => setFocused(null)}
+              />
+              <button
+                type="submit"
+                disabled={addingBl}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-semibold disabled:opacity-60 flex-shrink-0"
+                style={{ backgroundColor: "#DC2626", height: "40px" }}>
+                {addingBl ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                যোগ করুন
+              </button>
+            </form>
+
+            {blacklistLoading ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 size={24} className="animate-spin" style={{ color: S.muted }} />
+              </div>
+            ) : blacklist.length === 0 ? (
+              <div className="text-center py-10 rounded-xl" style={{ backgroundColor: S.bg }}>
+                <ShieldCheck size={32} className="mx-auto mb-2" style={{ color: S.muted }} />
+                <p className="text-sm font-medium" style={{ color: S.muted }}>ব্ল্যাকলিস্ট ফাঁকা</p>
+                <p className="text-xs mt-1" style={{ color: S.muted }}>উপরে ফোন নম্বর দিয়ে ব্লক করুন</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {blacklist.map(entry => (
+                  <div key={entry.id} className="flex items-center gap-3 px-4 py-3 rounded-xl border" style={{ borderColor: S.border, backgroundColor: S.bg }}>
+                    <ShieldX size={16} style={{ color: "#DC2626", flexShrink: 0 }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold font-mono" style={{ color: S.text }}>{entry.phone}</p>
+                      {entry.reason && <p className="text-xs truncate" style={{ color: S.muted }}>{entry.reason}</p>}
+                    </div>
+                    <p className="text-[10px] flex-shrink-0" style={{ color: S.muted }}>
+                      {new Date(entry.createdAt).toLocaleDateString("bn-BD")}
+                    </p>
+                    <button
+                      onClick={() => removeFromBlacklist(entry.id)}
+                      disabled={deletingBlId === entry.id}
+                      className="p-1.5 rounded-lg hover:bg-red-50 disabled:opacity-60 transition-colors flex-shrink-0"
+                      title="ব্ল্যাকলিস্ট থেকে সরান">
+                      {deletingBlId === entry.id ? <Loader2 size={14} className="animate-spin" style={{ color: "#DC2626" }} /> : <Trash2 size={14} style={{ color: "#DC2626" }} />}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-2xl p-5 border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+            <h3 className="font-bold text-sm mb-3" style={{ color: S.text }}>ফেক অর্ডার ডিটেকশন কীভাবে কাজ করে?</h3>
+            <div className="space-y-2.5">
+              {[
+                { icon: "🔴", text: "ব্ল্যাকলিস্টের নম্বর থেকে অর্ডার আসলে সরাসরি ব্লক" },
+                { icon: "🌐", text: "৩টি বা বেশি শপে ফেক রিপোর্ট থাকলে স্বয়ংক্রিয় ব্লক" },
+                { icon: "⚡", text: "২৪ ঘণ্টায় ৩+ অর্ডার হলে 'উচ্চ-ঝুঁকি' চিহ্নিত" },
+                { icon: "📵", text: "অবৈধ বাংলাদেশি ফোন ফরম্যাট ধরা পড়ে" },
+                { icon: "🕵️", text: "সন্দেহজনক নাম ও ঠিকানা বিশ্লেষণ" },
+              ].map(item => (
+                <div key={item.text} className="flex items-start gap-3">
+                  <span className="text-lg flex-shrink-0">{item.icon}</span>
+                  <p className="text-sm" style={{ color: S.secondary }}>{item.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 

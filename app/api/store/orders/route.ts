@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendSMS, decryptApiKey } from "@/lib/sms";
+import { detectFakeOrder } from "@/lib/fakeOrderDetector";
 
 const MAX_ITEM_QTY = 999;
 const MAX_ITEMS = 50;
@@ -124,6 +125,7 @@ export async function POST(req: Request) {
     }
 
     let validatedItems: { productId: string; variantId?: string; quantity: number }[];
+    let storeRiskResult = { riskScore: 0, riskLevel: "safe" as const, flags: [] as string[], action: "allow" as const };
     try {
       validatedItems = validateItems(rawItems);
     } catch (err: unknown) {
@@ -141,6 +143,19 @@ export async function POST(req: Request) {
     });
     if (!shop || !shop.storeEnabled) {
       return NextResponse.json({ error: "স্টোর পাওয়া যায়নি।" }, { status: 404 });
+    }
+
+    storeRiskResult = await detectFakeOrder({
+      shopId: shop.id,
+      phone: customerPhone,
+      customerName,
+      customerAddress,
+    });
+    if (storeRiskResult.action === "block") {
+      return NextResponse.json(
+        { error: `অর্ডার গ্রহণ করা যায়নি: ${storeRiskResult.blockReason ?? "উচ্চ-ঝুঁকির নম্বর"}` },
+        { status: 403 }
+      );
     }
 
     const ALLOWED_PAYMENT_METHODS = ["cod", "bkash", "nagad"] as const;
@@ -280,6 +295,8 @@ export async function POST(req: Request) {
           transactionId: transactionId || null,
           couponCode: appliedCouponCode || null,
           ipAddress,
+          riskScore: storeRiskResult.riskScore > 0 ? storeRiskResult.riskScore : null,
+          riskFlags: storeRiskResult.flags.length > 0 ? JSON.stringify(storeRiskResult.flags) : null,
           items: {
             create: itemLines.map(i => ({
               productId: i.productId,

@@ -7,7 +7,7 @@ import Link from "next/link";
 import {
   Package, ShoppingBag, Users, AlertTriangle, Truck, Target,
   Plus, FileText, TrendingDown, ArrowUpRight, ArrowDownRight,
-  Star, TrendingUp, Calendar, CheckSquare, Clock, Store,
+  Star, TrendingUp, Calendar, CheckSquare, Clock, Store, ShieldX,
 } from "lucide-react";
 import TaskQuickComplete from "./TaskQuickComplete";
 import GamificationWidget from "@/components/GamificationWidget";
@@ -199,6 +199,11 @@ export default async function DashboardPage() {
   const salesTarget: number = ((shop.notifSettings as Record<string, unknown> | null)?.salesTarget as number) ?? 0;
   const totalDue = allCustomers.reduce((s, c) => s + c.dueAmount, 0);
   const lowStockProducts = allProducts.filter((p) => p.stockQty <= p.lowStockAt);
+
+  const [blacklistCount, fakeReportedCount] = await Promise.all([
+    prisma.phoneBlacklist.count({ where: { shopId: shop.id } }),
+    prisma.order.count({ where: { userId: user.id, fakeReported: true } }),
+  ]);
 
   let storeStats: { totalOrders: number; monthRevenue: number; totalVisits: number } | null = null;
   if (hasStore) {
@@ -397,6 +402,27 @@ export default async function DashboardPage() {
           <p className="text-[11px] mt-1" style={{ color: S.muted }}>২০২৫ সালের বর্তমান</p>
         </div>
       </div>
+
+      {/* ── Fake Order Protection Widget ─────────────────────────── */}
+      {(blacklistCount > 0 || fakeReportedCount > 0) && (
+        <div className="rounded-2xl px-5 py-4 flex items-center gap-4 border" style={{ backgroundColor: "#FFF5F5", borderColor: "#FED7D7" }}>
+          <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#FEE2E2" }}>
+            <ShieldX size={18} style={{ color: "#DC2626" }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold" style={{ color: "#991B1B" }}>ফেক অর্ডার সুরক্ষা সক্রিয়</p>
+            <p className="text-xs mt-0.5" style={{ color: "#B91C1C" }}>
+              {blacklistCount > 0 && `${blacklistCount}টি নম্বর ব্লক`}
+              {blacklistCount > 0 && fakeReportedCount > 0 && " · "}
+              {fakeReportedCount > 0 && `${fakeReportedCount}টি ফেক অর্ডার রিপোর্টেড`}
+            </p>
+          </div>
+          <Link href="/settings?tab=blacklist" className="text-xs font-semibold px-3 py-1.5 rounded-lg flex-shrink-0"
+            style={{ backgroundColor: "#FEE2E2", color: "#DC2626" }}>
+            পরিচালনা →
+          </Link>
+        </div>
+      )}
 
       {/* ── Sales Target ─────────────────────────────────────────── */}
       {salesTarget > 0 && (() => {

@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, Plus, Download, Facebook, CheckCircle, XCircle, ExternalLink, ChevronLeft, ChevronRight, ShoppingBag, Loader2, MoreHorizontal, Printer, Truck } from "lucide-react";
+import { Search, Plus, Download, Facebook, CheckCircle, XCircle, ExternalLink, ChevronLeft, ChevronRight, ShoppingBag, Loader2, MoreHorizontal, Printer, Truck, ShieldX } from "lucide-react";
 import { formatBDT, formatRelativeDate, getStatusStyle } from "@/lib/utils";
 import { downloadExcel } from "@/lib/excel";
 import OrderCreatePanel from "./OrderCreatePanel";
+import RiskBadge from "./RiskBadge";
 
 interface Order {
   id: string; status: string; totalAmount: number; paidAmount: number; dueAmount: number;
@@ -14,6 +15,9 @@ interface Order {
   courierTrackId: string | null; courierStatus: string | null;
   source?: string | null;
   storeOrderId?: string | null;
+  riskScore?: number | null;
+  riskFlags?: string | null;
+  fakeReported?: boolean;
   customer: { name: string; phone: string | null } | null;
   items: { productId: string | null; comboId: string | null; comboSnapshot: string | null; product: { name: string } | null; combo: { name: string } | null }[];
 }
@@ -94,6 +98,24 @@ export default function FCommerceOrders() {
   const [createPanelOpen, setCreatePanelOpen] = useState(false);
   const [panelPrefillName, setPanelPrefillName] = useState<string | undefined>(undefined);
   const [panelPrefillSuggestId, setPanelPrefillSuggestId] = useState<string | undefined>(undefined);
+  const [blacklistingPhone, setBlacklistingPhone] = useState<string | null>(null);
+
+  async function quickBlacklistPhone(phone: string) {
+    if (!phone || blacklistingPhone === phone) return;
+    setBlacklistingPhone(phone);
+    setQuickMenu(null);
+    const r = await fetch("/api/fake-order/blacklist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone, reason: "অর্ডার পেজ থেকে ব্লক করা হয়েছে" }),
+    });
+    setBlacklistingPhone(null);
+    if (r.ok) {
+      showToast("success", `${phone} ব্ল্যাকলিস্টে যুক্ত হয়েছে ✓`);
+    } else {
+      showToast("error", "ব্ল্যাকলিস্ট করা যায়নি");
+    }
+  }
 
   function showToast(type: "success" | "error", msg: string) {
     setToast({ type, msg });
@@ -552,7 +574,16 @@ export default function FCommerceOrders() {
                           {initials}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold truncate" style={{ color: S.text }}>{o.customer?.name ?? "অজানা"}</p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-sm font-semibold truncate" style={{ color: S.text }}>{o.customer?.name ?? "অজানা"}</p>
+                            {o.riskScore != null && o.riskScore > 0 && (
+                              <RiskBadge
+                                riskScore={o.riskScore}
+                                riskLevel={o.riskScore >= 80 ? "high" : o.riskScore >= 50 ? "medium" : "low"}
+                                riskFlags={o.riskFlags}
+                              />
+                            )}
+                          </div>
                           <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                             <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg" style={{ backgroundColor: "var(--c-bg)", color: S.muted }}>#{o.id.slice(-6).toUpperCase()}</span>
                             {o.customer?.phone && <span className="text-[11px]" style={{ color: S.muted }}>{o.customer.phone}</span>}
@@ -825,6 +856,22 @@ export default function FCommerceOrders() {
                   <Truck size={14} /> কুরিয়ার বুক করুন
                 </button>
               )}
+              {(() => {
+                const o = data.orders.find(ord => ord.id === quickMenu.orderId);
+                const phone = o?.customer?.phone;
+                return phone ? (
+                  <button
+                    onClick={() => quickBlacklistPhone(phone)}
+                    disabled={blacklistingPhone === phone}
+                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm transition-colors hover:bg-red-50 disabled:opacity-60"
+                    style={{ color: "#DC2626" }}>
+                    {blacklistingPhone === phone
+                      ? <Loader2 size={14} className="animate-spin" />
+                      : <ShieldX size={14} />}
+                    ব্ল্যাকলিস্ট করুন
+                  </button>
+                ) : null;
+              })()}
               <div className="h-px my-1" style={{ backgroundColor: S.border }} />
               <p className="px-4 py-1 text-xs font-semibold uppercase tracking-wide" style={{ color: S.muted }}>স্ট্যাটাস বদলান</p>
               {STATUS_OPTIONS.map(s => {

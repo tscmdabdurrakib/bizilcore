@@ -152,6 +152,8 @@ model Shop {
   storeReviews           StoreReview[]
   storeCustomers         StoreCustomer[]
   coupons                Coupon[]
+  phoneBlacklist         PhoneBlacklist[]
+  fakeOrderReports       FakeOrderReport[]
   storePageViews         StorePageView[]
   categories             Category[]          @relation("ShopCategories")
   messengerConversations MessengerConversation[]
@@ -352,6 +354,9 @@ model Order {
   note            String?
   storeOrderId    String?       @unique
   storeOrder      StoreOrder?   @relation(fields: [storeOrderId], references: [id])
+  riskScore       Float?
+  riskFlags       String?
+  fakeReported    Boolean       @default(false)
   items           OrderItem[]
   returns         OrderReturn[]
   tasks           Task[]
@@ -1463,6 +1468,9 @@ model StoreOrder {
   status           String           @default("pending")
   couponCode       String?
   ipAddress        String?
+  riskScore        Float?
+  riskFlags        String?
+  fakeReported     Boolean          @default(false)
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   dashboardOrder   Order?
@@ -1615,4 +1623,31 @@ model StoreCustomer {
   @@unique([shopId, email])
   @@index([shopId])
   @@index([createdAt])
+}
+
+model PhoneBlacklist {
+  id        String   @id @default(cuid())
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  phone     String
+  reason    String?
+  blockedBy String   @default("manual")
+  createdAt DateTime @default(now())
+
+  @@unique([shopId, phone])
+  @@index([shopId])
+  @@index([phone])
+}
+
+model FakeOrderReport {
+  id        String   @id @default(cuid())
+  phone     String
+  orderId   String?
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+  @@index([shopId])
 }

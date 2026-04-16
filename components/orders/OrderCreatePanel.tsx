@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { X, Plus, Trash2, Tag, Truck, Loader2, ShoppingCart, ChevronDown, ChevronUp, ShoppingBag } from "lucide-react";
+import { X, Plus, Trash2, Tag, Truck, Loader2, ShoppingCart, ChevronDown, ChevronUp, ShoppingBag, ShieldX, ShieldAlert } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
 
 interface Customer { id: string; name: string; phone: string | null; }
@@ -75,6 +75,28 @@ export default function OrderCreatePanel({ onClose, onCreated, prefillCustomerNa
   const [trackId, setTrackId] = useState("");
 
   const [expandedSection, setExpandedSection] = useState<"customer" | "products" | "payment" | "tags" | "courier">("customer");
+  const [phoneRisk, setPhoneRisk] = useState<{ riskLevel: string; flags: string[] } | null>(null);
+  const [checkingPhone, setCheckingPhone] = useState(false);
+
+  useEffect(() => {
+    if (customerMode !== "new" || newCustomerPhone.replace(/\D/g, "").length < 11) {
+      setPhoneRisk(null);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setCheckingPhone(true);
+      fetch("/api/fake-order/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: newCustomerPhone, customerName: newCustomerName }),
+      })
+        .then(r => r.json())
+        .then(d => setPhoneRisk(d))
+        .catch(() => setPhoneRisk(null))
+        .finally(() => setCheckingPhone(false));
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [newCustomerPhone, customerMode, newCustomerName]);
 
   useEffect(() => {
     setTimeout(() => setVisible(true), 10);
@@ -331,12 +353,39 @@ export default function OrderCreatePanel({ onClose, onCreated, prefillCustomerNa
                           className="h-10 px-3 rounded-xl border text-sm outline-none"
                           style={{ borderColor: focused === "name" ? "#0F6E56" : S.border, backgroundColor: S.surface, color: S.text }}
                           onFocus={() => setFocused("name")} onBlur={() => setFocused(null)} />
-                        <input type="tel" placeholder="ফোন" value={newCustomerPhone}
-                          onChange={e => setNewCustomerPhone(e.target.value)}
-                          className="h-10 px-3 rounded-xl border text-sm outline-none"
-                          style={{ borderColor: focused === "phone" ? "#0F6E56" : S.border, backgroundColor: S.surface, color: S.text }}
-                          onFocus={() => setFocused("phone")} onBlur={() => setFocused(null)} />
+                        <div className="relative">
+                          <input type="tel" placeholder="ফোন" value={newCustomerPhone}
+                            onChange={e => { setNewCustomerPhone(e.target.value); setPhoneRisk(null); }}
+                            className="h-10 px-3 rounded-xl border text-sm outline-none w-full"
+                            style={{
+                              borderColor: phoneRisk?.riskLevel === "blocked" ? "#DC2626"
+                                : phoneRisk?.riskLevel === "high" ? "#F87171"
+                                : phoneRisk?.riskLevel === "medium" ? "#FCA5A5"
+                                : focused === "phone" ? "#0F6E56" : S.border,
+                              backgroundColor: S.surface, color: S.text,
+                            }}
+                            onFocus={() => setFocused("phone")} onBlur={() => setFocused(null)} />
+                          {checkingPhone && (
+                            <Loader2 size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 animate-spin" style={{ color: S.muted }} />
+                          )}
+                        </div>
                       </div>
+                      {phoneRisk && phoneRisk.riskLevel !== "safe" && (
+                        <div className="rounded-xl px-3 py-2 flex items-start gap-2"
+                          style={{ backgroundColor: phoneRisk.riskLevel === "blocked" ? "#FEE2E2" : "#FFF7ED", border: `1px solid ${phoneRisk.riskLevel === "blocked" ? "#FCA5A5" : "#FDBA74"}` }}>
+                          {phoneRisk.riskLevel === "blocked"
+                            ? <ShieldX size={14} style={{ color: "#DC2626", flexShrink: 0, marginTop: 1 }} />
+                            : <ShieldAlert size={14} style={{ color: "#EA580C", flexShrink: 0, marginTop: 1 }} />}
+                          <div>
+                            <p className="text-xs font-bold" style={{ color: phoneRisk.riskLevel === "blocked" ? "#DC2626" : "#EA580C" }}>
+                              {phoneRisk.riskLevel === "blocked" ? "এই নম্বর ব্লক করা আছে!" : "সতর্কতা: সন্দেহজনক নম্বর"}
+                            </p>
+                            {phoneRisk.flags?.length > 0 && (
+                              <p className="text-[10px] mt-0.5" style={{ color: "#92400E" }}>{phoneRisk.flags.join(" • ")}</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
                       <input type="text" placeholder="📍 ঠিকানা" value={newCustomerAddress}
                         onChange={e => setNewCustomerAddress(e.target.value)}
                         className="w-full h-10 px-3 rounded-xl border text-sm outline-none"

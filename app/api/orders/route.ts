@@ -5,6 +5,7 @@ import { logActivity } from "@/lib/logActivity";
 import { triggerOrderSMS } from "@/lib/sms";
 import { createAutoTask } from "@/lib/autoTasks";
 import { checkAndAwardBadges } from "@/lib/badges";
+import { detectFakeOrder } from "@/lib/fakeOrderDetector";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -74,6 +75,26 @@ export async function POST(req: NextRequest) {
 
   const shop = await prisma.shop.findUnique({ where: { userId: session.user.id } });
   if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+
+  const phoneForCheck = newCustomerPhone || (customerId
+    ? (await prisma.customer.findUnique({ where: { id: customerId }, select: { phone: true } }))?.phone ?? ""
+    : "");
+
+  let riskResult = { riskScore: 0, riskLevel: "safe" as const, flags: [] as string[], action: "allow" as const };
+  if (phoneForCheck) {
+    riskResult = await detectFakeOrder({
+      shopId: shop.id,
+      phone: phoneForCheck,
+      customerName: newCustomerName || undefined,
+      customerAddress: newCustomerAddress || undefined,
+    });
+    if (riskResult.action === "block") {
+      return NextResponse.json(
+        { error: `অর্ডার ব্লক হয়েছে: ${riskResult.blockReason ?? "উচ্চ-ঝুঁকির নম্বর"}` },
+        { status: 403 }
+      );
+    }
+  }
 
   // Separate regular product items from combo items
   const regularItems = items.filter((it: { productId?: string; comboId?: string }) => !it.comboId && it.productId);
@@ -161,6 +182,8 @@ export async function POST(req: NextRequest) {
         dueAmount: due,
         deliveryCharge: delivery,
         tags: tags ? JSON.stringify(tags) : "[]",
+        riskScore: riskResult.riskScore > 0 ? riskResult.riskScore : null,
+        riskFlags: riskResult.flags.length > 0 ? JSON.stringify(riskResult.flags) : null,
         items: {
           create: [
             ...regularItems.map((item: { productId: string; quantity: number; unitPrice: number; subtotal: number }) => ({
