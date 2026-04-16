@@ -200,9 +200,10 @@ export default async function DashboardPage() {
   const totalDue = allCustomers.reduce((s, c) => s + c.dueAmount, 0);
   const lowStockProducts = allProducts.filter((p) => p.stockQty <= p.lowStockAt);
 
-  const [blacklistCount, fakeReportedCount] = await Promise.all([
+  const [blacklistCount, blockedToday, flaggedThisMonth] = await Promise.all([
     prisma.phoneBlacklist.count({ where: { shopId: shop.id } }),
-    prisma.order.count({ where: { userId: user.id, fakeReported: true } }),
+    prisma.order.count({ where: { userId: user.id, riskScore: { gte: 80 }, createdAt: { gte: today } } }),
+    prisma.order.count({ where: { userId: user.id, riskScore: { gte: 20 }, createdAt: { gte: monthStart } } }),
   ]);
 
   let storeStats: { totalOrders: number; monthRevenue: number; totalVisits: number } | null = null;
@@ -404,7 +405,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Fake Order Protection Widget ─────────────────────────── */}
-      {(blacklistCount > 0 || fakeReportedCount > 0) && (
+      {(blacklistCount > 0 || blockedToday > 0 || flaggedThisMonth > 0) && (
         <div className="rounded-2xl px-5 py-4 flex items-center gap-4 border" style={{ backgroundColor: "#FFF5F5", borderColor: "#FED7D7" }}>
           <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#FEE2E2" }}>
             <ShieldX size={18} style={{ color: "#DC2626" }} />
@@ -412,9 +413,9 @@ export default async function DashboardPage() {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold" style={{ color: "#991B1B" }}>ফেক অর্ডার সুরক্ষা সক্রিয়</p>
             <p className="text-xs mt-0.5" style={{ color: "#B91C1C" }}>
-              {blacklistCount > 0 && `${blacklistCount}টি নম্বর ব্লক`}
-              {blacklistCount > 0 && fakeReportedCount > 0 && " · "}
-              {fakeReportedCount > 0 && `${fakeReportedCount}টি ফেক অর্ডার রিপোর্টেড`}
+              {blacklistCount > 0 && `${blacklistCount}টি ব্লকলিস্টেড`}
+              {blockedToday > 0 && `${blacklistCount > 0 ? " · " : ""}আজ ${blockedToday}টি উচ্চ-ঝুঁকি`}
+              {flaggedThisMonth > 0 && `${(blacklistCount > 0 || blockedToday > 0) ? " · " : ""}এ মাসে ${flaggedThisMonth}টি সন্দেহজনক`}
             </p>
           </div>
           <Link href="/settings?tab=blacklist" className="text-xs font-semibold px-3 py-1.5 rounded-lg flex-shrink-0"

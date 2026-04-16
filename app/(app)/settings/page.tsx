@@ -358,12 +358,19 @@ function SettingsContent() {
     }).catch(() => {});
   }, []);
 
+  const [fakeStats, setFakeStats] = useState<{ blacklistCount: number; fakeReportedTotal: number; blockedToday: number; flaggedThisMonth: number; crossStoreEncountered: number } | null>(null);
+
   useEffect(() => {
     if (tab === "blacklist") {
       setBlacklistLoading(true);
-      fetch("/api/fake-order/blacklist")
-        .then(r => r.json())
-        .then(d => { if (Array.isArray(d)) setBlacklist(d); })
+      Promise.all([
+        fetch("/api/fake-order/blacklist").then(r => r.json()),
+        fetch("/api/fake-order/stats").then(r => r.json()),
+      ])
+        .then(([bl, stats]) => {
+          if (Array.isArray(bl)) setBlacklist(bl);
+          if (stats && !stats.error) setFakeStats(stats);
+        })
         .catch(() => {})
         .finally(() => setBlacklistLoading(false));
     }
@@ -2122,6 +2129,21 @@ function SettingsContent() {
                 <p className="text-xs" style={{ color: S.muted }}>ব্লক করা নম্বর থেকে অর্ডার নেওয়া হবে না</p>
               </div>
             </div>
+
+            {fakeStats && (
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                {[
+                  { label: "ব্ল্যাকলিস্টেড", value: fakeStats.blacklistCount, color: "#DC2626", bg: "#FEE2E2" },
+                  { label: "এ মাসে সন্দেহজনক", value: fakeStats.flaggedThisMonth, color: "#D97706", bg: "#FEF3C7" },
+                  { label: "ক্রস-স্টোর রিপোর্টেড", value: fakeStats.crossStoreEncountered, color: "#7C3AED", bg: "#EDE9FE" },
+                ].map(s => (
+                  <div key={s.label} className="rounded-xl px-3 py-2 text-center" style={{ backgroundColor: s.bg }}>
+                    <p className="text-lg font-black" style={{ color: s.color }}>{s.value}</p>
+                    <p className="text-[10px] font-semibold mt-0.5" style={{ color: s.color }}>{s.label}</p>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <form onSubmit={addToBlacklist} className="flex gap-2 flex-wrap mb-5">
               <input

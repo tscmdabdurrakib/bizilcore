@@ -64,8 +64,9 @@ export async function detectFakeOrder(params: {
   phone: string;
   customerName?: string;
   customerAddress?: string;
+  ip?: string;
 }): Promise<RiskResult> {
-  const { shopId, phone, customerName, customerAddress } = params;
+  const { shopId, phone, customerName, customerAddress, ip } = params;
   const flags: string[] = [];
   let score = 0;
 
@@ -79,7 +80,7 @@ export async function detectFakeOrder(params: {
     score += 30;
   }
 
-  const [blacklisted, recentOrders, crossStoreShops] = await Promise.all([
+  const [blacklisted, recentOrders, crossStoreShops, cancelledOrders] = await Promise.all([
     prisma.phoneBlacklist.findFirst({
       where: { shopId, phone: normalizedPhone },
       select: { id: true, reason: true },
@@ -93,6 +94,13 @@ export async function detectFakeOrder(params: {
     prisma.fakeOrderReport.groupBy({
       by: ["shopId"],
       where: { phone: normalizedPhone },
+    }),
+    prisma.order.count({
+      where: {
+        customer: { phone: { contains: normalizedPhone.slice(-10) } },
+        status: "cancelled",
+        createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+      },
     }),
   ]);
 
@@ -121,6 +129,24 @@ export async function detectFakeOrder(params: {
   } else if (recentOrders >= 3) {
     flags.push(`২৪ ঘণ্টায় ${recentOrders}টি অর্ডার`);
     score += 15;
+  }
+
+  if (cancelledOrders >= 3) {
+    flags.push(`গত ৩০ দিনে ${cancelledOrders}টি বাতিল অর্ডার`);
+    score += cancelledOrders >= 5 ? 30 : 20;
+  }
+
+  if (ip && ip !== "unknown") {
+    const recentOrdersFromIp = await prisma.storeOrder.count({
+      where: { shopId, ipAddress: ip, createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+    });
+    if (recentOrdersFromIp >= 5) {
+      flags.push(`একই IP থেকে ${recentOrdersFromIp}টি অর্ডার (২৪ ঘণ্টায়)`);
+      score += 25;
+    } else if (recentOrdersFromIp >= 3) {
+      flags.push(`একই IP থেকে ${recentOrdersFromIp}টি অর্ডার`);
+      score += 10;
+    }
   }
 
   if (customerName && checkSuspiciousName(customerName)) {

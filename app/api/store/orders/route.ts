@@ -150,6 +150,7 @@ export async function POST(req: Request) {
       phone: customerPhone,
       customerName,
       customerAddress,
+      ip,
     });
     if (storeRiskResult.action === "block") {
       return NextResponse.json(
