@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { X, Plus, Trash2, Tag, Truck, Loader2, ShoppingCart, ChevronDown, ChevronUp, ShoppingBag, ShieldX, ShieldAlert } from "lucide-react";
+import { X, Plus, Trash2, Tag, Truck, Loader2, ShoppingCart, ChevronDown, ChevronUp, ShoppingBag } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import RiskBadge from "@/components/orders/RiskBadge";
 
 interface Customer { id: string; name: string; phone: string | null; }
 interface ProductVariant { id: string; name: string; size: string | null; color: string | null; sku: string | null; price: number | null; stockQty: number; }
@@ -390,19 +391,19 @@ export default function OrderCreatePanel({ onClose, onCreated, prefillCustomerNa
                       {phoneRisk && phoneRisk.riskLevel !== "safe" && (
                         <div className="rounded-xl px-3 py-2.5 space-y-2"
                           style={{ backgroundColor: isPhoneBlocked ? "#FEE2E2" : "#FFF7ED", border: `1px solid ${isPhoneBlocked ? "#FCA5A5" : "#FDBA74"}` }}>
-                          <div className="flex items-start gap-2">
-                            {isPhoneBlocked
-                              ? <ShieldX size={14} style={{ color: "#DC2626", flexShrink: 0, marginTop: 1 }} />
-                              : <ShieldAlert size={14} style={{ color: "#EA580C", flexShrink: 0, marginTop: 1 }} />}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold" style={{ color: isPhoneBlocked ? "#DC2626" : "#EA580C" }}>
-                                {isPhoneBlocked ? "উচ্চ-ঝুঁকির নম্বর শনাক্ত হয়েছে!" : "সতর্কতা: সন্দেহজনক নম্বর"}
-                              </p>
-                              {phoneRisk.flags?.length > 0 && (
-                                <p className="text-[10px] mt-0.5" style={{ color: isPhoneBlocked ? "#991B1B" : "#92400E" }}>{phoneRisk.flags.join(" • ")}</p>
-                              )}
-                            </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <RiskBadge
+                              riskLevel={phoneRisk.riskLevel as Parameters<typeof RiskBadge>[0]["riskLevel"]}
+                              riskFlags={JSON.stringify(phoneRisk.flags ?? [])}
+                              size="md"
+                            />
+                            <p className="text-xs font-bold" style={{ color: isPhoneBlocked ? "#DC2626" : "#EA580C" }}>
+                              {isPhoneBlocked ? "উচ্চ-ঝুঁকির নম্বর শনাক্ত হয়েছে!" : "সতর্কতা: সন্দেহজনক নম্বর"}
+                            </p>
                           </div>
+                          {phoneRisk.flags?.length > 0 && (
+                            <p className="text-[10px]" style={{ color: isPhoneBlocked ? "#991B1B" : "#92400E" }}>{phoneRisk.flags.join(" • ")}</p>
+                          )}
                           <label className="flex items-center gap-2 cursor-pointer">
                             <input type="checkbox" checked={confirmRisky} onChange={e => setConfirmRisky(e.target.checked)}
                               className="rounded" style={{ accentColor: isPhoneBlocked ? "#DC2626" : "#EA580C" }} />

@@ -13,12 +13,22 @@ export async function GET(_req: NextRequest) {
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
+  // Find phones reported by 2+ distinct shops globally (cross-store flagged phones)
+  const phoneShopPairs = await prisma.fakeOrderReport.groupBy({
+    by: ["phone", "shopId"],
+  });
+  const phoneToShops = new Map<string, Set<string>>();
+  for (const row of phoneShopPairs) {
+    if (!phoneToShops.has(row.phone)) phoneToShops.set(row.phone, new Set());
+    phoneToShops.get(row.phone)!.add(row.shopId);
+  }
+  const crossStoreEncountered = [...phoneToShops.values()].filter(shops => shops.size >= 2).length;
+
   const [
     blacklistCount,
     fakeReportedTotal,
     blockedToday,
     flaggedThisMonth,
-    crossStoreEncountered,
   ] = await Promise.all([
     prisma.phoneBlacklist.count({ where: { shopId: shop.id } }),
     prisma.order.count({ where: { userId: session.user.id, fakeReported: true } }),
@@ -36,10 +46,6 @@ export async function GET(_req: NextRequest) {
         createdAt: { gte: monthStart },
       },
     }),
-    prisma.fakeOrderReport.groupBy({
-      by: ["phone"],
-      where: { shopId: shop.id },
-    }).then(r => r.length),
   ]);
 
   return NextResponse.json({
