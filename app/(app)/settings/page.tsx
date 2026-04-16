@@ -18,14 +18,18 @@ interface SMSPrefs {
 }
 const CATEGORIES = ["পোশাক", "জুয়েলারি", "খাবার", "সৌন্দর্য", "গৃহস্থালি", "অন্যান্য"];
 const S = { surface: "var(--c-surface)", border: "var(--c-border)", text: "var(--c-text)", muted: "var(--c-text-muted)", secondary: "var(--c-text-sub)", primary: "var(--c-primary)", bg: "var(--c-bg)" };
-const inp = (f: boolean) => ({ height: "40px", border: `1px solid ${f ? S.primary : S.border}`, borderRadius: "8px", color: S.text, backgroundColor: S.surface, padding: "0 12px", fontSize: "14px", outline: "none", width: "100%" });
+const inp = (f: boolean) => ({ height: "42px", border: `1.5px solid ${f ? "#0F6E56" : S.border}`, borderRadius: "10px", color: S.text, backgroundColor: S.surface, padding: "0 14px", fontSize: "14px", outline: "none", width: "100%", transition: "border-color 0.15s" });
+const TAB_GROUPS = ["আমার", "শপ", "সংযোগ", "টুলস"] as const;
 
 function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
-    <label className="flex items-center justify-between py-3 cursor-pointer">
-      <span className="text-sm" style={{ color: S.text }}>{label}</span>
-      <div className="w-11 h-6 rounded-full flex items-center px-0.5 transition-colors" style={{ backgroundColor: checked ? S.primary : S.border }} onClick={() => onChange(!checked)}>
-        <div className="w-5 h-5 rounded-full bg-white shadow transition-transform" style={{ transform: checked ? "translateX(20px)" : "translateX(0)" }} />
+    <label className="flex items-center justify-between py-3 cursor-pointer group">
+      <span className="text-sm font-medium" style={{ color: S.text }}>{label}</span>
+      <div className="w-12 h-6 rounded-full flex items-center px-0.5 transition-all duration-200 flex-shrink-0"
+        style={{ backgroundColor: checked ? "#0F6E56" : S.border, boxShadow: checked ? "0 0 0 3px #0F6E5620" : "none" }}
+        onClick={() => onChange(!checked)}>
+        <div className="w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-200"
+          style={{ transform: checked ? "translateX(24px)" : "translateX(0)" }} />
       </div>
     </label>
   );
@@ -685,19 +689,19 @@ function SettingsContent() {
   }
 
   const TABS = [
-    { key: "account", label: "অ্যাকাউন্ট", desc: "প্রোফাইল ও পাসওয়ার্ড", icon: User },
-    { key: "shop", label: "Shop তথ্য", desc: "শপের নাম ও ঠিকানা", icon: Store },
-    { key: "invoice", label: "Invoice", desc: "কাস্টম invoice সেটিংস", icon: FileText },
-    { key: "catalog", label: "ক্যাটালগ", desc: "পাবলিক শপ পেজ", icon: Globe },
-    { key: "subscription", label: "Subscription", desc: "Plan ও billing", icon: CreditCard },
-    { key: "notifications", label: "Notifications", desc: "SMS ও alert সেটিংস", icon: Bell },
-    { key: "facebook", label: "Facebook", desc: "Page সংযোগ", icon: Facebook },
-    { key: "whatsapp", label: "WhatsApp", desc: "Meta API সংযোগ", icon: MessageCircle },
-    { key: "ai", label: "AI সেটিংস", desc: "AI ব্যবহার ও সীমা", icon: Sparkles },
-    { key: "slip", label: "অর্ডার স্লিপ", desc: "পেকিং স্লিপ কাস্টমাইজ করুন", icon: Printer },
-    { key: "courier", label: "কুরিয়ার", desc: "Pathao, Steadfast, RedX API", icon: Truck },
-    { key: "blacklist", label: "ব্ল্যাকলিস্ট", desc: "ফেক অর্ডার সুরক্ষা", icon: ShieldX },
-    { key: "referral", label: "Referral", desc: "বন্ধুকে invite করুন", icon: Target },
+    { key: "account",       label: "অ্যাকাউন্ট",   desc: "প্রোফাইল ও পাসওয়ার্ড",         icon: User,          color: "#6366F1", bg: "#EEF2FF",  group: "আমার"    },
+    { key: "subscription",  label: "Subscription",  desc: "Plan ও billing",               icon: CreditCard,    color: "#F59E0B", bg: "#FFFBEB",  group: "আমার"    },
+    { key: "referral",      label: "Referral",      desc: "বন্ধুকে invite করুন",           icon: Target,        color: "#10B981", bg: "#ECFDF5",  group: "আমার"    },
+    { key: "shop",          label: "Shop তথ্য",     desc: "শপের নাম ও ঠিকানা",             icon: Store,         color: "#0F6E56", bg: "#ECFDF5",  group: "শপ"      },
+    { key: "invoice",       label: "Invoice",       desc: "কাস্টম invoice সেটিংস",         icon: FileText,      color: "#0EA5E9", bg: "#F0F9FF",  group: "শপ"      },
+    { key: "catalog",       label: "ক্যাটালগ",       desc: "পাবলিক শপ পেজ",                icon: Globe,         color: "#8B5CF6", bg: "#F5F3FF",  group: "শপ"      },
+    { key: "slip",          label: "অর্ডার স্লিপ",   desc: "পেকিং স্লিপ কাস্টমাইজ করুন",  icon: Printer,       color: "#64748B", bg: "#F8FAFC",  group: "শপ"      },
+    { key: "notifications", label: "Notifications", desc: "SMS ও alert সেটিংস",           icon: Bell,          color: "#EF4444", bg: "#FEF2F2",  group: "সংযোগ"   },
+    { key: "facebook",      label: "Facebook",      desc: "Page সংযোগ",                   icon: Facebook,      color: "#1877F2", bg: "#EFF6FF",  group: "সংযোগ"   },
+    { key: "whatsapp",      label: "WhatsApp",      desc: "Meta API সংযোগ",               icon: MessageCircle, color: "#25D366", bg: "#F0FDF4",  group: "সংযোগ"   },
+    { key: "courier",       label: "কুরিয়ার",        desc: "Pathao, Steadfast, RedX API",  icon: Truck,         color: "#F97316", bg: "#FFF7ED",  group: "সংযোগ"   },
+    { key: "ai",            label: "AI সেটিংস",     desc: "AI ব্যবহার ও সীমা",            icon: Sparkles,      color: "#EC4899", bg: "#FDF2F8",  group: "টুলস"    },
+    { key: "blacklist",     label: "ব্ল্যাকলিস্ট",   desc: "ফেক অর্ডার সুরক্ষা",           icon: ShieldX,       color: "#DC2626", bg: "#FEF2F2",  group: "টুলস"    },
   ];
 
   const activeTab = TABS.find(t => t.key === tab);
@@ -884,30 +888,44 @@ function SettingsContent() {
       {/* Mobile menu grid */}
       {mobileView === "menu" && (
         <div className="lg:hidden mb-4">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: "var(--c-primary-light)" }}>
-              <Settings size={15} style={{ color: S.primary }} />
+          {/* Mobile header */}
+          <div className="rounded-2xl p-4 mb-5" style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ backgroundColor: "rgba(255,255,255,0.2)" }}>
+                <Settings size={18} color="white" />
+              </div>
+              <div>
+                <p className="font-black text-base text-white">সেটিংস</p>
+                <p className="text-xs" style={{ color: "rgba(255,255,255,0.7)" }}>আপনার শপ কাস্টমাইজ করুন</p>
+              </div>
             </div>
-            <span className="font-bold text-base" style={{ color: S.text }}>সেটিংস</span>
           </div>
-          <div className="grid grid-cols-2 gap-2.5">
-            {TABS.map(t => {
-              const MIcon = t.icon;
-              return (
-                <button key={t.key} onClick={() => { setTab(t.key); setMobileView("content"); }}
-                  className="flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all active:scale-95"
-                  style={{ backgroundColor: S.surface, borderColor: S.border }}>
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "var(--c-primary-light)" }}>
-                    <MIcon size={16} style={{ color: S.primary }} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold truncate" style={{ color: S.text }}>{t.label}</p>
-                    <p className="text-xs truncate mt-0.5" style={{ color: S.muted }}>{t.desc}</p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+          {TAB_GROUPS.map(group => {
+            const groupTabs = TABS.filter(t => t.group === group);
+            return (
+              <div key={group} className="mb-5">
+                <p className="text-xs font-black uppercase tracking-widest mb-2.5 px-1" style={{ color: S.muted }}>{group}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {groupTabs.map(t => {
+                    const MIcon = t.icon;
+                    return (
+                      <button key={t.key} onClick={() => { setTab(t.key); setMobileView("content"); }}
+                        className="flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all active:scale-95"
+                        style={{ backgroundColor: S.surface, borderColor: S.border }}>
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: t.bg }}>
+                          <MIcon size={16} style={{ color: t.color }} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold truncate" style={{ color: S.text }}>{t.label}</p>
+                          <p className="text-[10px] truncate mt-0.5" style={{ color: S.muted }}>{t.desc}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -926,49 +944,67 @@ function SettingsContent() {
 
       <div className={`flex gap-6 items-start ${mobileView === "menu" ? "hidden lg:flex" : ""}`}>
         {/* Desktop Sidebar */}
-        <div className="hidden lg:flex flex-col w-56 flex-shrink-0 sticky top-6">
-          <div className="flex items-center gap-2 px-3 mb-5">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: "var(--c-primary-light)" }}>
-              <Settings size={15} style={{ color: S.primary }} />
+        <div className="hidden lg:flex flex-col w-64 flex-shrink-0 sticky top-6 gap-0">
+          {/* Sidebar header */}
+          <div className="rounded-2xl p-4 mb-4" style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: "rgba(255,255,255,0.2)" }}>
+                <Settings size={17} color="white" />
+              </div>
+              <div>
+                <p className="font-black text-sm text-white">সেটিংস</p>
+                <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.7)" }}>শপ কাস্টমাইজ করুন</p>
+              </div>
             </div>
-            <span className="font-bold text-base" style={{ color: S.text }}>সেটিংস</span>
           </div>
-          <nav className="space-y-1">
-            {TABS.map(t => {
-              const Icon = t.icon;
-              const isActive = tab === t.key;
+
+          {/* Grouped nav */}
+          <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+            {TAB_GROUPS.map((group, gi) => {
+              const groupTabs = TABS.filter(t => t.group === group);
               return (
-                <button key={t.key} onClick={() => setTab(t.key)}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left"
-                  style={{
-                    backgroundColor: isActive ? "var(--c-primary-light)" : "transparent",
-                    color: isActive ? S.primary : S.secondary,
-                  }}>
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: isActive ? S.primary : S.border }}>
-                    <Icon size={14} color={isActive ? "white" : S.secondary} />
+                <div key={group}>
+                  {gi > 0 && <div className="mx-3" style={{ height: 1, backgroundColor: S.border }} />}
+                  <div className="px-3 pt-3 pb-1">
+                    <p className="text-[9px] font-black uppercase tracking-widest px-1" style={{ color: S.muted }}>{group}</p>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold truncate">{t.label}</p>
-                    <p className="text-xs truncate mt-0.5" style={{ color: isActive ? S.primary : S.muted, opacity: 0.8 }}>{t.desc}</p>
-                  </div>
-                </button>
+                  {groupTabs.map(t => {
+                    const Icon = t.icon;
+                    const isActive = tab === t.key;
+                    return (
+                      <button key={t.key} onClick={() => setTab(t.key)}
+                        className="w-full flex items-center gap-2.5 px-2.5 py-2 mx-0.5 mb-0.5 rounded-xl transition-all text-left"
+                        style={{ backgroundColor: isActive ? t.bg : "transparent" }}>
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                          style={{ backgroundColor: isActive ? t.color : S.border }}>
+                          <Icon size={13} color={isActive ? "white" : S.secondary} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold truncate" style={{ color: isActive ? t.color : S.text }}>{t.label}</p>
+                        </div>
+                        {isActive && <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: t.color }} />}
+                      </button>
+                    );
+                  })}
+                  <div className="pb-2" />
+                </div>
               );
             })}
-          </nav>
+          </div>
         </div>
 
         {/* Content Area */}
         <div className={`flex-1 min-w-0 ${mobileView === "menu" ? "hidden lg:block" : ""}`}>
           {/* Section Header */}
           {activeTab && (
-            <div className="flex items-center gap-3 mb-5 pb-4 border-b" style={{ borderColor: S.border }}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: "var(--c-primary-light)" }}>
-                {ActiveTabIcon && <ActiveTabIcon size={18} style={{ color: S.primary }} />}
+            <div className="flex items-center gap-4 mb-6 p-4 rounded-2xl" style={{ background: `linear-gradient(135deg, ${activeTab.bg} 0%, ${activeTab.bg}80 100%)`, border: `1.5px solid ${activeTab.color}20` }}>
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm flex-shrink-0"
+                style={{ background: `linear-gradient(135deg, ${activeTab.color} 0%, ${activeTab.color}cc 100%)` }}>
+                {ActiveTabIcon && <ActiveTabIcon size={20} color="white" />}
               </div>
-              <div>
-                <h2 className="font-bold text-base" style={{ color: S.text }}>{activeTab.label}</h2>
-                <p className="text-xs" style={{ color: S.muted }}>{activeTab.desc}</p>
+              <div className="flex-1 min-w-0">
+                <h2 className="font-black text-lg leading-tight" style={{ color: activeTab.color }}>{activeTab.label}</h2>
+                <p className="text-xs mt-0.5" style={{ color: S.muted }}>{activeTab.desc}</p>
               </div>
             </div>
           )}
@@ -977,7 +1013,7 @@ function SettingsContent() {
       {tab === "account" && (
         <div className="space-y-5">
           {/* Profile */}
-          <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+          <div className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: S.surface, borderColor: S.border }}>
             <div className="flex items-center gap-2 mb-4">
               <User size={15} style={{ color: S.primary }} />
               <h4 className="font-semibold text-sm" style={{ color: S.text }}>প্রোফাইল তথ্য</h4>
@@ -1003,7 +1039,7 @@ function SettingsContent() {
           </div>
 
           {/* Sales Target */}
-          <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+          <div className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: S.surface, borderColor: S.border }}>
             <div className="flex items-center gap-2 mb-4">
               <span style={{ fontSize: "18px" }}>🎯</span>
               <div>
@@ -1039,7 +1075,7 @@ function SettingsContent() {
           </div>
 
           {/* Dark Mode */}
-          <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+          <div className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: S.surface, borderColor: S.border }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span style={{ fontSize: "18px" }}>{darkMode ? "🌙" : "☀️"}</span>
@@ -1058,7 +1094,7 @@ function SettingsContent() {
           </div>
 
           {/* Password */}
-          <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+          <div className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: S.surface, borderColor: S.border }}>
             <div className="flex items-center gap-2 mb-4">
               <User size={15} style={{ color: S.primary }} />
               <h4 className="font-semibold text-sm" style={{ color: S.text }}>পাসওয়ার্ড পরিবর্তন</h4>
@@ -1156,7 +1192,7 @@ function SettingsContent() {
             const meta = BUSINESS_TYPE_META[businessType];
             const Icon = meta.icon;
             return (
-              <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+              <div className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: S.surface, borderColor: S.border }}>
                 <div className="flex items-center gap-2 mb-1">
                   <RefreshCcw size={16} style={{ color: S.muted }} />
                   <h4 className="font-semibold text-sm" style={{ color: S.text }}>Business Type</h4>
@@ -1195,7 +1231,7 @@ function SettingsContent() {
             const meta = SALES_CHANNEL_META[salesChannel];
             const Icon = meta.icon;
             return (
-              <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+              <div className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: S.surface, borderColor: S.border }}>
                 <div className="flex items-center gap-2 mb-1">
                   <Globe size={16} style={{ color: S.muted }} />
                   <h4 className="font-semibold text-sm" style={{ color: S.text }}>Sales Channel</h4>
@@ -1235,7 +1271,7 @@ function SettingsContent() {
       {/* ─── INVOICE ──────────────────────────── */}
       {tab === "invoice" && (
         <div className="space-y-5">
-          <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+          <div className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: S.surface, borderColor: S.border }}>
             <h4 className="font-semibold text-sm mb-1" style={{ color: S.text }}>Invoice কাস্টমাইজেশন</h4>
             <p className="text-xs mb-4" style={{ color: S.muted }}>প্রতিটি invoice-এ এই তথ্য দেখা যাবে।</p>
             <form onSubmit={saveInvoiceSettings} className="space-y-4">
@@ -1283,7 +1319,7 @@ function SettingsContent() {
             </form>
           </div>
 
-          <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+          <div className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: S.surface, borderColor: S.border }}>
             <h4 className="font-semibold text-sm mb-1" style={{ color: S.text }}>Invoice থেকে Packing Slip</h4>
             <p className="text-xs" style={{ color: S.muted }}>
               যেকোনো অর্ডার detail থেকে &quot;Invoice&quot; বাটনের পাশে &quot;Packing Slip&quot; লিঙ্ক পাবেন।
@@ -1298,7 +1334,7 @@ function SettingsContent() {
       {tab === "subscription" && (
         <div className="space-y-4">
           {/* Current plan card */}
-          <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+          <div className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: S.surface, borderColor: S.border }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold" style={{ color: S.text }}>বর্তমান Plan</h3>
               <span className="font-bold text-sm px-3 py-1 rounded-full" style={{ backgroundColor: planDisplay.bg, color: planDisplay.color }}>
@@ -1403,7 +1439,7 @@ function SettingsContent() {
       {/* ─── FACEBOOK ────────────────────────── */}
       {tab === "facebook" && (
         <div className="space-y-5">
-          <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+          <div className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: S.surface, borderColor: S.border }}>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#1877F2" }}>
                 <Facebook size={20} color="#fff" />
@@ -1486,7 +1522,7 @@ function SettingsContent() {
           </div>
 
           {/* Multiple Facebook Pages */}
-          <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+          <div className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: S.surface, borderColor: S.border }}>
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h4 className="font-semibold text-sm" style={{ color: S.text }}>একাধিক Facebook Page (Feature 42)</h4>
@@ -1586,7 +1622,7 @@ function SettingsContent() {
             </div>
           )}
 
-          <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+          <div className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: S.surface, borderColor: S.border }}>
             <h4 className="font-semibold text-sm mb-3" style={{ color: S.text }}>Webhook Setup (Advanced)</h4>
             <p className="text-xs mb-3" style={{ color: S.muted }}>
               Real-time comment notification-এর জন্য Facebook Developer Console-এ Webhook সেট করুন:
@@ -1604,7 +1640,7 @@ function SettingsContent() {
       {/* ─── NOTIFICATIONS ────────────────────── */}
       {tab === "notifications" && (
         <div className="space-y-5">
-          <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+          <div className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: S.surface, borderColor: S.border }}>
             <h4 className="font-semibold text-sm mb-3" style={{ color: S.text }}>App Notifications</h4>
             <div className="space-y-1 divide-y" style={{ borderColor: S.border }}>
               <Toggle checked={notifs.lowStock} onChange={v => setNotifs(p => ({ ...p, lowStock: v }))} label="কম স্টক alert" />
@@ -1833,7 +1869,7 @@ function SettingsContent() {
 
             {/* QR Code */}
             {catalogSlug && catalogEnabled && (
-              <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+              <div className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: S.surface, borderColor: S.border }}>
                 <div className="flex items-center gap-2 mb-4">
                   <QrCode size={15} style={{ color: S.primary }} />
                   <h4 className="font-semibold text-sm" style={{ color: S.text }}>QR কোড</h4>
@@ -1861,7 +1897,7 @@ function SettingsContent() {
             )}
 
             {/* Settings form */}
-            <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+            <div className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: S.surface, borderColor: S.border }}>
               <div className="flex items-center gap-2 mb-4">
                 <Globe size={15} style={{ color: S.primary }} />
                 <h4 className="font-semibold text-sm" style={{ color: S.text }}>ক্যাটালগ সেটিংস</h4>
@@ -1953,7 +1989,7 @@ function SettingsContent() {
           </div>
 
           {/* Section B: API Credentials */}
-          <div className="rounded-2xl border p-5 space-y-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+          <div className="rounded-2xl border p-5 shadow-sm space-y-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
             <h4 className="font-semibold text-sm" style={{ color: S.text }}>API Credentials</h4>
 
             {!waConnected ? (
@@ -2074,7 +2110,7 @@ function SettingsContent() {
 
           {/* Section D: Test message (connected only) */}
           {waConnected && (
-            <div className="rounded-2xl border p-5 space-y-3" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+            <div className="rounded-2xl border p-5 shadow-sm space-y-3" style={{ backgroundColor: S.surface, borderColor: S.border }}>
               <h4 className="font-semibold text-sm" style={{ color: S.text }}>টেস্ট Message পাঠান</h4>
               <input
                 type="tel"
@@ -2460,7 +2496,7 @@ function SlipSettingsPanel() {
     <div className="flex-1 space-y-5">
 
       {/* Template picker */}
-      <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+      <div className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: S.surface, borderColor: S.border }}>
         <div className="mb-4">
           <h3 className="font-semibold text-sm" style={{ color: S.text }}>ডিফল্ট টেমপ্লেট</h3>
           <p className="text-xs mt-0.5" style={{ color: S.muted }}>প্রতিটি স্লিপে এই ডিজাইন ডিফল্ট হিসেবে থাকবে</p>
@@ -2487,7 +2523,7 @@ function SlipSettingsPanel() {
       </div>
 
       {/* Color presets */}
-      <div className="rounded-2xl border p-5 space-y-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+      <div className="rounded-2xl border p-5 shadow-sm space-y-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
         <div>
           <h3 className="font-semibold text-sm" style={{ color: S.text }}>রং</h3>
           <p className="text-xs mt-0.5" style={{ color: S.muted }}>প্রতিটি অর্ডার স্লিপে এই রং ব্যবহার হবে</p>
@@ -2629,7 +2665,7 @@ function SlipSettingsPanel() {
       </div>
 
       {/* Custom message */}
-      <div className="rounded-2xl border p-5 space-y-3" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+      <div className="rounded-2xl border p-5 shadow-sm space-y-3" style={{ backgroundColor: S.surface, borderColor: S.border }}>
         <h3 className="font-semibold text-sm" style={{ color: S.text }}>ধন্যবাদ বার্তা</h3>
         <textarea rows={3} value={form.slipCustomMessage}
           onChange={e => setForm(f => ({ ...f, slipCustomMessage: e.target.value }))}
@@ -2639,7 +2675,7 @@ function SlipSettingsPanel() {
       </div>
 
       {/* Social media */}
-      <div className="rounded-2xl border p-5 space-y-3" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+      <div className="rounded-2xl border p-5 shadow-sm space-y-3" style={{ backgroundColor: S.surface, borderColor: S.border }}>
         <h3 className="font-semibold text-sm" style={{ color: S.text }}>সোশ্যাল মিডিয়া</h3>
         <div>
           <label className="block text-xs font-medium mb-1" style={{ color: S.muted }}>Facebook Page URL</label>
@@ -2778,7 +2814,7 @@ function PathaoSettingsPanel() {
       </div>
 
       {/* Connection Status */}
-      <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+      <div className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: S.surface, borderColor: S.border }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: status?.isConnected ? "#1D9E75" : S.border }} />
@@ -2825,7 +2861,7 @@ function PathaoSettingsPanel() {
 
       {/* Credentials Form */}
       {showForm && (
-        <div className="rounded-2xl border p-5 space-y-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+        <div className="rounded-2xl border p-5 shadow-sm space-y-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
           <div className="flex items-center justify-between">
             <h4 className="font-semibold text-sm" style={{ color: S.text }}>Pathao API Credentials</h4>
             <button onClick={() => setShowForm(false)}><X size={16} style={{ color: S.muted }} /></button>
@@ -2915,7 +2951,7 @@ function PathaoSettingsPanel() {
       )}
 
       {/* How to use guide */}
-      <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+      <div className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: S.surface, borderColor: S.border }}>
         <h4 className="font-semibold text-sm mb-3" style={{ color: S.text }}>কিভাবে ব্যবহার করবেন</h4>
         <div className="space-y-3">
           {[
@@ -2977,7 +3013,7 @@ function SteadfastSettingsPanel() {
   }
 
   return (
-    <div className="rounded-2xl border p-5 space-y-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+    <div className="rounded-2xl border p-5 shadow-sm space-y-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
       {toast && <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg" style={{ backgroundColor: toast.type === "success" ? "#1D9E75" : "#E24B4A" }}>{toast.msg}</div>}
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -3070,7 +3106,7 @@ function RedxSettingsPanel() {
   }
 
   return (
-    <div className="rounded-2xl border p-5 space-y-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+    <div className="rounded-2xl border p-5 shadow-sm space-y-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
       {toast && <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg" style={{ backgroundColor: toast.type === "success" ? "#1D9E75" : "#E24B4A" }}>{toast.msg}</div>}
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -3168,7 +3204,7 @@ function EcourierSettingsPanel() {
   }
 
   return (
-    <div className="rounded-2xl border p-5 space-y-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+    <div className="rounded-2xl border p-5 shadow-sm space-y-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
       {toast && <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg" style={{ backgroundColor: toast.type === "success" ? "#1D9E75" : "#E24B4A" }}>{toast.msg}</div>}
       <div className="flex items-start justify-between gap-3">
         <div>
