@@ -25,7 +25,7 @@ export async function PATCH(req: NextRequest) {
 
   const allowed = [
     "name", "phone", "email", "address", "logoUrl", "logoPublicId", "invoiceNote",
-    "bankAccount", "bankName", "catalogEnabled", "catalogTagline", "catalogShowInStockOnly",
+    "bankAccount", "bankName",
     "storeEnabled", "storeSlug", "storeTheme", "storePrimaryColor", "storeAccentColor",
     "storeBannerUrl", "storeTagline", "storeAbout", "storeShowReviews", "storeShowStock",
     "storeCODEnabled", "storeBkashNumber", "storeNagadNumber", "storeMinOrder",

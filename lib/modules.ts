@@ -153,7 +153,7 @@ export const SALES_CHANNEL_META: Record<SalesChannel, SalesChannelMeta> = {
 };
 
 /* Modules that only make sense for online selling */
-const ONLINE_ONLY_MODULES = new Set(["catalog", "courier", "facebook", "whatsapp"]);
+const ONLINE_ONLY_MODULES = new Set(["courier", "facebook", "whatsapp"]);
 
 /* Modules that only make sense for offline selling */
 const OFFLINE_ONLY_MODULES = new Set(["pos"]);
@@ -163,27 +163,27 @@ const OFFLINE_ONLY_MODULES = new Set(["pos"]);
 const BUSINESS_MODULES: Record<BusinessType, string[]> = {
   fcommerce: [
     "dashboard", "inventory", "orders", "customers",
-    "hisab", "reports", "courier", "catalog", "facebook", "whatsapp", "settings", "store",
+    "hisab", "reports", "courier", "facebook", "whatsapp", "settings", "store",
   ],
   restaurant: [
     "dashboard", "inventory", "orders", "customers",
-    "hisab", "reports", "tables", "kitchen", "menu", "staff", "catalog", "courier", "settings", "store",
+    "hisab", "reports", "tables", "kitchen", "menu", "staff", "courier", "settings", "store",
   ],
   pharmacy: [
     "dashboard", "inventory", "orders", "customers",
-    "hisab", "reports", "prescriptions", "expiry", "pos", "catalog", "courier", "settings", "store",
+    "hisab", "reports", "prescriptions", "expiry", "pos", "courier", "settings", "store",
   ],
   retail: [
     "dashboard", "inventory", "pos", "cash-register", "orders", "customers",
-    "hisab", "reports", "catalog", "courier", "settings", "store",
+    "hisab", "reports", "courier", "settings", "store",
   ],
   salon: [
     "dashboard", "services", "appointments", "inventory", "customers",
-    "hisab", "reports", "staff", "catalog", "settings", "store",
+    "hisab", "reports", "staff", "settings", "store",
   ],
   tailor: [
     "dashboard", "inventory", "orders", "customers",
-    "hisab", "reports", "measurements", "courier", "catalog", "settings", "store",
+    "hisab", "reports", "measurements", "courier", "settings", "store",
   ],
 };
 

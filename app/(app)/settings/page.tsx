@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Check, MessageSquare, Copy, Trash2, Crown, User, ChevronRight, ChevronLeft, Loader2, ArrowLeft, Facebook, Link2, Unlink, X, Store, FileText, Users, Bell, CreditCard, Settings, Target, Moon, Sun, ShieldCheck, ShieldX, Wifi, WifiOff, Eye, EyeOff, Send, BookOpen, MessageCircle, QrCode, Globe, ExternalLink, Sparkles, RefreshCw, Printer, Truck, RefreshCcw, Plus } from "lucide-react";
+import { Check, MessageSquare, Copy, Trash2, Crown, User, ChevronRight, ChevronLeft, Loader2, ArrowLeft, Facebook, Link2, Unlink, X, Store, FileText, Users, Bell, CreditCard, Settings, Target, Moon, Sun, ShieldCheck, ShieldX, Wifi, WifiOff, Eye, EyeOff, Send, BookOpen, MessageCircle, Globe, ExternalLink, Sparkles, RefreshCw, Printer, Truck, RefreshCcw, Plus } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 import { PLAN_DISPLAY, PLAN_LIMITS } from "@/lib/features";
 import { BUSINESS_TYPES, BUSINESS_TYPE_META, type BusinessType, SALES_CHANNELS, SALES_CHANNEL_META, type SalesChannel, isValidSalesChannel } from "@/lib/modules";
@@ -295,15 +295,6 @@ function SettingsContent() {
   const [pwForm, setPwForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
   const [savingAccount, setSavingAccount] = useState(false);
   const [savingPw, setSavingPw] = useState(false);
-  const [catalogSlug, setCatalogSlug] = useState("");
-  const [catalogEnabled, setCatalogEnabled] = useState(false);
-  const [catalogTagline, setCatalogTagline] = useState("");
-  const [catalogShowInStockOnly, setCatalogShowInStockOnly] = useState(false);
-  const [savingCatalog, setSavingCatalog] = useState(false);
-  const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
-  const [checkingSlug, setCheckingSlug] = useState(false);
-  const [catalogLinkCopied, setCatalogLinkCopied] = useState(false);
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   function showToast(type: "success" | "error", msg: string) {
     setToast({ type, msg }); setTimeout(() => setToast(null), 3500);
@@ -329,12 +320,6 @@ function SettingsContent() {
             setSalesTarget(Number((data.shop.notifSettings as Record<string,unknown>).salesTarget));
           }
         }
-        const loadedSlug = data.shop.slug ?? "";
-        setCatalogSlug(loadedSlug);
-        setCatalogEnabled(data.shop.catalogEnabled ?? false);
-        setCatalogTagline(data.shop.catalogTagline ?? "");
-        setCatalogShowInStockOnly(data.shop.catalogShowInStockOnly ?? false);
-        if (loadedSlug.length >= 3) setSlugAvailable(true);
       }
       if (data.user && !accountLoaded) {
         setAccount({ name: data.user.name ?? "", email: data.user.email ?? "" });
@@ -642,51 +627,6 @@ function SettingsContent() {
     else showToast("error", d.error ?? "কিছু একটা সমস্যা হয়েছে।");
   }
 
-  useEffect(() => {
-    if (tab !== "catalog" || !catalogSlug || !catalogEnabled) { setQrDataUrl(null); return; }
-    const catalogUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/s/${catalogSlug}`;
-    import("qrcode").then(QRCode => {
-      QRCode.toDataURL(catalogUrl, { width: 200, margin: 2, color: { dark: "#0F6E56", light: "#FFFFFF" } })
-        .then(url => setQrDataUrl(url))
-        .catch(() => setQrDataUrl(null));
-    });
-  }, [tab, catalogSlug, catalogEnabled]);
-
-  async function checkSlugAvailability(slug: string) {
-    if (slug.length < 3) { setSlugAvailable(null); return; }
-    setCheckingSlug(true);
-    try {
-      const r = await fetch(`/api/catalog/check-slug?slug=${encodeURIComponent(slug)}`);
-      if (!r.ok) { setSlugAvailable(null); return; }
-      const d = await r.json();
-      setSlugAvailable(d.available ?? null);
-    } catch {
-      setSlugAvailable(null);
-      showToast("error", "Slug যাচাই করা সম্ভব হয়নি। আবার চেষ্টা করুন।");
-    } finally {
-      setCheckingSlug(false);
-    }
-  }
-
-  async function saveCatalog(e: React.FormEvent) {
-    e.preventDefault();
-    if (!catalogSlug || catalogSlug.length < 3) { showToast("error", "Slug কমপক্ষে ৩ অক্ষর হতে হবে"); return; }
-    if (slugAvailable === false) { showToast("error", "এই slug ইতিমধ্যে ব্যবহৃত হচ্ছে"); return; }
-    setSavingCatalog(true);
-    const r = await fetch("/api/settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "catalog", slug: catalogSlug, catalogEnabled, catalogTagline, catalogShowInStockOnly }),
-    });
-    const d = await r.json();
-    setSavingCatalog(false);
-    if (r.ok) {
-      showToast("success", "ক্যাটালগ সেটিংস সেভ হয়েছে ✓");
-      setCatalogSlug(d.slug ?? catalogSlug);
-    } else {
-      showToast("error", d.error ?? "কিছু একটা সমস্যা হয়েছে।");
-    }
-  }
 
   const TABS = [
     { key: "account",       label: "অ্যাকাউন্ট",   desc: "প্রোফাইল ও পাসওয়ার্ড",         icon: User,          color: "#6366F1", bg: "#EEF2FF",  group: "আমার"    },
@@ -694,7 +634,6 @@ function SettingsContent() {
     { key: "referral",      label: "Referral",      desc: "বন্ধুকে invite করুন",           icon: Target,        color: "#10B981", bg: "#ECFDF5",  group: "আমার"    },
     { key: "shop",          label: "Shop তথ্য",     desc: "শপের নাম ও ঠিকানা",             icon: Store,         color: "#0F6E56", bg: "#ECFDF5",  group: "শপ"      },
     { key: "invoice",       label: "Invoice",       desc: "কাস্টম invoice সেটিংস",         icon: FileText,      color: "#0EA5E9", bg: "#F0F9FF",  group: "শপ"      },
-    { key: "catalog",       label: "ক্যাটালগ",       desc: "পাবলিক শপ পেজ",                icon: Globe,         color: "#8B5CF6", bg: "#F5F3FF",  group: "শপ"      },
     { key: "slip",          label: "অর্ডার স্লিপ",   desc: "পেকিং স্লিপ কাস্টমাইজ করুন",  icon: Printer,       color: "#64748B", bg: "#F8FAFC",  group: "শপ"      },
     { key: "notifications", label: "Notifications", desc: "SMS ও alert সেটিংস",           icon: Bell,          color: "#EF4444", bg: "#FEF2F2",  group: "সংযোগ"   },
     { key: "facebook",      label: "Facebook",      desc: "Page সংযোগ",                   icon: Facebook,      color: "#1877F2", bg: "#EFF6FF",  group: "সংযোগ"   },
@@ -1804,175 +1743,6 @@ function SettingsContent() {
           )}
         </div>
       )}
-
-      {/* ─── CATALOG ─────────────────────────── */}
-      {tab === "catalog" && (() => {
-        const catalogUrl = catalogSlug ? `${typeof window !== "undefined" ? window.location.origin : ""}/s/${catalogSlug}` : "";
-
-        if (plan !== "business") {
-          return (
-            <div className="rounded-2xl border p-10 flex flex-col items-center text-center" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: "linear-gradient(135deg, #FFF3DC 0%, #FDE68A 100%)" }}>
-                <Crown size={28} color="#EF9F27" />
-              </div>
-              <h3 className="font-bold text-base mb-2" style={{ color: S.text }}>Business Plan প্রয়োজন</h3>
-              <p className="text-sm mb-1" style={{ color: S.secondary }}>পাবলিক ক্যাটালগ — আপনার সব পণ্য একটি সুন্দর ecommerce পেজে দেখান।</p>
-              <p className="text-xs mb-6" style={{ color: S.muted }}>এই ফিচারটি শুধুমাত্র Business plan এ পাওয়া যায়।</p>
-              <Link
-                href="/checkout?plan=business"
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-semibold"
-                style={{ backgroundColor: "#EF9F27", textDecoration: "none" }}
-              >
-                <Crown size={15} /> Business-এ Upgrade করুন
-              </Link>
-              <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-sm text-left">
-                {["নিজস্ব URL (bizilcore.com/s/amar-shop)", "QR কোড শেয়ার করুন", "Facebook/WhatsApp এ লিঙ্ক দিন"].map((f) => (
-                  <div key={f} className="flex items-start gap-2 p-3 rounded-xl" style={{ backgroundColor: S.bg }}>
-                    <Check size={13} color="#EF9F27" className="mt-0.5 flex-shrink-0" />
-                    <span className="text-xs" style={{ color: S.secondary }}>{f}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        }
-
-        return (
-          <div className="space-y-5">
-            {/* Link box */}
-            {catalogSlug && (
-              <div className="rounded-2xl p-5 space-y-3" style={{ backgroundColor: "var(--c-primary-light)", border: `1px solid var(--c-primary)` }}>
-                <div className="flex items-center gap-2">
-                  <Globe size={14} style={{ color: S.primary }} />
-                  <p className="text-xs font-semibold" style={{ color: S.primary }}>আপনার ক্যাটালগ লিঙ্ক</p>
-                </div>
-                <div className="rounded-xl px-3 py-2.5 break-all font-mono text-sm font-bold" style={{ backgroundColor: "rgba(255,255,255,0.7)", color: S.primary }}>
-                  {catalogUrl}
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <button
-                    onClick={() => { navigator.clipboard.writeText(catalogUrl); setCatalogLinkCopied(true); setTimeout(() => setCatalogLinkCopied(false), 2000); }}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-sm font-medium border"
-                    style={{ borderColor: S.primary, color: S.primary, backgroundColor: "white" }}>
-                    {catalogLinkCopied ? <Check size={14} /> : <Copy size={14} />}
-                    {catalogLinkCopied ? "Copied!" : "Copy করুন"}
-                  </button>
-                  <a href={catalogUrl} target="_blank" rel="noopener noreferrer"
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-sm font-medium text-white"
-                    style={{ backgroundColor: S.primary }}>
-                    <ExternalLink size={14} />
-                    দেখুন
-                  </a>
-                </div>
-              </div>
-            )}
-
-            {/* QR Code */}
-            {catalogSlug && catalogEnabled && (
-              <div className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-                <div className="flex items-center gap-2 mb-4">
-                  <QrCode size={15} style={{ color: S.primary }} />
-                  <h4 className="font-semibold text-sm" style={{ color: S.text }}>QR কোড</h4>
-                </div>
-                <div className="flex flex-col sm:flex-row items-center gap-5">
-                  {qrDataUrl ? (
-                    <img src={qrDataUrl} alt="QR Code" width={160} height={160} className="rounded-xl border" style={{ borderColor: S.border }} />
-                  ) : (
-                    <div className="w-[160px] h-[160px] rounded-xl border flex items-center justify-center" style={{ borderColor: S.border, backgroundColor: S.bg }}>
-                      <span className="text-xs" style={{ color: S.secondary }}>তৈরি হচ্ছে...</span>
-                    </div>
-                  )}
-                  <div className="space-y-2 text-center sm:text-left">
-                    <p className="text-sm" style={{ color: S.secondary }}>এই QR কোডটি প্রিন্ট করে আপনার প্যাকেজিং বা পোস্টে ব্যবহার করুন।</p>
-                    {qrDataUrl && (
-                      <a href={qrDataUrl} download={`${catalogSlug}-qr.png`}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border"
-                        style={{ borderColor: S.border, color: S.secondary }}>
-                        QR Download করুন
-                      </a>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Settings form */}
-            <div className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-              <div className="flex items-center gap-2 mb-4">
-                <Globe size={15} style={{ color: S.primary }} />
-                <h4 className="font-semibold text-sm" style={{ color: S.text }}>ক্যাটালগ সেটিংস</h4>
-              </div>
-              <form onSubmit={saveCatalog} className="space-y-4">
-                <div>
-                  <Toggle checked={catalogEnabled} onChange={setCatalogEnabled} label="ক্যাটালগ সক্রিয় (পাবলিক ভিজিবল)" />
-                  <p className="text-xs mt-1.5 ml-1" style={{ color: S.muted }}>
-                    {catalogEnabled
-                      ? "✓ ক্যাটালগ চালু আছে — যে কেউ লিংক দিয়ে আপনার শপ দেখতে পারবে।"
-                      : "ক্যাটালগ বন্ধ আছে — চালু করতে এখানে টগল করুন এবং সেভ করুন।"}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium mb-1" style={{ color: S.text }}>Shop Slug (URL) *</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs" style={{ color: S.muted }}>/s/</span>
-                    <input
-                      value={catalogSlug}
-                      onChange={e => {
-                        const v = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
-                        setCatalogSlug(v);
-                        setSlugAvailable(null);
-                        if (v.length >= 3) {
-                          clearTimeout((window as typeof window & { _slugTimer?: ReturnType<typeof setTimeout> })._slugTimer);
-                          (window as typeof window & { _slugTimer?: ReturnType<typeof setTimeout> })._slugTimer = setTimeout(() => checkSlugAvailability(v), 600);
-                        }
-                      }}
-                      onBlur={() => { if (catalogSlug.length >= 3) checkSlugAvailability(catalogSlug); }}
-                      placeholder="amar-shop"
-                      style={{ ...inp(focused === "catslug"), paddingLeft: "32px" }}
-                      onFocus={() => setFocused("catslug")}
-                    />
-                    {catalogSlug.length >= 3 && (
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2">
-                        {checkingSlug ? <Loader2 size={13} className="animate-spin" style={{ color: S.muted }} /> :
-                          slugAvailable === true ? <Check size={13} style={{ color: "#16A34A" }} /> :
-                          slugAvailable === false ? <X size={13} style={{ color: "#DC2626" }} /> : null}
-                      </span>
-                    )}
-                  </div>
-                  {slugAvailable === false && <p className="text-xs mt-1" style={{ color: "#DC2626" }}>এই slug ইতিমধ্যে ব্যবহৃত হচ্ছে। অন্য একটি বেছে নিন।</p>}
-                  {slugAvailable === true && <p className="text-xs mt-1" style={{ color: "#16A34A" }}>✓ এই slug পাওয়া যাচ্ছে</p>}
-                  <p className="text-xs mt-1" style={{ color: S.muted }}>শুধুমাত্র ছোট হাতের a-z, 0-9 এবং dash (-) ব্যবহার করুন</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium mb-1" style={{ color: S.text }}>Tagline / Bio</label>
-                  <textarea
-                    value={catalogTagline}
-                    onChange={e => setCatalogTagline(e.target.value.slice(0, 200))}
-                    placeholder="যেমন: সেরা মানের পোশাক, দ্রুত ডেলিভারি!"
-                    rows={2}
-                    maxLength={200}
-                    className="w-full rounded-xl border text-sm p-3 outline-none resize-none"
-                    style={{ borderColor: focused === "cattagline" ? S.primary : S.border, color: S.text, backgroundColor: S.surface }}
-                    onFocus={() => setFocused("cattagline")}
-                    onBlur={() => setFocused(null)}
-                  />
-                  <p className="text-xs text-right mt-0.5" style={{ color: S.muted }}>{catalogTagline.length}/200</p>
-                </div>
-
-                <Toggle checked={catalogShowInStockOnly} onChange={setCatalogShowInStockOnly} label="শুধুমাত্র স্টকে আছে এমন পণ্য দেখাও" />
-
-                <button type="submit" disabled={savingCatalog || slugAvailable === false || (catalogSlug.length >= 3 && slugAvailable === null)}
-                  className="w-full py-2.5 rounded-xl text-white text-sm font-medium disabled:opacity-60"
-                  style={{ backgroundColor: S.primary }}>
-                  {savingCatalog ? "সেভ হচ্ছে..." : checkingSlug ? "Slug যাচাই হচ্ছে..." : "ক্যাটালগ সেটিংস সেভ করুন"}
-                </button>
-              </form>
-            </div>
-          </div>
-        );
-      })()}
 
       {/* ─── WHATSAPP ─────────────────────────── */}
       {tab === "whatsapp" && (
