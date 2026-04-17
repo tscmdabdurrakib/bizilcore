@@ -97,9 +97,6 @@ model Shop {
   bankAccount            String?
   bankName               String?
   slug                   String?             @unique
-  catalogEnabled         Boolean             @default(false)
-  catalogTagline         String?
-  catalogShowInStockOnly Boolean             @default(false)
   slipPrimaryColor       String?             @default("#0d2d1a")
   slipAccentColor        String?             @default("#00e676")
   slipShowBarcode        Boolean             @default(true)
