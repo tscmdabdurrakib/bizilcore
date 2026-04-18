@@ -126,3 +126,55 @@ export async function POST(req: NextRequest) {
     liked:        false,
   });
 }
+
+export async function PATCH(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const body    = await req.json();
+  const { id, content } = body as { id?: string; content?: string };
+
+  if (!id || !content?.trim()) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+  if (content.length > 2000) return NextResponse.json({ error: "Content too long" }, { status: 400 });
+
+  const existing = await prisma.communityPost.findUnique({ where: { id } });
+  if (!existing)                          return NextResponse.json({ error: "Not found" },  { status: 404 });
+  if (existing.userId !== session.user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const updated = await prisma.communityPost.update({
+    where: { id },
+    data:  { content: content.trim() },
+    include: {
+      user:   { select: { id: true, name: true } },
+      _count: { select: { comments: true, likes: true } },
+    },
+  });
+
+  return NextResponse.json({
+    id:           updated.id,
+    content:      updated.content,
+    imageUrl:     updated.imageUrl,
+    createdAt:    updated.createdAt,
+    user:         updated.user,
+    likeCount:    updated._count.likes,
+    commentCount: updated._count.comments,
+    liked:        false,
+  });
+}
+
+export async function DELETE(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
+
+  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+
+  const existing = await prisma.communityPost.findUnique({ where: { id } });
+  if (!existing)                          return NextResponse.json({ error: "Not found" },  { status: 404 });
+  if (existing.userId !== session.user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  await prisma.communityPost.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
+}
