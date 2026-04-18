@@ -7,7 +7,7 @@ export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const sub = await prisma.subscription.findUnique({ where: { userId: session.user.id } });
+  const sub  = await prisma.subscription.findUnique({ where: { userId: session.user.id } });
   const plan = (sub?.plan ?? "free") as keyof typeof PLAN_LIMITS;
 
   if (plan !== "business") {
@@ -16,18 +16,40 @@ export async function GET() {
 
   const maxShops = PLAN_LIMITS[plan].maxShops;
 
-  const mainShop = await prisma.shop.findUnique({
-    where: { userId: session.user.id },
-    include: { branches: { orderBy: { createdAt: "asc" } } },
-  });
+  const [mainShop, transferCount, productCount, customerCount] = await Promise.all([
+    prisma.shop.findUnique({
+      where: { userId: session.user.id },
+      include: {
+        branches: { orderBy: { createdAt: "asc" } },
+        _count:   { select: { products: true, customers: true } },
+      },
+    }),
+    prisma.stockMovement.count({
+      where: { userId: session.user.id, type: "branch_transfer" },
+    }),
+    prisma.product.count({
+      where: { shop: { userId: session.user.id } },
+    }),
+    prisma.customer.count({
+      where: { shop: { userId: session.user.id } },
+    }),
+  ]);
 
   if (!mainShop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
 
   return NextResponse.json({
-    mainShop: { id: mainShop.id, name: mainShop.name, category: mainShop.category, phone: mainShop.phone, address: mainShop.address, logoUrl: mainShop.logoUrl },
-    branches: mainShop.branches,
+    mainShop: {
+      id: mainShop.id, name: mainShop.name, category: mainShop.category,
+      phone: mainShop.phone, address: mainShop.address, logoUrl: mainShop.logoUrl,
+      productCount: mainShop._count.products,
+      customerCount: mainShop._count.customers,
+    },
+    branches:      mainShop.branches,
     maxShops,
-    totalShops: 1 + mainShop.branches.length,
+    totalShops:    1 + mainShop.branches.length,
+    transferCount,
+    productCount,
+    customerCount,
   });
 }
 
@@ -35,7 +57,7 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const sub = await prisma.subscription.findUnique({ where: { userId: session.user.id } });
+  const sub  = await prisma.subscription.findUnique({ where: { userId: session.user.id } });
   const plan = (sub?.plan ?? "free") as keyof typeof PLAN_LIMITS;
 
   if (plan !== "business") {
@@ -45,7 +67,7 @@ export async function POST(req: NextRequest) {
   const maxShops = PLAN_LIMITS[plan].maxShops;
 
   const mainShop = await prisma.shop.findUnique({
-    where: { userId: session.user.id },
+    where:   { userId: session.user.id },
     include: { _count: { select: { branches: true } } },
   });
   if (!mainShop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
@@ -55,16 +77,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `আপনার Business Plan-এ সর্বোচ্চ ${maxShops}টি শপ রাখা যাবে` }, { status: 400 });
   }
 
-  const { name, category, phone, address } = await req.json();
+  const { name, category, phone, address, note } = await req.json();
   if (!name?.trim()) return NextResponse.json({ error: "শপের নাম দিন" }, { status: 400 });
 
   const branch = await prisma.shopBranch.create({
     data: {
-      shopId: mainShop.id,
-      name: name.trim(),
+      shopId:   mainShop.id,
+      name:     name.trim(),
       category: category || null,
-      phone: phone || null,
-      address: address || null,
+      phone:    phone    || null,
+      address:  address  || null,
+      note:     note     || null,
     },
   });
 
@@ -85,12 +108,12 @@ export async function PATCH(req: NextRequest) {
   const branch = await prisma.shopBranch.findFirst({ where: { id: branchId, shopId: mainShop.id } });
   if (!branch) return NextResponse.json({ error: "Branch not found" }, { status: 404 });
 
-  const { name, category, phone, address } = await req.json();
+  const { name, category, phone, address, note } = await req.json();
   if (!name?.trim()) return NextResponse.json({ error: "শপের নাম দিন" }, { status: 400 });
 
   const updated = await prisma.shopBranch.update({
     where: { id: branchId },
-    data: { name: name.trim(), category: category || null, phone: phone || null, address: address || null },
+    data:  { name: name.trim(), category: category || null, phone: phone || null, address: address || null, note: note || null },
   });
 
   return NextResponse.json(updated);
