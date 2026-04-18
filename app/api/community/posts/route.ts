@@ -42,13 +42,16 @@ export async function GET(req: NextRequest) {
 
   const cursor  = searchParams.get("cursor");
   const mine    = searchParams.get("mine") === "1";
+  const popular = searchParams.get("sort") === "popular";
   const limit   = 10;
 
   const posts = await prisma.communityPost.findMany({
     where: mine ? { userId: session.user.id } : undefined,
-    orderBy: { createdAt: "desc" },
+    orderBy: popular
+      ? [{ likes: { _count: "desc" } }, { createdAt: "desc" }]
+      : { createdAt: "desc" },
     take: limit + 1,
-    ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+    ...(cursor && !popular ? { skip: 1, cursor: { id: cursor } } : {}),
     include: {
       user:   { select: { id: true, name: true } },
       _count: { select: { comments: true, likes: true } },
