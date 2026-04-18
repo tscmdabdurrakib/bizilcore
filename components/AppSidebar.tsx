@@ -32,7 +32,6 @@ import {
   Wallet,
   Store,
   TrendingUp,
-  Lightbulb,
   Palette,
   Image as ImageIcon,
   Settings2,
@@ -206,7 +205,6 @@ const navGroups: NavGroup[] = [
       { href: "/shops",           icon: Store,       label: "Multi-Shop" },
       { href: "/affiliate",       icon: TrendingUp,  label: "Affiliate" },
       { href: "/community",       icon: Users,       label: "কমিউনিটি" },
-      { href: "/community-tips",  icon: Lightbulb,   label: "Community টিপস" },
     ],
   },
   {
@@ -223,10 +221,9 @@ const navGroups: NavGroup[] = [
 const systemNavGroup: NavGroup = {
   label: "সিস্টেম",
   items: [
-    { href: "/billing",        icon: CreditCard,    label: "Billing"          },
-    { href: "/community-tips", icon: Lightbulb,     label: "Community টিপস"  },
-    { href: "/settings",       icon: Settings,      label: "সেটিংস"          },
-    { href: "/support",        icon: Headphones,    label: "সাপোর্ট"         },
+    { href: "/billing",  icon: CreditCard, label: "Billing"  },
+    { href: "/settings", icon: Settings,   label: "সেটিংস"  },
+    { href: "/support",  icon: Headphones, label: "সাপোর্ট" },
   ],
 };
 
@@ -315,7 +312,6 @@ const moreMenuGroups = [
       { href: "/shops",          icon: Store,      label: "Multi-Shop"      },
       { href: "/affiliate",      icon: TrendingUp, label: "Affiliate"       },
       { href: "/community",      icon: Users,      label: "কমিউনিটি"       },
-      { href: "/community-tips", icon: Lightbulb,  label: "Community টিপস" },
     ],
   },
   {
@@ -351,10 +347,9 @@ function buildDynamicMoreMenuGroups(businessType: string, salesChannel = "both")
     accent: "#8B5CF6",
     iconBg: "#F5F3FF",
     items: [
-      { href: "/billing",        icon: CreditCard, label: "Billing",         module: "billing"   },
-      { href: "/community-tips", icon: Lightbulb,  label: "Community টিপস", module: "community" },
-      { href: "/settings",       icon: Settings,   label: "সেটিংস",         module: "settings"  },
-      { href: "/support",        icon: Headphones, label: "সাপোর্ট",        module: "support"   },
+      { href: "/billing",  icon: CreditCard, label: "Billing",  module: "billing"  },
+      { href: "/settings", icon: Settings,   label: "সেটিংস",  module: "settings" },
+      { href: "/support",  icon: Headphones, label: "সাপোর্ট", module: "support"  },
     ],
   });
 
@@ -367,7 +362,6 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
   const isFCommerce  = businessType === "fcommerce";
   const [moreOpen, setMoreOpen] = useState(false);
   const [overdueCount, setOverdueCount] = useState(0);
-  const [tipsCount, setTipsCount] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
@@ -389,12 +383,6 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
       .catch(() => {});
   }, [plan]);
 
-  useEffect(() => {
-    fetch("/api/community-tips/count")
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d) setTipsCount(d.count ?? 0); })
-      .catch(() => {});
-  }, []);
 
   const activeNavGroups: NavGroup[] = isFCommerce
     ? navGroups
@@ -418,7 +406,6 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
     const active = isActive(pathname, item.href);
     const locked = isFreePlan && PRO_LOCKED_HREFS.includes(item.href);
     const showOverdueBadge = item.href === "/tasks" && !locked && overdueCount > 0;
-    const showTipsBadge = item.href === "/community-tips" && tipsCount > 0;
     return (
       <Link
         href={item.href}
@@ -455,11 +442,6 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
             {showOverdueBadge && (
               <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: "#E24B4A", color: "#fff" }}>
                 {overdueCount > 9 ? "9+" : overdueCount}
-              </span>
-            )}
-            {showTipsBadge && (
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: "#D97706", color: "#fff" }}>
-                {tipsCount > 99 ? "99+" : tipsCount}
               </span>
             )}
             {locked && (

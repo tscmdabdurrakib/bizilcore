@@ -13,7 +13,7 @@ export interface PostData {
   content:      string;
   imageUrl?:    string | null;
   createdAt:    string;
-  user:         { id: string; name: string };
+  user:         { id: string; name: string; plan?: string };
   likeCount:    number;
   commentCount: number;
   liked:        boolean;
@@ -98,6 +98,44 @@ function Avatar({ name, size = 36 }: { name: string; size?: number }) {
       {initials || "?"}
     </div>
   );
+}
+
+/* ── User plan badge ───────────────────────────── */
+function UserBadge({ plan }: { plan?: string }) {
+  if (!plan || plan === "free") return null;
+  if (plan === "pro") {
+    return (
+      <span
+        title="Pro সদস্য"
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 2,
+          backgroundColor: "#FEF3C7", color: "#B45309",
+          borderRadius: 9999, padding: "1px 6px",
+          fontSize: 10, fontWeight: 800, border: "1px solid #FCD34D",
+          lineHeight: 1.5,
+        }}
+      >
+        ⭐ Pro
+      </span>
+    );
+  }
+  if (plan === "business") {
+    return (
+      <span
+        title="Business Verified"
+        style={{
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          width: 17, height: 17, borderRadius: "50%",
+          backgroundColor: "#1877F2", flexShrink: 0,
+        }}
+      >
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+          <path d="M2 5L4 7L8 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </span>
+    );
+  }
+  return null;
 }
 
 const REPORT_REASONS = ["স্প্যাম বা বিজ্ঞাপন", "মিথ্যা তথ্য", "অপমানজনক বা ঘৃণ্য বক্তব্য", "অনুপযুক্ত বিষয়বস্তু", "অন্যান্য"];
@@ -299,10 +337,11 @@ export default function PostCard({
           <Avatar name={post.user.name} size={42} />
         </Link>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <Link href={`/community/profile/${post.user.id}`} className="font-bold text-sm hover:underline" style={{ color: "var(--c-text)" }}>
               {post.user.name}
             </Link>
+            <UserBadge plan={post.user.plan} />
             {category && (
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: category.bg, color: category.color }}>
                 {category.emoji} {category.label}

@@ -5,6 +5,16 @@ import { uploadImageToCloudinary, ALLOWED_TYPES, MAX_IMAGE_SIZE } from "@/lib/cl
 
 export const dynamic = "force-dynamic";
 
+const userSelect = {
+  id:           true,
+  name:         true,
+  subscription: { select: { plan: true } },
+} as const;
+
+function mapUser(u: { id: string; name: string; subscription: { plan: string } | null }) {
+  return { id: u.id, name: u.name, plan: u.subscription?.plan ?? "free" };
+}
+
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -14,13 +24,10 @@ export async function GET(req: NextRequest) {
 
   if (trending) {
     const posts = await prisma.communityPost.findMany({
-      orderBy: [
-        { likes: { _count: "desc" } },
-        { createdAt: "desc" },
-      ],
+      orderBy: [{ likes: { _count: "desc" } }, { createdAt: "desc" }],
       take: 5,
       include: {
-        user:   { select: { id: true, name: true } },
+        user:   { select: userSelect },
         _count: { select: { likes: true, comments: true } },
       },
     });
@@ -31,7 +38,7 @@ export async function GET(req: NextRequest) {
         content:      p.content,
         imageUrl:     p.imageUrl,
         createdAt:    p.createdAt,
-        user:         p.user,
+        user:         mapUser(p.user),
         likeCount:    p._count.likes,
         commentCount: p._count.comments,
         liked:        false,
@@ -46,14 +53,14 @@ export async function GET(req: NextRequest) {
   const limit   = 10;
 
   const posts = await prisma.communityPost.findMany({
-    where: mine ? { userId: session.user.id } : undefined,
+    where:   mine ? { userId: session.user.id } : undefined,
     orderBy: popular
       ? [{ likes: { _count: "desc" } }, { createdAt: "desc" }]
       : { createdAt: "desc" },
     take: limit + 1,
     ...(cursor && !popular ? { skip: 1, cursor: { id: cursor } } : {}),
     include: {
-      user:   { select: { id: true, name: true } },
+      user:   { select: userSelect },
       _count: { select: { comments: true, likes: true } },
       likes:  { where: { userId: session.user.id }, select: { id: true } },
     },
@@ -69,7 +76,7 @@ export async function GET(req: NextRequest) {
       content:      p.content,
       imageUrl:     p.imageUrl,
       createdAt:    p.createdAt,
-      user:         p.user,
+      user:         mapUser(p.user),
       likeCount:    p._count.likes,
       commentCount: p._count.comments,
       liked:        p.likes.length > 0,
@@ -93,12 +100,8 @@ export async function POST(req: NextRequest) {
   let imageId: string | null  = null;
 
   if (file && file.size > 0) {
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      return NextResponse.json({ error: "Unsupported image type" }, { status: 400 });
-    }
-    if (file.size > MAX_IMAGE_SIZE * 2.5) {
-      return NextResponse.json({ error: "Image too large (max 2MB)" }, { status: 400 });
-    }
+    if (!ALLOWED_TYPES.includes(file.type)) return NextResponse.json({ error: "Unsupported image type" }, { status: 400 });
+    if (file.size > MAX_IMAGE_SIZE * 2.5)   return NextResponse.json({ error: "Image too large (max 2MB)" }, { status: 400 });
     const buffer = Buffer.from(await file.arrayBuffer());
     const result = await uploadImageToCloudinary(buffer, `bizilcore/community/${session.user.id}`);
     imageUrl = result.url;
@@ -106,14 +109,9 @@ export async function POST(req: NextRequest) {
   }
 
   const post = await prisma.communityPost.create({
-    data: {
-      userId:   session.user.id,
-      content,
-      imageUrl,
-      imageId,
-    },
+    data: { userId: session.user.id, content, imageUrl, imageId },
     include: {
-      user: { select: { id: true, name: true } },
+      user:   { select: userSelect },
       _count: { select: { comments: true, likes: true } },
     },
   });
@@ -123,7 +121,7 @@ export async function POST(req: NextRequest) {
     content:      post.content,
     imageUrl:     post.imageUrl,
     createdAt:    post.createdAt,
-    user:         post.user,
+    user:         mapUser(post.user),
     likeCount:    post._count.likes,
     commentCount: post._count.comments,
     liked:        false,
@@ -134,21 +132,21 @@ export async function PATCH(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body    = await req.json();
-  const { id, content } = body as { id?: string; content?: string };
+  const body              = await req.json();
+  const { id, content }   = body as { id?: string; content?: string };
 
   if (!id || !content?.trim()) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
-  if (content.length > 2000) return NextResponse.json({ error: "Content too long" }, { status: 400 });
+  if (content.length > 2000)   return NextResponse.json({ error: "Content too long" }, { status: 400 });
 
   const existing = await prisma.communityPost.findUnique({ where: { id } });
-  if (!existing)                          return NextResponse.json({ error: "Not found" },  { status: 404 });
+  if (!existing)                           return NextResponse.json({ error: "Not found" },  { status: 404 });
   if (existing.userId !== session.user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const updated = await prisma.communityPost.update({
     where: { id },
     data:  { content: content.trim() },
     include: {
-      user:   { select: { id: true, name: true } },
+      user:   { select: userSelect },
       _count: { select: { comments: true, likes: true } },
     },
   });
@@ -158,7 +156,7 @@ export async function PATCH(req: NextRequest) {
     content:      updated.content,
     imageUrl:     updated.imageUrl,
     createdAt:    updated.createdAt,
-    user:         updated.user,
+    user:         mapUser(updated.user),
     likeCount:    updated._count.likes,
     commentCount: updated._count.comments,
     liked:        false,
@@ -175,7 +173,7 @@ export async function DELETE(req: NextRequest) {
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
   const existing = await prisma.communityPost.findUnique({ where: { id } });
-  if (!existing)                          return NextResponse.json({ error: "Not found" },  { status: 404 });
+  if (!existing)                           return NextResponse.json({ error: "Not found" },  { status: 404 });
   if (existing.userId !== session.user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   await prisma.communityPost.delete({ where: { id } });
