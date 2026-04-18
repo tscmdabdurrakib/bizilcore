@@ -5,7 +5,7 @@ import { logActivity } from "@/lib/logActivity";
 import { triggerOrderSMS } from "@/lib/sms";
 import { createAutoTask } from "@/lib/autoTasks";
 import { checkAndAwardBadges } from "@/lib/badges";
-import { detectFakeOrder } from "@/lib/fakeOrderDetector";
+import { detectFakeOrder, type RiskResult } from "@/lib/fakeOrderDetector";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
     ? (await prisma.customer.findUnique({ where: { id: customerId }, select: { phone: true } }))?.phone ?? ""
     : "");
 
-  let riskResult = { riskScore: 0, riskLevel: "safe" as const, flags: [] as string[], action: "allow" as const };
+  let riskResult: RiskResult = { riskScore: 0, riskLevel: "safe", flags: [], action: "allow" };
   if (phoneForCheck) {
     riskResult = await detectFakeOrder({
       shopId: shop.id,

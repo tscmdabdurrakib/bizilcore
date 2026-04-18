@@ -705,7 +705,7 @@ export default function OrderCreatePanel({ onClose, onCreated, prefillCustomerNa
             </p>
           )}
           <button type="submit" form="order-create-form"
-            disabled={submitting || bookingCourier || dataLoading || ((isPhoneBlocked || isPhoneRisky) && !confirmRisky)}
+            disabled={submitting || bookingCourier || dataLoading || !!((isPhoneBlocked || isPhoneRisky) && !confirmRisky)}
             className="w-full py-3.5 rounded-2xl text-white font-extrabold text-sm disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg transition-all hover:opacity-90 active:scale-[0.98]"
             style={{ background: confirmRisky && isPhoneBlocked ? "linear-gradient(135deg, #DC2626, #991B1B)" : "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}>
             {(submitting || bookingCourier) && <Loader2 size={16} className="animate-spin" />}

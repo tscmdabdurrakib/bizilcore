@@ -70,7 +70,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
 
   return (
     <StoreHomeClient
-      shop={{ ...shop, storeSlug: shop.storeSlug! }}
+      shop={{ ...shop, storeSlug: shop.storeSlug!, storeFreeShipping: !!shop.storeFreeShipping }}
       products={products}
       categories={categoryRows.map(c => c.category!)}
       totalOrders={totalOrders}

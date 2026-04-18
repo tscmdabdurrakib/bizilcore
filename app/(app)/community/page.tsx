@@ -76,7 +76,7 @@ export default function CommunityPage() {
   const [sort, setSort]           = useState<"new" | "popular">("new");
   const [search, setSearch]       = useState("");
   const [showSearch, setShowSrch] = useState(false);
-  const [activeHashtag, setHashtag] = useState<string | null>(null);
+  const [activeHashtag, setActiveHashtag] = useState<string | null>(null);
 
   const cursorRef  = useRef<string | null>(null);
   const searchRef  = useRef<HTMLInputElement>(null);

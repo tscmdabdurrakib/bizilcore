@@ -328,9 +328,9 @@ function TransferModal({ branches, mainShopName, onClose, onTransferred, showToa
   const [transferring, setTransferring] = useState(false);
 
   useEffect(() => {
-    fetch("/api/products?limit=500")
+    fetch("/api/products?all=1")
       .then(r => r.json())
-      .then(d => setProducts(Array.isArray(d.products) ? d.products : []))
+      .then(d => setProducts(Array.isArray(d) ? d : (Array.isArray(d.products) ? d.products : [])))
       .finally(() => setLoading(false));
   }, []);
 

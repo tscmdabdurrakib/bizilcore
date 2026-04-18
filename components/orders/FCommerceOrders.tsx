@@ -136,7 +136,7 @@ export default function FCommerceOrders() {
     else setSelectedIds(new Set(filtered.map(o => o.id)));
   }
 
-  function openMenu(e: React.MouseEvent, type: "status" | "actions", orderId: string) {
+  function openMenu(e: React.MouseEvent, type: "status" | "actions" | "courier", orderId: string) {
     e.stopPropagation();
     e.preventDefault();
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();

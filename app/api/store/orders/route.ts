@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendSMS, decryptApiKey } from "@/lib/sms";
-import { detectFakeOrder } from "@/lib/fakeOrderDetector";
+import { detectFakeOrder, type RiskResult } from "@/lib/fakeOrderDetector";
 
 const MAX_ITEM_QTY = 999;
 const MAX_ITEMS = 50;
@@ -125,7 +125,7 @@ export async function POST(req: Request) {
     }
 
     let validatedItems: { productId: string; variantId?: string; quantity: number }[];
-    let storeRiskResult = { riskScore: 0, riskLevel: "safe" as const, flags: [] as string[], action: "allow" as const };
+    let storeRiskResult: RiskResult = { riskScore: 0, riskLevel: "safe", flags: [], action: "allow" };
     try {
       validatedItems = validateItems(rawItems);
     } catch (err: unknown) {

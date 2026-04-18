@@ -92,9 +92,9 @@ export default async function StoreLayout({
         >
           <StoreVisitTracker slug={slug} />
           <StoreCustomerProvider />
-          <DynamicNav shop={{ ...shop, storeSlug: shop.storeSlug! }} categories={categories} />
+          <DynamicNav shop={{ ...shop, storeSlug: shop.storeSlug!, storeFreeShipping: !!shop.storeFreeShipping }} categories={categories} />
           <main className="flex-1">{children}</main>
-          <StoreFooter shop={{ ...shop, storeSlug: shop.storeSlug! }} />
+          <StoreFooter shop={{ ...shop, storeSlug: shop.storeSlug!, storeFreeShipping: !!shop.storeFreeShipping }} />
           <FloatingWhatsApp whatsappNumber={waNumber} shopName={shop.name} primary={primary} />
         </div>
       </StoreThemeProvider>

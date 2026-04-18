@@ -19,6 +19,7 @@ interface Product {
   id: string; name: string; description: string | null; category: string | null;
   sellPrice: number; stockQty: number; imageUrl: string | null; images: unknown;
   hasVariants: boolean; variants: Variant[]; storeReviews?: Review[];
+  storeFeatured?: boolean | null;
 }
 interface Props {
   product: Product;
