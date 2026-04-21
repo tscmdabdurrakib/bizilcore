@@ -4,27 +4,6 @@ import { prisma } from "@/lib/prisma";
 
 const VALID_STATUSES = ["pending", "confirmed", "cancelled", "delivered", "converted"];
 
-export async function GET(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const shop = await prisma.shop.findUnique({ where: { userId: session.user.id } });
-  if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
-
-  const { searchParams } = new URL(req.url);
-  const status = searchParams.get("status");
-
-  const orders = await prisma.suggestedOrder.findMany({
-    where: {
-      shopId: shop.id,
-      ...(status && status !== "all" ? { status } : {}),
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  return NextResponse.json(orders);
-}
-
 export async function PATCH(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -32,16 +11,34 @@ export async function PATCH(req: NextRequest) {
   const shop = await prisma.shop.findUnique({ where: { userId: session.user.id } });
   if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
 
-  const { id, status } = await req.json();
-  if (!id || !VALID_STATUSES.includes(status)) {
+  const { ids, status } = await req.json();
+  if (!Array.isArray(ids) || ids.length === 0 || !VALID_STATUSES.includes(status)) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const order = await prisma.suggestedOrder.findUnique({ where: { id } });
-  if (!order || order.shopId !== shop.id) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const result = await prisma.suggestedOrder.updateMany({
+    where: { id: { in: ids }, shopId: shop.id },
+    data:  { status },
+  });
+
+  return NextResponse.json({ updated: result.count });
+}
+
+export async function DELETE(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const shop = await prisma.shop.findUnique({ where: { userId: session.user.id } });
+  if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+
+  const { ids } = await req.json();
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const updated = await prisma.suggestedOrder.update({ where: { id }, data: { status } });
-  return NextResponse.json(updated);
+  const result = await prisma.suggestedOrder.deleteMany({
+    where: { id: { in: ids }, shopId: shop.id },
+  });
+
+  return NextResponse.json({ deleted: result.count });
 }
