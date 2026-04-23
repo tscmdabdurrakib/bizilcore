@@ -361,10 +361,21 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
   const [moreOpen, setMoreOpen] = useState(false);
   const [overdueCount, setOverdueCount] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
+  const [isDarkTheme, setIsDarkTheme] = useState(false);
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem("sidebar-collapsed") : null;
     if (saved === "1") setCollapsed(true);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const root = document.documentElement;
+    const update = () => setIsDarkTheme(root.classList.contains("dark"));
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
   }, []);
 
   const toggleCollapsed = () => {
@@ -478,17 +489,13 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
         >
           <div className="flex items-center min-w-0 flex-1">
             {collapsed ? (
-              <div
-                className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
-                style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}
-              >
-                <img src="/logo.svg" alt="BizilCore" className="w-5 h-5 brightness-0 invert" />
-              </div>
+              <img src="/logo.svg" alt="BizilCore" className="w-8 h-8" />
             ) : (
-              <>
-                <img src="/logo-black.svg" alt="BizilCore" className="theme-logo-light h-7 w-auto" />
-                <img src="/logo-white.svg" alt="BizilCore" className="theme-logo-dark h-7 w-auto" />
-              </>
+              <img
+                src={isDarkTheme ? "/logo-white.svg" : "/logo-black.svg"}
+                alt="BizilCore"
+                className="h-7 w-auto"
+              />
             )}
           </div>
           {!collapsed && (
