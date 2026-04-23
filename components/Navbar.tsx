@@ -11,21 +11,8 @@ export default function Navbar() {
     <nav style={{ backgroundColor: "#FFFFFF", borderBottom: "1px solid #E8E6DF" }}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
-          <Link href="/" className="flex items-center gap-2.5">
-            <img src="/logo.svg" alt="BizilCore" className="w-8 h-8" />
-            <span
-              className="text-lg tracking-tight"
-              style={{
-                fontWeight: 800,
-                background: "linear-gradient(120deg, #0A5240 0%, #0F6E56 40%, #1BAA78 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-                letterSpacing: "-0.02em",
-              }}
-            >
-              BizilCore
-            </span>
+          <Link href="/" className="flex items-center">
+            <img src="/logo-black.svg" alt="BizilCore" className="h-8 w-auto" />
           </Link>
 
           <div className="hidden md:flex items-center gap-8">

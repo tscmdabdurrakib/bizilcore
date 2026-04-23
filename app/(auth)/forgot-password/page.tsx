@@ -44,21 +44,8 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-md px-4">
 
         {/* Logo */}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <img src="/logo.svg" alt="BizilCore" className="w-9 h-9" />
-          <span
-            className="text-2xl"
-            style={{
-              fontWeight: 800,
-              background: "linear-gradient(120deg, #0A5240 0%, #0F6E56 40%, #1BAA78 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-              letterSpacing: "-0.02em",
-            }}
-          >
-            BizilCore
-          </span>
+        <div className="flex items-center justify-center mb-8">
+          <img src="/logo-black.svg" alt="BizilCore" className="h-10 w-auto" />
         </div>
 
         <div

@@ -31,14 +31,8 @@ const inputStyle = {
 
 function Logo() {
   return (
-    <div className="flex items-center justify-center gap-2 mb-3">
-      <img src="/logo.svg" alt="BizilCore" className="w-11 h-11" />
-      <span style={{
-        fontWeight: 800, fontSize: "1.6rem",
-        background: "linear-gradient(120deg, #0A5240 0%, #0F6E56 40%, #1BAA78 100%)",
-        WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-        backgroundClip: "text", letterSpacing: "-0.02em",
-      }}>BizilCore</span>
+    <div className="flex items-center justify-center mb-3">
+      <img src="/logo-black.svg" alt="BizilCore" className="h-12 w-auto" />
     </div>
   );
 }

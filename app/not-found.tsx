@@ -28,21 +28,8 @@ export default function NotFound() {
 
       <div className="relative z-10 flex flex-col items-center text-center max-w-md w-full">
         {/* Logo */}
-        <div className="flex items-center gap-2 mb-10">
-          <img src="/logo.svg" alt="BizilCore" className="w-9 h-9" />
-          <span
-            style={{
-              fontWeight: 800,
-              fontSize: "1.15rem",
-              background: "linear-gradient(120deg, #0A5240 0%, #0F6E56 40%, #1BAA78 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-              letterSpacing: "-0.02em",
-            }}
-          >
-            BizilCore
-          </span>
+        <div className="flex items-center mb-10">
+          <img src="/logo-black.svg" alt="BizilCore" className="h-9 w-auto" />
         </div>
 
         {/* 404 Display */}
