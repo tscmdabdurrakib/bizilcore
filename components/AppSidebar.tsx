@@ -476,15 +476,19 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
             justifyContent: collapsed ? "center" : "space-between",
           }}
         >
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            <div
-              className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
-              style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}
-            >
-              <img src="/logo.svg" alt="BizilCore" className="w-5 h-5 brightness-0 invert" />
-            </div>
-            {!collapsed && (
-              <span className="font-bold text-[15px] truncate" style={{ color: "var(--shell-text)", letterSpacing: "-0.01em" }}>BizilCore</span>
+          <div className="flex items-center min-w-0 flex-1">
+            {collapsed ? (
+              <div
+                className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
+                style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}
+              >
+                <img src="/logo.svg" alt="BizilCore" className="w-5 h-5 brightness-0 invert" />
+              </div>
+            ) : (
+              <>
+                <img src="/logo-black.svg" alt="BizilCore" className="theme-logo-light h-7 w-auto" />
+                <img src="/logo-white.svg" alt="BizilCore" className="theme-logo-dark h-7 w-auto" />
+              </>
             )}
           </div>
           {!collapsed && (

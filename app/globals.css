@@ -129,6 +129,11 @@
 }
 
 /* ── Dark mode design tokens ─────────────────────── */
+.theme-logo-light { display: inline-block; }
+.theme-logo-dark { display: none; }
+html.dark .theme-logo-light { display: none; }
+html.dark .theme-logo-dark { display: inline-block; }
+
 html.dark {
   --background: #111110;
   --foreground: #EDECEA;

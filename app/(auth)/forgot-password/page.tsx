@@ -45,7 +45,7 @@ export default function ForgotPasswordPage() {
 
         {/* Logo */}
         <div className="flex items-center justify-center mb-8">
-          <img src="/logo-black.svg" alt="BizilCore" className="h-10 w-auto" />
+          <img src="/logo-black.svg" alt="BizilCore" className="h-14 w-auto" />
         </div>
 
         <div

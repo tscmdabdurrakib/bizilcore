@@ -50,7 +50,7 @@ export default function Footer() {
           {/* Brand Column */}
           <div className="md:col-span-4">
             <Link href="/" className="flex items-center mb-4">
-              <img src="/logo-white.svg" alt="BizilCore" className="h-9 w-auto" />
+              <img src="/logo-white.svg" alt="BizilCore" className="h-11 w-auto" />
             </Link>
             <p className="text-sm leading-relaxed mb-6" style={{ color: "#C2E0D6" }}>
               বাংলাদেশের Facebook seller দের জন্য তৈরি একটি সম্পূর্ণ ব্যবসা ম্যানেজমেন্ট প্ল্যাটফর্ম।
