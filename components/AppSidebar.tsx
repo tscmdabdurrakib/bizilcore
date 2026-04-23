@@ -489,12 +489,12 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
         >
           <div className="flex items-center min-w-0 flex-1">
             {collapsed ? (
-              <img src="/logo.svg" alt="BizilCore" className="w-8 h-8" />
+              <img src="/logo.svg" alt="BizilCore" className="w-9 h-9" />
             ) : (
               <img
                 src={isDarkTheme ? "/logo-white.svg" : "/logo-black.svg"}
                 alt="BizilCore"
-                className="h-7 w-auto"
+                className="h-10 w-auto max-w-full"
               />
             )}
           </div>

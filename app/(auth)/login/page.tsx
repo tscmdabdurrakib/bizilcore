@@ -84,7 +84,7 @@ export default function LoginPage() {
           </div>
           <div className="text-center mb-8">
             <div className="flex items-center justify-center mb-4">
-              <img src="/logo-black.svg" alt="BizilCore" className="h-14 w-auto" />
+              <img src="/logo-black.svg" alt="BizilCore" className="h-20 w-auto" />
             </div>
             <h1 className="text-xl font-semibold" style={{ color: "#1A1A18" }}>
               আবার স্বাগতম

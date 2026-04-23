@@ -29,7 +29,7 @@ export default function NotFound() {
       <div className="relative z-10 flex flex-col items-center text-center max-w-md w-full">
         {/* Logo */}
         <div className="flex items-center mb-10">
-          <img src="/logo-black.svg" alt="BizilCore" className="h-9 w-auto" />
+          <img src="/logo-black.svg" alt="BizilCore" className="h-14 w-auto" />
         </div>
 
         {/* 404 Display */}

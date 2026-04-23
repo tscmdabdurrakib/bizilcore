@@ -32,7 +32,7 @@ const inputStyle = {
 function Logo() {
   return (
     <div className="flex items-center justify-center mb-3">
-      <img src="/logo-black.svg" alt="BizilCore" className="h-12 w-auto" />
+      <img src="/logo-black.svg" alt="BizilCore" className="h-16 w-auto" />
     </div>
   );
 }

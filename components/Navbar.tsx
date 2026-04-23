@@ -10,9 +10,9 @@ export default function Navbar() {
   return (
     <nav style={{ backgroundColor: "#FFFFFF", borderBottom: "1px solid #E8E6DF" }}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-20">
           <Link href="/" className="flex items-center">
-            <img src="/logo-black.svg" alt="BizilCore" className="h-10 w-auto" />
+            <img src="/logo-black.svg" alt="BizilCore" className="h-14 w-auto" />
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
