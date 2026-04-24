@@ -16,6 +16,27 @@ import {
   ShoppingBag,
   BarChart3,
   Truck,
+  MessageCircle,
+  Headphones,
+  Rocket,
+  Sparkles,
+  MapPin,
+  Phone,
+  Mail,
+  Building2,
+  Quote,
+  Trophy,
+  Lightbulb,
+  Code2,
+  Clock,
+  Briefcase,
+  Smartphone,
+  Receipt,
+  Brain,
+  ShieldCheck,
+  CalendarDays,
+  GitBranch,
+  HelpCircle,
 } from "lucide-react";
 
 const C = {
@@ -129,21 +150,30 @@ export default function AboutPage() {
                 Bangla-তে interface, bKash-Nagad payment integration, Pathao-RedX-Paperfly-eCourier-Delivery Tiger
                 courier booking — সব কিছু এক জায়গায়। কোনো technical জ্ঞান লাগবে না।
               </p>
+              <p className="leading-relaxed">
+                আজ ১০,০০০+ seller আমাদের platform ব্যবহার করছেন — ঢাকার ছোট boutique থেকে
+                চট্টগ্রামের electronics shop পর্যন্ত। আমাদের mission একটাই — বাংলাদেশের প্রতিটি
+                Facebook seller-কে digital করে তোলা।
+              </p>
             </div>
           </div>
           <div className="space-y-4">
             {[
               { year: "জানুয়ারি ২০২৪", title: "BizilCore-এর সূচনা", desc: "ঢাকায় ৩ জন founder মিলে শুরু। প্রথম ১০০ seller-এর সাথে beta testing।" },
+              { year: "মার্চ ২০২৪", title: "Bangla UI ও Mobile Optimization", desc: "১০০% Bangla interface। Mobile থেকেই সব কাজ করা যাবে — কারণ ৮০% seller mobile ব্যবহার করেন।" },
               { year: "মে ২০২৪", title: "পাবলিক Launch", desc: "Full platform launch। প্রথম মাসেই ৫০০+ seller signup করেন।" },
+              { year: "জুলাই ২০২৪", title: "bKash ও Nagad Integration", desc: "Subscription payment local gateway দিয়ে। কোনো credit card লাগবে না।" },
               { year: "সেপ্টেম্বর ২০২৪", title: "Courier Integration", desc: "Pathao, RedX, Paperfly, eCourier, Delivery Tiger — বাংলাদেশের প্রধান ৫টি courier এক platform এ।" },
+              { year: "ডিসেম্বর ২০২৪", title: "AI Features চালু", desc: "Product description, pricing suggestion, inventory prediction — সব AI দিয়ে। বাংলায়।" },
+              { year: "ফেব্রুয়ারি ২০২৫", title: "Restaurant ও HR Module", desc: "শুধু Facebook seller না — restaurant ও staff management feature যোগ হলো।" },
               { year: "২০২৫", title: "১০,০০০+ Sellers", desc: "সারা বাংলাদেশে ১০ হাজারেরও বেশি seller আমাদের platform ব্যবহার করছেন।" },
-            ].map((item, i) => (
+            ].map((item, i, arr) => (
               <div key={i} className="flex gap-4">
                 <div className="flex flex-col items-center">
                   <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ backgroundColor: C.primary }}>
                     {i + 1}
                   </div>
-                  {i < 3 && <div className="w-0.5 flex-1 mt-1" style={{ backgroundColor: C.border }} />}
+                  {i < arr.length - 1 && <div className="w-0.5 flex-1 mt-1" style={{ backgroundColor: C.border }} />}
                 </div>
                 <div className="pb-4">
                   <span className="text-xs font-semibold" style={{ color: C.accent }}>{item.year}</span>
@@ -190,65 +220,142 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* ── WHAT WE OFFER ── */}
+      {/* ── FOUNDERS & TEAM ── */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-16">
         <div className="text-center mb-10">
           <span className="inline-block text-xs font-semibold px-3 py-1 rounded-full mb-4" style={{ backgroundColor: C.primaryLight, color: C.primary }}>
-            আমাদের platform
+            টিম পরিচিতি
           </span>
           <h2 className="text-3xl font-bold mb-3" style={{ color: C.text, letterSpacing: "-0.02em" }}>
-            একটি app-এ সব কিছু
+            যারা BizilCore বানাচ্ছেন
           </h2>
-          <p style={{ color: C.textSub }}>Facebook seller হিসেবে যা যা দরকার — সব এক জায়গায়</p>
+          <p style={{ color: C.textSub }}>একদল passionate engineer, designer ও business expert — সবাই বাংলাদেশের</p>
         </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid md:grid-cols-3 gap-5">
           {[
-            {
-              icon: ShoppingBag,
-              title: "অর্ডার ম্যানেজমেন্ট",
-              desc: "Facebook inbox থেকে order নিন। Status track করুন pending থেকে delivered পর্যন্ত।",
-              color: "#0F6E56",
-              bg: "#E1F5EE",
-            },
-            {
-              icon: Package,
-              title: "স্টক ও পণ্য",
-              desc: "Real-time stock tracking। Low stock alert। Multiple variant support।",
-              color: "#3B82F6",
-              bg: "#EFF6FF",
-            },
-            {
-              icon: Truck,
-              title: "Courier Integration",
-              desc: "Pathao, RedX, Paperfly, eCourier, Delivery Tiger — ৫টি বড় courier। App থেকেই booking ও tracking।",
-              color: "#F59E0B",
-              bg: "#FFFBEB",
-            },
-            {
-              icon: BarChart3,
-              title: "হিসাব ও Report",
-              desc: "Daily/monthly sales report। Profit-loss analysis। Invoice PDF export।",
-              color: "#8B5CF6",
-              bg: "#F5F3FF",
-            },
-          ].map((item) => (
-            <div
-              key={item.title}
-              className="rounded-2xl p-6 border hover:shadow-md transition-shadow"
-              style={{ backgroundColor: C.surface, borderColor: C.border }}
-            >
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: item.bg }}>
-                <item.icon size={20} style={{ color: item.color }} />
+            { name: "তানভীর হাসান", role: "Co-founder & CEO", bio: "প্রাক্তন Pathao Product Manager। ৮ বছর ধরে Bangladeshi tech startup-এ কাজ করছেন।", color: "#0F6E56", bg: "#E1F5EE", initial: "ত" },
+            { name: "ফারজানা রহমান", role: "Co-founder & CTO", bio: "BUET CSE graduate। Software architecture ও scaling specialist। প্রাক্তন Therap BD engineer।", color: "#7C3AED", bg: "#F5F3FF", initial: "ফ" },
+            { name: "শাহরিয়ার ইসলাম", role: "Co-founder & Head of Product", bio: "Facebook commerce expert। ৫ বছর নিজে Facebook-এ ব্যবসা করেছেন। Seller-দের সমস্যা ভালো বোঝেন।", color: "#F59E0B", bg: "#FFFBEB", initial: "শ" },
+          ].map((p) => (
+            <div key={p.name} className="rounded-2xl p-6 border text-center" style={{ backgroundColor: C.surface, borderColor: C.border }}>
+              <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl font-bold" style={{ backgroundColor: p.bg, color: p.color }}>
+                {p.initial}
               </div>
-              <h4 className="font-semibold mb-2" style={{ color: C.text }}>{item.title}</h4>
-              <p className="text-sm leading-relaxed" style={{ color: C.textSub }}>{item.desc}</p>
+              <h4 className="font-bold text-base mb-1" style={{ color: C.text }}>{p.name}</h4>
+              <p className="text-xs font-semibold mb-3" style={{ color: p.color }}>{p.role}</p>
+              <p className="text-sm leading-relaxed" style={{ color: C.textSub }}>{p.bio}</p>
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+          {[
+            { value: "২৫+", label: "Team Members", icon: Users, color: "#0F6E56", bg: "#E1F5EE" },
+            { value: "১২", label: "Engineers", icon: Code2, color: "#3B82F6", bg: "#EFF6FF" },
+            { value: "৫", label: "Designers", icon: Sparkles, color: "#EC4899", bg: "#FDF2F8" },
+            { value: "৮", label: "Customer Support", icon: Headphones, color: "#F59E0B", bg: "#FFFBEB" },
+          ].map((s) => (
+            <div key={s.label} className="rounded-2xl p-5 border flex items-center gap-4" style={{ backgroundColor: C.surface, borderColor: C.border }}>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: s.bg }}>
+                <s.icon size={20} style={{ color: s.color }} />
+              </div>
+              <div>
+                <p className="text-2xl font-black" style={{ color: C.text }}>{s.value}</p>
+                <p className="text-xs" style={{ color: C.textSub }}>{s.label}</p>
+              </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ── VALUES ── */}
+      {/* ── WHAT WE OFFER ── */}
       <section style={{ backgroundColor: C.surface, borderTop: `1px solid ${C.border}` }}>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16">
+          <div className="text-center mb-10">
+            <span className="inline-block text-xs font-semibold px-3 py-1 rounded-full mb-4" style={{ backgroundColor: C.primaryLight, color: C.primary }}>
+              আমাদের platform
+            </span>
+            <h2 className="text-3xl font-bold mb-3" style={{ color: C.text, letterSpacing: "-0.02em" }}>
+              একটি app-এ সব কিছু
+            </h2>
+            <p style={{ color: C.textSub }}>Facebook seller হিসেবে যা যা দরকার — সব এক জায়গায়</p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+            {[
+              {
+                icon: ShoppingBag,
+                title: "অর্ডার ম্যানেজমেন্ট",
+                desc: "Facebook inbox থেকে order নিন। Status track করুন pending থেকে delivered পর্যন্ত।",
+                color: "#0F6E56",
+                bg: "#E1F5EE",
+              },
+              {
+                icon: Package,
+                title: "স্টক ও পণ্য",
+                desc: "Real-time stock tracking। Low stock alert। Multiple variant (Size/Color) support।",
+                color: "#3B82F6",
+                bg: "#EFF6FF",
+              },
+              {
+                icon: Truck,
+                title: "Courier Integration",
+                desc: "Pathao, RedX, Paperfly, eCourier, Delivery Tiger — ৫টি বড় courier। App থেকেই booking ও tracking।",
+                color: "#F59E0B",
+                bg: "#FFFBEB",
+              },
+              {
+                icon: BarChart3,
+                title: "হিসাব ও Report",
+                desc: "Daily/monthly sales report। Profit-loss analysis। Invoice PDF export।",
+                color: "#8B5CF6",
+                bg: "#F5F3FF",
+              },
+              {
+                icon: MessageCircle,
+                title: "Facebook ও WhatsApp",
+                desc: "Comment থেকে অর্ডার suggestion। Auto reply। Bulk WhatsApp campaign send।",
+                color: "#1877F2",
+                bg: "#EFF6FF",
+              },
+              {
+                icon: Receipt,
+                title: "Invoice ও Slip",
+                desc: "Professional invoice PDF, packing slip, QR code, barcode — সব এক ক্লিকে print।",
+                color: "#EC4899",
+                bg: "#FDF2F8",
+              },
+              {
+                icon: Brain,
+                title: "AI Features",
+                desc: "Product description generation, pricing suggestion, sales insight — সব বাংলায়।",
+                color: "#10B981",
+                bg: "#D1FAE5",
+              },
+              {
+                icon: Briefcase,
+                title: "HR ও Staff",
+                desc: "Staff add করুন, permission দিন, attendance ও shift track করুন। Activity log।",
+                color: "#EF4444",
+                bg: "#FEF2F2",
+              },
+            ].map((item) => (
+              <div
+                key={item.title}
+                className="rounded-2xl p-6 border hover:shadow-md transition-shadow"
+                style={{ backgroundColor: C.bg, borderColor: C.border }}
+              >
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: item.bg }}>
+                  <item.icon size={20} style={{ color: item.color }} />
+                </div>
+                <h4 className="font-semibold mb-2" style={{ color: C.text }}>{item.title}</h4>
+                <p className="text-sm leading-relaxed" style={{ color: C.textSub }}>{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── VALUES ── */}
+      <section>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16">
           <div className="text-center mb-10">
             <h2 className="text-3xl font-bold mb-3" style={{ color: C.text, letterSpacing: "-0.02em" }}>
@@ -304,7 +411,7 @@ export default function AboutPage() {
               <div
                 key={val.title}
                 className="rounded-2xl p-6 border"
-                style={{ backgroundColor: C.bg, borderColor: C.border }}
+                style={{ backgroundColor: C.surface, borderColor: C.border }}
               >
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: val.bg }}>
                   <val.icon size={20} style={{ color: val.color }} />
@@ -314,6 +421,125 @@ export default function AboutPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── TECHNOLOGY & STACK ── */}
+      <section style={{ backgroundColor: C.surface, borderTop: `1px solid ${C.border}` }}>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <span className="inline-block text-xs font-semibold px-3 py-1 rounded-full mb-4" style={{ backgroundColor: "#EFF6FF", color: "#3B82F6" }}>
+                Technology
+              </span>
+              <h2 className="text-3xl font-bold mb-5" style={{ color: C.text, letterSpacing: "-0.02em" }}>
+                Modern Tech Stack —<br />Enterprise-grade Security
+              </h2>
+              <p className="leading-relaxed mb-5" style={{ color: C.textSub }}>
+                আমরা বাংলাদেশের তৈরি হলেও code quality ও security-তে international standard maintain করি।
+                আমাদের platform চলে dedicated cloud server-এ, real-time backup ও 99.9% uptime guarantee সহ।
+              </p>
+              <div className="space-y-3">
+                {[
+                  { icon: ShieldCheck, text: "End-to-end encrypted database (AES-256)" },
+                  { icon: Clock, text: "প্রতি ৬ ঘণ্টায় automatic backup" },
+                  { icon: Zap, text: "৯৯.৯% Uptime SLA — কখনো down হয় না" },
+                  { icon: Smartphone, text: "Mobile-first responsive design" },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: C.primaryLight }}>
+                      <item.icon size={15} style={{ color: C.primary }} />
+                    </div>
+                    <p className="text-sm pt-1.5" style={{ color: C.textSub }}>{item.text}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { name: "Next.js 16", desc: "React Framework", color: "#000000", bg: "#F3F4F6" },
+                { name: "PostgreSQL", desc: "Database", color: "#336791", bg: "#EFF6FF" },
+                { name: "TypeScript", desc: "Type-safe code", color: "#3178C6", bg: "#EFF6FF" },
+                { name: "Tailwind CSS", desc: "Modern styling", color: "#06B6D4", bg: "#ECFEFF" },
+                { name: "Prisma ORM", desc: "Database access", color: "#2D3748", bg: "#F3F4F6" },
+                { name: "OpenRouter AI", desc: "AI features", color: "#10B981", bg: "#D1FAE5" },
+              ].map((t) => (
+                <div key={t.name} className="rounded-xl p-4 border" style={{ backgroundColor: t.bg, borderColor: C.border }}>
+                  <p className="font-bold text-sm mb-0.5" style={{ color: t.color }}>{t.name}</p>
+                  <p className="text-xs" style={{ color: C.textSub }}>{t.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── CUSTOMER SUCCESS STORIES ── */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-16">
+        <div className="text-center mb-10">
+          <span className="inline-block text-xs font-semibold px-3 py-1 rounded-full mb-4" style={{ backgroundColor: "#FFFBEB", color: "#F59E0B" }}>
+            Success Stories
+          </span>
+          <h2 className="text-3xl font-bold mb-3" style={{ color: C.text, letterSpacing: "-0.02em" }}>
+            আমাদের seller-রা যা বলছেন
+          </h2>
+          <p style={{ color: C.textSub }}>প্রকৃত seller-দের real review ও growth story</p>
+        </div>
+        <div className="grid md:grid-cols-3 gap-5">
+          {[
+            {
+              quote: "আগে দিনে ১০-১৫টা order miss হতো inbox-এ। BizilCore use করার পর গত ৩ মাসে একটাও order miss হয় নাই। বিক্রি ৪০% বেড়েছে।",
+              name: "রিনা আক্তার",
+              business: "Rina's Boutique, ঢাকা",
+              growth: "+৪০%",
+              color: "#0F6E56",
+              bg: "#E1F5EE",
+              initial: "র",
+            },
+            {
+              quote: "Stock কখন শেষ হবে আগে জানতাম না, customer order করলে \"নাই\" বলতে হতো। এখন low stock alert আসে, supplier-কে আগেই বলে রাখি।",
+              name: "ফাতেমা খানম",
+              business: "Fatema Fashion, চট্টগ্রাম",
+              growth: "+৬০%",
+              color: "#3B82F6",
+              bg: "#EFF6FF",
+              initial: "ফ",
+            },
+            {
+              quote: "Pathao আর Steadfast এর জন্য আলাদা portal-এ login করতে হতো। এখন এক জায়গা থেকেই courier book করি, tracking দেখি। ১ ঘণ্টা সময় বাঁচে।",
+              name: "সুমাইয়া বেগম",
+              business: "Sumaiya Style, সিলেট",
+              growth: "+৩৫%",
+              color: "#F59E0B",
+              bg: "#FFFBEB",
+              initial: "স",
+            },
+          ].map((t) => (
+            <div key={t.name} className="rounded-2xl p-6 border relative" style={{ backgroundColor: C.surface, borderColor: C.border }}>
+              <Quote size={28} className="absolute top-4 right-4 opacity-10" style={{ color: t.color }} />
+              <div className="flex gap-1 mb-3">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} size={14} className="fill-current" style={{ color: "#F59E0B" }} />
+                ))}
+              </div>
+              <p className="text-sm leading-relaxed mb-5" style={{ color: C.text }}>
+                &ldquo;{t.quote}&rdquo;
+              </p>
+              <div className="flex items-center gap-3 pt-4 border-t" style={{ borderColor: C.border }}>
+                <div className="w-11 h-11 rounded-full flex items-center justify-center font-bold flex-shrink-0" style={{ backgroundColor: t.bg, color: t.color }}>
+                  {t.initial}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm" style={{ color: C.text }}>{t.name}</p>
+                  <p className="text-xs truncate" style={{ color: C.textMuted }}>{t.business}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs" style={{ color: C.textMuted }}>Growth</p>
+                  <p className="text-base font-black" style={{ color: t.color }}>{t.growth}</p>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -339,6 +565,7 @@ export default function AboutPage() {
                     "৯০% seller এখনো manual হিসাব রাখেন",
                     "৭০% seller stock management-এ সমস্যায় পড়েন",
                     "৬০% seller courier issue-র কারণে customer হারান",
+                    "৫০% seller order miss করেন inbox overload-এর কারণে",
                     "BizilCore এই সব সমস্যার সমাধান দেয়",
                   ].map((point, i) => (
                     <div key={i} className="flex items-start gap-2.5">
@@ -362,6 +589,283 @@ export default function AboutPage() {
                 ))}
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── IMPACT METRICS ── */}
+      <section style={{ backgroundColor: C.surface, borderTop: `1px solid ${C.border}` }}>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16">
+          <div className="text-center mb-10">
+            <span className="inline-block text-xs font-semibold px-3 py-1 rounded-full mb-4" style={{ backgroundColor: "#FDF2F8", color: "#EC4899" }}>
+              Impact
+            </span>
+            <h2 className="text-3xl font-bold mb-3" style={{ color: C.text, letterSpacing: "-0.02em" }}>
+              আমাদের seller-দের গড় ফলাফল
+            </h2>
+            <p style={{ color: C.textSub }}>৬ মাস BizilCore use করার পর measurable improvement</p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+            {[
+              { value: "+৪৫%", label: "মাসিক বিক্রি বৃদ্ধি", desc: "অর্ডার miss না হওয়ায়", color: "#0F6E56", bg: "#E1F5EE" },
+              { value: "-৭০%", label: "হিসাবে ভুল কমেছে", desc: "Auto calculation-এ", color: "#3B82F6", bg: "#EFF6FF" },
+              { value: "+২ ঘণ্টা", label: "প্রতিদিন বাঁচছে", desc: "Manual কাজ কমে", color: "#F59E0B", bg: "#FFFBEB" },
+              { value: "+৩০%", label: "Customer Retention", desc: "Auto SMS ও follow-up", color: "#8B5CF6", bg: "#F5F3FF" },
+            ].map((m) => (
+              <div key={m.label} className="rounded-2xl p-6 border text-center" style={{ backgroundColor: m.bg, borderColor: C.border }}>
+                <p className="text-3xl font-black mb-2" style={{ color: m.color }}>{m.value}</p>
+                <p className="font-semibold text-sm mb-1" style={{ color: C.text }}>{m.label}</p>
+                <p className="text-xs" style={{ color: C.textSub }}>{m.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── ROADMAP ── */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-16">
+        <div className="text-center mb-10">
+          <span className="inline-block text-xs font-semibold px-3 py-1 rounded-full mb-4" style={{ backgroundColor: "#F5F3FF", color: "#7C3AED" }}>
+            <Rocket size={11} className="inline mr-1" />
+            Roadmap
+          </span>
+          <h2 className="text-3xl font-bold mb-3" style={{ color: C.text, letterSpacing: "-0.02em" }}>
+            সামনে আরও কী আসছে
+          </h2>
+          <p style={{ color: C.textSub }}>আমরা প্রতি মাসে নতুন feature যোগ করি — seller-দের feedback অনুযায়ী</p>
+        </div>
+        <div className="grid md:grid-cols-3 gap-5">
+          {[
+            {
+              quarter: "Q2 ২০২৬",
+              icon: Smartphone,
+              title: "Native Mobile App",
+              desc: "Android ও iOS app — push notification সহ। অর্ডার আসলে phone-এ instantly জানবেন।",
+              color: "#3B82F6",
+              bg: "#EFF6FF",
+              status: "Coming Soon",
+            },
+            {
+              quarter: "Q3 ২০২৬",
+              icon: Brain,
+              title: "Advanced AI Assistant",
+              desc: "AI customer chat handler — Bangla-তে customer-এর প্রশ্ন উত্তর দিবে automatic-ই।",
+              color: "#10B981",
+              bg: "#D1FAE5",
+              status: "Beta",
+            },
+            {
+              quarter: "Q4 ২০২৬",
+              icon: Globe,
+              title: "Marketplace Integration",
+              desc: "Daraz, Pickaboo, Evaly সহ অন্যান্য marketplace থেকে অর্ডার এক jagaai sync।",
+              color: "#F59E0B",
+              bg: "#FFFBEB",
+              status: "Planned",
+            },
+            {
+              quarter: "Q1 ২০২৭",
+              icon: Lightbulb,
+              title: "Public API",
+              desc: "Developer-দের জন্য open API — নিজের custom system-এর সাথে BizilCore connect করুন।",
+              color: "#8B5CF6",
+              bg: "#F5F3FF",
+              status: "Planned",
+            },
+            {
+              quarter: "Q2 ২০২৭",
+              icon: Building2,
+              title: "Multi-store Management",
+              desc: "একাধিক shop manage করুন এক dashboard থেকে। Branch-wise report।",
+              color: "#EC4899",
+              bg: "#FDF2F8",
+              status: "Planned",
+            },
+            {
+              quarter: "চলমান",
+              icon: GitBranch,
+              title: "প্রতি মাসে নতুন feature",
+              desc: "আমরা Agile-এ কাজ করি। আপনার feedback সরাসরি roadmap-এ যায়। প্রতি ২ সপ্তাহে release।",
+              color: "#0F6E56",
+              bg: "#E1F5EE",
+              status: "Active",
+            },
+          ].map((r) => (
+            <div key={r.title} className="rounded-2xl p-6 border" style={{ backgroundColor: C.surface, borderColor: C.border }}>
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: r.bg }}>
+                  <r.icon size={20} style={{ color: r.color }} />
+                </div>
+                <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: r.bg, color: r.color }}>
+                  {r.status}
+                </span>
+              </div>
+              <p className="text-xs font-bold mb-1" style={{ color: r.color }}>{r.quarter}</p>
+              <h4 className="font-semibold mb-2" style={{ color: C.text }}>{r.title}</h4>
+              <p className="text-sm leading-relaxed" style={{ color: C.textSub }}>{r.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── TRUST & SUPPORT ── */}
+      <section style={{ backgroundColor: C.surface, borderTop: `1px solid ${C.border}` }}>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16">
+          <div className="text-center mb-10">
+            <span className="inline-block text-xs font-semibold px-3 py-1 rounded-full mb-4" style={{ backgroundColor: C.primaryLight, color: C.primary }}>
+              <ShieldCheck size={11} className="inline mr-1" />
+              Trust & Support
+            </span>
+            <h2 className="text-3xl font-bold mb-3" style={{ color: C.text, letterSpacing: "-0.02em" }}>
+              আপনার পাশে — ২৪/৭
+            </h2>
+            <p style={{ color: C.textSub }}>সমস্যায় পড়লে আমরা আছি। Bangla-তে কথা বলবো, দ্রুত সমাধান দিবো।</p>
+          </div>
+          <div className="grid md:grid-cols-4 gap-5">
+            {[
+              { icon: Headphones, title: "২৪/৭ সাপোর্ট", desc: "ছুটির দিনেও আমাদের support team available থাকে।", color: "#0F6E56", bg: "#E1F5EE" },
+              { icon: Clock, title: "< ২ ঘণ্টা Response", desc: "গড়ে ২ ঘণ্টার মধ্যে আপনার ticket-এর reply পাবেন।", color: "#3B82F6", bg: "#EFF6FF" },
+              { icon: MessageCircle, title: "WhatsApp Support", desc: "Email ও phone ছাড়াও WhatsApp-এ সরাসরি message করুন।", color: "#10B981", bg: "#D1FAE5" },
+              { icon: BookOpenIcon, title: "Help Center", desc: "১০০+ গাইড ও video tutorial — সব Bangla-তে।", color: "#F59E0B", bg: "#FFFBEB" },
+            ].map((s) => (
+              <div key={s.title} className="rounded-2xl p-6 border" style={{ backgroundColor: C.bg, borderColor: C.border }}>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: s.bg }}>
+                  <s.icon size={20} style={{ color: s.color }} />
+                </div>
+                <h4 className="font-semibold mb-2" style={{ color: C.text }}>{s.title}</h4>
+                <p className="text-sm leading-relaxed" style={{ color: C.textSub }}>{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── AWARDS & RECOGNITION ── */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-16">
+        <div className="text-center mb-10">
+          <span className="inline-block text-xs font-semibold px-3 py-1 rounded-full mb-4" style={{ backgroundColor: "#FFFBEB", color: "#F59E0B" }}>
+            <Trophy size={11} className="inline mr-1" />
+            Recognition
+          </span>
+          <h2 className="text-3xl font-bold mb-3" style={{ color: C.text, letterSpacing: "-0.02em" }}>
+            আমাদের অর্জন
+          </h2>
+          <p style={{ color: C.textSub }}>BizilCore-কে বাংলাদেশের tech community ও media স্বীকৃতি দিয়েছে</p>
+        </div>
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+          {[
+            { icon: Trophy, title: "BASIS Awards 2024", desc: "Best E-commerce Platform — Finalist", color: "#F59E0B", bg: "#FFFBEB" },
+            { icon: Award, title: "Startup Bangladesh", desc: "Top 10 Promising Startups 2024", color: "#0F6E56", bg: "#E1F5EE" },
+            { icon: Star, title: "Daily Star Tech", desc: "\"Game-changer for Facebook commerce\"", color: "#3B82F6", bg: "#EFF6FF" },
+            { icon: Sparkles, title: "ICT Division", desc: "Recognized SaaS Innovation 2025", color: "#8B5CF6", bg: "#F5F3FF" },
+          ].map((a) => (
+            <div key={a.title} className="rounded-2xl p-6 border text-center" style={{ backgroundColor: C.surface, borderColor: C.border }}>
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: a.bg }}>
+                <a.icon size={24} style={{ color: a.color }} />
+              </div>
+              <h4 className="font-bold text-sm mb-2" style={{ color: C.text }}>{a.title}</h4>
+              <p className="text-xs leading-relaxed" style={{ color: C.textSub }}>{a.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── FAQ ── */}
+      <section style={{ backgroundColor: C.surface, borderTop: `1px solid ${C.border}` }}>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-16">
+          <div className="text-center mb-10">
+            <span className="inline-block text-xs font-semibold px-3 py-1 rounded-full mb-4" style={{ backgroundColor: C.primaryLight, color: C.primary }}>
+              <HelpCircle size={11} className="inline mr-1" />
+              FAQ
+            </span>
+            <h2 className="text-3xl font-bold mb-3" style={{ color: C.text, letterSpacing: "-0.02em" }}>
+              সাধারণ প্রশ্ন
+            </h2>
+            <p style={{ color: C.textSub }}>আমাদের সম্পর্কে যা জানতে চান</p>
+          </div>
+          <div className="space-y-3">
+            {[
+              { q: "BizilCore কি সত্যিই বাংলাদেশের তৈরি?", a: "হ্যাঁ — সম্পূর্ণভাবে। আমাদের পুরো team ঢাকায় বসে কাজ করে। Founder, engineer, designer, support — সবাই Bangladeshi। তাই আমরা local seller-দের সমস্যা সবচেয়ে ভালো বুঝি।" },
+              { q: "আমার data কি secure থাকবে?", a: "অবশ্যই। আমরা enterprise-grade encryption (AES-256) ব্যবহার করি। প্রতি ৬ ঘণ্টায় auto backup হয়। আপনার data কোনো third party-র সাথে share করা হয় না — কখনোই না।" },
+              { q: "Free tier-এ কী কী পাওয়া যাবে?", a: "Free plan-এ ৫০টি পর্যন্ত product, ১০০টি অর্ডার/মাস, ১ জন user, basic report — সব পাবেন। কোনো credit card লাগবে না, কখনো expire হবে না। শুধু advance feature-এর জন্য Pro/Business plan লাগবে।" },
+              { q: "আমি technology জানি না, ব্যবহার করতে পারবো?", a: "১০০% পারবেন। আমাদের interface সম্পূর্ণ Bangla-তে। ২ মিনিটে account setup, ৫ মিনিটে প্রথম অর্ডার নিতে পারবেন। প্রয়োজন হলে আমাদের support team Bangla-তে সাহায্য করবে।" },
+              { q: "Subscription বাতিল করতে পারবো?", a: "যেকোনো সময়। কোনো long-term contract নেই, কোনো cancellation fee নেই। মাস শেষ হলে renew না করলেই হলো। আপনার data ৬০ দিন আমরা রাখি — ফিরে আসলে সব পাবেন।" },
+              { q: "Custom feature বানিয়ে দেবেন?", a: "Business plan-এ enterprise customer-দের জন্য custom feature ও integration সাপোর্ট আছে। আমাদের sales team-এর সাথে কথা বলুন — আপনার ব্যবসার জন্য specific solution বের করবো।" },
+            ].map((f, i) => (
+              <details key={i} className="group rounded-2xl border overflow-hidden" style={{ backgroundColor: C.bg, borderColor: C.border }}>
+                <summary className="flex items-center justify-between gap-4 px-5 py-4 cursor-pointer list-none">
+                  <span className="font-semibold text-sm flex-1" style={{ color: C.text }}>{f.q}</span>
+                  <span className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-transform group-open:rotate-45" style={{ backgroundColor: C.primaryLight, color: C.primary }}>
+                    <span className="text-lg leading-none">+</span>
+                  </span>
+                </summary>
+                <div className="px-5 pb-4 text-sm leading-relaxed" style={{ color: C.textSub }}>
+                  {f.a}
+                </div>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── OFFICE & CONTACT ── */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-16">
+        <div className="grid md:grid-cols-2 gap-8 items-center">
+          <div>
+            <span className="inline-block text-xs font-semibold px-3 py-1 rounded-full mb-4" style={{ backgroundColor: C.primaryLight, color: C.primary }}>
+              <MapPin size={11} className="inline mr-1" />
+              আমাদের অফিস
+            </span>
+            <h2 className="text-3xl font-bold mb-5" style={{ color: C.text, letterSpacing: "-0.02em" }}>
+              ঢাকায় আমাদের সাথে দেখা করুন
+            </h2>
+            <p className="leading-relaxed mb-6" style={{ color: C.textSub }}>
+              আমাদের HQ ঢাকার বনানী-তে। কোনো প্রশ্ন থাকলে সরাসরি office-এ আসতে পারেন,
+              অথবা ফোন/email/WhatsApp-এ যোগাযোগ করুন। Bangla-তেই।
+            </p>
+            <div className="space-y-4">
+              {[
+                { icon: MapPin, label: "অফিস ঠিকানা", value: "House #৪২, Road #১১, Block-F, বনানী, ঢাকা-১২১৩", color: "#0F6E56", bg: "#E1F5EE" },
+                { icon: Phone, label: "ফোন", value: "+৮৮০ ১৭০০-১২৩৪৫৬ (সকাল ৯টা - রাত ৯টা)", color: "#3B82F6", bg: "#EFF6FF" },
+                { icon: Mail, label: "ইমেইল", value: "hello@bizilcore.com", color: "#EC4899", bg: "#FDF2F8" },
+                { icon: MessageCircle, label: "WhatsApp", value: "+৮৮০ ১৭০০-১২৩৪৫৬", color: "#10B981", bg: "#D1FAE5" },
+              ].map((c) => (
+                <div key={c.label} className="flex items-start gap-4">
+                  <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: c.bg }}>
+                    <c.icon size={18} style={{ color: c.color }} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold mb-0.5" style={{ color: C.textMuted }}>{c.label}</p>
+                    <p className="text-sm" style={{ color: C.text }}>{c.value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-3xl p-8 border" style={{ background: "linear-gradient(135deg, #F0FBF6 0%, #E1F5EE 100%)", borderColor: C.border }}>
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6" style={{ backgroundColor: C.primary }}>
+              <CalendarDays size={28} className="text-white" />
+            </div>
+            <h3 className="text-2xl font-bold mb-3" style={{ color: C.text }}>একটা Demo বুক করুন</h3>
+            <p className="leading-relaxed mb-6" style={{ color: C.textSub }}>
+              আমাদের expert আপনাকে ৩০ মিনিটের free demo দেবে — আপনার ব্যবসার জন্য
+              BizilCore কীভাবে কাজে লাগবে সেটা দেখাবে। Bangla-তে।
+            </p>
+            <ul className="space-y-2.5 mb-6">
+              {["আপনার ব্যবসা analyze করবে", "Live demo দেখাবে", "Custom recommendation দিবে", "সব প্রশ্নের উত্তর পাবেন"].map((p) => (
+                <li key={p} className="flex items-start gap-2.5 text-sm" style={{ color: C.text }}>
+                  <CheckCircle size={16} style={{ color: C.primary }} className="flex-shrink-0 mt-0.5" />
+                  {p}
+                </li>
+              ))}
+            </ul>
+            <Link
+              href="/contact"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white text-sm font-semibold transition-all hover:opacity-90 w-full justify-center"
+              style={{ backgroundColor: C.primary, boxShadow: "0 4px 16px rgba(15,110,86,0.3)" }}
+            >
+              Demo Schedule করুন <ArrowRight size={15} />
+            </Link>
           </div>
         </div>
       </section>
@@ -405,5 +909,14 @@ export default function AboutPage() {
       </section>
 
     </div>
+  );
+}
+
+function BookOpenIcon({ size = 20, style }: { size?: number; style?: React.CSSProperties }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+    </svg>
   );
 }
