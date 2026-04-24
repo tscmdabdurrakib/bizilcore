@@ -390,8 +390,8 @@ const categories = [
     features: [
       {
         icon: Truck,
-        title: "১২টি Courier সংযুক্ত",
-        desc: "Pathao, eCourier, Steadfast, RedX, Sundarban, Paperfly, CarryBee, Delivery Tiger, Karatoa, Janani, Sheba, SA Paribahan — সব বড় courier এক app এ।",
+        title: "৫টি বড় Courier সংযুক্ত",
+        desc: "Pathao, RedX, Paperfly, eCourier, Delivery Tiger — বাংলাদেশের প্রধান ৫টি courier এক app এ।",
         highlight: true,
       },
       {
@@ -492,7 +492,7 @@ const allFeatures = [
   "পণ্যের ছবি (Business)", "অর্ডার Lifecycle Track", "Invoice ও Due Date", "Return Management", "COD Tracking",
   "Customer Profile", "বাকি ট্র্যাকিং", "Bulk WhatsApp", "Supplier Management",
   "P&L Report", "হিসাব বই", "Excel Export", "Sales Analytics",
-  "Pathao Integration", "eCourier Integration", "eCourier API Credentials (Business)", "RedX Integration", "Steadfast Integration", "CarryBee Integration", "Delivery Tiger Integration", "Karatoa KCS Integration", "Janani Express Integration", "Sheba Delivery Integration", "SA Paribahan Integration",
+  "Pathao Integration", "RedX Integration", "Paperfly Integration", "eCourier Integration", "eCourier API Credentials (Business)", "Delivery Tiger Integration",
   "Staff Management", "Role Permission", "Activity Log", "Multiple Facebook Page",
   "Dark Mode", "Mobile Friendly", "In-app Notification", "Facebook Comment Import",
   "Purchase Tracking", "Sales Target", "Discount & Coupon", "Delivery Analytics",
@@ -547,7 +547,7 @@ export default function FeaturesPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             {[
               { value: "৫৫+", label: "Total Features" },
-              { value: "১২টি", label: "Courier Integration" },
+              { value: "৫টি", label: "Courier Integration" },
               { value: "৩টি", label: "Subscription Plan" },
               { value: "১০০%", label: "Bangla UI" },
             ].map((s) => (

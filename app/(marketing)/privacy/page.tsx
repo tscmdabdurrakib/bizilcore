@@ -110,7 +110,7 @@ export default function PrivacyPage() {
                 <Body>আমরা নিম্নলিখিত সীমিত পরিস্থিতিতে আপনার তথ্য শেয়ার করতে পারি:</Body>
                 <ul className="space-y-2 mt-3">
                   {[
-                    "কুরিয়ার পার্টনার (Pathao, eCourier) — ডেলিভারি সম্পন্ন করতে",
+                    "কুরিয়ার পার্টনার (Pathao, RedX, Paperfly, eCourier, Delivery Tiger) — ডেলিভারি সম্পন্ন করতে",
                     "পেমেন্ট প্রসেসর (bKash, Nagad) — পেমেন্ট যাচাই করতে",
                     "SMS ও Email সেবা প্রদানকারী — নোটিফিকেশন পাঠাতে",
                     "আইনি কর্তৃপক্ষ — আদালতের আদেশ বা আইনি প্রয়োজনে",
@@ -236,7 +236,7 @@ export default function PrivacyPage() {
                   {[
                     "Facebook API — অর্ডার সাজেশন ও সোশ্যাল লগইনের জন্য",
                     "bKash ও Nagad — পেমেন্ট প্রক্রিয়াকরণের জন্য",
-                    "Pathao, eCourier — ডেলিভারি সেবার জন্য",
+                    "Pathao, RedX, Paperfly, eCourier, Delivery Tiger — ডেলিভারি সেবার জন্য",
                     "Google Analytics — প্ল্যাটফর্ম ব্যবহার বিশ্লেষণের জন্য",
                     "Twilio/SSL Wireless — SMS নোটিফিকেশনের জন্য",
                   ].map(item => <ListItem key={item}>{item}</ListItem>)}

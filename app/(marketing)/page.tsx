@@ -198,7 +198,7 @@ export default async function HomePage() {
               { value: "১০,০০০+", label: "Active Seller" },
               { value: "৫০ লাখ+", label: "অর্ডার প্রসেস হয়েছে" },
               { value: "৯৮%", label: "Customer Satisfaction" },
-              { value: "১২টি", label: "Courier Integration" },
+              { value: "৫টি", label: "Courier Integration" },
             ].map((s) => (
               <div key={s.label}>
                 <p className="text-3xl font-bold mb-1" style={{ color: C.primary }}>{s.value}</p>
@@ -252,7 +252,7 @@ export default async function HomePage() {
                 "সব হিসাব auto — স্টক, বাকি, লাভ সব real-time",
                 "Low stock হলে সাথে সাথে notification পাবেন",
                 "প্রতিটি customer এর বাকি ও ইতিহাস এক ক্লিকে",
-                "১২টি Courier সরাসরি app থেকে বুক করুন",
+                "৫টি বড় Courier সরাসরি app থেকে বুক করুন",
                 "মাসিক P&L রিপোর্ট automatic তৈরি হবে",
                 "নিজস্ব পাবলিক Catalog পেজে পণ্য showcase করুন",
                 "Staff এর প্রতিটি কাজ activity log এ দেখুন",
@@ -306,8 +306,8 @@ export default async function HomePage() {
               {
                 icon: Truck,
                 title: "কুরিয়ার ইন্টিগ্রেশন",
-                desc: "Pathao, eCourier, Steadfast, RedX, Sundarban, Paperfly, CarryBee, Delivery Tiger, Karatoa, Janani, Sheba, SA Paribahan — সরাসরি app থেকে booking ও tracking।",
-                badge: "১২টি Courier",
+                desc: "Pathao, RedX, Paperfly, eCourier, Delivery Tiger — বাংলাদেশের প্রধান ৫টি কুরিয়ার সরাসরি app থেকে booking ও tracking।",
+                badge: "৫টি Courier",
               },
               {
                 icon: BarChart3,
@@ -394,17 +394,10 @@ export default async function HomePage() {
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
           {([
             { name: "Pathao", logo: "/couriers/pathao.png" as string | null, color: "" },
-            { name: "eCourier", logo: "/couriers/ecourier.png" as string | null, color: "" },
             { name: "RedX", logo: "/couriers/redx.png?v=2" as string | null, color: "" },
-            { name: "Sundarban", logo: "/couriers/sundarban.png" as string | null, color: "" },
-            { name: "Steadfast", logo: "/couriers/steadfast.png" as string | null, color: "#6B35FF" },
             { name: "Paperfly", logo: "/couriers/paperfly.png" as string | null, color: "" },
-            { name: "CarryBee", logo: "/couriers/carrybee.svg" as string | null, color: "" },
+            { name: "eCourier", logo: "/couriers/ecourier.png" as string | null, color: "" },
             { name: "Delivery Tiger", logo: "/couriers/delivery_tiger.svg" as string | null, color: "" },
-            { name: "Karatoa KCS", logo: "/couriers/karatoa.svg" as string | null, color: "" },
-            { name: "Janani Express", logo: "/couriers/janani.svg" as string | null, color: "" },
-            { name: "Sheba Delivery", logo: "/couriers/sheba.svg" as string | null, color: "" },
-            { name: "SA Paribahan", logo: "/couriers/sa_paribahan.svg" as string | null, color: "" },
           ]).map((c) => (
             <div
               key={c.name}

@@ -28,14 +28,13 @@ const CUSTOMER_GROUPS = [
   { key: "vip", label: "VIP", emoji: "⭐", desc: "বিশেষ" },
   { key: "wholesale", label: "Wholesale", emoji: "🏪", desc: "পাইকারি" },
 ];
-const MANUAL_COURIERS = ["sundarban","paperfly","carrybee","delivery_tiger","karatoa","janani","sheba","sa_paribahan","other"];
+const MANUAL_COURIERS = ["paperfly","delivery_tiger","other"];
 const ALL_COURIERS = [
-  { key: "pathao", label: "Pathao" }, { key: "steadfast", label: "Steadfast" },
-  { key: "redx", label: "RedX" }, { key: "ecourier", label: "eCourier" },
-  { key: "sundarban", label: "Sundarban" }, { key: "paperfly", label: "Paperfly" },
-  { key: "carrybee", label: "CarryBee" }, { key: "delivery_tiger", label: "Delivery Tiger" },
-  { key: "karatoa", label: "Karatoa" }, { key: "janani", label: "Janani" },
-  { key: "sheba", label: "Sheba" }, { key: "sa_paribahan", label: "SA Paribahan" },
+  { key: "pathao", label: "Pathao" },
+  { key: "redx", label: "RedX" },
+  { key: "paperfly", label: "Paperfly" },
+  { key: "ecourier", label: "eCourier" },
+  { key: "delivery_tiger", label: "Delivery Tiger" },
   { key: "other", label: "অন্য" },
 ];
 
@@ -72,7 +71,7 @@ export default function OrderCreatePanel({ onClose, onCreated, prefillCustomerNa
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [wantCourier, setWantCourier] = useState(false);
-  const [courierName, setCourierName] = useState("steadfast");
+  const [courierName, setCourierName] = useState("pathao");
   const [trackId, setTrackId] = useState("");
 
   const [expandedSection, setExpandedSection] = useState<"customer" | "products" | "payment" | "tags" | "courier">("customer");

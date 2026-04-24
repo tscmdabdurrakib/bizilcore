@@ -60,7 +60,7 @@ export default function NewOrderPage() {
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [wantCourier, setWantCourier] = useState(false);
-  const [newOrderCourier, setNewOrderCourier] = useState("steadfast");
+  const [newOrderCourier, setNewOrderCourier] = useState("pathao");
   const [newOrderTrackId, setNewOrderTrackId] = useState("");
   const [bookingCourier, setBookingCourier] = useState(false);
 
@@ -136,16 +136,15 @@ export default function NewOrderPage() {
     setItems(prev => prev.filter((_, i) => i !== idx));
   }
 
-  const MANUAL_COURIERS_NEW = ["sundarban", "paperfly", "carrybee", "delivery_tiger", "karatoa", "janani", "sheba", "sa_paribahan", "other"];
+  const MANUAL_COURIERS_NEW = ["paperfly", "delivery_tiger", "other"];
   const isManualCourierSelected = MANUAL_COURIERS_NEW.includes(newOrderCourier);
 
   const NEW_ORDER_COURIERS = [
-    { key: "pathao", label: "Pathao" }, { key: "steadfast", label: "Steadfast" },
-    { key: "redx", label: "RedX" }, { key: "ecourier", label: "eCourier" },
-    { key: "sundarban", label: "Sundarban" }, { key: "paperfly", label: "Paperfly" },
-    { key: "carrybee", label: "CarryBee" }, { key: "delivery_tiger", label: "Delivery Tiger" },
-    { key: "karatoa", label: "Karatoa" }, { key: "janani", label: "Janani" },
-    { key: "sheba", label: "Sheba" }, { key: "sa_paribahan", label: "SA Paribahan" },
+    { key: "pathao", label: "Pathao" },
+    { key: "redx", label: "RedX" },
+    { key: "paperfly", label: "Paperfly" },
+    { key: "ecourier", label: "eCourier" },
+    { key: "delivery_tiger", label: "Delivery Tiger" },
     { key: "other", label: "অন্য" },
   ];
 

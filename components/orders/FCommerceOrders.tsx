@@ -59,17 +59,10 @@ const STATUS_OPTIONS = [
 
 const COURIER_LIST = [
   { key: "pathao",         label: "Pathao",          manual: false },
-  { key: "steadfast",      label: "Steadfast",       manual: false },
   { key: "redx",           label: "RedX",            manual: false },
   { key: "ecourier",       label: "eCourier",        manual: false },
-  { key: "sundarban",      label: "Sundarban",       manual: true  },
   { key: "paperfly",       label: "Paperfly",        manual: true  },
-  { key: "carrybee",       label: "CarryBee",        manual: true  },
   { key: "delivery_tiger", label: "Delivery Tiger",  manual: true  },
-  { key: "karatoa",        label: "Karatoa",         manual: true  },
-  { key: "janani",         label: "Janani",          manual: true  },
-  { key: "sheba",          label: "Sheba",           manual: true  },
-  { key: "sa_paribahan",   label: "SA Paribahan",    manual: true  },
   { key: "other",          label: "অন্য",            manual: true  },
 ];
 
@@ -92,7 +85,7 @@ export default function FCommerceOrders() {
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [quickMenu, setQuickMenu] = useState<{ type: "status" | "actions" | "courier"; orderId: string; x: number; y: number } | null>(null);
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
-  const [inlineCourier, setInlineCourier] = useState("steadfast");
+  const [inlineCourier, setInlineCourier] = useState("pathao");
   const [inlineTrackInput, setInlineTrackInput] = useState("");
   const [bookingInline, setBookingInline] = useState(false);
   const [createPanelOpen, setCreatePanelOpen] = useState(false);
@@ -540,7 +533,7 @@ export default function FCommerceOrders() {
               {filtered.map((o) => {
                 const st = getStatusStyle(o.status);
                 const courierSt = o.courierStatus ? COURIER_STATUS_STYLE[o.courierStatus] : null;
-                const COURIER_LABEL: Record<string, string> = { pathao:"Pathao", ecourier:"eCourier", steadfast:"Steadfast", redx:"RedX", sundarban:"Sundarban", paperfly:"Paperfly", carrybee:"CarryBee", delivery_tiger:"Delivery Tiger", karatoa:"Karatoa", janani:"Janani", sheba:"Sheba", sa_paribahan:"SA Paribahan", other:"Manual" };
+                const COURIER_LABEL: Record<string, string> = { pathao:"Pathao", redx:"RedX", paperfly:"Paperfly", ecourier:"eCourier", delivery_tiger:"Delivery Tiger", other:"Manual" };
                 const summary = o.items.slice(0, 1).map(it => {
                   if (it.comboId) {
                     if (it.comboSnapshot) { try { return (JSON.parse(it.comboSnapshot) as { name: string }).name; } catch { /* */ } }

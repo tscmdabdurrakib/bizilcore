@@ -72,17 +72,11 @@ export default function OrderDetailPage() {
   const [manualTrackInput, setManualTrackInput] = useState("");
   const [submittingManual, setSubmittingManual] = useState(false);
 
-  const MANUAL_COURIERS_LIST = ["sundarban", "paperfly", "carrybee", "delivery_tiger", "karatoa", "janani", "sheba", "sa_paribahan", "other"];
+  const MANUAL_COURIERS_LIST = ["paperfly", "delivery_tiger", "other"];
 
   const MANUAL_COURIER_WEBSITES: Record<string, string> = {
-    sundarban: "https://www.sundarbanexpresscourier.com",
     paperfly: "https://paperfly.com.bd",
-    carrybee: "https://carrybee.com.bd",
     delivery_tiger: "https://deliverytiger.com.bd",
-    karatoa: "https://kcs.com.bd",
-    janani: "https://jananiexpress.com.bd",
-    sheba: "https://shebadelivery.com.bd",
-    sa_paribahan: "https://saparibahan.com.bd",
     other: "",
   };
 
@@ -270,7 +264,7 @@ export default function OrderDetailPage() {
         `\n\nশীঘ্রই পণ্য পাঠানো হবে। ধন্যবাদ! 🙏`;
     } else if (order.status === "shipped") {
       message = `আস্সালামু আলাইকুম!\n\nআপনার অর্ডার ${orderRef} পাঠানো হয়েছে। 📦` +
-        (order.courierName ? `\n\nCourier: ${{ pathao:"Pathao",ecourier:"eCourier",steadfast:"Steadfast",redx:"RedX",sundarban:"Sundarban (SCS)",paperfly:"Paperfly",carrybee:"CarryBee",delivery_tiger:"Delivery Tiger",karatoa:"Karatoa (KCS)",janani:"Janani Express",sheba:"Sheba Delivery",sa_paribahan:"SA Paribahan",other:"Manual" }[order.courierName] ?? order.courierName}` : "") +
+        (order.courierName ? `\n\nCourier: ${{ pathao:"Pathao",redx:"RedX",paperfly:"Paperfly",ecourier:"eCourier",delivery_tiger:"Delivery Tiger",other:"Manual" }[order.courierName] ?? order.courierName}` : "") +
         (order.courierTrackId ? `\nTracking ID: ${order.courierTrackId}` : "") +
         `\n\n২-৩ কার্যদিবসের মধ্যে পৌঁছাবে। ধন্যবাদ! 🙏`;
     } else if (order.status === "delivered") {
@@ -649,19 +643,12 @@ export default function OrderDetailPage() {
                   style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }}>
                   <optgroup label="— API সংযুক্ত (Auto Book) —">
                     <option value="pathao">🚚 Pathao</option>
-                    <option value="ecourier">📦 eCourier</option>
-                    <option value="steadfast">🔵 Steadfast</option>
                     <option value="redx">🔴 RedX</option>
+                    <option value="ecourier">📦 eCourier</option>
                   </optgroup>
                   <optgroup label="— Manual (Tracking ID দিন) —">
-                    <option value="sundarban">🟠 Sundarban (SCS)</option>
                     <option value="paperfly">🟣 Paperfly</option>
-                    <option value="carrybee">🐝 CarryBee</option>
                     <option value="delivery_tiger">🐯 Delivery Tiger</option>
-                    <option value="karatoa">🔷 Karatoa (KCS)</option>
-                    <option value="janani">🟢 Janani Express</option>
-                    <option value="sheba">💜 Sheba Delivery</option>
-                    <option value="sa_paribahan">🔴 SA Paribahan</option>
                     <option value="other">📮 অন্য Courier</option>
                   </optgroup>
                 </select>
@@ -685,17 +672,10 @@ export default function OrderDetailPage() {
                     <span className="text-xs font-semibold uppercase" style={{ color: S.secondary }}>
                       {{
                         pathao: "Pathao",
-                        ecourier: "eCourier",
-                        steadfast: "Steadfast",
                         redx: "RedX",
-                        sundarban: "Sundarban (SCS)",
                         paperfly: "Paperfly",
-                        carrybee: "CarryBee",
+                        ecourier: "eCourier",
                         delivery_tiger: "Delivery Tiger",
-                        karatoa: "Karatoa (KCS)",
-                        janani: "Janani Express",
-                        sheba: "Sheba Delivery",
-                        sa_paribahan: "SA Paribahan",
                         other: "Manual Courier",
                       }[order.courierName ?? ""] ?? order.courierName ?? "Courier"}
                     </span>

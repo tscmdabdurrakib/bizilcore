@@ -10,17 +10,10 @@ import Link from "next/link";
 
 const COURIER_LABELS: Record<string, string> = {
   pathao: "Pathao",
-  ecourier: "eCourier",
-  steadfast: "Steadfast",
   redx: "RedX",
-  sundarban: "Sundarban (SCS)",
   paperfly: "Paperfly",
-  carrybee: "CarryBee",
+  ecourier: "eCourier",
   delivery_tiger: "Delivery Tiger",
-  karatoa: "Karatoa (KCS)",
-  janani: "Janani Express",
-  sheba: "Sheba Delivery",
-  sa_paribahan: "SA Paribahan",
   other: "Manual",
 };
 

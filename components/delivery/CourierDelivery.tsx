@@ -24,29 +24,19 @@ interface DeliveryOrder {
 
 const COURIER_TRACK_URLS: Record<string, string> = {
   pathao: "https://pathao.com/bd/track/",
-  ecourier: "https://ecourier.com.bd/tracking/",
   redx: "https://redx.com.bd/track-shipment/?trackingId=",
-  steadfast: "https://steadfast.com.bd/t/",
-  sundarban: "https://www.sundarbanexpress.com/",
   paperfly: "https://paperfly.com.bd/track/",
-  carrybee: "https://carrybee.com/tracking/",
+  ecourier: "https://ecourier.com.bd/tracking/",
   delivery_tiger: "https://deliverytiger.com.bd/",
 };
 
 const COURIER_LABELS: Record<string, string> = {
   all: "সব Courier",
   pathao: "Pathao",
-  ecourier: "eCourier",
-  steadfast: "Steadfast",
   redx: "RedX",
-  sundarban: "Sundarban (SCS)",
   paperfly: "Paperfly",
-  carrybee: "CarryBee",
+  ecourier: "eCourier",
   delivery_tiger: "Delivery Tiger",
-  karatoa: "Karatoa (KCS)",
-  janani: "Janani Express",
-  sheba: "Sheba Delivery",
-  sa_paribahan: "SA Paribahan",
   other: "Manual",
 };
 
@@ -94,7 +84,7 @@ export default function CourierDelivery() {
   useEffect(() => { load(); }, [page, search, courier, statusFilter]);
   useEffect(() => { setPage(1); }, [search, courier, statusFilter]);
 
-  const couriers = ["all", "pathao", "ecourier", "steadfast", "redx", "sundarban", "paperfly", "carrybee", "delivery_tiger", "karatoa", "janani", "sheba", "sa_paribahan", "other"];
+  const couriers = ["all", "pathao", "redx", "paperfly", "ecourier", "delivery_tiger", "other"];
 
   function getTrackUrl(o: DeliveryOrder) {
     if (!o.courierTrackId || !o.courierName) return null;

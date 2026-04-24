@@ -66,7 +66,7 @@ const PLAN_STATIC = [
       "সীমাহীন অর্ডার",
       "১টি শপ",
       "Advanced Analytics",
-      "Courier Integration (১২টি)",
+      "Courier Integration (৫টি)",
       "Invoice PDF",
       "Excel Export",
       "Low Stock Alert",
@@ -136,7 +136,7 @@ const comparisonSections = [
     title: "কুরিয়ার ও ইন্টিগ্রেশন",
     rows: [
       { label: "Courier Integration", free: false, pro: true, business: true },
-      { label: "Supported Couriers", free: "—", pro: "১২টি", business: "১২টি" },
+      { label: "Supported Couriers", free: "—", pro: "৫টি", business: "৫টি" },
       { label: "Facebook Integration", free: false, pro: "১টি Page", business: "Multiple Page" },
       { label: "Bulk WhatsApp", free: false, pro: true, business: true },
     ],

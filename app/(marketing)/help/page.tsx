@@ -67,7 +67,7 @@ const categories = [
   {
     icon: Truck,
     title: "Courier Integration",
-    desc: "Pathao, eCourier সহ courier booking ও tracking",
+    desc: "Pathao, RedX, Paperfly, eCourier, Delivery Tiger booking ও tracking",
     color: "#F59E0B",
     bg: "#FFFBEB",
     href: "#courier",

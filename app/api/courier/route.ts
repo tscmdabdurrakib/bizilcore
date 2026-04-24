@@ -3,10 +3,9 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { bookPathaoDelivery, getPathaoStatus, PathaoCreds } from "@/lib/pathao";
 import { bookEcourierDelivery, getEcourierStatus } from "@/lib/ecourier";
-import { bookSteadfastDelivery, getSteadfastStatus, SteadfastCreds } from "@/lib/steadfast";
 import { bookRedxDelivery, getRedxStatus, RedxCreds } from "@/lib/redx";
 
-const MANUAL_COURIERS = ["sundarban", "paperfly", "carrybee", "delivery_tiger", "karatoa", "janani", "sheba", "sa_paribahan", "other"];
+const MANUAL_COURIERS = ["paperfly", "delivery_tiger", "other"];
 
 async function getUserPathaoCreds(userId: string): Promise<PathaoCreds | null> {
   const settings = await prisma.pathaoSettings.findUnique({ where: { userId } });
@@ -21,12 +20,6 @@ async function getUserPathaoCreds(userId: string): Promise<PathaoCreds | null> {
     storeId: parseInt(settings.storeId, 10),
     sandboxMode: settings.sandboxMode,
   };
-}
-
-async function getUserSteadfastCreds(userId: string): Promise<SteadfastCreds | null> {
-  const settings = await prisma.steadfastSettings.findUnique({ where: { userId } });
-  if (!settings?.isConnected || !settings.apiKey || !settings.secretKey) return null;
-  return { apiKey: settings.apiKey, secretKey: settings.secretKey };
 }
 
 async function getUserRedxCreds(userId: string): Promise<RedxCreds | null> {
@@ -115,13 +108,6 @@ export async function POST(req: NextRequest) {
         trackingId = await bookEcourierDelivery(input, ecCreds.creds);
       }
 
-    } else if (courierName === "steadfast") {
-      const creds = await getUserSteadfastCreds(session.user.id);
-      if (!creds) {
-        return NextResponse.json({ error: "Steadfast সংযোগ করা নেই। Settings → কুরিয়ার থেকে API Key সেট করুন।" }, { status: 400 });
-      }
-      trackingId = await bookSteadfastDelivery(input, creds);
-
     } else if (courierName === "redx") {
       const creds = await getUserRedxCreds(session.user.id);
       if (!creds) {
@@ -194,11 +180,6 @@ export async function GET(req: NextRequest) {
       } else {
         status = "manual_tracking";
       }
-
-    } else if (order.courierName === "steadfast") {
-      const creds = await getUserSteadfastCreds(session.user.id);
-      if (!creds) throw new Error("Steadfast credentials not configured");
-      status = await getSteadfastStatus(order.courierTrackId, creds);
 
     } else if (order.courierName === "redx") {
       const creds = await getUserRedxCreds(session.user.id);

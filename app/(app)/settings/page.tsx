@@ -638,7 +638,7 @@ function SettingsContent() {
     { key: "notifications", label: "Notifications", desc: "SMS ও alert সেটিংস",           icon: Bell,          color: "#EF4444", bg: "#FEF2F2",  group: "সংযোগ"   },
     { key: "facebook",      label: "Facebook",      desc: "Page সংযোগ",                   icon: Facebook,      color: "#1877F2", bg: "#EFF6FF",  group: "সংযোগ"   },
     { key: "whatsapp",      label: "WhatsApp",      desc: "Meta API সংযোগ",               icon: MessageCircle, color: "#25D366", bg: "#F0FDF4",  group: "সংযোগ"   },
-    { key: "courier",       label: "কুরিয়ার",        desc: "Pathao, Steadfast, RedX API",  icon: Truck,         color: "#F97316", bg: "#FFF7ED",  group: "সংযোগ"   },
+    { key: "courier",       label: "কুরিয়ার",        desc: "Pathao, RedX, eCourier API",   icon: Truck,         color: "#F97316", bg: "#FFF7ED",  group: "সংযোগ"   },
     { key: "ai",            label: "AI সেটিংস",     desc: "AI ব্যবহার ও সীমা",            icon: Sparkles,      color: "#EC4899", bg: "#FDF2F8",  group: "টুলস"    },
     { key: "blacklist",     label: "ব্ল্যাকলিস্ট",   desc: "ফেক অর্ডার সুরক্ষা",           icon: ShieldX,       color: "#DC2626", bg: "#FEF2F2",  group: "টুলস"    },
   ];
@@ -1916,7 +1916,6 @@ function SettingsContent() {
       {tab === "courier" && (
         <div className="space-y-6">
           <PathaoSettingsPanel />
-          <SteadfastSettingsPanel />
           <RedxSettingsPanel />
           <EcourierSettingsPanel />
         </div>
@@ -2741,99 +2740,6 @@ function PathaoSettingsPanel() {
           ))}
         </div>
       </div>
-    </div>
-  );
-}
-
-/* ─── Steadfast Settings Panel ──────────────────────── */
-function SteadfastSettingsPanel() {
-  const [status, setStatus] = useState<{ isConnected: boolean; connectedAt: string | null; apiKey: string | null; hasCredentials: boolean } | null>(null);
-  const [form, setForm] = useState({ apiKey: "", secretKey: "" });
-  const [showForm, setShowForm] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
-  const S = { surface: "var(--c-surface)", border: "var(--c-border)", text: "var(--c-text)", secondary: "var(--c-text-sub)", muted: "var(--c-text-muted)", primary: "var(--c-primary)" };
-
-  function showToast(type: "success" | "error", msg: string) { setToast({ type, msg }); setTimeout(() => setToast(null), 3500); }
-
-  async function load() {
-    const res = await fetch("/api/settings/steadfast");
-    if (res.ok) setStatus(await res.json());
-  }
-
-  useEffect(() => { load(); }, []);
-
-  async function save() {
-    setSaving(true);
-    const r = await fetch("/api/settings/steadfast", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    const d = await r.json();
-    if (r.ok) { showToast("success", "Steadfast সফলভাবে সংযুক্ত হয়েছে!"); setShowForm(false); load(); }
-    else showToast("error", d.error ?? "সেভ করা যায়নি");
-    setSaving(false);
-  }
-
-  async function disconnect() {
-    if (!confirm("Steadfast সংযোগ বিচ্ছিন্ন করবেন?")) return;
-    await fetch("/api/settings/steadfast", { method: "DELETE" });
-    showToast("success", "Steadfast সংযোগ বিচ্ছিন্ন করা হয়েছে");
-    load();
-  }
-
-  return (
-    <div className="rounded-2xl border p-5 shadow-sm space-y-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-      {toast && <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg" style={{ backgroundColor: toast.type === "success" ? "#1D9E75" : "#E24B4A" }}>{toast.msg}</div>}
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="font-semibold text-sm" style={{ color: S.text }}>Steadfast Courier Integration</p>
-          <p className="text-xs mt-0.5" style={{ color: S.muted }}>আপনার Steadfast merchant account দিয়ে অর্ডার book করুন</p>
-        </div>
-        <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: status?.isConnected ? "var(--status-delivered-bg)" : "var(--status-pending-bg)", color: status?.isConnected ? "var(--status-delivered-text)" : "var(--status-pending-text)" }}>
-          {status === null ? "লোড হচ্ছে..." : status.isConnected ? "সংযুক্ত" : "সংযুক্ত নেই"}
-        </span>
-      </div>
-
-      {status?.isConnected ? (
-        <div className="space-y-3">
-          <div className="rounded-xl p-3 text-sm" style={{ backgroundColor: "var(--c-bg)" }}>
-            <p style={{ color: S.muted }}>API Key: <span style={{ color: S.text }}>{status.apiKey ?? "—"}</span></p>
-            {status.connectedAt && <p className="mt-1" style={{ color: S.muted }}>Connected: <span style={{ color: S.text }}>{new Date(status.connectedAt).toLocaleDateString("bn-BD")}</span></p>}
-          </div>
-          <div className="flex gap-2">
-            <button onClick={() => setShowForm(!showForm)} className="flex-1 py-2 rounded-xl border text-sm font-medium" style={{ borderColor: S.border, color: S.secondary }}>
-              API Key পরিবর্তন
-            </button>
-            <button onClick={disconnect} className="px-4 py-2 rounded-xl border text-sm font-medium" style={{ borderColor: "#E24B4A", color: "#E24B4A" }}>
-              Disconnect
-            </button>
-          </div>
-        </div>
-      ) : (
-        <button onClick={() => setShowForm(true)} className="w-full py-2.5 rounded-xl text-white text-sm font-medium" style={{ backgroundColor: S.primary }}>
-          Steadfast সংযুক্ত করুন
-        </button>
-      )}
-
-      {showForm && (
-        <div className="space-y-3 pt-2 border-t" style={{ borderColor: S.border }}>
-          <p className="text-xs font-semibold" style={{ color: S.text }}>Steadfast API Credentials</p>
-          <p className="text-xs" style={{ color: S.muted }}>portal.steadfast.com.bd → Settings → API থেকে পাবেন</p>
-          <div className="space-y-2">
-            <input type="text" placeholder="API Key" value={form.apiKey} onChange={e => setForm(f => ({ ...f, apiKey: e.target.value }))}
-              className="w-full h-10 px-3 rounded-xl border text-sm outline-none" style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
-            <input type="text" placeholder="Secret Key" value={form.secretKey} onChange={e => setForm(f => ({ ...f, secretKey: e.target.value }))}
-              className="w-full h-10 px-3 rounded-xl border text-sm outline-none" style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
-          </div>
-          <div className="flex gap-2">
-            <button onClick={() => setShowForm(false)} className="flex-1 py-2 rounded-xl border text-sm" style={{ borderColor: S.border, color: S.secondary }}>বাতিল</button>
-            <button onClick={save} disabled={saving || !form.apiKey || !form.secretKey} className="flex-1 py-2 rounded-xl text-white text-sm font-medium disabled:opacity-60" style={{ backgroundColor: S.primary }}>
-              {saving ? "সেভ হচ্ছে..." : "সেভ করুন"}
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

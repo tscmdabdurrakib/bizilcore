@@ -126,7 +126,7 @@ export default function AboutPage() {
                 কথা মাথায় রেখে design করা হয়েছে।
               </p>
               <p className="leading-relaxed">
-                Bangla-তে interface, bKash-Nagad payment integration, Pathao-eCourier-Steadfast
+                Bangla-তে interface, bKash-Nagad payment integration, Pathao-RedX-Paperfly-eCourier-Delivery Tiger
                 courier booking — সব কিছু এক জায়গায়। কোনো technical জ্ঞান লাগবে না।
               </p>
             </div>
@@ -135,7 +135,7 @@ export default function AboutPage() {
             {[
               { year: "জানুয়ারি ২০২৪", title: "BizilCore-এর সূচনা", desc: "ঢাকায় ৩ জন founder মিলে শুরু। প্রথম ১০০ seller-এর সাথে beta testing।" },
               { year: "মে ২০২৪", title: "পাবলিক Launch", desc: "Full platform launch। প্রথম মাসেই ৫০০+ seller signup করেন।" },
-              { year: "সেপ্টেম্বর ২০২৪", title: "Courier Integration", desc: "Pathao, eCourier, Steadfast সহ মোট ১২টি courier যুক্ত হয়। সব বড় courier এক platform এ।" },
+              { year: "সেপ্টেম্বর ২০২৪", title: "Courier Integration", desc: "Pathao, RedX, Paperfly, eCourier, Delivery Tiger — বাংলাদেশের প্রধান ৫টি courier এক platform এ।" },
               { year: "২০২৫", title: "১০,০০০+ Sellers", desc: "সারা বাংলাদেশে ১০ হাজারেরও বেশি seller আমাদের platform ব্যবহার করছেন।" },
             ].map((item, i) => (
               <div key={i} className="flex gap-4">
@@ -220,7 +220,7 @@ export default function AboutPage() {
             {
               icon: Truck,
               title: "Courier Integration",
-              desc: "Pathao, eCourier, Steadfast সহ ১২টি courier। App থেকেই booking ও tracking।",
+              desc: "Pathao, RedX, Paperfly, eCourier, Delivery Tiger — ৫টি বড় courier। App থেকেই booking ও tracking।",
               color: "#F59E0B",
               bg: "#FFFBEB",
             },

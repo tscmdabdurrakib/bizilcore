@@ -13,7 +13,7 @@ interface PlanGateProps {
 
 const FEATURE_INFO: Record<FeatureName, { label: string; desc: string; icon: string }> = {
   sms:            { label: "SMS Notification",    desc: "গ্রাহকদের স্বয়ংক্রিয় SMS পাঠান — অর্ডার confirm, delivery update সব।", icon: "💬" },
-  courier:        { label: "Courier Integration", desc: "Pathao, Steadfast, Paperfly — সব courier এক জায়গা থেকে manage করুন।", icon: "🚚" },
+  courier:        { label: "Courier Integration", desc: "Pathao, RedX, Paperfly, eCourier, Delivery Tiger — সব courier এক জায়গা থেকে manage করুন।", icon: "🚚" },
   export:         { label: "Excel / PDF Export",  desc: "অর্ডার, পণ্য, গ্রাহক ডেটা Excel বা PDF-এ export করুন।", icon: "📊" },
   reports:        { label: "Advanced Reports",    desc: "বিক্রয়, লাভ, খরচ, গ্রাহক — সব বিশ্লেষণ এক জায়গায়।", icon: "📈" },
   staff:          { label: "Staff Management",    desc: "টিম মেম্বার যোগ করুন, permission দিন, কাজ assign করুন।", icon: "👥" },

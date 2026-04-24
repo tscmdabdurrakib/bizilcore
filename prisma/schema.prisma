@@ -47,7 +47,6 @@ model User {
   feedbacks                  UserFeedback[]
   whatsAppSettings           WhatsAppSettings?
   pathaoSettings             PathaoSettings?
-  steadfastSettings          SteadfastSettings?
   redxSettings               RedxSettings?
   ecourierSettings           EcourierSettings?
   messageLogs                MessageLog[]
@@ -775,20 +774,6 @@ model PathaoSettings {
   connectedAt  DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
-
-  @@index([userId])
-}
-
-model SteadfastSettings {
-  id          String    @id @default(cuid())
-  userId      String    @unique
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  apiKey      String?
-  secretKey   String?
-  isConnected Boolean   @default(false)
-  connectedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
 
   @@index([userId])
 }
