@@ -1,13 +1,21 @@
 const FREE_MODELS: Record<string, string> = {
-  product_description:  "qwen/qwen-2-7b-instruct:free",
-  pricing_suggestion:   "mistralai/mistral-7b-instruct:free",
-  inventory_prediction: "meta-llama/llama-3.1-8b-instruct:free",
-  sales_insight:        "meta-llama/llama-3.1-8b-instruct:free",
+  product_description:  "google/gemma-3-12b-it:free",
+  pricing_suggestion:   "google/gemma-3-12b-it:free",
+  inventory_prediction: "google/gemma-3-12b-it:free",
+  sales_insight:        "google/gemma-3-12b-it:free",
 };
 
-const FALLBACK_MODEL = "meta-llama/llama-3.1-8b-instruct:free";
+const FALLBACK_CHAIN = [
+  "google/gemma-3-12b-it:free",
+  "google/gemma-3-4b-it:free",
+  "google/gemma-3n-e4b-it:free",
+];
 
 async function callOpenRouter(model: string, systemPrompt: string, userPrompt: string): Promise<string> {
+  const combinedPrompt = systemPrompt
+    ? `${systemPrompt}\n\n${userPrompt}`
+    : userPrompt;
+
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -19,8 +27,7 @@ async function callOpenRouter(model: string, systemPrompt: string, userPrompt: s
     body: JSON.stringify({
       model,
       messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
+        { role: "user", content: combinedPrompt },
       ],
       temperature: 0.7,
       max_tokens: 800,
@@ -29,24 +36,34 @@ async function callOpenRouter(model: string, systemPrompt: string, userPrompt: s
 
   const data = await res.json();
   if (data.error) throw new Error(data.error.message ?? "OpenRouter error");
-  return data.choices[0].message.content as string;
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error("Empty response from model");
+  return content as string;
 }
 
 export async function askAI(feature: string, systemPrompt: string, userPrompt: string): Promise<string> {
-  const model = FREE_MODELS[feature] ?? FALLBACK_MODEL;
-  try {
-    return await callOpenRouter(model, systemPrompt, userPrompt);
-  } catch (err) {
-    if (model !== FALLBACK_MODEL) {
-      console.warn(`Model ${model} failed, falling back to ${FALLBACK_MODEL}...`);
-      return await callOpenRouter(FALLBACK_MODEL, systemPrompt, userPrompt);
+  const primary = FREE_MODELS[feature] ?? FALLBACK_CHAIN[0];
+  const tryModels = [primary, ...FALLBACK_CHAIN.filter(m => m !== primary)];
+
+  let lastError: Error | null = null;
+  for (const model of tryModels) {
+    try {
+      const result = await callOpenRouter(model, systemPrompt, userPrompt);
+      if (model !== primary) {
+        console.warn(`Used fallback model: ${model}`);
+      }
+      return result;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      console.warn(`Model ${model} failed: ${lastError.message}`);
     }
-    throw err;
   }
+
+  throw lastError ?? new Error("All AI models failed");
 }
 
 export function getModelForFeature(feature: string): string {
-  return FREE_MODELS[feature] ?? FALLBACK_MODEL;
+  return FREE_MODELS[feature] ?? FALLBACK_CHAIN[0];
 }
 
 export function safeParseJSON<T = unknown>(text: string): T | null {

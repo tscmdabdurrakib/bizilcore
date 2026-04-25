@@ -41,6 +41,7 @@ BKASH_BASE_URL = "https://tokenized.pay.bka.sh/v1.2.0-beta"
 NAGAD_BASE_URL = "https://api.mynagad.com/remote-payment-gateway-1.0"
 SUPABASE_DIRECT_URL = "postgresql://postgres.qoliepmmquycarvospag:[XM4PecUuPiaGBPOI]@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres"
 EMAIL_FROM_NAME = "BizilCore"
+NEXT_PUBLIC_APP_URL = "https://bizilcore.com"
 
 [postMerge]
 path = "scripts/post-merge.sh"
