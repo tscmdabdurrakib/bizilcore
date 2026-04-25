@@ -16,11 +16,11 @@ const SIZE_MAP: Record<
   BrandSize,
   { icon: number; gap: string; text: string; cHeight: string }
 > = {
-  xs: { icon: 22, gap: "gap-1.5", text: "text-base",     cHeight: "0.78em" },
-  sm: { icon: 28, gap: "gap-1.5", text: "text-lg",       cHeight: "0.78em" },
-  md: { icon: 34, gap: "gap-2",   text: "text-[1.35rem]", cHeight: "0.78em" },
-  lg: { icon: 40, gap: "gap-2",   text: "text-[1.6rem]",  cHeight: "0.78em" },
-  xl: { icon: 52, gap: "gap-2.5", text: "text-[2rem]",    cHeight: "0.78em" },
+  xs: { icon: 28, gap: "gap-[2px]", text: "text-base",      cHeight: "0.78em" },
+  sm: { icon: 34, gap: "gap-[3px]", text: "text-lg",        cHeight: "0.78em" },
+  md: { icon: 42, gap: "gap-[4px]", text: "text-[1.35rem]", cHeight: "0.78em" },
+  lg: { icon: 50, gap: "gap-[5px]", text: "text-[1.6rem]",  cHeight: "0.78em" },
+  xl: { icon: 64, gap: "gap-[6px]", text: "text-[2rem]",    cHeight: "0.78em" },
 };
 
 /**
