@@ -481,41 +481,52 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
       >
         {/* Logo + collapse toggle */}
         <div
-          className="flex items-center h-[56px] border-b flex-shrink-0 gap-2"
+          className="flex items-center h-[56px] border-b flex-shrink-0"
           style={{
             borderColor: "var(--shell-border)",
-            padding: collapsed ? "0 10px" : "0 10px 0 14px",
+            padding: collapsed ? "0" : "0 10px 0 14px",
             justifyContent: collapsed ? "center" : "space-between",
           }}
         >
-          <div className="flex items-center min-w-0 flex-1">
-            {collapsed ? (
-              <BrandLogo size="sm" tone={isDarkTheme ? "light" : "dark"} iconOnly href={null} />
-            ) : (
-              <BrandLogo size="md" tone={isDarkTheme ? "light" : "dark"} href={null} />
-            )}
-          </div>
-          {!collapsed && (
-            <button
-              onClick={toggleCollapsed}
-              title="সাইডবার ছোট করুন"
-              className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all hover:bg-gray-100"
-              style={{ color: "var(--shell-text-muted)" }}
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </button>
+          {collapsed ? (
+            <BrandLogo size="sm" tone={isDarkTheme ? "light" : "dark"} iconOnly href={null} />
+          ) : (
+            <>
+              <div className="flex items-center min-w-0 flex-1">
+                <BrandLogo size="md" tone={isDarkTheme ? "light" : "dark"} href={null} />
+              </div>
+              <button
+                onClick={toggleCollapsed}
+                title="সাইডবার ছোট করুন"
+                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all hover:bg-gray-100 dark:hover:bg-white/10"
+                style={{ color: "var(--shell-text-muted)" }}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </button>
+            </>
           )}
-          {collapsed && (
+        </div>
+
+        {/* Expand button — shown only when collapsed, always clearly visible */}
+        {collapsed && (
+          <div className="px-1.5 py-1.5 border-b flex-shrink-0" style={{ borderColor: "var(--shell-border)" }}>
             <button
               onClick={toggleCollapsed}
               title="সাইডবার বড় করুন"
-              className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-all hover:bg-gray-100"
-              style={{ color: "var(--shell-text-muted)" }}
+              className="w-full h-8 rounded-lg flex items-center justify-center transition-all"
+              style={{
+                backgroundColor: "rgba(15,110,86,0.1)",
+                color: "#0F6E56",
+              }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = "rgba(15,110,86,0.18)")}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = "rgba(15,110,86,0.1)")}
             >
-              <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Nav */}
         <nav className="flex-1 px-2 py-3 overflow-y-auto overflow-x-hidden">
