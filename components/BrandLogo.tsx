@@ -77,7 +77,7 @@ export default function BrandLogo({
         style={{ width: s.icon, height: s.icon }}
       >
         <Image
-          src="/brand-icon.png"
+          src="/brand-icon.svg"
           alt="BizilCore"
           width={s.icon * 2}
           height={s.icon * 2}
