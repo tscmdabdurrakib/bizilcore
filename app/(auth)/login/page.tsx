@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { loginAction } from "@/app/actions/auth";
+import BrandLogo from "@/components/BrandLogo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -84,7 +85,7 @@ export default function LoginPage() {
           </div>
           <div className="text-center mb-8">
             <div className="flex items-center justify-center mb-4">
-              <img src="/logo-black.svg" alt="BizilCore" className="h-20 w-auto" />
+              <BrandLogo size="xl" tone="dark" href="/" />
             </div>
             <h1 className="text-xl font-semibold" style={{ color: "#1A1A18" }}>
               আবার স্বাগতম

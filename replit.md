@@ -107,6 +107,12 @@ prisma/schema.prisma    # 9 models: User, Shop, Product, Customer, Order, OrderI
 - **Login** → `user.onboarded === true` → /dashboard, else → /onboarding
 - **Protected routes**: /dashboard, /inventory, /orders, /customers, /hisab, /reports, /settings, /onboarding
 
+## Brand Logo
+- Centralized component: `components/BrandLogo.tsx` — used everywhere. Props: `size` (xs/sm/md/lg/xl), `tone` (dark/light), `iconOnly`, `href`, `showTagline`.
+- Icon: `public/brand-icon.png` (green rounded-square with stylized "B" symbol — original supplied by user, do not replace with old `/logo.svg`, `/logo-black.svg`, `/logo-white.svg`).
+- Wordmark: "BizilCore" rendered in **Sora** font (loaded via `next/font/google` in `app/layout.tsx` as `--font-sora`). The "**C**" of "Core" is highlighted with a green gradient pill (`#0F6E56→#1BAA78` for dark tone, `#1BAA78→#5EECA0` for light tone) with white letter inside, soft glow, slight upward translate.
+- Used in: Navbar, Footer, AppSidebar (collapsed = iconOnly), OnboardingWizard, not-found, login, signup, forgot-password. Old `/logo*.svg` images are NOT referenced in app code anymore (kept only for `/logo-email.png` mailer use).
+
 ## Design Tokens
 - Primary: #0F6E56 | PrimaryLight: #E1F5EE
 - Bg: #F7F6F2 | Surface: #FFFFFF | Border: #E8E6DF

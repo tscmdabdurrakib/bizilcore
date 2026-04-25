@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LayoutDashboard, ShoppingBag, Package, ArrowLeft, Home } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
 
 export default function NotFound() {
   return (
@@ -29,7 +30,7 @@ export default function NotFound() {
       <div className="relative z-10 flex flex-col items-center text-center max-w-md w-full">
         {/* Logo */}
         <div className="flex items-center mb-10">
-          <img src="/logo-black.svg" alt="BizilCore" className="h-14 w-auto" />
+          <BrandLogo size="lg" tone="dark" href="/" />
         </div>
 
         {/* 404 Display */}

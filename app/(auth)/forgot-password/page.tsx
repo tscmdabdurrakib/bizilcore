@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Mail, ArrowLeft, CheckCircle } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -45,7 +46,7 @@ export default function ForgotPasswordPage() {
 
         {/* Logo */}
         <div className="flex items-center justify-center mb-8">
-          <img src="/logo-black.svg" alt="BizilCore" className="h-20 w-auto" />
+          <BrandLogo size="xl" tone="dark" href="/" />
         </div>
 
         <div

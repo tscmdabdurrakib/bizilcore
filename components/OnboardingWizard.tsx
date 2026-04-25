@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { CheckCircle, ChevronRight, CheckCheck } from "lucide-react";
+import BrandLogo from "./BrandLogo";
 import {
   BUSINESS_TYPE_META, BUSINESS_TYPES, type BusinessType,
   SALES_CHANNEL_META, SALES_CHANNELS, type SalesChannel,
@@ -32,7 +33,7 @@ const inputStyle = {
 function Logo() {
   return (
     <div className="flex items-center justify-center mb-3">
-      <img src="/logo-black.svg" alt="BizilCore" className="h-16 w-auto" />
+      <BrandLogo size="lg" tone="dark" href={null} />
     </div>
   );
 }

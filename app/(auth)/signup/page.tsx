@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import BrandLogo from "@/components/BrandLogo";
 
 const PRIMARY = "#0F6E56";
 const inputStyle = {
@@ -281,7 +282,7 @@ function SignupContent() {
           {/* Logo + Title */}
           <div className="text-center mb-7">
             <div className="flex items-center justify-center mb-4">
-              <img src="/logo-black.svg" alt="BizilCore" className="h-20 w-auto" />
+              <BrandLogo size="xl" tone="dark" href="/" />
             </div>
             {step === 1 ? (
               <>

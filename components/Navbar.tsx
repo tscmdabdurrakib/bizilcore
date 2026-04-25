@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
+import BrandLogo from "./BrandLogo";
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -12,7 +13,7 @@ export default function Navbar() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-20">
           <Link href="/" className="flex items-center">
-            <img src="/logo-black.svg" alt="BizilCore" className="h-14 w-auto" />
+            <BrandLogo size="lg" tone="dark" href={null} />
           </Link>
 
           <div className="hidden md:flex items-center gap-8">

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { signOut } from "next-auth/react";
+import BrandLogo from "./BrandLogo";
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -489,13 +490,9 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
         >
           <div className="flex items-center min-w-0 flex-1">
             {collapsed ? (
-              <img src="/logo.svg" alt="BizilCore" className="w-9 h-9" />
+              <BrandLogo size="sm" tone={isDarkTheme ? "light" : "dark"} iconOnly href={null} />
             ) : (
-              <img
-                src={isDarkTheme ? "/logo-white.svg" : "/logo-black.svg"}
-                alt="BizilCore"
-                className="h-10 w-auto max-w-full"
-              />
+              <BrandLogo size="md" tone={isDarkTheme ? "light" : "dark"} href={null} />
             )}
           </div>
           {!collapsed && (
