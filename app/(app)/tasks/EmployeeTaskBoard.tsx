@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Users, CheckCircle2, Clock, AlertCircle, Loader2,
-  ChevronRight, Plus, Briefcase, TrendingUp, BarChart2,
+  ChevronRight, Plus, Briefcase, TrendingUp, BarChart2, RefreshCw,
 } from "lucide-react";
 
 interface EmployeeStat {
@@ -197,10 +197,29 @@ export default function EmployeeTaskBoard({ onViewTasks, onCreateTask }: Props) 
             {opt.label}
           </button>
         ))}
-        <button onClick={fetchEmployees}
-          className="ml-auto text-[11px] font-bold px-3 py-1 rounded-full border transition-all hover:opacity-80"
-          style={{ borderColor: S.border, color: S.muted, backgroundColor: S.surface }}>
-          🔄 রিফ্রেশ
+        <button
+          onClick={fetchEmployees}
+          disabled={loading}
+          title="রিফ্রেশ"
+          className="group relative ml-auto flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-bold border transition-all duration-200 overflow-hidden disabled:cursor-not-allowed"
+          style={{
+            borderColor: loading ? "#67E8F9" : S.border,
+            color: loading ? "#0891B2" : S.muted,
+            backgroundColor: loading ? "#ECFEFF" : S.surface,
+            boxShadow: loading ? "0 0 0 3px #CFFAFE60" : "none",
+          }}
+        >
+          <span className={`inline-flex flex-shrink-0 transition-colors duration-200 ${loading ? "animate-spin" : ""}`}
+            style={{ color: loading ? "#0891B2" : "currentColor" }}>
+            <RefreshCw size={11} strokeWidth={2.5} />
+          </span>
+          <span style={{ color: loading ? "#0891B2" : S.muted }}>
+            {loading ? "লোড হচ্ছে..." : "রিফ্রেশ"}
+          </span>
+          {!loading && (
+            <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-full pointer-events-none"
+              style={{ background: "linear-gradient(135deg, #ECFEFF40, #A5F3FC30)" }} />
+          )}
         </button>
       </div>
 
