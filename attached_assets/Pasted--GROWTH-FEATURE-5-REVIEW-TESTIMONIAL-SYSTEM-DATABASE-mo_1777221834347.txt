@@ -1,0 +1,93 @@
+=== GROWTH FEATURE 5: REVIEW & TESTIMONIAL SYSTEM ===
+
+━━━ DATABASE ━━━
+
+model AppReview {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  rating       Int      -- 1 to 5
+  title        String?
+  body         String?
+  businessType String?
+  isApproved   Boolean  @default(false)
+  showOnSite   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+}
+
+model NPSSurvey {
+  id        String   @id @default(cuid())
+  userId    String
+  score     Int      -- 0 to 10
+  reason    String?
+  createdAt DateTime @default(now())
+}
+
+━━━ REVIEW PROMPT LOGIC ━━━
+
+Trigger condition (check on each login):
+  user.createdAt < 30 days ago
+  AND total orders > 10
+  AND no existing AppReview for this user
+  AND user has not dismissed review prompt (store in localStorage: "review_dismissed")
+
+If all conditions met → show review modal (once per session only):
+
+Review Modal:
+  Title: "BizilCore কেমন লাগছে?"
+  Star rating row (5 stars, tap to select, gold fill):
+    1★ "খুব খারাপ" | 2★ "খারাপ" | 3★ "ঠিক আছে" | 4★ "ভালো" | 5★ "অসাধারণ!"
+  
+  After star tap → show text area:
+    Placeholder: "আপনার মতামত লিখুন (ঐচ্ছিক)..."
+  
+  "Submit করুন" button
+  "এখন না" link (sets localStorage flag, doesn't show again for 30 days)
+  
+  On submit (rating ≥ 4):
+    Save review (isApproved=false, pending admin review)
+    Show second modal:
+      "ধন্যবাদ! আপনার মতামত আমাদের অনুপ্রাণিত করে।"
+      "Google Play এ ৫ স্টার দিন 🙏" → opens Play Store link
+      "Skip" button
+  
+  On submit (rating ≤ 3):
+    Save review
+    Show second modal:
+      "আপনার মতামত পেয়েছি। কী উন্নত করলে ভালো হতো?"
+      Text area for improvement suggestion
+      "পাঠান" → saves note, closes modal
+
+━━━ NPS SURVEY (Quarterly) ━━━
+
+Trigger: every 90 days after last NPS survey (or since signup if no survey)
+Show as banner at top of dashboard (dismissible):
+  "HisabBoi কতটা recommend করবেন? (০-১০)"
+  11 number buttons: 0 1 2 3 4 5 6 7 8 9 10
+  Color: 0-6 red, 7-8 amber, 9-10 green
+  
+  On selection:
+    Save NPSSurvey record
+    0-6 (Detractor): show text area "কী সমস্যা হচ্ছে?"
+    7-8 (Passive): show "কী যোগ করলে ১০ দিতেন?"
+    9-10 (Promoter): show referral prompt "বন্ধুকে invite করুন →"
+    "Submit" → saves, dismisses banner
+
+━━━ TESTIMONIAL ON LANDING PAGE ━━━
+
+Admin panel (/admin/reviews):
+  Review list with: user name, business type, rating, review text, date
+  "Approve" button → isApproved=true
+  "Show on Site" toggle → showOnSite=true
+  "Reject" button → delete
+
+Landing page testimonials section:
+  Fetch reviews where isApproved=true AND showOnSite=true
+  Show max 6 testimonials in 2×3 grid:
+    Star rating (gold stars)
+    Review text (max 150 chars, truncate)
+    Name (first name + last initial) + business type badge
+    Example: "Rina B. — পোশাক বিক্রেতা, ঢাকা"
+
+All Bangla UI. Same design system.
+Review modal uses same modal/overlay style as rest of app.

@@ -195,3 +195,22 @@ codStatus (with_courier/collected/returned) — already existed, now driven by c
 - **Modules registry**: `hotel` BusinessType added with Bed icon (green), navigation groups, full module list
 - **Migrations applied**: `20260426160000_add_hotel_module`, `20260426170000_booking_number_per_shop_unique`
 - **Architect-reviewed**: 5 initial findings + 3 follow-ups all resolved (cross-tenant customerId, atomic conflict check, services status guard, NaN/negative input rejection, housekeeping state machine, per-shop bookingNumber uniqueness with race retry)
+
+## Phase 7 — Review & Testimonial System (Growth Feature 5) (Complete)
+- **DB models**: `AppReview` (one per user via `userId @unique`, with `improvementNote` for low ratings), `NPSSurvey`
+- **Review prompt eligibility** (server + client checks): account >30 days old, totalOrders >= 10, no existing review; localStorage `review_dismissed_until` snoozes 30 days; sessionStorage prevents repeat in-session
+- **Review modal**: 5-star with hover/select labels, free-text body, branches on rating — `>=4` shows Play Store CTA, `<=3` shows improvement note prompt
+- **NPS banner** (in-page, dismissible): every 90 days from last survey or signup; 0–10 buttons color-coded (red/amber/green); detractor/passive/promoter follow-ups; promoter routes to `/affiliate`
+- **APIs**:
+  - `/api/reviews` POST (eligibility + race-safe insert via `P2002` → 409), PATCH (improvement note)
+  - `/api/reviews/eligibility` GET
+  - `/api/nps` POST (90-day cooldown enforced server-side, 429 if too recent), PATCH (reason)
+  - `/api/nps/eligibility` GET
+  - `/api/admin/reviews` GET (filter: all|pending|approved|onsite), `/api/admin/reviews/[id]` PATCH/DELETE — `isAdmin` guarded
+  - `/api/public/testimonials` GET — masked names (first + last initial), max 6, body truncated to 150 chars
+- **Pages**:
+  - `/admin/reviews` — approve / show-on-site toggle / un-approve / delete with filter tabs (added to admin nav)
+  - Marketing landing — `<TestimonialsSection />` RSC inserted before FAQ; auto-hides if zero approved+visible reviews
+- **App-shell wiring**: `components/growth/GrowthPrompts.tsx` mounted in `app/(app)/layout.tsx` — defers eligibility checks 1.5s post-mount, renders modal/banner conditionally
+- **Migrations**: `20260426180000_add_review_nps`, `20260426190000_app_review_user_unique`
+- **Architect-reviewed (PASS)**: server-side eligibility on review submit, server-side NPS cooldown, DB-level uniqueness on AppReview.userId — all critical findings addressed

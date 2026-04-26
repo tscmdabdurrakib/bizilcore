@@ -66,6 +66,36 @@ model User {
   communityPosts             CommunityPost[]
   communityComments          CommunityComment[]
   communityLikes             CommunityLike[]
+  appReviews                 AppReview[]
+  npsSurveys                 NPSSurvey[]
+}
+
+model AppReview {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating          Int
+  title           String?
+  body            String?
+  improvementNote String?
+  businessType    String?
+  isApproved      Boolean  @default(false)
+  showOnSite      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@index([isApproved, showOnSite])
+}
+
+model NPSSurvey {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  score     Int
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model Notification {

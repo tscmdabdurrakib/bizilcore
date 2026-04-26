@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import AppSidebar from "@/components/AppSidebar";
 import AppTopbar from "@/components/AppTopbar";
 import AccountStatusModal from "@/components/AccountStatusModal";
+import GrowthPrompts from "@/components/growth/GrowthPrompts";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -29,8 +30,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       />
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <AppTopbar />
-        <main className="app-main flex-1 overflow-y-auto p-5 pb-20 md:pb-5">
-          {children}
+        <main className="app-main flex-1 overflow-y-auto pb-20 md:pb-5">
+          <GrowthPrompts />
+          <div className="p-5">{children}</div>
         </main>
       </div>
       {/* Show status popup if account is disabled or suspended */}

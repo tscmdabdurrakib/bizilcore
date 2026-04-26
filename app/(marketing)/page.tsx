@@ -1,5 +1,6 @@
 import Link from "next/link";
 import FAQAccordion from "@/components/FAQAccordion";
+import TestimonialsSection from "@/components/TestimonialsSection";
 import { prisma } from "@/lib/prisma";
 import {
   Package,
@@ -663,6 +664,11 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ══════════════════════════════════════════
+          TESTIMONIALS (auto-renders only when reviews exist)
+      ══════════════════════════════════════════ */}
+      <TestimonialsSection />
 
       {/* ══════════════════════════════════════════
           FAQ
