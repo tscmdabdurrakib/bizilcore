@@ -11,13 +11,14 @@ import CreateTaskModal from "./CreateTaskModal";
 import TaskReports from "./TaskReports";
 import TaskTemplatesModal, { type TaskTemplate } from "./TaskTemplates";
 import { TaskTimerProvider, FloatingTimer } from "./TaskTimerContext";
+import EmployeeTaskBoard from "./EmployeeTaskBoard";
 import {
   LayoutGrid, List, CalendarDays, BarChart2, Plus, Search,
   SlidersHorizontal, Download, User, BookmarkPlus, X,
   AlertCircle, Clock, CheckCircle2, LayoutTemplate,
   ChevronDown, ChevronUp, ClipboardList, Zap, Activity,
   TrendingUp, Users, Tag as TagIcon, Loader2, ArrowRight,
-  Flame,
+  Flame, UserCheck,
 } from "lucide-react";
 
 export type TaskStatus = "todo" | "in_progress" | "review" | "done";
@@ -49,7 +50,7 @@ export interface Task {
   assignedTo?: { name: string } | null;
 }
 
-type ViewMode = "kanban" | "list" | "calendar" | "reports" | "activity";
+type ViewMode = "kanban" | "list" | "calendar" | "reports" | "activity" | "employees";
 
 interface FilterPreset {
   name: string;
@@ -181,6 +182,8 @@ function TasksContent() {
   const [activityLoading, setActivityLoading] = useState(false);
   const presetInputRef = useRef<HTMLInputElement>(null);
   const quickAddRef = useRef<HTMLInputElement>(null);
+
+  const [employeeCreateAssigneeId, setEmployeeCreateAssigneeId] = useState<string | undefined>(undefined);
 
   const hasActiveFilter = statusFilter !== "all" || priorityFilter !== "all" || categoryFilter !== "all" ||
     assigneeFilter !== "all" || dueDateFilter !== "all" || myTasksOnly || completedTodayFilter ||
@@ -334,6 +337,19 @@ function TasksContent() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  const handleViewEmployeeTasks = (userId: string, name: string) => {
+    setAssigneeFilter(userId);
+    setMyTasksOnly(false);
+    setView("list");
+    setFilterOpen(false);
+  };
+
+  const handleCreateEmployeeTask = (userId: string) => {
+    setEmployeeCreateAssigneeId(userId);
+    setCreateInitialData(undefined);
+    setCreateOpen(true);
+  };
+
   const handleTemplateSelect = (template: TaskTemplate) => {
     setCreateInitialData({
       title: template.title, description: template.description,
@@ -352,6 +368,7 @@ function TasksContent() {
     { mode: "kanban" as ViewMode, icon: LayoutGrid, label: "কানবান", color: "#8B5CF6", bg: "#F5F3FF" },
     { mode: "list" as ViewMode, icon: List, label: "লিস্ট", color: "#3B82F6", bg: "#EFF6FF" },
     { mode: "calendar" as ViewMode, icon: CalendarDays, label: "ক্যালেন্ডার", color: "#0F6E56", bg: "#E8F5F0" },
+    { mode: "employees" as ViewMode, icon: UserCheck, label: "কর্মী ভিত্তিক", color: "#0891B2", bg: "#E0F2FE" },
     { mode: "reports" as ViewMode, icon: BarChart2, label: "রিপোর্ট", color: "#EF4444", bg: "#FEF2F2" },
     { mode: "activity" as ViewMode, icon: Activity, label: "অ্যাক্টিভিটি", color: "#F59E0B", bg: "#FFFBEB" },
   ];
@@ -406,7 +423,7 @@ function TasksContent() {
       </div>
 
       {/* ── Stat Cards ── */}
-      {view !== "reports" && view !== "activity" && (
+      {view !== "reports" && view !== "activity" && view !== "employees" && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
 
           {/* Total / Progress */}
@@ -538,7 +555,7 @@ function TasksContent() {
         </div>
 
         {/* Search + filter strip */}
-        {view !== "reports" && view !== "activity" && (
+        {view !== "reports" && view !== "activity" && view !== "employees" && (
           <div className="space-y-0">
             <div className="flex items-center gap-2 px-4 py-2.5">
               <div className="relative flex-1 min-w-0">
@@ -620,7 +637,7 @@ function TasksContent() {
       </div>
 
       {/* ── Saved Presets ── */}
-      {view !== "reports" && presets.length > 0 && (
+      {view !== "reports" && view !== "employees" && presets.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: S.muted }}>📌 প্রিসেট:</span>
           {presets.map(preset => (
@@ -641,7 +658,7 @@ function TasksContent() {
       )}
 
       {/* ── Collapsible Filter Panel ── */}
-      {view !== "reports" && filterOpen && (
+      {view !== "reports" && view !== "employees" && filterOpen && (
         <div className="rounded-2xl border p-4 space-y-4" style={{ borderColor: S.border, backgroundColor: S.surface }}>
 
           <PillFilter label="স্ট্যাটাস" value={statusFilter}
@@ -785,7 +802,12 @@ function TasksContent() {
       )}
 
       {/* ── Views ── */}
-      {view === "reports" ? (
+      {view === "employees" ? (
+        <EmployeeTaskBoard
+          onViewTasks={handleViewEmployeeTasks}
+          onCreateTask={handleCreateEmployeeTask}
+        />
+      ) : view === "reports" ? (
         <TaskReports />
       ) : view === "activity" ? (
         <div className="rounded-2xl border overflow-hidden" style={{ borderColor: S.border, backgroundColor: S.surface }}>
@@ -919,9 +941,10 @@ function TasksContent() {
       )}
       {createOpen && (
         <CreateTaskModal
-          onClose={() => { setCreateOpen(false); setCreateInitialData(undefined); }}
-          onCreated={() => { setCreateOpen(false); setCreateInitialData(undefined); fetchTasks(); fetchSummaryStats(); }}
-          initialData={createInitialData} />
+          onClose={() => { setCreateOpen(false); setCreateInitialData(undefined); setEmployeeCreateAssigneeId(undefined); }}
+          onCreated={() => { setCreateOpen(false); setCreateInitialData(undefined); setEmployeeCreateAssigneeId(undefined); fetchTasks(); fetchSummaryStats(); }}
+          initialData={createInitialData}
+          defaultAssigneeId={employeeCreateAssigneeId} />
       )}
       <FloatingTimer />
     </div>

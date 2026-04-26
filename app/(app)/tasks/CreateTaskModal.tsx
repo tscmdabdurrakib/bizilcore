@@ -12,15 +12,17 @@ interface InitialData {
   priority?: string;
   tags?: string;
   subtasks?: string[];
+  assignedToId?: string;
 }
 
 interface Props {
   onClose: () => void;
   onCreated: () => void;
   initialData?: InitialData;
+  defaultAssigneeId?: string;
 }
 
-export default function CreateTaskModal({ onClose, onCreated, initialData }: Props) {
+export default function CreateTaskModal({ onClose, onCreated, initialData, defaultAssigneeId }: Props) {
   const [title, setTitle] = useState(initialData?.title ?? "");
   const [description, setDescription] = useState(initialData?.description ?? "");
   const [status, setStatus] = useState("todo");
@@ -33,7 +35,7 @@ export default function CreateTaskModal({ onClose, onCreated, initialData }: Pro
   const [tags, setTags] = useState(initialData?.tags ?? "");
   const [subtasks, setSubtasks] = useState<string[]>(initialData?.subtasks ?? []);
   const [newSubtask, setNewSubtask] = useState("");
-  const [assignedToId, setAssignedToId] = useState("");
+  const [assignedToId, setAssignedToId] = useState(defaultAssigneeId ?? initialData?.assignedToId ?? "");
   const [orderId, setOrderId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -171,6 +173,25 @@ export default function CreateTaskModal({ onClose, onCreated, initialData }: Pro
               />
             </div>
 
+            <div>
+              <label className="text-xs font-semibold block mb-1.5" style={{ color: S.muted }}>দায়িত্বপ্রাপ্ত কর্মী</label>
+              <select
+                value={assignedToId}
+                onChange={e => setAssignedToId(e.target.value)}
+                className="w-full text-sm border rounded-xl px-3 py-2.5"
+                style={{
+                  borderColor: assignedToId ? "var(--c-primary)" : S.border,
+                  backgroundColor: assignedToId ? "var(--c-primary-light)" : S.surface,
+                  color: S.text,
+                }}
+              >
+                <option value="">কাউকে নির্ধারণ করা হয়নি</option>
+                {staffMembers.map(m => (
+                  <option key={m.userId} value={m.userId}>{m.user.name}</option>
+                ))}
+              </select>
+            </div>
+
             {/* Inline button-group pickers for priority + category */}
             <div className="space-y-3">
               <div>
@@ -300,31 +321,15 @@ export default function CreateTaskModal({ onClose, onCreated, initialData }: Pro
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-semibold block mb-1.5" style={{ color: S.muted }}>রিমাইন্ডার</label>
-                <input
-                  type="datetime-local"
-                  value={reminderAt}
-                  onChange={e => setReminderAt(e.target.value)}
-                  className="w-full text-sm border rounded-xl px-3 py-2"
-                  style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold block mb-1.5" style={{ color: S.muted }}>দায়িত্বপ্রাপ্ত</label>
-                <select
-                  value={assignedToId}
-                  onChange={e => setAssignedToId(e.target.value)}
-                  className="w-full text-sm border rounded-xl px-3 py-2"
-                  style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }}
-                >
-                  <option value="">কেউ নয়</option>
-                  {staffMembers.map(m => (
-                    <option key={m.userId} value={m.userId}>{m.user.name}</option>
-                  ))}
-                </select>
-              </div>
+            <div>
+              <label className="text-xs font-semibold block mb-1.5" style={{ color: S.muted }}>রিমাইন্ডার</label>
+              <input
+                type="datetime-local"
+                value={reminderAt}
+                onChange={e => setReminderAt(e.target.value)}
+                className="w-full text-sm border rounded-xl px-3 py-2"
+                style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
