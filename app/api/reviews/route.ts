@@ -15,19 +15,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "রেটিং ১–৫ এর মধ্যে হতে হবে" }, { status: 400 });
   }
 
-  // Server-side eligibility — must mirror /api/reviews/eligibility
+  // Server-side eligibility — must mirror /api/reviews/eligibility.
+  // Admin can bypass age/order checks via reviewRequestedAt.
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, createdAt: true, totalOrders: true },
+    select: { id: true, createdAt: true, totalOrders: true, reviewRequestedAt: true },
   });
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-  const ageDays = Math.floor((Date.now() - user.createdAt.getTime()) / (1000 * 60 * 60 * 24));
-  if (ageDays < MIN_AGE_DAYS) {
-    return NextResponse.json({ error: "অ্যাকাউন্ট ৩০ দিনের পুরাতন হতে হবে" }, { status: 403 });
-  }
-  if ((user.totalOrders ?? 0) < MIN_ORDERS) {
-    return NextResponse.json({ error: "কমপক্ষে ১০টি অর্ডার থাকতে হবে" }, { status: 403 });
+  if (!user.reviewRequestedAt) {
+    const ageDays = Math.floor((Date.now() - user.createdAt.getTime()) / (1000 * 60 * 60 * 24));
+    if (ageDays < MIN_AGE_DAYS) {
+      return NextResponse.json({ error: "অ্যাকাউন্ট ৩০ দিনের পুরাতন হতে হবে" }, { status: 403 });
+    }
+    if ((user.totalOrders ?? 0) < MIN_ORDERS) {
+      return NextResponse.json({ error: "কমপক্ষে ১০টি অর্ডার থাকতে হবে" }, { status: 403 });
+    }
   }
 
   const shop = await prisma.shop.findUnique({
@@ -35,19 +38,30 @@ export async function POST(req: NextRequest) {
     select: { businessType: true },
   });
 
-  // Race-safe insert via DB unique([userId]); handle P2002 as 409
+  // Race-safe insert via DB unique([userId]); handle P2002 as 409.
+  // Create + clear admin flag run in one transaction so the two stay consistent.
   try {
-    const review = await prisma.appReview.create({
-      data: {
-        userId: session.user.id,
-        rating: Math.round(rating),
-        title: body.title ? String(body.title).slice(0, 120) : null,
-        body: body.body ? String(body.body).slice(0, 1000) : null,
-        improvementNote: body.improvementNote ? String(body.improvementNote).slice(0, 1000) : null,
-        businessType: shop?.businessType ?? null,
-        isApproved: false,
-        showOnSite: false,
-      },
+    const review = await prisma.$transaction(async (tx) => {
+      const created = await tx.appReview.create({
+        data: {
+          userId: session.user.id!,
+          rating: Math.round(rating),
+          title: body.title ? String(body.title).slice(0, 120) : null,
+          body: body.body ? String(body.body).slice(0, 1000) : null,
+          improvementNote: body.improvementNote ? String(body.improvementNote).slice(0, 1000) : null,
+          businessType: shop?.businessType ?? null,
+          isApproved: false,
+          showOnSite: false,
+        },
+      });
+      // Always clear the admin-request flag after a successful submission.
+      // Unconditional clear avoids stale-read races with admin concurrently
+      // setting reviewRequestedAt between our pre-read and the transaction.
+      await tx.user.update({
+        where: { id: session.user.id! },
+        data: { reviewRequestedAt: null },
+      });
+      return created;
     });
     return NextResponse.json({ ok: true, id: review.id }, { status: 201 });
   } catch (e) {

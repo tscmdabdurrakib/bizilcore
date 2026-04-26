@@ -26,6 +26,7 @@ model User {
   streak                     Int                         @default(0)
   lastLoginDate              String?
   totalOrders                Int                         @default(0)
+  reviewRequestedAt          DateTime?
   badges                     String[]                    @default([])
   maxShops                   Int                         @default(1)
   shop                       Shop?

@@ -214,3 +214,19 @@ codStatus (with_courier/collected/returned) — already existed, now driven by c
 - **App-shell wiring**: `components/growth/GrowthPrompts.tsx` mounted in `app/(app)/layout.tsx` — defers eligibility checks 1.5s post-mount, renders modal/banner conditionally
 - **Migrations**: `20260426180000_add_review_nps`, `20260426190000_app_review_user_unique`
 - **Architect-reviewed (PASS)**: server-side eligibility on review submit, server-side NPS cooldown, DB-level uniqueness on AppReview.userId — all critical findings addressed
+
+## Phase 7.1 — Admin "Request Review" feature (Complete)
+- **Problem solved**: organic eligibility (30-day account + 10 orders) makes the review modal hard to test/trigger. Admins now have a manual override.
+- **DB**: added `User.reviewRequestedAt: DateTime?` (migration `20260426200000_add_review_requested_at`).
+- **APIs**:
+  - `POST /api/admin/users/[id]/request-review` — atomic `updateMany` with `appReviews: { none: {} }` predicate (no TOCTOU, returns 409 if already reviewed); refuses admin targets
+  - `DELETE /api/admin/users/[id]/request-review` — cancel pending request; validates target exists/non-admin
+  - `GET /api/admin/users` — now includes `reviewRequestedAt` and `appReviews[0]` (rating, id) per user
+- **Eligibility bypass**:
+  - `/api/reviews/eligibility` — if `reviewRequestedAt` set + no existing review → eligible (bypasses age/order checks)
+  - `POST /api/reviews` — same bypass; on successful submit, clears `reviewRequestedAt` unconditionally inside the same `prisma.$transaction` as the create (race-safe vs concurrent admin requests)
+- **UI** (`/admin/users` page):
+  - "Request Review" button (blue) on each active user with no review and no pending request
+  - "Cancel" button when a request is pending
+  - Status badges: "Review request pending" (blue) and "★ Submitted" (yellow) with the submitted star count
+- **Architect-PASS** after 2 rounds: all race conditions (admin flag re-targeting reviewed user, transaction atomicity, target validation on DELETE) resolved.

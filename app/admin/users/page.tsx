@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Users, Search, RefreshCw, ShieldOff, ShieldCheck, Clock,
-  Trash2, Loader2, X, ChevronDown, Store,
+  Trash2, Loader2, X, ChevronDown, Store, Star, Send,
 } from "lucide-react";
 
 const S = {
@@ -35,8 +35,10 @@ interface User {
   createdAt: string;
   onboarded: boolean;
   totalOrders: number;
+  reviewRequestedAt: string | null;
   subscription: { plan: string; status: string; endDate: string | null } | null;
   shop: { name: string; businessType: string | null } | null;
+  appReviews: { id: string; rating: number }[];
 }
 
 type ActionType = "disable" | "suspend" | "activate" | "delete";
@@ -86,6 +88,30 @@ export default function AdminUsersPage() {
   function openModal(user: User, action: ActionType) {
     setReason("");
     setModal({ user, action });
+  }
+
+  const [reviewBusy, setReviewBusy] = useState<string | null>(null);
+
+  async function requestReview(user: User) {
+    setReviewBusy(user.id);
+    const r = await fetch(`/api/admin/users/${user.id}/request-review`, { method: "POST" });
+    setReviewBusy(null);
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      showToast("error", d.error ?? "সমস্যা হয়েছে");
+      return;
+    }
+    setUsers(prev => prev.map(u => u.id === user.id ? { ...u, reviewRequestedAt: new Date().toISOString() } : u));
+    showToast("success", `${user.name} কে review request পাঠানো হয়েছে`);
+  }
+
+  async function cancelReviewRequest(user: User) {
+    setReviewBusy(user.id);
+    const r = await fetch(`/api/admin/users/${user.id}/request-review`, { method: "DELETE" });
+    setReviewBusy(null);
+    if (!r.ok) { showToast("error", "বাতিল করতে সমস্যা হয়েছে"); return; }
+    setUsers(prev => prev.map(u => u.id === user.id ? { ...u, reviewRequestedAt: null } : u));
+    showToast("success", "Review request বাতিল করা হয়েছে");
   }
 
   async function executeAction() {
@@ -225,6 +251,18 @@ export default function AdminUsersPage() {
                       style={{ backgroundColor: planStyle.bg, color: planStyle.text }}>
                       {plan.toUpperCase()}
                     </span>
+                    {user.appReviews?.[0] && (
+                      <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-semibold"
+                        style={{ backgroundColor: "#FEF3C7", color: "#92400E" }}>
+                        <Star size={10} fill="#F5B400" stroke="#F5B400" /> {user.appReviews[0].rating}★ Submitted
+                      </span>
+                    )}
+                    {user.reviewRequestedAt && !user.appReviews?.[0] && (
+                      <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-semibold"
+                        style={{ backgroundColor: "#DBEAFE", color: "#1D4ED8" }}>
+                        <Send size={10} /> Review request pending
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-3 flex-wrap text-xs" style={{ color: S.muted }}>
                     {user.shop && (
@@ -244,7 +282,31 @@ export default function AdminUsersPage() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-1.5 flex-shrink-0">
+                <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap">
+                  {!user.appReviews?.[0] && !user.reviewRequestedAt && user.accountStatus === "active" && (
+                    <button
+                      onClick={() => requestReview(user)}
+                      disabled={reviewBusy === user.id}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border disabled:opacity-50"
+                      style={{ backgroundColor: "#fff", color: "#1D4ED8", borderColor: "#BFDBFE" }}
+                      title="এই ইউজারকে review modal দেখান (eligibility বাইপাস)"
+                    >
+                      {reviewBusy === user.id ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+                      Request Review
+                    </button>
+                  )}
+                  {user.reviewRequestedAt && !user.appReviews?.[0] && (
+                    <button
+                      onClick={() => cancelReviewRequest(user)}
+                      disabled={reviewBusy === user.id}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border disabled:opacity-50"
+                      style={{ backgroundColor: "#fff", color: "#6B7280", borderColor: "#E5E7EB" }}
+                      title="পেন্ডিং review request বাতিল করুন"
+                    >
+                      {reviewBusy === user.id ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
+                      Cancel
+                    </button>
+                  )}
                   {user.accountStatus !== "active" && (
                     <button onClick={() => openModal(user, "activate")}
                       className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white"

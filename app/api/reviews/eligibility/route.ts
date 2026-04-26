@@ -13,9 +13,23 @@ export async function GET() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, createdAt: true, totalOrders: true },
+    select: { id: true, createdAt: true, totalOrders: true, reviewRequestedAt: true },
   });
   if (!user) return NextResponse.json({ eligible: false, reason: "no_user" });
+
+  // Already reviewed? Block regardless of admin request.
+  const existing = await prisma.appReview.findFirst({
+    where: { userId: user.id },
+    select: { id: true },
+  });
+  if (existing) {
+    return NextResponse.json({ eligible: false, reason: "already_reviewed" });
+  }
+
+  // Admin override: if admin requested a review, bypass age + order checks.
+  if (user.reviewRequestedAt) {
+    return NextResponse.json({ eligible: true, reason: "admin_requested" });
+  }
 
   const ageDays = Math.floor((Date.now() - user.createdAt.getTime()) / (1000 * 60 * 60 * 24));
   if (ageDays < MIN_AGE_DAYS) {
@@ -23,13 +37,6 @@ export async function GET() {
   }
   if ((user.totalOrders ?? 0) < MIN_ORDERS) {
     return NextResponse.json({ eligible: false, reason: "not_enough_orders", totalOrders: user.totalOrders });
-  }
-  const existing = await prisma.appReview.findFirst({
-    where: { userId: user.id },
-    select: { id: true },
-  });
-  if (existing) {
-    return NextResponse.json({ eligible: false, reason: "already_reviewed" });
   }
 
   return NextResponse.json({ eligible: true });
