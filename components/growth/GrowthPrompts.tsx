@@ -21,17 +21,28 @@ export default function GrowthPrompts() {
 
     async function check() {
       // ── Review prompt ───────────────────────────────────────────
+      // Always check the server first — admin requests must override
+      // any local dismiss flag (server is the source of truth).
       try {
-        const dismissUntil = Number(localStorage.getItem(REVIEW_DISMISS_KEY) || 0);
         const shownThisSession = sessionStorage.getItem(SESSION_REVIEW_KEY) === "1";
-        if (Date.now() > dismissUntil && !shownThisSession) {
+        if (!shownThisSession) {
           const res = await fetch("/api/reviews/eligibility");
           if (res.ok) {
             const data = await res.json();
             if (data.eligible && !cancelled) {
-              sessionStorage.setItem(SESSION_REVIEW_KEY, "1");
-              setShowReview(true);
-              return; // don't also show NPS in same session
+              const dismissUntil = Number(localStorage.getItem(REVIEW_DISMISS_KEY) || 0);
+              const adminOverride = data.reason === "admin_requested";
+              // Honor local snooze only when admin hasn't explicitly requested
+              if (adminOverride || Date.now() > dismissUntil) {
+                // Admin override clears any old local snooze so the user
+                // doesn't get blocked next session by a stale flag.
+                if (adminOverride) {
+                  try { localStorage.removeItem(REVIEW_DISMISS_KEY); } catch {}
+                }
+                sessionStorage.setItem(SESSION_REVIEW_KEY, "1");
+                setShowReview(true);
+                return; // don't also show NPS in same session
+              }
             }
           }
         }
