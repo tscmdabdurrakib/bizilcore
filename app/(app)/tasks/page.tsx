@@ -18,7 +18,7 @@ import {
   AlertCircle, Clock, CheckCircle2, LayoutTemplate,
   ChevronDown, ChevronUp, ClipboardList, Zap, Activity,
   TrendingUp, Users, Tag as TagIcon, Loader2, ArrowRight,
-  Flame, UserCheck,
+  Flame, UserCheck, RefreshCw,
 } from "lucide-react";
 
 export type TaskStatus = "todo" | "in_progress" | "review" | "done";
@@ -818,10 +818,33 @@ function TasksContent() {
               </div>
               <span className="text-sm font-extrabold" style={{ color: S.text }}>সাম্প্রতিক অ্যাক্টিভিটি</span>
             </div>
-            <button onClick={fetchActivityFeed} disabled={activityLoading}
-              className="text-xs font-bold px-3 py-1.5 rounded-xl border transition-all hover:opacity-80"
-              style={{ borderColor: S.border, color: S.muted, backgroundColor: S.bg }}>
-              {activityLoading ? "লোড হচ্ছে..." : "🔄 রিফ্রেশ"}
+            <button
+              onClick={fetchActivityFeed}
+              disabled={activityLoading}
+              title="রিফ্রেশ"
+              className="group relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all duration-200 overflow-hidden disabled:cursor-not-allowed"
+              style={{
+                borderColor: activityLoading ? "#FDE68A" : S.border,
+                color: activityLoading ? "#F59E0B" : S.muted,
+                backgroundColor: activityLoading ? "#FEF9C3" : S.surface,
+                boxShadow: activityLoading ? "0 0 0 3px #FEF3C740" : "none",
+              }}
+            >
+              <span
+                className={`flex-shrink-0 inline-flex transition-colors duration-200 ${activityLoading ? "animate-spin" : ""}`}
+                style={{ color: activityLoading ? "#F59E0B" : "currentColor" }}
+              >
+                <RefreshCw size={13} strokeWidth={2.5} />
+              </span>
+              <span className="transition-all duration-200" style={{ color: activityLoading ? "#F59E0B" : S.muted }}>
+                {activityLoading ? "লোড হচ্ছে..." : "রিফ্রেশ"}
+              </span>
+              {!activityLoading && (
+                <span
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-xl pointer-events-none"
+                  style={{ background: "linear-gradient(135deg, #FEF3C720, #FDE68A30)" }}
+                />
+              )}
             </button>
           </div>
 
