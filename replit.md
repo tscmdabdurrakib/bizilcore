@@ -180,3 +180,18 @@ ECOURIER_API_KEY, ECOURIER_API_SECRET, ECOURIER_USER_ID, ECOURIER_PICKUP_ADDRESS
 ### Order model courier fields:
 courierName (pathao|ecourier), courierTrackId, courierStatus (booked/picked/transit/delivered/returned), courierBookedAt
 codStatus (with_courier/collected/returned) — already existed, now driven by courier booking
+
+## Phase 6 — Hotel/Guesthouse Module (Complete)
+- **DB models**: `Room`, `Booking`, `RoomServiceOrder`, `HousekeepingLog` + Shop hotel config (checkInTime, checkOutTime, lateFee, earlyFee, minAdvancePct, autoHousekeeping)
+- **Booking number**: `BK-YYYY-NNN` per shop, generated **inside** `prisma.$transaction` with `@@unique([shopId, bookingNumber])` and P2002 retry (max 5)
+- **APIs (all tenant-scoped, all `logActivity`-audited)**:
+  - Rooms: `/api/rooms` GET/POST, `/api/rooms/[id]` GET/PATCH/DELETE (delete blocked when active booking)
+  - Bookings: `/api/bookings` GET/POST (with conflict re-check inside transaction → 409), `/api/bookings/[id]` GET/PATCH (cancel)
+  - Booking actions: `/api/bookings/[id]/check-in|check-out|payment|services` — check-out clamps NaN/negatives, payment blocks on cancelled
+  - Hotel: `/api/hotel/availability` GET, `/api/hotel/dashboard-stats` GET
+  - Housekeeping: `/api/housekeeping` GET/POST (tenant-scoped staffId), `/api/housekeeping/[id]` PATCH with strict state machine (`pending→in_progress→done`; cancel from pending/in_progress only)
+- **Pages**: `/rooms` (grid), `/bookings` (status tabs + 3-step new modal), `/bookings/[id]` (detail with all actions + room service + payment), `/housekeeping` (3-column kanban)
+- **Dashboard**: `components/dashboards/DashboardHotel.tsx` — 4 stat cards, room occupancy mini-grid, today activity feed; wired into `app/(app)/dashboard/page.tsx` via `businessType === "hotel"` branch
+- **Modules registry**: `hotel` BusinessType added with Bed icon (green), navigation groups, full module list
+- **Migrations applied**: `20260426160000_add_hotel_module`, `20260426170000_booking_number_per_shop_unique`
+- **Architect-reviewed**: 5 initial findings + 3 follow-ups all resolved (cross-tenant customerId, atomic conflict check, services status guard, NaN/negative input rejection, housekeeping state machine, per-shop bookingNumber uniqueness with race retry)

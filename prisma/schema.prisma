@@ -176,6 +176,17 @@ model Shop {
   storeSocialIG     String?
   storeSocialWA     String?
   storeVisits       Int     @default(0)
+
+  // Hotel module
+  rooms             Room[]
+  bookings          Booking[]
+  housekeepingLogs  HousekeepingLog[]
+  hotelCheckInTime    String?  @default("14:00")
+  hotelCheckOutTime   String?  @default("11:00")
+  hotelLateFeePerHour Float    @default(0)
+  hotelEarlyFeePerHour Float   @default(0)
+  hotelMinAdvancePct  Int      @default(30)
+  hotelAutoHousekeeping Boolean @default(true)
 }
 
 model Subscription {
@@ -320,6 +331,7 @@ model Customer {
   appointments  Appointment[]
   measurements  Measurement[]
   tailorOrders  TailorOrder[]
+  bookings      Booking[]
   createdAt     DateTime       @default(now())
 
   @@index([shopId])
@@ -1632,4 +1644,105 @@ model FakeOrderReport {
 
   @@index([phone])
   @@index([shopId])
+}
+
+/* ─── HOTEL / GUESTHOUSE MODULE ─────────────────────────── */
+
+model Room {
+  id           String            @id @default(cuid())
+  shopId       String
+  shop         Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  number       String
+  type         String            @default("single")
+  floor        String            @default("1st")
+  capacity     Int               @default(2)
+  ratePerNight Float
+  status       String            @default("vacant")
+  amenities    String[]          @default([])
+  description  String?
+  imageUrl     String?
+  bookings     Booking[]
+  housekeeping HousekeepingLog[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@unique([shopId, number])
+  @@index([shopId])
+  @@index([status])
+}
+
+model Booking {
+  id            String             @id @default(cuid())
+  shopId        String
+  shop          Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  bookingNumber String
+  roomId        String
+  room          Room               @relation(fields: [roomId], references: [id])
+  customerId    String?
+  customer      Customer?          @relation(fields: [customerId], references: [id])
+  guestName     String
+  guestPhone    String
+  guestNID      String?
+  guestAddress  String?
+  adults        Int                @default(1)
+  children      Int                @default(0)
+  checkIn       DateTime
+  checkOut      DateTime
+  nights        Int
+  ratePerNight  Float
+  extraCharges  Float              @default(0)
+  extraNote     String?
+  totalAmount   Float
+  advancePaid   Float              @default(0)
+  dueAmount     Float
+  paymentMethod String?
+  status        String             @default("confirmed")
+  source        String             @default("walk_in")
+  note          String?
+  checkedInAt   DateTime?
+  checkedOutAt  DateTime?
+  cancelledAt   DateTime?
+  roomServices  RoomServiceOrder[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@unique([shopId, bookingNumber])
+  @@index([shopId])
+  @@index([roomId])
+  @@index([status])
+  @@index([checkIn])
+  @@index([checkOut])
+}
+
+model RoomServiceOrder {
+  id        String   @id @default(cuid())
+  bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  item      String
+  quantity  Int      @default(1)
+  price     Float
+  status    String   @default("pending")
+  orderedAt DateTime @default(now())
+
+  @@index([bookingId])
+}
+
+model HousekeepingLog {
+  id        String    @id @default(cuid())
+  shopId    String
+  shop      Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  roomId    String
+  room      Room      @relation(fields: [roomId], references: [id])
+  staffId   String?
+  task      String    @default("cleaning")
+  status    String    @default("pending")
+  priority  String    @default("normal")
+  note      String?
+  startedAt DateTime?
+  doneAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([shopId])
+  @@index([roomId])
+  @@index([status])
 }

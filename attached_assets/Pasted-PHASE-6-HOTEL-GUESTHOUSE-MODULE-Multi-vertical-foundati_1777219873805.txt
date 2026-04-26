@@ -1,0 +1,254 @@
+PHASE 6 — HOTEL / GUESTHOUSE MODULE
+(Multi-vertical foundation from Phase 5 complete)
+
+Add to BUSINESS_MODULES in /lib/modules.ts:
+hotel: ["dashboard","rooms","bookings","housekeeping",
+        "customers","staff","hisab","reports","settings"]
+
+Add to onboarding business type selector:
+  Icon: bed/building
+  Name: "হোটেল / গেস্টহাউস"
+  Description: "রুম ভাড়া দিই বা গেস্ট ম্যানেজ করি"
+
+━━━ DATABASE ━━━
+
+model Room {
+  id           String    @id @default(cuid())
+  shopId       String
+  shop         Shop      @relation(fields: [shopId], references: [id])
+  number       String    -- "101", "Deluxe-1", "Suite-A"
+  type         String    -- "single"|"double"|"triple"|"family"|"suite"
+  floor        String    @default("1st")
+  capacity     Int       @default(2)
+  ratePerNight Float
+  status       String    @default("vacant")
+              -- "vacant"|"occupied"|"reserved"|"maintenance"|"cleaning"
+  amenities    String[]  -- ["ac","wifi","tv","geyser","attached_bath"]
+  description  String?
+  imageUrl     String?
+  bookings     Booking[]
+  housekeeping HousekeepingLog[]
+}
+
+model Booking {
+  id            String    @id @default(cuid())
+  shopId        String
+  bookingNumber String    @unique -- "BK-2026-001"
+  roomId        String
+  room          Room      @relation(fields: [roomId], references: [id])
+  customerId    String?
+  customer      Customer? @relation(fields: [customerId], references: [id])
+  guestName     String
+  guestPhone    String
+  guestNID      String?
+  guestAddress  String?
+  adults        Int       @default(1)
+  children      Int       @default(0)
+  checkIn       DateTime
+  checkOut      DateTime
+  nights        Int
+  ratePerNight  Float
+  extraCharges  Float     @default(0)
+  totalAmount   Float
+  advancePaid   Float     @default(0)
+  dueAmount     Float
+  paymentMethod String?   -- "cash"|"bkash"|"nagad"|"card"
+  status        String    @default("confirmed")
+              -- "confirmed"|"checked_in"|"checked_out"|"cancelled"|"no_show"
+  source        String    @default("walk_in")
+              -- "walk_in"|"phone"|"facebook"|"booking_com"|"other"
+  note          String?
+  roomServices  RoomServiceOrder[]
+  createdAt     DateTime  @default(now())
+}
+
+model RoomServiceOrder {
+  id        String   @id @default(cuid())
+  bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+  item      String
+  quantity  Int      @default(1)
+  price     Float
+  status    String   @default("pending")
+  orderedAt DateTime @default(now())
+}
+
+model HousekeepingLog {
+  id        String    @id @default(cuid())
+  shopId    String
+  roomId    String
+  room      Room      @relation(fields: [roomId], references: [id])
+  staffId   String?
+  task      String    -- "cleaning"|"linen_change"|"maintenance"|"inspection"
+  status    String    @default("pending")
+  -- "pending"|"in_progress"|"done"
+  priority  String    @default("normal") -- "normal"|"urgent"
+  note      String?
+  doneAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+━━━ HOTEL DASHBOARD (/dashboard) ━━━
+
+Greeting: "আসসালামু আলাইকুম, [name] [আপু/ভাইয়া] 👋"
+
+4 stat cards:
+  আজ চেক-ইন: count of bookings checking in today
+  আজ চেক-আউট: count checking out today
+  Vacant রুম: X / total rooms (e.g. "৫ / ১২")
+  আজকের আয়: sum of payments received today
+
+Room occupancy grid (mini map):
+  Small colored squares per room:
+  🟢 Vacant  🔵 Occupied  🟡 Reserved  ⚪ Cleaning  🔴 Maintenance
+  Click any room → quick popup:
+    If vacant: "বুকিং নিন" button
+    If occupied: guest name + checkout date + "চেক-আউট" button
+
+Today's activity feed:
+  Upcoming check-ins (time sorted)
+  Upcoming check-outs
+
+━━━ ROOM MANAGEMENT (/rooms) ━━━
+
+Room grid view (cards):
+  Each card: room number, type badge, floor, capacity, rate/night, status badge
+  Edit button | Delete button (only if no active booking)
+
+"রুম যোগ করুন" button → form:
+  Room number*, type* (dropdown), floor, capacity, rate per night*
+  Amenities (checkboxes): AC, WiFi, TV, Geyser, Attached Bathroom, 
+    Balcony, Refrigerator, Hot Water, Kitchen
+  Description (optional), image upload (optional)
+  "সেভ করুন"
+
+Room detail page:
+  Current guest info (if occupied)
+  Booking history list (past 10 bookings)
+  Housekeeping history
+
+━━━ BOOKING MANAGEMENT (/bookings) ━━━
+
+Two views (toggle button):
+  📅 Calendar view | 📋 List view
+
+Calendar view:
+  Month calendar. Each booking = colored bar across occupied dates.
+  Color by room type: single=blue, double=green, suite=purple
+  Click date → sidebar shows that day's events (check-ins, check-outs, stays)
+  Click booking bar → booking detail popup
+
+List view tabs:
+  আজ চেক-ইন | আজ চেক-আউট | চলমান | সব বুকিং | বাতিল
+
+Each row: booking number, guest name, room, dates, nights, amount, status badge
+  Status badges:
+    confirmed: bg=#E6F1FB text=#0C447C
+    checked_in: bg=#E1F5EE text=#085041
+    checked_out: bg=#F1EFE8 text=#444441
+    cancelled: bg=#FCEBEB text=#791F1F
+
+"নতুন বুকিং" button → 3-step form:
+
+  Step 1 — তারিখ ও রুম:
+    Check-in date + Check-out date (date pickers)
+    → Auto-calculate nights
+    → Show available rooms grid for that date range
+      (Unavailable rooms grayed out with "বুকড" label)
+    Room type filter buttons: সব | Single | Double | Family | Suite
+    Select room → shows: rate/night × nights = subtotal
+
+  Step 2 — অতিথির তথ্য:
+    Guest name*, phone*, NID (optional), address (optional)
+    Adults + children (number inputs)
+    Booking source: Walk-in / Phone / Facebook / Booking.com / Other
+    Special requests (textarea)
+
+  Step 3 — পেমেন্ট:
+    Rate per night (editable), nights (auto), subtotal
+    Extra charges (optional, with description)
+    Grand total (auto)
+    Advance amount input
+    Due = total - advance (auto)
+    Payment method: Cash / bKash / Nagad / Card
+
+  "বুকিং নিশ্চিত করুন" →
+    Saves booking, room status → "reserved"
+    Auto-generates booking number (BK-YYYY-NNN)
+    SMS to guest:
+      "প্রিয় [name], আপনার বুকিং নিশ্চিত হয়েছে।
+       বুকিং নং: [BK-number]
+       রুম: [room number] ([type])
+       চেক-ইন: [date] | চেক-আউট: [date]
+       অগ্রিম: ৳[advance] | বাকি: ৳[due]
+       - [HotelName]"
+
+Booking detail page:
+  Full info card (all booking details)
+  Guest info with NID if provided
+  Payment history (advance + any subsequent payments)
+  Room service orders for this booking
+  Action buttons:
+    "চেক-ইন করুন" (if status=confirmed):
+      → Marks room "occupied", booking "checked_in"
+      → Shows welcome note: "অতিথিকে স্বাগতম!"
+    "চেক-আউট করুন" (if status=checked_in):
+      → Shows final bill: room charges + room service total + any extras
+      → "বাকি পরিশোধ" input if due > 0
+      → "চেক-আউট নিশ্চিত করুন" → room → "cleaning", booking → "checked_out"
+    "বাতিল করুন": confirmation modal → "বুকিং বাতিল করবেন?"
+    "পেমেন্ট নিন": add partial payment anytime
+
+Room service order (on booking detail):
+  "+ রুম সার্ভিস" button → item name, quantity, price
+  All room service charges auto-add to final bill
+
+━━━ HOUSEKEEPING (/housekeeping) ━━━
+
+Kanban board:
+  Column 1 "Pending" | Column 2 "চলছে" | Column 3 "সম্পন্ন"
+
+Each task card:
+  Room number (big, bold), task type badge, priority (🔴 urgent / normal),
+  assigned staff name (or "Unassigned"), time created
+
+"নতুন Task" button → form:
+  Select room, task type, priority, assign staff, note
+  "তৈরি করুন"
+
+Task actions:
+  "শুরু করুন" → moves to "চলছে", marks start time
+  "সম্পন্ন" → moves to "সম্পন্ন", marks done time
+  → If task was post-checkout cleaning: room status → "vacant" automatically
+
+Filter: All / By room / By staff / Today only
+
+━━━ SETTINGS — HOTEL CONFIG ━━━
+
+In /settings — "Hotel Config" tab:
+  Check-in time (default: 2:00 PM)
+  Check-out time (default: 11:00 AM)
+  Late check-out fee (৳ per hour)
+  Early check-in fee (৳ per hour)
+  Minimum advance % required (e.g. 30%)
+  Auto housekeeping task on checkout (toggle)
+
+━━━ REPORTS (/reports) ━━━
+
+Hotel-specific report cards:
+  Occupancy rate: % of rooms occupied (today / this week / this month)
+  Revenue per available room (RevPAR)
+  Most booked room type
+  Average length of stay
+  Booking source breakdown (pie chart)
+  Monthly revenue bar chart
+
+━━━ UI NOTES ━━━
+All labels in Bangla.
+Room status color coding consistent throughout.
+Booking number always visible and prominent.
+Print booking confirmation option (browser print).
+Same green design system (#0F6E56 primary).
+
+
+=====================================================================

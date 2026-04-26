@@ -28,6 +28,10 @@ import {
   Settings2,
   Tag,
   Star,
+  Bed,
+  BedDouble,
+  Sparkles,
+  CalendarRange,
   type LucideIcon,
 } from "lucide-react";
 
@@ -39,7 +43,8 @@ export type BusinessType =
   | "pharmacy"
   | "retail"
   | "salon"
-  | "tailor";
+  | "tailor"
+  | "hotel";
 
 export const BUSINESS_TYPES: BusinessType[] = [
   "fcommerce",
@@ -48,6 +53,7 @@ export const BUSINESS_TYPES: BusinessType[] = [
   "retail",
   "salon",
   "tailor",
+  "hotel",
 ];
 
 export interface BusinessTypeMeta {
@@ -107,6 +113,14 @@ export const BUSINESS_TYPE_META: Record<BusinessType, BusinessTypeMeta> = {
     color: "#8B5CF6",
     bgColor: "#F5F3FF",
     icon: Shirt,
+  },
+  hotel: {
+    type: "hotel",
+    label: "হোটেল / গেস্টহাউস",
+    description: "রুম ভাড়া দিই বা গেস্ট ম্যানেজ করি",
+    color: "#0F6E56",
+    bgColor: "#E1F5EE",
+    icon: BedDouble,
   },
 };
 
@@ -184,6 +198,10 @@ const BUSINESS_MODULES: Record<BusinessType, string[]> = {
   tailor: [
     "dashboard", "inventory", "orders", "customers",
     "hisab", "reports", "measurements", "courier", "settings", "store",
+  ],
+  hotel: [
+    "dashboard", "rooms", "bookings", "housekeeping", "customers",
+    "hisab", "reports", "staff", "settings", "store",
   ],
 };
 
@@ -350,6 +368,30 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
       items: [
         { href: "/customers",    icon: Users,           label: "কাস্টমার",     module: "customers"    },
         { href: "/delivery",     icon: Navigation,      label: "ডেলিভারি",     module: "courier"      },
+      ],
+    },
+    {
+      label: "আর্থিক",
+      items: [
+        { href: "/hisab",   icon: BookOpen,  label: "হিসাব",   module: "hisab"   },
+        { href: "/reports", icon: BarChart2, label: "রিপোর্ট", module: "reports" },
+      ],
+    },
+  ],
+  hotel: [
+    {
+      items: [
+        { href: "/dashboard",    icon: LayoutDashboard, label: "ড্যাশবোর্ড",   module: "dashboard"    },
+        { href: "/rooms",        icon: Bed,             label: "রুম",           module: "rooms"        },
+        { href: "/bookings",     icon: CalendarRange,   label: "বুকিং",         module: "bookings"     },
+        { href: "/housekeeping", icon: Sparkles,        label: "হাউসকিপিং",     module: "housekeeping" },
+      ],
+    },
+    STORE_NAV_GROUP,
+    {
+      items: [
+        { href: "/customers",    icon: Users,           label: "গেস্ট",         module: "customers"    },
+        { href: "/hr",           icon: UserCog,         label: "স্টাফ",         module: "staff"        },
       ],
     },
     {
