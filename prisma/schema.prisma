@@ -804,19 +804,21 @@ model WhatsAppSettings {
 }
 
 model PathaoSettings {
-  id           String    @id @default(cuid())
-  userId       String    @unique
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clientId     String?
-  clientSecret String?
-  username     String?
-  password     String?
-  storeId      String?
-  sandboxMode  Boolean   @default(false)
-  isConnected  Boolean   @default(false)
-  connectedAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId        String?
+  clientSecret    String?
+  username        String?
+  password        String?
+  storeId         String?
+  sandboxMode     Boolean   @default(false)
+  isConnected     Boolean   @default(false)
+  connectedAt     DateTime?
+  defaultCityId   Int       @default(1)
+  defaultZoneId   Int       @default(1)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@index([userId])
 }

@@ -19,6 +19,8 @@ async function getUserPathaoCreds(userId: string): Promise<PathaoCreds | null> {
     password: settings.password,
     storeId: parseInt(settings.storeId, 10),
     sandboxMode: settings.sandboxMode,
+    defaultCityId: settings.defaultCityId ?? 1,
+    defaultZoneId: settings.defaultZoneId ?? 1,
   };
 }
 

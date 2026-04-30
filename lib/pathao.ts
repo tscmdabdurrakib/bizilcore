@@ -8,6 +8,8 @@ export interface PathaoCreds {
   password: string;
   storeId: number;
   sandboxMode?: boolean;
+  defaultCityId?: number;
+  defaultZoneId?: number;
 }
 
 function baseUrl(creds: PathaoCreds) {
@@ -79,8 +81,8 @@ export async function bookPathaoDelivery(input: CourierInput, creds: PathaoCreds
     recipient_name: input.recipientName || "Customer",
     recipient_phone: phone,
     recipient_address: input.recipientAddress || "Dhaka",
-    recipient_city: 1,
-    recipient_zone: 1,
+    recipient_city: creds.defaultCityId ?? 1,
+    recipient_zone: creds.defaultZoneId ?? 1,
     delivery_type: 48,
     item_type: 2,
     special_instruction: input.note ?? "",

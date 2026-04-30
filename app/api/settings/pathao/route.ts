@@ -17,6 +17,8 @@ export async function GET() {
     storeId: settings?.storeId ?? null,
     username: settings?.username ?? null,
     sandboxMode: settings?.sandboxMode ?? false,
+    defaultCityId: settings?.defaultCityId ?? 1,
+    defaultZoneId: settings?.defaultZoneId ?? 1,
     hasCredentials: !!(settings?.clientId && settings?.clientSecret && settings?.username && settings?.password && settings?.storeId),
   });
 }
@@ -26,13 +28,15 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { clientId, clientSecret, username, password, storeId, sandboxMode } = body as {
+  const { clientId, clientSecret, username, password, storeId, sandboxMode, defaultCityId, defaultZoneId } = body as {
     clientId?: string;
     clientSecret?: string;
     username?: string;
     password?: string;
     storeId?: string;
     sandboxMode?: boolean;
+    defaultCityId?: number;
+    defaultZoneId?: number;
   };
 
   if (!clientId || !clientSecret || !username || !password || !storeId) {
@@ -49,6 +53,8 @@ export async function POST(req: NextRequest) {
       password: password.trim(),
       storeId: storeId.trim(),
       sandboxMode: sandboxMode ?? false,
+      defaultCityId: defaultCityId ?? 1,
+      defaultZoneId: defaultZoneId ?? 1,
       isConnected: true,
       connectedAt: new Date(),
     },
@@ -59,6 +65,8 @@ export async function POST(req: NextRequest) {
       password: password.trim(),
       storeId: storeId.trim(),
       sandboxMode: sandboxMode ?? false,
+      defaultCityId: defaultCityId ?? 1,
+      defaultZoneId: defaultZoneId ?? 1,
       isConnected: true,
       connectedAt: new Date(),
     },

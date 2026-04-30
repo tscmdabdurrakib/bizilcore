@@ -1913,13 +1913,7 @@ function SettingsContent() {
       {tab === "slip" && <SlipSettingsPanel />}
 
       {/* কুরিয়ার Tab */}
-      {tab === "courier" && (
-        <div className="space-y-6">
-          <PathaoSettingsPanel />
-          <RedxSettingsPanel />
-          <SteadfastSettingsPanel />
-        </div>
-      )}
+      {tab === "courier" && <CourierSettingsTab />}
 
       {/* Blacklist Tab */}
       {tab === "blacklist" && (
@@ -2478,450 +2472,634 @@ function SlipSettingsPanel() {
   );
 }
 
-/* ─── Pathao Settings Panel ──────────────────────────── */
-function PathaoSettingsPanel() {
-  const [status, setStatus] = useState<{ isConnected: boolean; connectedAt: string | null; clientId: string | null; storeId: string | null; sandboxMode: boolean; hasCredentials: boolean } | null>(null);
-  const [form, setForm] = useState({ clientId: "", clientSecret: "", username: "", password: "", storeId: "", sandboxMode: false });
-  const [showForm, setShowForm] = useState(false);
+/* ─── Unified Courier Settings Tab ─────────────────── */
+function CourierSettingsTab() {
+  const [active, setActive] = useState<"pathao" | "redx" | "steadfast">("pathao");
+  const [pathaoStatus, setPathaoStatus] = useState<{ isConnected: boolean; sandboxMode: boolean; clientId: string | null; storeId: string | null; connectedAt: string | null; defaultCityId: number; defaultZoneId: number } | null>(null);
+  const [redxStatus, setRedxStatus] = useState<{ isConnected: boolean; apiKey: string | null; connectedAt: string | null } | null>(null);
+  const [sfStatus, setSfStatus] = useState<{ isConnected: boolean; apiKey: string | null; connectedAt: string | null } | null>(null);
+  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const Sv = { surface: "var(--c-surface)", border: "var(--c-border)", text: "var(--c-text)", secondary: "var(--c-text-sub)", muted: "var(--c-text-muted)", primary: "var(--c-primary)", bg: "var(--c-bg)" };
+
+  function showToast(type: "success" | "error", msg: string) { setToast({ type, msg }); setTimeout(() => setToast(null), 4000); }
+
+  async function loadAll() {
+    const [p, r, s] = await Promise.all([
+      fetch("/api/settings/pathao").then(r => r.ok ? r.json() : null),
+      fetch("/api/settings/redx").then(r => r.ok ? r.json() : null),
+      fetch("/api/settings/steadfast").then(r => r.ok ? r.json() : null),
+    ]);
+    if (p) setPathaoStatus(p);
+    if (r) setRedxStatus(r);
+    if (s) setSfStatus(s);
+  }
+
+  useEffect(() => { loadAll(); }, []);
+
+  const COURIERS = [
+    { key: "pathao" as const, name: "Pathao", color: "#D32F2F", bg: "#FFEBEE", desc: "Auto booking via API", connected: pathaoStatus?.isConnected },
+    { key: "redx" as const, name: "RedX", color: "#C62828", bg: "#FCE4EC", desc: "API দিয়ে auto book", connected: redxStatus?.isConnected },
+    { key: "steadfast" as const, name: "Steadfast", color: "#1565C0", bg: "#E3F2FD", desc: "API দিয়ে auto book", connected: sfStatus?.isConnected },
+  ];
+
+  return (
+    <div className="space-y-5">
+      {toast && <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-xl animate-in slide-in-from-bottom-4" style={{ backgroundColor: toast.type === "success" ? "#1D9E75" : "#E24B4A" }}>{toast.msg}</div>}
+
+      {/* Courier selector cards */}
+      <div className="grid grid-cols-3 gap-3">
+        {COURIERS.map(c => (
+          <button key={c.key} onClick={() => setActive(c.key)}
+            className="relative p-4 rounded-2xl border-2 text-left transition-all duration-200 hover:shadow-md"
+            style={{
+              borderColor: active === c.key ? c.color : Sv.border,
+              backgroundColor: active === c.key ? c.bg : Sv.surface,
+              transform: active === c.key ? "translateY(-1px)" : "none",
+            }}>
+            {c.connected && (
+              <span className="absolute top-3 right-3 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+            )}
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ backgroundColor: active === c.key ? c.color : Sv.bg }}>
+              <Truck size={16} color={active === c.key ? "#fff" : c.color} />
+            </div>
+            <p className="font-bold text-sm" style={{ color: active === c.key ? c.color : Sv.text }}>{c.name}</p>
+            <p className="text-xs mt-0.5" style={{ color: active === c.key ? c.color + "CC" : Sv.muted }}>{c.desc}</p>
+            <div className="mt-2">
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                style={{ backgroundColor: c.connected ? "#DCFCE7" : "#F3F4F6", color: c.connected ? "#15803D" : "#9CA3AF" }}>
+                {c.connected ? "● সংযুক্ত" : "○ সংযুক্ত নেই"}
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Active panel */}
+      {active === "pathao" && (
+        <PathaoPanel
+          status={pathaoStatus}
+          onReload={loadAll}
+          showToast={showToast}
+          sv={Sv}
+        />
+      )}
+      {active === "redx" && (
+        <RedxPanel
+          status={redxStatus}
+          onReload={loadAll}
+          showToast={showToast}
+          sv={Sv}
+        />
+      )}
+      {active === "steadfast" && (
+        <SteadfastPanel
+          status={sfStatus}
+          onReload={loadAll}
+          showToast={showToast}
+          sv={Sv}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ─── Pathao Panel ─────────────────────────────────── */
+function PathaoPanel({ status, onReload, showToast, sv }: {
+  status: { isConnected: boolean; sandboxMode: boolean; clientId: string | null; storeId: string | null; connectedAt: string | null; defaultCityId: number; defaultZoneId: number } | null;
+  onReload: () => void;
+  showToast: (t: "success" | "error", m: string) => void;
+  sv: Record<string, string>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ clientId: "", clientSecret: "", username: "", password: "", storeId: "", sandboxMode: false, defaultCityId: 1, defaultZoneId: 1 });
   const [showPass, setShowPass] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [cities, setCities] = useState<{ id: number; name: string }[]>([]);
+  const [zones, setZones] = useState<{ id: number; name: string }[]>([]);
+  const [loadingCities, setLoadingCities] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
-  function showToast(type: "success" | "error", msg: string) {
-    setToast({ type, msg });
-    setTimeout(() => setToast(null), 3500);
+  const inp = (f: boolean) => ({ height: "42px", border: `1.5px solid ${f ? "#D32F2F" : sv.border}`, borderRadius: "10px", color: sv.text, backgroundColor: sv.surface, padding: "0 12px", fontSize: "14px", outline: "none", width: "100%" });
+
+  async function fetchCities() {
+    if (!status?.isConnected) return;
+    setLoadingCities(true);
+    const res = await fetch("/api/settings/pathao/cities");
+    if (res.ok) { const d = await res.json(); setCities(d.cities ?? []); }
+    setLoadingCities(false);
   }
 
-  async function load() {
-    const res = await fetch("/api/settings/pathao");
-    if (res.ok) setStatus(await res.json());
+  async function fetchZones(cityId: number) {
+    if (!status?.isConnected) return;
+    const res = await fetch(`/api/settings/pathao/cities?cityId=${cityId}`);
+    if (res.ok) { const d = await res.json(); setZones(d.zones ?? []); }
   }
 
-  useEffect(() => { load(); }, []);
+  function startEdit() {
+    setForm({ clientId: "", clientSecret: "", username: "", password: "", storeId: status?.storeId ?? "", sandboxMode: status?.sandboxMode ?? false, defaultCityId: status?.defaultCityId ?? 1, defaultZoneId: status?.defaultZoneId ?? 1 });
+    setEditing(true);
+  }
 
   async function handleTest() {
-    if (!form.clientId || !form.clientSecret || !form.username || !form.password || !form.storeId) {
-      showToast("error", "সব ঘর পূরণ করুন");
-      return;
-    }
+    if (!form.clientId || !form.clientSecret || !form.username || !form.password || !form.storeId) { showToast("error", "সব ঘর পূরণ করুন"); return; }
     setTesting(true);
-    const res = await fetch("/api/settings/pathao/test", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    const data = await res.json();
+    const res = await fetch("/api/settings/pathao/test", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+    const d = await res.json();
     setTesting(false);
-    if (res.ok) showToast("success", data.message ?? "সংযোগ সফল!");
-    else showToast("error", data.error ?? "সংযোগ ব্যর্থ");
+    if (res.ok) showToast("success", d.message ?? "Pathao সংযোগ সফল!");
+    else showToast("error", d.error ?? "সংযোগ ব্যর্থ");
   }
 
   async function handleSave() {
-    if (!form.clientId || !form.clientSecret || !form.username || !form.password || !form.storeId) {
-      showToast("error", "সব ঘর পূরণ করুন");
-      return;
-    }
+    if (!form.clientId || !form.clientSecret || !form.username || !form.password || !form.storeId) { showToast("error", "সব ঘর পূরণ করুন"); return; }
     setSaving(true);
-    const res = await fetch("/api/settings/pathao", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    const data = await res.json();
+    const res = await fetch("/api/settings/pathao", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+    const d = await res.json();
     setSaving(false);
-    if (res.ok) {
-      showToast("success", "Pathao সফলভাবে সংযুক্ত হয়েছে!");
-      setShowForm(false);
-      setForm({ clientId: "", clientSecret: "", username: "", password: "", storeId: "", sandboxMode: false });
-      load();
-    } else {
-      showToast("error", data.error ?? "সেভ ব্যর্থ");
-    }
+    if (res.ok) { showToast("success", "Pathao সফলভাবে সংযুক্ত হয়েছে!"); setEditing(false); onReload(); }
+    else showToast("error", d.error ?? "সেভ ব্যর্থ");
   }
 
   async function handleDisconnect() {
     if (!confirm("Pathao সংযোগ বিচ্ছিন্ন করবেন?")) return;
-    const res = await fetch("/api/settings/pathao", { method: "DELETE" });
-    if (res.ok) {
-      showToast("success", "Pathao সংযোগ বিচ্ছিন্ন করা হয়েছে");
-      load();
-    }
+    await fetch("/api/settings/pathao", { method: "DELETE" });
+    showToast("success", "Pathao সংযোগ বিচ্ছিন্ন করা হয়েছে");
+    onReload();
   }
 
-  const inp2 = (f: boolean) => ({ height: "42px", border: `1px solid ${f ? S.primary : S.border}`, borderRadius: "10px", color: S.text, backgroundColor: S.surface, padding: "0 12px", fontSize: "14px", outline: "none", width: "100%" });
-
   return (
-    <div className="space-y-5">
-      {toast && <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg" style={{ backgroundColor: toast.type === "success" ? "#1D9E75" : "#E24B4A" }}>{toast.msg}</div>}
-
-      {/* Info Card */}
-      <div className="rounded-2xl p-5" style={{ background: "rgba(15,110,86,0.06)", border: "1px solid rgba(15,110,86,0.18)" }}>
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "var(--c-primary-light)" }}>
-            <Truck size={18} style={{ color: S.primary }} />
+    <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: sv.border }}>
+      {/* Header */}
+      <div className="px-5 py-4 flex items-center justify-between" style={{ background: "linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%)" }}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+            <Truck size={18} color="#fff" />
           </div>
           <div>
-            <p className="font-semibold text-sm" style={{ color: S.text }}>Pathao Courier Integration</p>
-            <p className="text-xs" style={{ color: S.muted }}>আপনার নিজস্ব Pathao merchant account দিয়ে অর্ডার book করুন</p>
+            <p className="font-bold text-white text-sm">Pathao Courier</p>
+            <p className="text-white/70 text-xs">hermes.pathao.com API Integration</p>
           </div>
         </div>
-        <div className="space-y-1.5">
-          {[
-            "অর্ডার থেকে সরাসরি Pathao-তে booking",
-            "Automatic tracking ID সংরক্ষণ",
-            "Real-time courier status update",
-          ].map(f => (
-            <div key={f} className="flex items-center gap-2">
-              <Check size={13} style={{ color: S.primary }} />
-              <span className="text-xs" style={{ color: S.secondary }}>{f}</span>
+        <span className="text-xs font-semibold px-3 py-1 rounded-full" style={{ backgroundColor: status?.isConnected ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.2)", color: "#fff" }}>
+          {status === null ? "লোড হচ্ছে..." : status.isConnected ? (status.sandboxMode ? "⚡ Sandbox" : "✓ Production") : "সংযুক্ত নেই"}
+        </span>
+      </div>
+
+      <div className="p-5 space-y-4" style={{ backgroundColor: sv.surface }}>
+        {/* Features */}
+        <div className="grid grid-cols-3 gap-2">
+          {["অর্ডার থেকে সরাসরি booking", "Auto tracking ID", "Real-time status"].map(f => (
+            <div key={f} className="flex items-center gap-1.5 text-xs" style={{ color: sv.secondary }}>
+              <Check size={11} color="#D32F2F" />
+              {f}
             </div>
           ))}
         </div>
-      </div>
 
-      {/* Connection Status */}
-      <div className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: status?.isConnected ? "#1D9E75" : S.border }} />
-            <div>
-              <p className="font-semibold text-sm" style={{ color: S.text }}>
-                {status === null ? "লোড হচ্ছে..." : status.isConnected ? "Pathao সংযুক্ত আছে" : "Pathao সংযুক্ত নেই"}
-              </p>
-              {status?.isConnected && status.connectedAt && (
-                <p className="text-xs mt-0.5" style={{ color: S.muted }}>
-                  সংযুক্ত হয়েছে {new Date(status.connectedAt).toLocaleDateString("bn-BD")}
-                </p>
-              )}
-              {status?.isConnected && status.clientId && (
-                <p className="text-xs font-mono mt-0.5" style={{ color: S.muted }}>Client ID: {status.clientId}</p>
-              )}
-              {status?.isConnected && status.storeId && (
-                <p className="text-xs font-mono mt-0.5" style={{ color: S.muted }}>Store ID: {status.storeId}</p>
-              )}
-              {status?.isConnected && (
-                <span className="inline-block mt-1 text-xs font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: status.sandboxMode ? "#FFF3DC" : "#E8F5F0", color: status.sandboxMode ? "#EF9F27" : "#0F6E56" }}>
-                  {status.sandboxMode ? "Sandbox Mode" : "Production"}
-                </span>
-              )}
+        {/* Connected State */}
+        {status?.isConnected && !editing && (
+          <div className="rounded-xl p-4 space-y-2" style={{ backgroundColor: sv.bg, border: `1px solid ${sv.border}` }}>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              {status.clientId && <div><span style={{ color: sv.muted }}>Client ID: </span><span className="font-mono" style={{ color: sv.text }}>{status.clientId}</span></div>}
+              {status.storeId && <div><span style={{ color: sv.muted }}>Store ID: </span><span className="font-mono" style={{ color: sv.text }}>{status.storeId}</span></div>}
+              <div><span style={{ color: sv.muted }}>City ID: </span><span className="font-mono" style={{ color: sv.text }}>{status.defaultCityId}</span></div>
+              <div><span style={{ color: sv.muted }}>Zone ID: </span><span className="font-mono" style={{ color: sv.text }}>{status.defaultZoneId}</span></div>
+              {status.connectedAt && <div className="col-span-2"><span style={{ color: sv.muted }}>Connected: </span><span style={{ color: sv.text }}>{new Date(status.connectedAt).toLocaleDateString("bn-BD")}</span></div>}
             </div>
-          </div>
-          <div className="flex gap-2">
-            {status?.isConnected ? (
-              <>
-                <button onClick={() => { setShowForm(true); }} className="px-3 py-1.5 rounded-xl border text-xs font-medium" style={{ borderColor: S.border, color: S.secondary }}>
-                  পরিবর্তন করুন
-                </button>
-                <button onClick={handleDisconnect} className="px-3 py-1.5 rounded-xl text-xs font-medium" style={{ backgroundColor: "var(--bg-danger-soft)", color: "var(--bg-danger-text)" }}>
-                  Disconnect
-                </button>
-              </>
-            ) : (
-              <button onClick={() => setShowForm(true)} className="px-4 py-2 rounded-xl text-white text-sm font-medium" style={{ backgroundColor: S.primary }}>
-                + সংযুক্ত করুন
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => { fetchCities(); setEditing(true); startEdit(); }} className="flex-1 py-2 rounded-xl border text-xs font-medium transition-colors hover:bg-gray-50" style={{ borderColor: sv.border, color: sv.secondary }}>
+                সেটিংস পরিবর্তন করুন
               </button>
-            )}
+              <button onClick={handleDisconnect} className="px-4 py-2 rounded-xl text-xs font-medium" style={{ backgroundColor: "#FEE2E2", color: "#DC2626" }}>
+                Disconnect
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
+        )}
 
-      {/* Credentials Form */}
-      {showForm && (
-        <div className="rounded-2xl border p-5 shadow-sm space-y-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-          <div className="flex items-center justify-between">
-            <h4 className="font-semibold text-sm" style={{ color: S.text }}>Pathao API Credentials</h4>
-            <button onClick={() => setShowForm(false)}><X size={16} style={{ color: S.muted }} /></button>
-          </div>
+        {/* Not connected */}
+        {!status?.isConnected && !editing && (
+          <button onClick={startEdit} className="w-full py-3 rounded-xl text-white text-sm font-semibold transition-all hover:opacity-90 active:scale-[0.99]" style={{ backgroundColor: "#D32F2F" }}>
+            + Pathao সংযুক্ত করুন
+          </button>
+        )}
 
-          <div className="rounded-xl p-3 text-xs space-y-1" style={{ backgroundColor: "var(--c-bg)", border: `1px solid ${S.border}` }}>
-            <p style={{ color: S.secondary }}>Pathao Merchant Dashboard থেকে এই তথ্য পাবেন:</p>
-            <p style={{ color: S.muted }}>🔗 <strong>hermes.pathao.com</strong> → Developer Settings → API Credentials</p>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3">
-            <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: S.text }}>Client ID *</label>
-              <input value={form.clientId} onChange={e => setForm(p => ({ ...p, clientId: e.target.value }))}
-                placeholder="your-client-id"
-                style={inp2(focused === "clientId")} onFocus={() => setFocused("clientId")} onBlur={() => setFocused(null)} />
+        {/* Form */}
+        {editing && (
+          <div className="space-y-4 pt-1">
+            <div className="rounded-xl p-3 text-xs" style={{ backgroundColor: "#FFF8E1", border: "1px solid #FFD54F" }}>
+              <p className="font-semibold" style={{ color: "#795548" }}>📍 Pathao Merchant Dashboard থেকে তথ্য সংগ্রহ করুন:</p>
+              <p style={{ color: "#9E9E9E" }}>hermes.pathao.com → Developer Settings → API Credentials</p>
             </div>
 
-            <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: S.text }}>Client Secret *</label>
-              <div className="relative">
-                <input type={showSecret ? "text" : "password"} value={form.clientSecret} onChange={e => setForm(p => ({ ...p, clientSecret: e.target.value }))}
-                  placeholder="your-client-secret"
-                  style={{ ...inp2(focused === "clientSecret"), paddingRight: "40px" }} onFocus={() => setFocused("clientSecret")} onBlur={() => setFocused(null)} />
-                <button type="button" onClick={() => setShowSecret(!showSecret)} className="absolute right-3 top-1/2 -translate-y-1/2">
-                  {showSecret ? <EyeOff size={14} style={{ color: S.muted }} /> : <Eye size={14} style={{ color: S.muted }} />}
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: S.text }}>Username (Email) *</label>
-                <input type="email" value={form.username} onChange={e => setForm(p => ({ ...p, username: e.target.value }))}
-                  placeholder="merchant@email.com"
-                  style={inp2(focused === "username")} onFocus={() => setFocused("username")} onBlur={() => setFocused(null)} />
+                <label className="block text-xs font-medium mb-1" style={{ color: sv.text }}>Client ID *</label>
+                <input value={form.clientId} onChange={e => setForm(p => ({ ...p, clientId: e.target.value }))} placeholder="your-client-id"
+                  style={inp(focused === "cid")} onFocus={() => setFocused("cid")} onBlur={() => setFocused(null)} />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: S.text }}>Password *</label>
+                <label className="block text-xs font-medium mb-1" style={{ color: sv.text }}>Client Secret *</label>
                 <div className="relative">
-                  <input type={showPass ? "text" : "password"} value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
-                    placeholder="••••••••"
-                    style={{ ...inp2(focused === "password"), paddingRight: "40px" }} onFocus={() => setFocused("password")} onBlur={() => setFocused(null)} />
-                  <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2">
-                    {showPass ? <EyeOff size={14} style={{ color: S.muted }} /> : <Eye size={14} style={{ color: S.muted }} />}
+                  <input type={showSecret ? "text" : "password"} value={form.clientSecret} onChange={e => setForm(p => ({ ...p, clientSecret: e.target.value }))} placeholder="your-client-secret"
+                    style={{ ...inp(focused === "csec"), paddingRight: "44px" }} onFocus={() => setFocused("csec")} onBlur={() => setFocused(null)} />
+                  <button type="button" onClick={() => setShowSecret(!showSecret)} className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {showSecret ? <EyeOff size={14} style={{ color: sv.muted }} /> : <Eye size={14} style={{ color: sv.muted }} />}
                   </button>
                 </div>
               </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: S.text }}>Store ID *</label>
-              <input type="number" value={form.storeId} onChange={e => setForm(p => ({ ...p, storeId: e.target.value }))}
-                placeholder="12345"
-                style={inp2(focused === "storeId")} onFocus={() => setFocused("storeId")} onBlur={() => setFocused(null)} />
-              <p className="text-xs mt-1" style={{ color: S.muted }}>Pathao Dashboard → Store Management থেকে Store ID পাবেন</p>
-            </div>
-
-            <label className="flex items-center gap-3 cursor-pointer py-2 px-3 rounded-xl" style={{ backgroundColor: form.sandboxMode ? "#FFF9EC" : "var(--c-bg)", border: `1px solid ${form.sandboxMode ? "#F5C842" : S.border}` }}>
-              <div className="w-10 h-5 rounded-full flex items-center px-0.5 transition-colors flex-shrink-0" style={{ backgroundColor: form.sandboxMode ? "#F5C842" : S.border }} onClick={() => setForm(p => ({ ...p, sandboxMode: !p.sandboxMode }))}>
-                <div className="w-4 h-4 rounded-full bg-white shadow transition-transform" style={{ transform: form.sandboxMode ? "translateX(20px)" : "translateX(0)" }} />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium mb-1" style={{ color: sv.text }}>Email (Username) *</label>
+                  <input type="email" value={form.username} onChange={e => setForm(p => ({ ...p, username: e.target.value }))} placeholder="merchant@email.com"
+                    style={inp(focused === "uname")} onFocus={() => setFocused("uname")} onBlur={() => setFocused(null)} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1" style={{ color: sv.text }}>Password *</label>
+                  <div className="relative">
+                    <input type={showPass ? "text" : "password"} value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} placeholder="••••••••"
+                      style={{ ...inp(focused === "pass"), paddingRight: "44px" }} onFocus={() => setFocused("pass")} onBlur={() => setFocused(null)} />
+                    <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {showPass ? <EyeOff size={14} style={{ color: sv.muted }} /> : <Eye size={14} style={{ color: sv.muted }} />}
+                    </button>
+                  </div>
+                </div>
               </div>
               <div>
-                <p className="text-xs font-medium" style={{ color: S.text }}>Sandbox Mode (পরীক্ষার জন্য)</p>
-                <p className="text-xs" style={{ color: S.muted }}>
-                  {form.sandboxMode
-                    ? "hermes-sandbox.pathao.com ব্যবহার হচ্ছে — real booking হবে না"
-                    : "hermes.pathao.com (production) — real booking হবে"}
-                </p>
+                <label className="block text-xs font-medium mb-1" style={{ color: sv.text }}>Store ID * <span style={{ color: sv.muted }}>(Pathao Dashboard → Store Management)</span></label>
+                <input type="number" value={form.storeId} onChange={e => setForm(p => ({ ...p, storeId: e.target.value }))} placeholder="12345"
+                  style={inp(focused === "sid")} onFocus={() => setFocused("sid")} onBlur={() => setFocused(null)} />
               </div>
-            </label>
-          </div>
 
-          <div className="flex gap-3 pt-1">
-            <button onClick={handleTest} disabled={testing}
-              className="flex-1 py-2.5 rounded-xl border text-sm font-medium disabled:opacity-60"
-              style={{ borderColor: S.primary, color: S.primary }}>
-              {testing ? <span className="flex items-center justify-center gap-2"><Loader2 size={14} className="animate-spin" /> পরীক্ষা...</span> : "সংযোগ পরীক্ষা"}
-            </button>
-            <button onClick={handleSave} disabled={saving}
-              className="flex-1 py-2.5 rounded-xl text-white text-sm font-medium disabled:opacity-60"
-              style={{ backgroundColor: S.primary }}>
-              {saving ? "সেভ হচ্ছে..." : "সেভ করুন"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* How to use guide */}
-      <div className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-        <h4 className="font-semibold text-sm mb-3" style={{ color: S.text }}>কিভাবে ব্যবহার করবেন</h4>
-        <div className="space-y-3">
-          {[
-            { step: "১", title: "Pathao Merchant Account খুলুন", desc: "pathao.com/business থেকে merchant account তৈরি করুন" },
-            { step: "২", title: "API Credentials সংগ্রহ করুন", desc: "Pathao Dashboard → Developer Settings থেকে Client ID ও Secret নিন" },
-            { step: "৩", title: "এখানে সংযুক্ত করুন", desc: "উপরের ফর্মে credentials দিয়ে 'সেভ করুন' চাপুন" },
-            { step: "৪", title: "অর্ডার থেকে বুকিং করুন", desc: "যেকোনো অর্ডার খুলে 'Pathao' বেছে courier book করুন" },
-          ].map(item => (
-            <div key={item.step} className="flex gap-3">
-              <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                style={{ backgroundColor: "var(--c-primary-light)", color: S.primary }}>{item.step}</span>
-              <div>
-                <p className="text-sm font-medium" style={{ color: S.text }}>{item.title}</p>
-                <p className="text-xs mt-0.5" style={{ color: S.muted }}>{item.desc}</p>
+              {/* City & Zone */}
+              <div className="rounded-xl p-3 space-y-3" style={{ backgroundColor: sv.bg, border: `1px solid ${sv.border}` }}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold" style={{ color: sv.text }}>Default Delivery Area</p>
+                    <p className="text-xs" style={{ color: sv.muted }}>Pathao city ও zone ID সেট করুন (manual বা fetch করুন)</p>
+                  </div>
+                  {status?.isConnected && (
+                    <button onClick={fetchCities} disabled={loadingCities} className="text-xs px-3 py-1.5 rounded-lg font-medium disabled:opacity-60" style={{ backgroundColor: "#D32F2F", color: "#fff" }}>
+                      {loadingCities ? "লোড হচ্ছে..." : "Cities Fetch"}
+                    </button>
+                  )}
+                </div>
+                {cities.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-medium mb-1" style={{ color: sv.text }}>City</label>
+                      <select value={form.defaultCityId} onChange={e => { const id = Number(e.target.value); setForm(p => ({ ...p, defaultCityId: id, defaultZoneId: 1 })); fetchZones(id); }}
+                        className="w-full h-10 px-3 rounded-xl border text-sm outline-none" style={{ borderColor: sv.border, color: sv.text, backgroundColor: sv.surface }}>
+                        {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1" style={{ color: sv.text }}>Zone</label>
+                      <select value={form.defaultZoneId} onChange={e => setForm(p => ({ ...p, defaultZoneId: Number(e.target.value) }))}
+                        className="w-full h-10 px-3 rounded-xl border text-sm outline-none" style={{ borderColor: sv.border, color: sv.text, backgroundColor: sv.surface }}>
+                        {zones.map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-medium mb-1" style={{ color: sv.text }}>City ID <span style={{ color: sv.muted }}>(Dhaka=1)</span></label>
+                      <input type="number" value={form.defaultCityId} onChange={e => setForm(p => ({ ...p, defaultCityId: Number(e.target.value) }))} placeholder="1"
+                        className="w-full h-10 px-3 rounded-xl border text-sm outline-none" style={{ borderColor: sv.border, color: sv.text, backgroundColor: sv.surface }} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1" style={{ color: sv.text }}>Zone ID</label>
+                      <input type="number" value={form.defaultZoneId} onChange={e => setForm(p => ({ ...p, defaultZoneId: Number(e.target.value) }))} placeholder="1"
+                        className="w-full h-10 px-3 rounded-xl border text-sm outline-none" style={{ borderColor: sv.border, color: sv.text, backgroundColor: sv.surface }} />
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {/* Sandbox toggle */}
+              <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl" style={{ backgroundColor: form.sandboxMode ? "#FFFDE7" : sv.bg, border: `1px solid ${form.sandboxMode ? "#FDD835" : sv.border}` }}>
+                <div className="w-10 h-5 rounded-full flex items-center px-0.5 transition-colors flex-shrink-0" style={{ backgroundColor: form.sandboxMode ? "#FDD835" : sv.border }}
+                  onClick={() => setForm(p => ({ ...p, sandboxMode: !p.sandboxMode }))}>
+                  <div className="w-4 h-4 rounded-full bg-white shadow transition-transform" style={{ transform: form.sandboxMode ? "translateX(20px)" : "translateX(0)" }} />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold" style={{ color: sv.text }}>Sandbox Mode {form.sandboxMode ? "(চালু)" : "(বন্ধ)"}</p>
+                  <p className="text-xs" style={{ color: sv.muted }}>{form.sandboxMode ? "hermes-sandbox.pathao.com — test only" : "hermes.pathao.com — real orders"}</p>
+                </div>
+              </label>
             </div>
-          ))}
-        </div>
+
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setEditing(false)} className="px-4 py-2.5 rounded-xl border text-sm" style={{ borderColor: sv.border, color: sv.secondary }}>বাতিল</button>
+              <button onClick={handleTest} disabled={testing} className="flex-1 py-2.5 rounded-xl border text-sm font-medium disabled:opacity-60" style={{ borderColor: "#D32F2F", color: "#D32F2F" }}>
+                {testing ? <span className="flex items-center justify-center gap-2"><Loader2 size={14} className="animate-spin" /> পরীক্ষা...</span> : "সংযোগ পরীক্ষা"}
+              </button>
+              <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-60" style={{ backgroundColor: "#D32F2F" }}>
+                {saving ? "সেভ হচ্ছে..." : "সেভ করুন"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Guide */}
+        {!editing && (
+          <div className="rounded-xl p-4" style={{ backgroundColor: sv.bg, border: `1px solid ${sv.border}` }}>
+            <p className="text-xs font-semibold mb-3" style={{ color: sv.text }}>কিভাবে সেটআপ করবেন</p>
+            <div className="space-y-2">
+              {[
+                { n: "১", t: "Pathao Merchant Account", d: "pathao.com/business থেকে merchant account খুলুন" },
+                { n: "২", t: "API Credentials সংগ্রহ", d: "Dashboard → Developer Settings → Client ID ও Secret নিন" },
+                { n: "৩", t: "Store ID খুঁজুন", d: "Dashboard → Store Management → Store ID নোট করুন" },
+                { n: "৪", t: "City & Zone নির্বাচন", d: "Dhaka = City 1. Zone ID Pathao dashboard থেকে নিন বা 'Cities Fetch' করুন" },
+              ].map(s => (
+                <div key={s.n} className="flex gap-3">
+                  <span className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-white" style={{ backgroundColor: "#D32F2F" }}>{s.n}</span>
+                  <div><p className="text-xs font-medium" style={{ color: sv.text }}>{s.t}</p><p className="text-xs" style={{ color: sv.muted }}>{s.d}</p></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-/* ─── RedX Settings Panel ──────────────────────────── */
-function RedxSettingsPanel() {
-  const [status, setStatus] = useState<{ isConnected: boolean; connectedAt: string | null; apiKey: string | null; hasCredentials: boolean } | null>(null);
+/* ─── RedX Panel ───────────────────────────────────── */
+function RedxPanel({ status, onReload, showToast, sv }: {
+  status: { isConnected: boolean; apiKey: string | null; connectedAt: string | null } | null;
+  onReload: () => void;
+  showToast: (t: "success" | "error", m: string) => void;
+  sv: Record<string, string>;
+}) {
+  const [editing, setEditing] = useState(false);
   const [apiKey, setApiKey] = useState("");
-  const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
-  const S = { surface: "var(--c-surface)", border: "var(--c-border)", text: "var(--c-text)", secondary: "var(--c-text-sub)", muted: "var(--c-text-muted)", primary: "var(--c-primary)" };
+  const [testing, setTesting] = useState(false);
+  const [focused, setFocused] = useState(false);
 
-  function showToast(type: "success" | "error", msg: string) { setToast({ type, msg }); setTimeout(() => setToast(null), 3500); }
+  const inp = (f: boolean) => ({ height: "42px", border: `1.5px solid ${f ? "#C62828" : sv.border}`, borderRadius: "10px", color: sv.text, backgroundColor: sv.surface, padding: "0 12px", fontSize: "14px", outline: "none", width: "100%" });
 
-  async function load() {
-    const res = await fetch("/api/settings/redx");
-    if (res.ok) setStatus(await res.json());
+  async function handleTest() {
+    if (!apiKey.trim()) { showToast("error", "API Key দিন"); return; }
+    setTesting(true);
+    const res = await fetch("/api/settings/redx/test", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ apiKey }) });
+    const d = await res.json();
+    setTesting(false);
+    if (res.ok) showToast("success", d.message ?? "RedX সংযোগ সফল!");
+    else showToast("error", d.error ?? "সংযোগ ব্যর্থ");
   }
 
-  useEffect(() => { load(); }, []);
-
-  async function save() {
+  async function handleSave() {
+    if (!apiKey.trim()) { showToast("error", "API Key দিন"); return; }
     setSaving(true);
-    const r = await fetch("/api/settings/redx", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ apiKey }),
-    });
-    const d = await r.json();
-    if (r.ok) { showToast("success", "RedX সফলভাবে সংযুক্ত হয়েছে!"); setShowForm(false); load(); }
-    else showToast("error", d.error ?? "সেভ করা যায়নি");
+    const res = await fetch("/api/settings/redx", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ apiKey }) });
+    const d = await res.json();
     setSaving(false);
+    if (res.ok) { showToast("success", "RedX সফলভাবে সংযুক্ত হয়েছে!"); setEditing(false); setApiKey(""); onReload(); }
+    else showToast("error", d.error ?? "সেভ ব্যর্থ");
   }
 
-  async function disconnect() {
+  async function handleDisconnect() {
     if (!confirm("RedX সংযোগ বিচ্ছিন্ন করবেন?")) return;
     await fetch("/api/settings/redx", { method: "DELETE" });
     showToast("success", "RedX সংযোগ বিচ্ছিন্ন করা হয়েছে");
-    load();
+    onReload();
   }
 
   return (
-    <div className="rounded-2xl border p-5 shadow-sm space-y-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-      {toast && <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg" style={{ backgroundColor: toast.type === "success" ? "#1D9E75" : "#E24B4A" }}>{toast.msg}</div>}
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="font-semibold text-sm" style={{ color: S.text }}>RedX Courier Integration</p>
-          <p className="text-xs mt-0.5" style={{ color: S.muted }}>আপনার RedX merchant account দিয়ে অর্ডার book করুন</p>
+    <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: sv.border }}>
+      <div className="px-5 py-4 flex items-center justify-between" style={{ background: "linear-gradient(135deg, #B71C1C 0%, #880E4F 100%)" }}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center"><Truck size={18} color="#fff" /></div>
+          <div>
+            <p className="font-bold text-white text-sm">RedX Courier</p>
+            <p className="text-white/70 text-xs">openapi.redx.com.bd API Integration</p>
+          </div>
         </div>
-        <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: status?.isConnected ? "var(--status-delivered-bg)" : "var(--status-pending-bg)", color: status?.isConnected ? "var(--status-delivered-text)" : "var(--status-pending-text)" }}>
-          {status === null ? "লোড হচ্ছে..." : status.isConnected ? "সংযুক্ত" : "সংযুক্ত নেই"}
+        <span className="text-xs font-semibold px-3 py-1 rounded-full" style={{ backgroundColor: status?.isConnected ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.2)", color: "#fff" }}>
+          {status === null ? "লোড হচ্ছে..." : status.isConnected ? "✓ সংযুক্ত" : "সংযুক্ত নেই"}
         </span>
       </div>
 
-      {status?.isConnected ? (
-        <div className="space-y-3">
-          <div className="rounded-xl p-3 text-sm" style={{ backgroundColor: "var(--c-bg)" }}>
-            <p style={{ color: S.muted }}>API Key: <span style={{ color: S.text }}>{status.apiKey ?? "—"}</span></p>
-            {status.connectedAt && <p className="mt-1" style={{ color: S.muted }}>Connected: <span style={{ color: S.text }}>{new Date(status.connectedAt).toLocaleDateString("bn-BD")}</span></p>}
-          </div>
-          <div className="flex gap-2">
-            <button onClick={() => setShowForm(!showForm)} className="flex-1 py-2 rounded-xl border text-sm font-medium" style={{ borderColor: S.border, color: S.secondary }}>
-              API Key পরিবর্তন
-            </button>
-            <button onClick={disconnect} className="px-4 py-2 rounded-xl border text-sm font-medium" style={{ borderColor: "#E24B4A", color: "#E24B4A" }}>
-              Disconnect
-            </button>
-          </div>
+      <div className="p-5 space-y-4" style={{ backgroundColor: sv.surface }}>
+        <div className="grid grid-cols-3 gap-2">
+          {["Auto order booking", "Tracking ID auto-save", "Status tracking"].map(f => (
+            <div key={f} className="flex items-center gap-1.5 text-xs" style={{ color: sv.secondary }}>
+              <Check size={11} color="#B71C1C" />{f}
+            </div>
+          ))}
         </div>
-      ) : (
-        <button onClick={() => setShowForm(true)} className="w-full py-2.5 rounded-xl text-white text-sm font-medium" style={{ backgroundColor: S.primary }}>
-          RedX সংযুক্ত করুন
-        </button>
-      )}
 
-      {showForm && (
-        <div className="space-y-3 pt-2 border-t" style={{ borderColor: S.border }}>
-          <p className="text-xs font-semibold" style={{ color: S.text }}>RedX API Key</p>
-          <p className="text-xs" style={{ color: S.muted }}>redx.com.bd → Settings → API Integration থেকে পাবেন</p>
-          <input type="text" placeholder="API Key (Bearer Token)" value={apiKey} onChange={e => setApiKey(e.target.value)}
-            className="w-full h-10 px-3 rounded-xl border text-sm outline-none" style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
-          <div className="flex gap-2">
-            <button onClick={() => setShowForm(false)} className="flex-1 py-2 rounded-xl border text-sm" style={{ borderColor: S.border, color: S.secondary }}>বাতিল</button>
-            <button onClick={save} disabled={saving || !apiKey.trim()} className="flex-1 py-2 rounded-xl text-white text-sm font-medium disabled:opacity-60" style={{ backgroundColor: S.primary }}>
-              {saving ? "সেভ হচ্ছে..." : "সেভ করুন"}
-            </button>
+        {status?.isConnected && !editing && (
+          <div className="rounded-xl p-4 space-y-2" style={{ backgroundColor: sv.bg, border: `1px solid ${sv.border}` }}>
+            <div className="text-xs space-y-1">
+              {status.apiKey && <div><span style={{ color: sv.muted }}>API Key: </span><span className="font-mono" style={{ color: sv.text }}>{status.apiKey}</span></div>}
+              {status.connectedAt && <div><span style={{ color: sv.muted }}>Connected: </span><span style={{ color: sv.text }}>{new Date(status.connectedAt).toLocaleDateString("bn-BD")}</span></div>}
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setEditing(true)} className="flex-1 py-2 rounded-xl border text-xs font-medium hover:bg-gray-50" style={{ borderColor: sv.border, color: sv.secondary }}>API Key পরিবর্তন</button>
+              <button onClick={handleDisconnect} className="px-4 py-2 rounded-xl text-xs font-medium" style={{ backgroundColor: "#FEE2E2", color: "#DC2626" }}>Disconnect</button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {!status?.isConnected && !editing && (
+          <button onClick={() => setEditing(true)} className="w-full py-3 rounded-xl text-white text-sm font-semibold hover:opacity-90" style={{ backgroundColor: "#B71C1C" }}>
+            + RedX সংযুক্ত করুন
+          </button>
+        )}
+
+        {editing && (
+          <div className="space-y-4 pt-1">
+            <div className="rounded-xl p-3 text-xs" style={{ backgroundColor: "#FFF8E1", border: "1px solid #FFD54F" }}>
+              <p className="font-semibold" style={{ color: "#795548" }}>📍 RedX থেকে API Key সংগ্রহ করুন:</p>
+              <p style={{ color: "#9E9E9E" }}>redx.com.bd → Settings → API Integration → Bearer Token</p>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: sv.text }}>API Key (Bearer Token) *</label>
+              <input value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="your-redx-api-key"
+                style={inp(focused)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => { setEditing(false); setApiKey(""); }} className="px-4 py-2.5 rounded-xl border text-sm" style={{ borderColor: sv.border, color: sv.secondary }}>বাতিল</button>
+              <button onClick={handleTest} disabled={testing} className="flex-1 py-2.5 rounded-xl border text-sm font-medium disabled:opacity-60" style={{ borderColor: "#B71C1C", color: "#B71C1C" }}>
+                {testing ? <span className="flex items-center justify-center gap-2"><Loader2 size={14} className="animate-spin" />পরীক্ষা...</span> : "সংযোগ পরীক্ষা"}
+              </button>
+              <button onClick={handleSave} disabled={saving || !apiKey.trim()} className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-60" style={{ backgroundColor: "#B71C1C" }}>
+                {saving ? "সেভ হচ্ছে..." : "সেভ করুন"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!editing && (
+          <div className="rounded-xl p-4" style={{ backgroundColor: sv.bg, border: `1px solid ${sv.border}` }}>
+            <p className="text-xs font-semibold mb-2" style={{ color: sv.text }}>কিভাবে সেটআপ করবেন</p>
+            <div className="space-y-2">
+              {[
+                { n: "১", t: "RedX Merchant Account", d: "redx.com.bd থেকে merchant account খুলুন" },
+                { n: "২", t: "API Token সংগ্রহ", d: "Settings → API Integration → Bearer Token কপি করুন" },
+                { n: "৩", t: "এখানে সংযুক্ত করুন", d: "API Key দিয়ে 'সংযোগ পরীক্ষা' করে 'সেভ করুন'" },
+              ].map(s => (
+                <div key={s.n} className="flex gap-3">
+                  <span className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-white" style={{ backgroundColor: "#B71C1C" }}>{s.n}</span>
+                  <div><p className="text-xs font-medium" style={{ color: sv.text }}>{s.t}</p><p className="text-xs" style={{ color: sv.muted }}>{s.d}</p></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-function SteadfastSettingsPanel() {
-  const [status, setStatus] = useState<{ isConnected: boolean; connectedAt: string | null; apiKey: string | null } | null>(null);
+/* ─── Steadfast Panel ──────────────────────────────── */
+function SteadfastPanel({ status, onReload, showToast, sv }: {
+  status: { isConnected: boolean; apiKey: string | null; connectedAt: string | null } | null;
+  onReload: () => void;
+  showToast: (t: "success" | "error", m: string) => void;
+  sv: Record<string, string>;
+}) {
+  const [editing, setEditing] = useState(false);
   const [apiKey, setApiKey] = useState("");
   const [secretKey, setSecretKey] = useState("");
-  const [showForm, setShowForm] = useState(false);
+  const [showSecret, setShowSecret] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
-  const S = { surface: "var(--c-surface)", border: "var(--c-border)", text: "var(--c-text)", secondary: "var(--c-text-sub)", muted: "var(--c-text-muted)", primary: "var(--c-primary)" };
+  const [testing, setTesting] = useState(false);
+  const [focused, setFocused] = useState<string | null>(null);
 
-  function showToast(type: "success" | "error", msg: string) { setToast({ type, msg }); setTimeout(() => setToast(null), 3500); }
+  const inp = (f: boolean) => ({ height: "42px", border: `1.5px solid ${f ? "#1565C0" : sv.border}`, borderRadius: "10px", color: sv.text, backgroundColor: sv.surface, padding: "0 12px", fontSize: "14px", outline: "none", width: "100%" });
 
-  async function load() {
-    const res = await fetch("/api/settings/steadfast");
-    if (res.ok) { const d = await res.json(); setStatus(d); }
+  async function handleTest() {
+    if (!apiKey.trim() || !secretKey.trim()) { showToast("error", "API Key ও Secret Key দিন"); return; }
+    setTesting(true);
+    const res = await fetch("/api/settings/steadfast/test", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ apiKey, secretKey }) });
+    const d = await res.json();
+    setTesting(false);
+    if (res.ok) showToast("success", d.message ?? "Steadfast সংযোগ সফল!");
+    else showToast("error", d.error ?? "সংযোগ ব্যর্থ");
   }
 
-  useEffect(() => { load(); }, []);
-
-  async function save() {
+  async function handleSave() {
+    if (!apiKey.trim() || !secretKey.trim()) { showToast("error", "API Key ও Secret Key দিন"); return; }
     setSaving(true);
-    const r = await fetch("/api/settings/steadfast", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ apiKey: apiKey.trim(), secretKey: secretKey.trim() }),
-    });
-    const d = await r.json();
-    if (r.ok) { showToast("success", "Steadfast সফলভাবে সেভ হয়েছে!"); setShowForm(false); setApiKey(""); setSecretKey(""); load(); }
-    else showToast("error", d.error ?? "সেভ করা যায়নি");
+    const res = await fetch("/api/settings/steadfast", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ apiKey, secretKey }) });
+    const d = await res.json();
     setSaving(false);
+    if (res.ok) { showToast("success", "Steadfast সফলভাবে সংযুক্ত হয়েছে!"); setEditing(false); setApiKey(""); setSecretKey(""); onReload(); }
+    else showToast("error", d.error ?? "সেভ ব্যর্থ");
   }
 
-  async function disconnect() {
-    if (!confirm("Steadfast সেটিংস মুছে ফেলবেন?")) return;
+  async function handleDisconnect() {
+    if (!confirm("Steadfast সংযোগ বিচ্ছিন্ন করবেন?")) return;
     await fetch("/api/settings/steadfast", { method: "DELETE" });
-    showToast("success", "Steadfast সেটিংস মুছে ফেলা হয়েছে");
-    load();
+    showToast("success", "Steadfast সংযোগ বিচ্ছিন্ন করা হয়েছে");
+    onReload();
   }
 
   return (
-    <div className="rounded-2xl border p-5 shadow-sm space-y-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-      {toast && <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg" style={{ backgroundColor: toast.type === "success" ? "#1D9E75" : "#E24B4A" }}>{toast.msg}</div>}
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="font-semibold text-sm" style={{ color: S.text }}>Steadfast Courier Integration</p>
-          <p className="text-xs mt-0.5" style={{ color: S.muted }}>API দিয়ে অটো-বুকিং ও ট্র্যাকিং করুন</p>
+    <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: sv.border }}>
+      <div className="px-5 py-4 flex items-center justify-between" style={{ background: "linear-gradient(135deg, #1565C0 0%, #0D47A1 100%)" }}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center"><Truck size={18} color="#fff" /></div>
+          <div>
+            <p className="font-bold text-white text-sm">Steadfast Courier</p>
+            <p className="text-white/70 text-xs">portal.steadfast.com.bd API Integration</p>
+          </div>
         </div>
-        <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: status?.isConnected ? "var(--status-delivered-bg)" : "var(--status-pending-bg)", color: status?.isConnected ? "var(--status-delivered-text)" : "var(--status-pending-text)" }}>
-          {status === null ? "লোড হচ্ছে..." : status.isConnected ? "API সংযুক্ত" : "সংযুক্ত নেই"}
+        <span className="text-xs font-semibold px-3 py-1 rounded-full" style={{ backgroundColor: status?.isConnected ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.2)", color: "#fff" }}>
+          {status === null ? "লোড হচ্ছে..." : status.isConnected ? "✓ সংযুক্ত" : "সংযুক্ত নেই"}
         </span>
       </div>
 
-      {status?.isConnected ? (
-        <div className="space-y-3">
-          <div className="rounded-xl p-3 text-sm space-y-1" style={{ backgroundColor: "var(--c-bg)" }}>
-            {status.apiKey && <p style={{ color: S.muted }}>API Key: <span style={{ color: S.text }}>{status.apiKey}</span></p>}
-            {status.connectedAt && <p style={{ color: S.muted }}>Connected: <span style={{ color: S.text }}>{new Date(status.connectedAt).toLocaleDateString("bn-BD")}</span></p>}
-          </div>
-          <div className="flex gap-2">
-            <button onClick={() => setShowForm(!showForm)} className="flex-1 py-2 rounded-xl border text-sm font-medium" style={{ borderColor: S.border, color: S.secondary }}>
-              সেটিংস পরিবর্তন
-            </button>
-            <button onClick={disconnect} className="px-4 py-2 rounded-xl border text-sm font-medium" style={{ borderColor: "#E24B4A", color: "#E24B4A" }}>
-              Disconnect
-            </button>
-          </div>
+      <div className="p-5 space-y-4" style={{ backgroundColor: sv.surface }}>
+        <div className="grid grid-cols-3 gap-2">
+          {["Auto order booking", "Tracking code auto-save", "Balance check support"].map(f => (
+            <div key={f} className="flex items-center gap-1.5 text-xs" style={{ color: sv.secondary }}>
+              <Check size={11} color="#1565C0" />{f}
+            </div>
+          ))}
         </div>
-      ) : (
-        <button onClick={() => setShowForm(true)} className="w-full py-2.5 rounded-xl text-white text-sm font-medium" style={{ backgroundColor: S.primary }}>
-          Steadfast সেটআপ করুন
-        </button>
-      )}
 
-      {showForm && (
-        <div className="space-y-3 pt-3 border-t" style={{ borderColor: S.border }}>
-          <p className="text-xs" style={{ color: S.muted }}>portal.steadfast.com.bd → Profile → API Credentials থেকে পাবেন</p>
-          <input type="text" placeholder="API Key" value={apiKey} onChange={e => setApiKey(e.target.value)}
-            className="w-full h-10 px-3 rounded-xl border text-sm outline-none" style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
-          <input type="password" placeholder="Secret Key" value={secretKey} onChange={e => setSecretKey(e.target.value)}
-            className="w-full h-10 px-3 rounded-xl border text-sm outline-none" style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
-          <div className="flex gap-2">
-            <button onClick={() => setShowForm(false)} className="flex-1 py-2 rounded-xl border text-sm" style={{ borderColor: S.border, color: S.secondary }}>বাতিল</button>
-            <button onClick={save} disabled={saving} className="flex-1 py-2 rounded-xl text-white text-sm font-medium disabled:opacity-60" style={{ backgroundColor: S.primary }}>
-              {saving ? "সেভ হচ্ছে..." : "সেভ করুন"}
-            </button>
+        {status?.isConnected && !editing && (
+          <div className="rounded-xl p-4 space-y-2" style={{ backgroundColor: sv.bg, border: `1px solid ${sv.border}` }}>
+            <div className="text-xs space-y-1">
+              {status.apiKey && <div><span style={{ color: sv.muted }}>API Key: </span><span className="font-mono" style={{ color: sv.text }}>{status.apiKey}</span></div>}
+              {status.connectedAt && <div><span style={{ color: sv.muted }}>Connected: </span><span style={{ color: sv.text }}>{new Date(status.connectedAt).toLocaleDateString("bn-BD")}</span></div>}
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setEditing(true)} className="flex-1 py-2 rounded-xl border text-xs font-medium hover:bg-gray-50" style={{ borderColor: sv.border, color: sv.secondary }}>Credentials পরিবর্তন</button>
+              <button onClick={handleDisconnect} className="px-4 py-2 rounded-xl text-xs font-medium" style={{ backgroundColor: "#FEE2E2", color: "#DC2626" }}>Disconnect</button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {!status?.isConnected && !editing && (
+          <button onClick={() => setEditing(true)} className="w-full py-3 rounded-xl text-white text-sm font-semibold hover:opacity-90" style={{ backgroundColor: "#1565C0" }}>
+            + Steadfast সংযুক্ত করুন
+          </button>
+        )}
+
+        {editing && (
+          <div className="space-y-4 pt-1">
+            <div className="rounded-xl p-3 text-xs" style={{ backgroundColor: "#FFF8E1", border: "1px solid #FFD54F" }}>
+              <p className="font-semibold" style={{ color: "#795548" }}>📍 Steadfast থেকে credentials সংগ্রহ করুন:</p>
+              <p style={{ color: "#9E9E9E" }}>portal.steadfast.com.bd → Profile → API Credentials</p>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: sv.text }}>API Key *</label>
+              <input value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="your-steadfast-api-key"
+                style={inp(focused === "ak")} onFocus={() => setFocused("ak")} onBlur={() => setFocused(null)} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: sv.text }}>Secret Key *</label>
+              <div className="relative">
+                <input type={showSecret ? "text" : "password"} value={secretKey} onChange={e => setSecretKey(e.target.value)} placeholder="your-secret-key"
+                  style={{ ...inp(focused === "sk"), paddingRight: "44px" }} onFocus={() => setFocused("sk")} onBlur={() => setFocused(null)} />
+                <button type="button" onClick={() => setShowSecret(!showSecret)} className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {showSecret ? <EyeOff size={14} style={{ color: sv.muted }} /> : <Eye size={14} style={{ color: sv.muted }} />}
+                </button>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => { setEditing(false); setApiKey(""); setSecretKey(""); }} className="px-4 py-2.5 rounded-xl border text-sm" style={{ borderColor: sv.border, color: sv.secondary }}>বাতিল</button>
+              <button onClick={handleTest} disabled={testing} className="flex-1 py-2.5 rounded-xl border text-sm font-medium disabled:opacity-60" style={{ borderColor: "#1565C0", color: "#1565C0" }}>
+                {testing ? <span className="flex items-center justify-center gap-2"><Loader2 size={14} className="animate-spin" />পরীক্ষা...</span> : "সংযোগ পরীক্ষা"}
+              </button>
+              <button onClick={handleSave} disabled={saving || !apiKey.trim() || !secretKey.trim()} className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-60" style={{ backgroundColor: "#1565C0" }}>
+                {saving ? "সেভ হচ্ছে..." : "সেভ করুন"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!editing && (
+          <div className="rounded-xl p-4" style={{ backgroundColor: sv.bg, border: `1px solid ${sv.border}` }}>
+            <p className="text-xs font-semibold mb-2" style={{ color: sv.text }}>কিভাবে সেটআপ করবেন</p>
+            <div className="space-y-2">
+              {[
+                { n: "১", t: "Steadfast Merchant Account", d: "steadfast.com.bd থেকে merchant account তৈরি করুন" },
+                { n: "২", t: "API Credentials সংগ্রহ", d: "Portal → Profile → API Credentials → API Key ও Secret Key" },
+                { n: "৩", t: "সংযোগ পরীক্ষা করুন", d: "Credentials দিয়ে 'সংযোগ পরীক্ষা' করুন, balance দেখাবে" },
+              ].map(s => (
+                <div key={s.n} className="flex gap-3">
+                  <span className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-white" style={{ backgroundColor: "#1565C0" }}>{s.n}</span>
+                  <div><p className="text-xs font-medium" style={{ color: sv.text }}>{s.t}</p><p className="text-xs" style={{ color: sv.muted }}>{s.d}</p></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+
 
 /* ─── Referral Panel ────────────────────────────────── */
 function ReferralPanel() {
