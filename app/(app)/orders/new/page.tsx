@@ -143,7 +143,7 @@ export default function NewOrderPage() {
     { key: "pathao", label: "Pathao" },
     { key: "redx", label: "RedX" },
     { key: "paperfly", label: "Paperfly" },
-    { key: "ecourier", label: "eCourier" },
+    { key: "steadfast", label: "Steadfast" },
     { key: "delivery_tiger", label: "Delivery Tiger" },
     { key: "other", label: "অন্য" },
   ];

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { bookPathaoDelivery, getPathaoStatus, PathaoCreds } from "@/lib/pathao";
-import { bookEcourierDelivery, getEcourierStatus } from "@/lib/ecourier";
+import { bookSteadfastDelivery, getSteadfastStatus, SteadfastCreds } from "@/lib/steadfast";
 import { bookRedxDelivery, getRedxStatus, RedxCreds } from "@/lib/redx";
 
 const MANUAL_COURIERS = ["paperfly", "delivery_tiger", "other"];
@@ -28,20 +28,10 @@ async function getUserRedxCreds(userId: string): Promise<RedxCreds | null> {
   return { apiKey: settings.apiKey };
 }
 
-async function getUserEcourierCreds(userId: string): Promise<{ hasApi: boolean; creds?: import("@/lib/ecourier").EcourierCreds } | null> {
-  const settings = await prisma.ecourierSettings.findUnique({ where: { userId } });
-  if (!settings?.isConnected) return null;
-  if (!settings.hasApi) return { hasApi: false };
-  if (!settings.apiKey || !settings.apiSecret || !settings.ecUserId) return { hasApi: false };
-  return {
-    hasApi: true,
-    creds: {
-      apiKey: settings.apiKey,
-      apiSecret: settings.apiSecret,
-      ecUserId: settings.ecUserId,
-      pickupAddress: settings.pickupAddress ?? undefined,
-    },
-  };
+async function getUserSteadfastCreds(userId: string): Promise<SteadfastCreds | null> {
+  const settings = await prisma.steadfastSettings.findUnique({ where: { userId } });
+  if (!settings?.isConnected || !settings.apiKey || !settings.secretKey) return null;
+  return { apiKey: settings.apiKey, secretKey: settings.secretKey };
 }
 
 export async function POST(req: NextRequest) {
@@ -93,20 +83,12 @@ export async function POST(req: NextRequest) {
       }
       trackingId = await bookPathaoDelivery(input, creds);
 
-    } else if (courierName === "ecourier") {
-      const ecCreds = await getUserEcourierCreds(session.user.id);
-      if (!ecCreds) {
-        return NextResponse.json({ error: "eCourier সংযোগ করা নেই। Settings → কুরিয়ার থেকে সেটআপ করুন।" }, { status: 400 });
+    } else if (courierName === "steadfast") {
+      const creds = await getUserSteadfastCreds(session.user.id);
+      if (!creds) {
+        return NextResponse.json({ error: "Steadfast সংযোগ করা নেই। Settings → কুরিয়ার থেকে API credentials সেট করুন।" }, { status: 400 });
       }
-      if (!ecCreds.hasApi) {
-        if (!manualTrackId?.trim()) {
-          return NextResponse.json({ error: "eCourier Tracking ID দিন (ID tracking mode)" }, { status: 400 });
-        }
-        trackingId = manualTrackId.trim();
-        isManual = true;
-      } else {
-        trackingId = await bookEcourierDelivery(input, ecCreds.creds);
-      }
+      trackingId = await bookSteadfastDelivery(input, creds);
 
     } else if (courierName === "redx") {
       const creds = await getUserRedxCreds(session.user.id);
@@ -173,13 +155,10 @@ export async function GET(req: NextRequest) {
       if (!creds) throw new Error("Pathao credentials not configured");
       status = await getPathaoStatus(order.courierTrackId, creds);
 
-    } else if (order.courierName === "ecourier") {
-      const ecCreds = await getUserEcourierCreds(session.user.id);
-      if (ecCreds?.hasApi && ecCreds.creds) {
-        status = await getEcourierStatus(order.courierTrackId, ecCreds.creds);
-      } else {
-        status = "manual_tracking";
-      }
+    } else if (order.courierName === "steadfast") {
+      const creds = await getUserSteadfastCreds(session.user.id);
+      if (!creds) throw new Error("Steadfast credentials not configured");
+      status = await getSteadfastStatus(order.courierTrackId, creds);
 
     } else if (order.courierName === "redx") {
       const creds = await getUserRedxCreds(session.user.id);

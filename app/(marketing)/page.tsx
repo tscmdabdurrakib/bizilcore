@@ -397,7 +397,7 @@ export default async function HomePage() {
             { name: "Pathao", logo: "/couriers/pathao.png" as string | null, color: "" },
             { name: "RedX", logo: "/couriers/redx.png?v=2" as string | null, color: "" },
             { name: "Paperfly", logo: "/couriers/paperfly.png" as string | null, color: "" },
-            { name: "eCourier", logo: "/couriers/ecourier.png" as string | null, color: "" },
+            { name: "Steadfast", logo: null, color: "" },
             { name: "Delivery Tiger", logo: "/couriers/delivery_tiger.svg" as string | null, color: "" },
           ]).map((c) => (
             <div

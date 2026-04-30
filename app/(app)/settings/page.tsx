@@ -638,7 +638,7 @@ function SettingsContent() {
     { key: "notifications", label: "Notifications", desc: "SMS ও alert সেটিংস",           icon: Bell,          color: "#EF4444", bg: "#FEF2F2",  group: "সংযোগ"   },
     { key: "facebook",      label: "Facebook",      desc: "Page সংযোগ",                   icon: Facebook,      color: "#1877F2", bg: "#EFF6FF",  group: "সংযোগ"   },
     { key: "whatsapp",      label: "WhatsApp",      desc: "Meta API সংযোগ",               icon: MessageCircle, color: "#25D366", bg: "#F0FDF4",  group: "সংযোগ"   },
-    { key: "courier",       label: "কুরিয়ার",        desc: "Pathao, RedX, eCourier API",   icon: Truck,         color: "#F97316", bg: "#FFF7ED",  group: "সংযোগ"   },
+    { key: "courier",       label: "কুরিয়ার",        desc: "Pathao, RedX, Steadfast API",  icon: Truck,         color: "#F97316", bg: "#FFF7ED",  group: "সংযোগ"   },
     { key: "ai",            label: "AI সেটিংস",     desc: "AI ব্যবহার ও সীমা",            icon: Sparkles,      color: "#EC4899", bg: "#FDF2F8",  group: "টুলস"    },
     { key: "blacklist",     label: "ব্ল্যাকলিস্ট",   desc: "ফেক অর্ডার সুরক্ষা",           icon: ShieldX,       color: "#DC2626", bg: "#FEF2F2",  group: "টুলস"    },
   ];
@@ -1917,7 +1917,7 @@ function SettingsContent() {
         <div className="space-y-6">
           <PathaoSettingsPanel />
           <RedxSettingsPanel />
-          <EcourierSettingsPanel />
+          <SteadfastSettingsPanel />
         </div>
       )}
 
@@ -2833,13 +2833,10 @@ function RedxSettingsPanel() {
   );
 }
 
-function EcourierSettingsPanel() {
-  const [status, setStatus] = useState<{ isConnected: boolean; hasApi: boolean; connectedAt: string | null; apiKey: string | null; ecUserId: string | null; pickupAddress: string | null } | null>(null);
-  const [hasApi, setHasApi] = useState(false);
+function SteadfastSettingsPanel() {
+  const [status, setStatus] = useState<{ isConnected: boolean; connectedAt: string | null; apiKey: string | null } | null>(null);
   const [apiKey, setApiKey] = useState("");
-  const [apiSecret, setApiSecret] = useState("");
-  const [ecUserId, setEcUserId] = useState("");
-  const [pickupAddress, setPickupAddress] = useState("");
+  const [secretKey, setSecretKey] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
@@ -2848,34 +2845,28 @@ function EcourierSettingsPanel() {
   function showToast(type: "success" | "error", msg: string) { setToast({ type, msg }); setTimeout(() => setToast(null), 3500); }
 
   async function load() {
-    const res = await fetch("/api/settings/ecourier");
-    if (res.ok) {
-      const d = await res.json();
-      setStatus(d);
-      setHasApi(d.hasApi ?? false);
-      setPickupAddress(d.pickupAddress ?? "");
-      setEcUserId(d.ecUserId ?? "");
-    }
+    const res = await fetch("/api/settings/steadfast");
+    if (res.ok) { const d = await res.json(); setStatus(d); }
   }
 
   useEffect(() => { load(); }, []);
 
   async function save() {
     setSaving(true);
-    const r = await fetch("/api/settings/ecourier", {
+    const r = await fetch("/api/settings/steadfast", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ hasApi, apiKey: apiKey.trim(), apiSecret: apiSecret.trim(), ecUserId: ecUserId.trim(), pickupAddress: pickupAddress.trim() }),
+      body: JSON.stringify({ apiKey: apiKey.trim(), secretKey: secretKey.trim() }),
     });
     const d = await r.json();
-    if (r.ok) { showToast("success", "eCourier সফলভাবে সেভ হয়েছে!"); setShowForm(false); setApiKey(""); setApiSecret(""); load(); }
+    if (r.ok) { showToast("success", "Steadfast সফলভাবে সেভ হয়েছে!"); setShowForm(false); setApiKey(""); setSecretKey(""); load(); }
     else showToast("error", d.error ?? "সেভ করা যায়নি");
     setSaving(false);
   }
 
   async function disconnect() {
-    if (!confirm("eCourier সেটিংস মুছে ফেলবেন?")) return;
-    await fetch("/api/settings/ecourier", { method: "DELETE" });
-    showToast("success", "eCourier সেটিংস মুছে ফেলা হয়েছে");
+    if (!confirm("Steadfast সেটিংস মুছে ফেলবেন?")) return;
+    await fetch("/api/settings/steadfast", { method: "DELETE" });
+    showToast("success", "Steadfast সেটিংস মুছে ফেলা হয়েছে");
     load();
   }
 
@@ -2884,21 +2875,18 @@ function EcourierSettingsPanel() {
       {toast && <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg" style={{ backgroundColor: toast.type === "success" ? "#1D9E75" : "#E24B4A" }}>{toast.msg}</div>}
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="font-semibold text-sm" style={{ color: S.text }}>eCourier Integration</p>
-          <p className="text-xs mt-0.5" style={{ color: S.muted }}>API দিয়ে অটো-বুকিং অথবা Tracking ID দিয়ে ম্যানুয়াল ট্র্যাক করুন</p>
+          <p className="font-semibold text-sm" style={{ color: S.text }}>Steadfast Courier Integration</p>
+          <p className="text-xs mt-0.5" style={{ color: S.muted }}>API দিয়ে অটো-বুকিং ও ট্র্যাকিং করুন</p>
         </div>
         <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: status?.isConnected ? "var(--status-delivered-bg)" : "var(--status-pending-bg)", color: status?.isConnected ? "var(--status-delivered-text)" : "var(--status-pending-text)" }}>
-          {status === null ? "লোড হচ্ছে..." : status.isConnected ? (status.hasApi ? "API সংযুক্ত" : "ID Tracking") : "সংযুক্ত নেই"}
+          {status === null ? "লোড হচ্ছে..." : status.isConnected ? "API সংযুক্ত" : "সংযুক্ত নেই"}
         </span>
       </div>
 
       {status?.isConnected ? (
         <div className="space-y-3">
           <div className="rounded-xl p-3 text-sm space-y-1" style={{ backgroundColor: "var(--c-bg)" }}>
-            <p style={{ color: S.muted }}>মোড: <span style={{ color: S.text }}>{status.hasApi ? "API Auto-booking" : "Manual ID Tracking"}</span></p>
-            {status.hasApi && status.apiKey && <p style={{ color: S.muted }}>API Key: <span style={{ color: S.text }}>{status.apiKey}</span></p>}
-            {status.hasApi && status.ecUserId && <p style={{ color: S.muted }}>User ID: <span style={{ color: S.text }}>{status.ecUserId}</span></p>}
-            {status.pickupAddress && <p style={{ color: S.muted }}>Pickup: <span style={{ color: S.text }}>{status.pickupAddress}</span></p>}
+            {status.apiKey && <p style={{ color: S.muted }}>API Key: <span style={{ color: S.text }}>{status.apiKey}</span></p>}
             {status.connectedAt && <p style={{ color: S.muted }}>Connected: <span style={{ color: S.text }}>{new Date(status.connectedAt).toLocaleDateString("bn-BD")}</span></p>}
           </div>
           <div className="flex gap-2">
@@ -2912,45 +2900,17 @@ function EcourierSettingsPanel() {
         </div>
       ) : (
         <button onClick={() => setShowForm(true)} className="w-full py-2.5 rounded-xl text-white text-sm font-medium" style={{ backgroundColor: S.primary }}>
-          eCourier সেটআপ করুন
+          Steadfast সেটআপ করুন
         </button>
       )}
 
       {showForm && (
         <div className="space-y-3 pt-3 border-t" style={{ borderColor: S.border }}>
-          <div className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: "var(--c-bg)" }}>
-            <button onClick={() => setHasApi(false)} className="flex items-center gap-2 flex-1 text-sm" style={{ color: !hasApi ? S.primary : S.muted }}>
-              <span className="w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center" style={{ borderColor: !hasApi ? S.primary : S.border }}>
-                {!hasApi && <span className="w-2 h-2 rounded-full" style={{ backgroundColor: S.primary }} />}
-              </span>
-              Manual Tracking ID
-            </button>
-            <button onClick={() => setHasApi(true)} className="flex items-center gap-2 flex-1 text-sm" style={{ color: hasApi ? S.primary : S.muted }}>
-              <span className="w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center" style={{ borderColor: hasApi ? S.primary : S.border }}>
-                {hasApi && <span className="w-2 h-2 rounded-full" style={{ backgroundColor: S.primary }} />}
-              </span>
-              API Auto-booking
-            </button>
-          </div>
-
-          {!hasApi && (
-            <p className="text-xs px-1" style={{ color: S.muted }}>এই মোডে অর্ডার বুক করার সময় আপনি eCourier Tracking ID নিজে দেবেন। সিস্টেম ট্র্যাক করবে না।</p>
-          )}
-
-          {hasApi && (
-            <div className="space-y-2">
-              <p className="text-xs" style={{ color: S.muted }}>ecourier.com.bd → API Integration থেকে credentials পাবেন</p>
-              <input type="text" placeholder="API Key" value={apiKey} onChange={e => setApiKey(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border text-sm outline-none" style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
-              <input type="password" placeholder="API Secret" value={apiSecret} onChange={e => setApiSecret(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border text-sm outline-none" style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
-              <input type="text" placeholder="User ID" value={ecUserId} onChange={e => setEcUserId(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border text-sm outline-none" style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
-              <input type="text" placeholder="Pickup Address (যেমন: Uttara, Dhaka)" value={pickupAddress} onChange={e => setPickupAddress(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border text-sm outline-none" style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
-            </div>
-          )}
-
+          <p className="text-xs" style={{ color: S.muted }}>portal.steadfast.com.bd → Profile → API Credentials থেকে পাবেন</p>
+          <input type="text" placeholder="API Key" value={apiKey} onChange={e => setApiKey(e.target.value)}
+            className="w-full h-10 px-3 rounded-xl border text-sm outline-none" style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
+          <input type="password" placeholder="Secret Key" value={secretKey} onChange={e => setSecretKey(e.target.value)}
+            className="w-full h-10 px-3 rounded-xl border text-sm outline-none" style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
           <div className="flex gap-2">
             <button onClick={() => setShowForm(false)} className="flex-1 py-2 rounded-xl border text-sm" style={{ borderColor: S.border, color: S.secondary }}>বাতিল</button>
             <button onClick={save} disabled={saving} className="flex-1 py-2 rounded-xl text-white text-sm font-medium disabled:opacity-60" style={{ backgroundColor: S.primary }}>

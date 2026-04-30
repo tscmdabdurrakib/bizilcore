@@ -32,8 +32,8 @@ const MANUAL_COURIERS = ["paperfly","delivery_tiger","other"];
 const ALL_COURIERS = [
   { key: "pathao", label: "Pathao" },
   { key: "redx", label: "RedX" },
+  { key: "steadfast", label: "Steadfast" },
   { key: "paperfly", label: "Paperfly" },
-  { key: "ecourier", label: "eCourier" },
   { key: "delivery_tiger", label: "Delivery Tiger" },
   { key: "other", label: "অন্য" },
 ];

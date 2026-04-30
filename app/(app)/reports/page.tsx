@@ -388,8 +388,8 @@ export default function ReportsPage() {
     return {
       all: calc(periodCourierOrders),
       pathao: calc(periodCourierOrders.filter(o => o.courierName === "pathao")),
-      ecourier: calc(periodCourierOrders.filter(o => o.courierName === "ecourier")),
-      other: calc(periodCourierOrders.filter(o => !["pathao", "ecourier"].includes(o.courierName ?? ""))),
+      steadfast: calc(periodCourierOrders.filter(o => o.courierName === "steadfast")),
+      other: calc(periodCourierOrders.filter(o => !["pathao", "steadfast"].includes(o.courierName ?? ""))),
     };
   }, [periodCourierOrders]);
 
@@ -1392,7 +1392,7 @@ export default function ReportsPage() {
           <div className="grid md:grid-cols-3 gap-4">
             {[
               { key: "pathao", label: "Pathao", emoji: "🚚", data: codSummary.pathao },
-              { key: "ecourier", label: "eCourier", emoji: "📦", data: codSummary.ecourier },
+              { key: "steadfast", label: "Steadfast", emoji: "📦", data: codSummary.steadfast },
               { key: "other", label: "অন্যান্য", emoji: "🏍️", data: codSummary.other },
             ].map(cn => (
               <div key={cn.key} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">

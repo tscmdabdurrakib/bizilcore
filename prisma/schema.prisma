@@ -49,7 +49,7 @@ model User {
   whatsAppSettings           WhatsAppSettings?
   pathaoSettings             PathaoSettings?
   redxSettings               RedxSettings?
-  ecourierSettings           EcourierSettings?
+  steadfastSettings          SteadfastSettings?
   messageLogs                MessageLog[]
   tasks                      Task[]
   assignedTasks              Task[]                      @relation("AssignedTasks")
@@ -834,19 +834,16 @@ model RedxSettings {
   @@index([userId])
 }
 
-model EcourierSettings {
-  id            String    @id @default(cuid())
-  userId        String    @unique
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  isConnected   Boolean   @default(false)
-  hasApi        Boolean   @default(false)
-  apiKey        String?
-  apiSecret     String?
-  ecUserId      String?
-  pickupAddress String?
-  connectedAt   DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+model SteadfastSettings {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isConnected Boolean   @default(false)
+  apiKey      String?
+  secretKey   String?
+  connectedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([userId])
 }

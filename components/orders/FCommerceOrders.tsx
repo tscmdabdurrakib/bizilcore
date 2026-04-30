@@ -60,7 +60,7 @@ const STATUS_OPTIONS = [
 const COURIER_LIST = [
   { key: "pathao",         label: "Pathao",          manual: false },
   { key: "redx",           label: "RedX",            manual: false },
-  { key: "ecourier",       label: "eCourier",        manual: false },
+  { key: "steadfast",      label: "Steadfast",       manual: false },
   { key: "paperfly",       label: "Paperfly",        manual: true  },
   { key: "delivery_tiger", label: "Delivery Tiger",  manual: true  },
   { key: "other",          label: "অন্য",            manual: true  },
@@ -533,7 +533,7 @@ export default function FCommerceOrders() {
               {filtered.map((o) => {
                 const st = getStatusStyle(o.status);
                 const courierSt = o.courierStatus ? COURIER_STATUS_STYLE[o.courierStatus] : null;
-                const COURIER_LABEL: Record<string, string> = { pathao:"Pathao", redx:"RedX", paperfly:"Paperfly", ecourier:"eCourier", delivery_tiger:"Delivery Tiger", other:"Manual" };
+                const COURIER_LABEL: Record<string, string> = { pathao:"Pathao", redx:"RedX", steadfast:"Steadfast", paperfly:"Paperfly", delivery_tiger:"Delivery Tiger", other:"Manual" };
                 const summary = o.items.slice(0, 1).map(it => {
                   if (it.comboId) {
                     if (it.comboSnapshot) { try { return (JSON.parse(it.comboSnapshot) as { name: string }).name; } catch { /* */ } }

@@ -83,7 +83,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
                 <p style={{ fontSize: "12px", color: "#777", marginBottom: "2px" }}>Tracking: {order.courierTrackId}</p>
               )}
               {order.courierName && (
-                <p style={{ fontSize: "12px", color: "#777" }}>Courier: {({ pathao:"Pathao",redx:"RedX",paperfly:"Paperfly",ecourier:"eCourier",delivery_tiger:"Delivery Tiger" } as Record<string,string>)[order.courierName ?? ""] ?? order.courierName}</p>
+                <p style={{ fontSize: "12px", color: "#777" }}>Courier: {({ pathao:"Pathao",redx:"RedX",steadfast:"Steadfast",paperfly:"Paperfly",delivery_tiger:"Delivery Tiger" } as Record<string,string>)[order.courierName ?? ""] ?? order.courierName}</p>
               )}
             </div>
           </div>

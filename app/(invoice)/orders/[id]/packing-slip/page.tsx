@@ -72,7 +72,7 @@ export default async function PackingSlipPage({ params }: { params: Promise<{ id
               <p style={{ fontSize: "10px", fontWeight: 700, color: "#0F6E56", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "6px" }}>কুরিয়ার তথ্য</p>
               {order.courierName && (
                 <p style={{ fontSize: "12px", color: "#333", marginBottom: "3px" }}>
-                  Courier: <strong>{({ pathao:"Pathao",redx:"RedX",paperfly:"Paperfly",ecourier:"eCourier",delivery_tiger:"Delivery Tiger" } as Record<string,string>)[order.courierName ?? ""] ?? order.courierName}</strong>
+                  Courier: <strong>{({ pathao:"Pathao",redx:"RedX",steadfast:"Steadfast",paperfly:"Paperfly",delivery_tiger:"Delivery Tiger" } as Record<string,string>)[order.courierName ?? ""] ?? order.courierName}</strong>
                 </p>
               )}
               {order.courierTrackId && (

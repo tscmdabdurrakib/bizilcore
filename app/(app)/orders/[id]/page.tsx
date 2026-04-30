@@ -264,7 +264,7 @@ export default function OrderDetailPage() {
         `\n\nশীঘ্রই পণ্য পাঠানো হবে। ধন্যবাদ! 🙏`;
     } else if (order.status === "shipped") {
       message = `আস্সালামু আলাইকুম!\n\nআপনার অর্ডার ${orderRef} পাঠানো হয়েছে। 📦` +
-        (order.courierName ? `\n\nCourier: ${{ pathao:"Pathao",redx:"RedX",paperfly:"Paperfly",ecourier:"eCourier",delivery_tiger:"Delivery Tiger",other:"Manual" }[order.courierName] ?? order.courierName}` : "") +
+        (order.courierName ? `\n\nCourier: ${{ pathao:"Pathao",redx:"RedX",steadfast:"Steadfast",paperfly:"Paperfly",delivery_tiger:"Delivery Tiger",other:"Manual" }[order.courierName] ?? order.courierName}` : "") +
         (order.courierTrackId ? `\nTracking ID: ${order.courierTrackId}` : "") +
         `\n\n২-৩ কার্যদিবসের মধ্যে পৌঁছাবে। ধন্যবাদ! 🙏`;
     } else if (order.status === "delivered") {
@@ -644,7 +644,7 @@ export default function OrderDetailPage() {
                   <optgroup label="— API সংযুক্ত (Auto Book) —">
                     <option value="pathao">🚚 Pathao</option>
                     <option value="redx">🔴 RedX</option>
-                    <option value="ecourier">📦 eCourier</option>
+                    <option value="steadfast">📦 Steadfast</option>
                   </optgroup>
                   <optgroup label="— Manual (Tracking ID দিন) —">
                     <option value="paperfly">🟣 Paperfly</option>
@@ -674,7 +674,7 @@ export default function OrderDetailPage() {
                         pathao: "Pathao",
                         redx: "RedX",
                         paperfly: "Paperfly",
-                        ecourier: "eCourier",
+                        steadfast: "Steadfast",
                         delivery_tiger: "Delivery Tiger",
                         other: "Manual Courier",
                       }[order.courierName ?? ""] ?? order.courierName ?? "Courier"}

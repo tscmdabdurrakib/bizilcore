@@ -25,8 +25,8 @@ interface DeliveryOrder {
 const COURIER_TRACK_URLS: Record<string, string> = {
   pathao: "https://pathao.com/bd/track/",
   redx: "https://redx.com.bd/track-shipment/?trackingId=",
+  steadfast: "https://steadfast.com.bd/en/track?trackingId=",
   paperfly: "https://paperfly.com.bd/track/",
-  ecourier: "https://ecourier.com.bd/tracking/",
   delivery_tiger: "https://deliverytiger.com.bd/",
 };
 
@@ -34,8 +34,8 @@ const COURIER_LABELS: Record<string, string> = {
   all: "সব Courier",
   pathao: "Pathao",
   redx: "RedX",
+  steadfast: "Steadfast",
   paperfly: "Paperfly",
-  ecourier: "eCourier",
   delivery_tiger: "Delivery Tiger",
   other: "Manual",
 };
@@ -84,7 +84,7 @@ export default function CourierDelivery() {
   useEffect(() => { load(); }, [page, search, courier, statusFilter]);
   useEffect(() => { setPage(1); }, [search, courier, statusFilter]);
 
-  const couriers = ["all", "pathao", "redx", "paperfly", "ecourier", "delivery_tiger", "other"];
+  const couriers = ["all", "pathao", "redx", "steadfast", "paperfly", "delivery_tiger", "other"];
 
   function getTrackUrl(o: DeliveryOrder) {
     if (!o.courierTrackId || !o.courierName) return null;

@@ -12,7 +12,7 @@ const COURIER_LABELS: Record<string, string> = {
   pathao: "Pathao",
   redx: "RedX",
   paperfly: "Paperfly",
-  ecourier: "eCourier",
+  steadfast: "Steadfast",
   delivery_tiger: "Delivery Tiger",
   other: "Manual",
 };

@@ -156,10 +156,11 @@ All labels shown in Bangla UI via STATUS_MAP in lib/utils.ts
 
 ## Courier Integration (Phase 2 Step 1)
 - `lib/pathao.ts` — Pathao Merchant API: bookPathaoDelivery(), getPathaoStatus(); token caching
-- `lib/ecourier.ts` — eCourier API: bookEcourierDelivery(), getEcourierStatus()
+- `lib/redx.ts` — RedX API: bookRedxDelivery(), getRedxStatus()
+- `lib/steadfast.ts` — Steadfast Courier API: bookSteadfastDelivery(), getSteadfastStatus()
 - `app/api/courier/route.ts` — POST (book courier → saves trackingId, sets status=shipped, codStatus=with_courier); GET (refresh status from provider)
 - `app/api/webhooks/pathao/route.ts` — POST (receive Pathao status push, update DB)
-- `app/api/webhooks/ecourier/route.ts` — POST (receive eCourier status push, update DB)
+- Active couriers: Pathao, RedX, Steadfast (eCourier removed)
 
 ## Task #10 — Store Foundation & Public Storefront (Complete)
 - **Multi-tenant e-commerce storefront**: `/store/[slug]` — public, no auth required
@@ -173,13 +174,14 @@ All labels shown in Bangla UI via STATUS_MAP in lib/utils.ts
 - **Shop store fields**: 22 fields added to Shop (storeSlug @unique, storeEnabled, storeTheme, storePrimaryColor, storeAccentColor, storeBannerUrl, storeTagline, storeAbout, storeShowReviews, storeShowStock, storeCODEnabled, storeBkashNumber, storeNagadNumber, storeMinOrder, storeFreeShipping, storeShippingFee, storeSocialFB, storeSocialIG, storeSocialWA)
 - **Product store fields**: `storeVisible`, `storeFeatured` on Product model
 
-### Courier env vars needed:
-PATHAO_CLIENT_ID, PATHAO_CLIENT_SECRET, PATHAO_BASE_URL, PATHAO_USERNAME, PATHAO_PASSWORD, PATHAO_STORE_ID
-ECOURIER_API_KEY, ECOURIER_API_SECRET, ECOURIER_USER_ID, ECOURIER_PICKUP_ADDRESS
+### Courier settings (stored in DB per user):
+- PathaoSettings: clientId, clientSecret, username, password, storeId, sandboxMode
+- RedxSettings: apiKey
+- SteadfastSettings: apiKey, secretKey
 
 ### Order model courier fields:
-courierName (pathao|ecourier), courierTrackId, courierStatus (booked/picked/transit/delivered/returned), courierBookedAt
-codStatus (with_courier/collected/returned) — already existed, now driven by courier booking
+courierName (pathao|redx|steadfast), courierTrackId, courierStatus (booked/picked/transit/delivered/returned), courierBookedAt
+codStatus (with_courier/collected/returned) — driven by courier booking
 
 ## Phase 6 — Hotel/Guesthouse Module (Complete)
 - **DB models**: `Room`, `Booking`, `RoomServiceOrder`, `HousekeepingLog` + Shop hotel config (checkInTime, checkOutTime, lateFee, earlyFee, minAdvancePct, autoHousekeeping)
