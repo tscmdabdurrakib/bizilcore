@@ -44,8 +44,7 @@
 
   <text x="60" y="40"
     font-family="'Segoe UI', Arial, sans-serif"
-    font-size="26"
     font-weight="800"
     letter-spacing="-0.5"
-    fill="url(#textGrad)">BizilCore</text>
+    fill="url(#textGrad)"><tspan font-size="26">Bizil</tspan><tspan font-size="33">C</tspan><tspan font-size="26">ore</tspan></text>
 </svg>
