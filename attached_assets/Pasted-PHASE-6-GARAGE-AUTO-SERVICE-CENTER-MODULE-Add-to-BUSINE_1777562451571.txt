@@ -1,0 +1,240 @@
+PHASE 6 — GARAGE / AUTO SERVICE CENTER MODULE ===
+
+Add to BUSINESS_MODULES:
+garage: ["dashboard","jobcards","vehicles","inventory",
+         "customers","staff","hisab","reports","settings"]
+
+Add to onboarding:
+  Name: "গ্যারেজ / সার্ভিস সেন্টার"
+  Description: "গাড়ি মেরামত ও সার্ভিসিং করি"
+
+━━━ DATABASE ━━━
+
+model Vehicle {
+  id           String    @id @default(cuid())
+  shopId       String
+  customerId   String
+  customer     Customer  @relation(fields: [customerId], references: [id])
+  regNumber    String    -- "DHA-GA-1234"
+  type         String    -- "car"|"motorcycle"|"cng"|"microbus"|"truck"|"bus"
+  brand        String    -- "Toyota", "Honda", "Bajaj"
+  model        String    -- "Corolla", "CB150R", "RE"
+  year         Int?
+  color        String?
+  engineCC     Int?
+  lastMileage  Int?
+  fuelType     String?   -- "petrol"|"diesel"|"cng"|"electric"
+  notes        String?
+  jobCards     JobCard[]
+  createdAt    DateTime  @default(now())
+}
+
+model JobCard {
+  id              String    @id @default(cuid())
+  shopId          String
+  jobNumber       String    @unique  -- "JOB-2026-001"
+  vehicleId       String
+  vehicle         Vehicle   @relation(fields: [vehicleId], references: [id])
+  complaint       String    -- customer reported issue
+  diagnosis       String?   -- mechanic's findings
+  workDescription String?   -- what was actually done
+  status          String    @default("received")
+              -- "received"|"diagnosing"|"waiting_parts"
+              -- |"repairing"|"quality_check"|"ready"|"delivered"
+  priority        String    @default("normal") -- "normal"|"urgent"|"express"
+  assignedToId    String?   -- staff/mechanic id
+  estimatedAmt    Float?
+  laborCharge     Float     @default(0)
+  partsTotal      Float     @default(0)
+  totalAmount     Float     @default(0)
+  advancePaid     Float     @default(0)
+  dueAmount       Float     @default(0)
+  mileageIn       Int?
+  mileageOut      Int?
+  estimatedDone   DateTime?
+  deliveredAt     DateTime?
+  parts           JobCardPart[]
+  services        JobCardService[]
+  images          String[]  -- before/after photos
+  createdAt       DateTime  @default(now())
+}
+
+model JobCardPart {
+  id          String   @id @default(cuid())
+  jobCardId   String
+  jobCard     JobCard  @relation(fields: [jobCardId], references: [id])
+  productId   String?  -- links to inventory if stocked part
+  product     Product? @relation(fields: [productId], references: [id])
+  partName    String
+  partNumber  String?
+  quantity    Int      @default(1)
+  unitPrice   Float
+  subtotal    Float
+  isFromStock Boolean  @default(false)
+}
+
+model JobCardService {
+  id          String   @id @default(cuid())
+  jobCardId   String
+  jobCard     JobCard  @relation(fields: [jobCardId], references: [id])
+  serviceName String   -- "Oil Change", "Brake Pad Replace"
+  laborCost   Float
+  mechanicId  String?
+}
+
+━━━ GARAGE DASHBOARD (/dashboard) ━━━
+
+4 stat cards:
+  আজ আসা গাড়ি: new job cards today
+  Ready গাড়ি: count where status="ready" (waiting for pickup)
+  চলমান কাজ: count where status in [diagnosing, repairing, waiting_parts]
+  আজকের আয়: today's collected payments
+
+Active jobs kanban preview (mini):
+  5 most recent jobs with status + vehicle reg + mechanic
+
+"Today's Ready" alert:
+  List of vehicles ready for pickup with owner phone + "SMS পাঠান" button
+
+━━━ JOB CARD SYSTEM (/jobcards) ━━━
+
+Default view: Kanban board
+
+6 columns:
+  গাড়ি এসেছে → Diagnosis → Parts অপেক্ষা → মেরামত → Quality Check → Ready
+
+Each card shows:
+  Job number (top, small), reg number (big, bold), vehicle type icon
+  Customer name, complaint (first 50 chars), mechanic assigned
+  Priority badge: 🔴 Express / 🟡 Urgent / ⚪ Normal
+  Hours/days since received
+  Estimated amount
+
+Card color border by priority:
+  Express: red border | Urgent: amber border | Normal: gray border
+
+List view toggle (table format):
+  Filter tabs: সব | চলমান | Ready | Delivered | আজকের
+
+"নতুন Job Card" button → 3-step intake form:
+
+  Step 1 — গাড়ির তথ্য:
+    Registration number input
+    → Search existing vehicles: if found, auto-fill owner + vehicle details
+    → If not found: "নতুন গাড়ি যোগ করুন" expands
+      Vehicle type (dropdown with icons), brand*, model*, year, color,
+      Fuel type, engine CC (optional), current mileage
+    Owner: search existing customer or add new
+      Name*, phone*, address (optional)
+
+  Step 2 — কাজের বিবরণ:
+    Customer complaint (textarea — what they reported)
+    Common complaint shortcuts (quick-add chips):
+      "ইঞ্জিন সমস্যা" "ব্রেক ফেইল" "AC কাজ করছে না" "তেল পরিবর্তন"
+      "টায়ার পরিবর্তন" "ইলেকট্রিক সমস্যা" "গিয়ার সমস্যা" "অন্যান্য"
+    Services checklist (check all that apply):
+      ☐ Oil & Filter Change  ☐ Brake Service  ☐ AC Service
+      ☐ Tyre Change/Repair   ☐ Engine Repair  ☐ Electrical Work
+      ☐ Washing & Cleaning   ☐ Body Work      ☐ Battery Replace
+    Priority: Normal / Urgent / Express
+    Assign mechanic (staff dropdown)
+    Estimated delivery date + time
+    Before-condition photos (optional, up to 4)
+
+  Step 3 — অগ্রিম পেমেন্ট:
+    Estimated total (optional)
+    Advance collected, method (Cash/bKash/Nagad)
+    Due amount (auto)
+  
+  "Job Card তৈরি করুন" →
+    Auto-generates job number (JOB-YYYY-NNN sequential)
+    Prints/shows job card slip:
+      [GarageName] | Job No: JOB-2026-001
+      Date: [date] | Vehicle: [reg] [brand model]
+      Owner: [name] [phone]
+      Complaint: [text]
+      Mechanic: [name] | Est. Delivery: [date]
+      Advance: ৳[amount]
+
+Job Card Detail page:
+  Full info card at top
+  Status progress bar: 6 steps highlighted to current
+  "স্ট্যাটাস আপডেট করুন" dropdown → change status
+
+  Parts section:
+    Parts list table: name, part number, qty, price, subtotal
+    "+ Parts যোগ করুন" button:
+      Search inventory (stocked parts auto-fill price)
+      Or manual entry: name, part number, qty, price
+      "যোগ করুন" → auto-deducts from inventory if from stock
+    Parts total auto-calculates
+
+  Services section:
+    Services list: service name, labor cost, mechanic
+    "+ Service যোগ করুন": name, labor cost, assign mechanic
+    Services total auto-calculates
+
+  Bill summary:
+    Labor charges: ৳X
+    Parts: ৳X
+    Total: ৳X
+    Advance paid: ৳X
+    Due: ৳X
+    "পেমেন্ট নিন" button → add payment, reduce due
+
+  Delivery action:
+    "গাড়ি দিয়ে দিন" button (when status=ready):
+      Final mileage reading input
+      Final payment collection
+      "Deliver নিশ্চিত করুন" → status=delivered
+      Auto SMS to owner:
+        "আপনার গাড়ি [reg] মেরামত সম্পন্ন।
+         মোট বিল: ৳[total] | বাকি: ৳[due]
+         নিয়ে যেতে পারেন। - [GarageName]"
+
+  "Ready" status trigger SMS:
+    "আপনার [brand model] ([reg]) সার্ভিস সম্পন্ন হয়েছে।
+     যেকোনো সময় নিয়ে যেতে পারেন। - [GarageName]"
+
+━━━ VEHICLE LIST (/vehicles) ━━━
+
+Search by reg number, owner name, or phone.
+
+Vehicle card: type icon, reg number (big), brand+model, owner name+phone
+  Service history badge: "X বার সার্ভিস হয়েছে"
+  Last service date
+  "নতুন Job Card" quick button
+
+Vehicle detail:
+  Vehicle info + owner info (editable)
+  Full job card history table
+  Total spent at garage
+
+━━━ PARTS INVENTORY ━━━
+
+Garage uses existing /inventory but with garage-specific categories:
+  Engine Parts, Brake Parts, Electrical, Oil & Fluids, Tyres, Body Parts, Others
+
+Low stock alert on dashboard: "X টি পার্টস কম আছে"
+
+━━━ MECHANIC PERFORMANCE (/reports) ━━━
+
+Garage-specific reports:
+  Jobs per mechanic (bar chart)
+  Average job completion time
+  Most common repairs (top 10)
+  Monthly revenue vs parts cost vs labor = profit
+  Pending payments list
+
+━━━ SETTINGS — GARAGE CONFIG ━━━
+
+In /settings — "Garage Config":
+  Shop GST/VAT registration number
+  Default labor rate per hour
+  Common services list (editable — add/remove standard services)
+  Job card number prefix (default: "JOB")
+  Auto-SMS on "Ready" toggle
+  Warranty note on bill (e.g. "৩০ দিনের warranty")
+
+All Bangla UI. Same green design system.
+Job number always auto-generated, never manual.
