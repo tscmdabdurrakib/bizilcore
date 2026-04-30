@@ -177,7 +177,7 @@ const OFFLINE_ONLY_MODULES = new Set(["pos"]);
 const BUSINESS_MODULES: Record<BusinessType, string[]> = {
   fcommerce: [
     "dashboard", "inventory", "orders", "customers",
-    "hisab", "reports", "courier", "facebook", "whatsapp", "settings", "store",
+    "hisab", "reports", "courier", "settings", "store",
   ],
   restaurant: [
     "dashboard", "inventory", "orders", "customers",
@@ -222,15 +222,15 @@ export interface NavGroup {
 const STORE_NAV_GROUP: NavGroup = {
   label: "আমার স্টোর",
   items: [
-    { href: "/store/setup",      icon: Store,    label: "সেটআপ",     module: "store" },
-    { href: "/store/theme",      icon: Palette,  label: "থিম",        module: "store" },
-    { href: "/store/appearance", icon: Image,    label: "লুক ও ফিল", module: "store" },
-    { href: "/store/products",   icon: Package,  label: "পণ্য",       module: "store" },
-    { href: "/store/settings",   icon: Settings2,label: "সেটিংস",    module: "store" },
-    { href: "/store/orders",     icon: ShoppingBag, label: "অর্ডার", module: "store" },
-    { href: "/store/coupons",    icon: Tag,      label: "কুপন",       module: "store" },
-    { href: "/store/reviews",    icon: Star,     label: "রিভিউ",      module: "store" },
-    { href: "/dashboard/store/analytics",  icon: BarChart2,label: "অ্যানালিটিক্স", module: "store" },
+    { href: "/store/setup", icon: Store, label: "সেটআপ", module: "store" },
+    { href: "/store/theme", icon: Palette, label: "থিম", module: "store" },
+    { href: "/store/appearance", icon: Image, label: "লুক ও ফিল", module: "store" },
+    { href: "/store/products", icon: Package, label: "পণ্য", module: "store" },
+    { href: "/store/settings", icon: Settings2, label: "সেটিংস", module: "store" },
+    { href: "/store/orders", icon: ShoppingBag, label: "অর্ডার", module: "store" },
+    { href: "/store/coupons", icon: Tag, label: "কুপন", module: "store" },
+    { href: "/store/reviews", icon: Star, label: "রিভিউ", module: "store" },
+    { href: "/dashboard/store/analytics", icon: BarChart2, label: "অ্যানালিটিক্স", module: "store" },
   ],
 };
 
