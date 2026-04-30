@@ -32,6 +32,8 @@ import {
   BedDouble,
   Sparkles,
   CalendarRange,
+  Wrench,
+  Car,
   type LucideIcon,
 } from "lucide-react";
 
@@ -44,7 +46,8 @@ export type BusinessType =
   | "retail"
   | "salon"
   | "tailor"
-  | "hotel";
+  | "hotel"
+  | "garage";
 
 export const BUSINESS_TYPES: BusinessType[] = [
   "fcommerce",
@@ -54,6 +57,7 @@ export const BUSINESS_TYPES: BusinessType[] = [
   "salon",
   "tailor",
   "hotel",
+  "garage",
 ];
 
 export interface BusinessTypeMeta {
@@ -121,6 +125,14 @@ export const BUSINESS_TYPE_META: Record<BusinessType, BusinessTypeMeta> = {
     color: "#0F6E56",
     bgColor: "#E1F5EE",
     icon: BedDouble,
+  },
+  garage: {
+    type: "garage",
+    label: "গ্যারেজ / সার্ভিস সেন্টার",
+    description: "গাড়ি মেরামত ও সার্ভিসিং করি",
+    color: "#B45309",
+    bgColor: "#FEF3C7",
+    icon: Wrench,
   },
 };
 
@@ -202,6 +214,10 @@ const BUSINESS_MODULES: Record<BusinessType, string[]> = {
   hotel: [
     "dashboard", "rooms", "bookings", "housekeeping", "customers",
     "hisab", "reports", "staff", "settings", "store",
+  ],
+  garage: [
+    "dashboard", "jobcards", "vehicles", "inventory",
+    "customers", "staff", "hisab", "reports", "settings",
   ],
 };
 
@@ -392,6 +408,29 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
       items: [
         { href: "/customers",    icon: Users,           label: "গেস্ট",         module: "customers"    },
         { href: "/hr",           icon: UserCog,         label: "স্টাফ",         module: "staff"        },
+      ],
+    },
+    {
+      label: "আর্থিক",
+      items: [
+        { href: "/hisab",   icon: BookOpen,  label: "হিসাব",   module: "hisab"   },
+        { href: "/reports", icon: BarChart2, label: "রিপোর্ট", module: "reports" },
+      ],
+    },
+  ],
+  garage: [
+    {
+      items: [
+        { href: "/dashboard",  icon: LayoutDashboard, label: "ড্যাশবোর্ড",     module: "dashboard" },
+        { href: "/jobcards",   icon: ClipboardList,   label: "জব কার্ড",        module: "jobcards"  },
+        { href: "/vehicles",   icon: Car,             label: "গাড়ির তালিকা",   module: "vehicles"  },
+        { href: "/inventory",  icon: Package,         label: "পার্টস স্টক",     module: "inventory" },
+      ],
+    },
+    {
+      items: [
+        { href: "/customers",  icon: Users,           label: "কাস্টমার",        module: "customers" },
+        { href: "/hr",         icon: UserCog,         label: "মেকানিক / স্টাফ", module: "staff"     },
       ],
     },
     {

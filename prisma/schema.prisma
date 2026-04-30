@@ -218,6 +218,16 @@ model Shop {
   hotelEarlyFeePerHour Float   @default(0)
   hotelMinAdvancePct  Int      @default(30)
   hotelAutoHousekeeping Boolean @default(true)
+
+  // Garage module
+  vehicles              Vehicle[]
+  jobCards              JobCard[]
+  garageJobPrefix       String?  @default("JOB")
+  garageLaborRate       Float    @default(0)
+  garageWarrantyNote    String?
+  garageVatNumber       String?
+  garageAutoSmsReady    Boolean  @default(true)
+  garageCommonServices  Json?    @default("[]")
 }
 
 model Subscription {
@@ -319,6 +329,7 @@ model Product {
   comboItems      ComboItem[]
   storeOrderItems StoreOrderItem[]
   storeReviews    StoreReview[]
+  jobCardParts    JobCardPart[]
   createdAt       DateTime          @default(now())
 
   @@index([shopId])
@@ -363,6 +374,7 @@ model Customer {
   measurements  Measurement[]
   tailorOrders  TailorOrder[]
   bookings      Booking[]
+  vehicles      Vehicle[]
   createdAt     DateTime       @default(now())
 
   @@index([shopId])
@@ -1775,4 +1787,95 @@ model HousekeepingLog {
   @@index([shopId])
   @@index([roomId])
   @@index([status])
+}
+
+/* ─── GARAGE / AUTO SERVICE CENTER MODULE ───────────────── */
+
+model Vehicle {
+  id          String    @id @default(cuid())
+  shopId      String
+  shop        Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id])
+  regNumber   String
+  type        String    @default("car")
+  brand       String
+  model       String
+  year        Int?
+  color       String?
+  engineCC    Int?
+  lastMileage Int?
+  fuelType    String?
+  notes       String?
+  jobCards    JobCard[]
+  createdAt   DateTime  @default(now())
+
+  @@unique([shopId, regNumber])
+  @@index([shopId])
+  @@index([customerId])
+  @@index([regNumber])
+}
+
+model JobCard {
+  id              String           @id @default(cuid())
+  shopId          String
+  shop            Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  jobNumber       String
+  vehicleId       String
+  vehicle         Vehicle          @relation(fields: [vehicleId], references: [id])
+  complaint       String
+  diagnosis       String?
+  workDescription String?
+  status          String           @default("received")
+  priority        String           @default("normal")
+  assignedToId    String?
+  estimatedAmt    Float?
+  laborCharge     Float            @default(0)
+  partsTotal      Float            @default(0)
+  totalAmount     Float            @default(0)
+  advancePaid     Float            @default(0)
+  dueAmount       Float            @default(0)
+  mileageIn       Int?
+  mileageOut      Int?
+  estimatedDone   DateTime?
+  deliveredAt     DateTime?
+  images          String[]         @default([])
+  parts           JobCardPart[]
+  services        JobCardService[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@unique([shopId, jobNumber])
+  @@index([shopId])
+  @@index([vehicleId])
+  @@index([status])
+  @@index([shopId, createdAt])
+}
+
+model JobCardPart {
+  id          String   @id @default(cuid())
+  jobCardId   String
+  jobCard     JobCard  @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id])
+  partName    String
+  partNumber  String?
+  quantity    Int      @default(1)
+  unitPrice   Float
+  subtotal    Float
+  isFromStock Boolean  @default(false)
+
+  @@index([jobCardId])
+  @@index([productId])
+}
+
+model JobCardService {
+  id          String  @id @default(cuid())
+  jobCardId   String
+  jobCard     JobCard @relation(fields: [jobCardId], references: [id], onDelete: Cascade)
+  serviceName String
+  laborCost   Float
+  mechanicId  String?
+
+  @@index([jobCardId])
 }
