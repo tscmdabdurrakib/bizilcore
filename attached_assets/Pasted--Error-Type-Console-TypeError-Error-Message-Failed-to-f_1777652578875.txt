@@ -1,0 +1,32 @@
+## Error Type
+Console TypeError
+
+## Error Message
+Failed to fetch
+
+
+    at createFetch (file:///home/runner/workspace/.next/dev/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:8084:21)
+    at fetchServerResponse (file:///home/runner/workspace/.next/dev/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:7928:27)
+    at fetchMissingDynamicData (file:///home/runner/workspace/.next/dev/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:9341:75)
+    at spawnDynamicRequests (file:///home/runner/workspace/.next/dev/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:9149:35)
+    at navigateToKnownRoute (file:///home/runner/workspace/.next/dev/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:10033:54)
+    at refreshDynamicData (file:///home/runner/workspace/.next/dev/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:10653:49)
+    at hmrRefreshReducer (file:///home/runner/workspace/.next/dev/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:10802:51)
+    at clientReducer (file:///home/runner/workspace/.next/dev/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:11398:65)
+    at Object.action (file:///home/runner/workspace/.next/dev/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:11631:55)
+    at runAction (file:///home/runner/workspace/.next/dev/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:11536:38)
+    at dispatchAction (file:///home/runner/workspace/.next/dev/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:11599:9)
+    at Object.dispatch (file:///home/runner/workspace/.next/dev/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:11629:40)
+    at <unknown> (file:///home/runner/workspace/.next/dev/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:963:29)
+    at startTransition (file:///home/runner/workspace/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:5469:31)
+    at nextDispatch (file:///home/runner/workspace/.next/dev/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:962:13)
+    at dispatchAppRouterAction (file:///home/runner/workspace/.next/dev/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:922:5)
+    at <unknown> (file:///home/runner/workspace/.next/dev/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:11800:61)
+    at startTransition (file:///home/runner/workspace/.next/dev/static/chunks/node_modules_next_dist_compiled_0rpq4pf._.js:1279:31)
+    at Object.hmrRefresh (file:///home/runner/workspace/.next/dev/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:11799:40)
+    at <unknown> (file:///home/runner/workspace/.next/dev/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:13967:64)
+    at startTransition (file:///home/runner/workspace/.next/dev/static/chunks/node_modules_next_dist_compiled_0rpq4pf._.js:1279:31)
+    at processMessage (file:///home/runner/workspace/.next/dev/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:13966:44)
+    at WebSocket.handleMessage (file:///home/runner/workspace/.next/dev/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:13335:52)
+
+Next.js version: 16.2.1 (Turbopack)
