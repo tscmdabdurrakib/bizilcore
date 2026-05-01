@@ -271,6 +271,22 @@ model Shop {
   farmAreaUnit          String?  @default("bigha")
   farmWeightUnit        String?  @default("kg")
   farmVaccinationDays   Int      @default(7)
+
+  // Hospital / Clinic module
+  doctors               Doctor[]
+  patients              HospitalPatient[]
+  opdVisits             OPDVisit[]
+  ipdAdmissions         IPDAdmission[]
+  beds                  Bed[]
+  hospitalFacilityType  String?  @default("hospital")
+  hospitalRegNumber     String?
+  hospitalEmergencyPhone String?
+  hospitalTokenResetTime String? @default("00:00")
+  hospitalAdmissionPrefix String? @default("IPD")
+  hospitalOpdPrefix     String?  @default("OPD")
+  hospitalPatientPrefix String?  @default("PAT")
+  hospitalShowVitals    Boolean  @default(true)
+  hospitalAutoSms       Boolean  @default(false)
 }
 
 model Subscription {
@@ -2428,4 +2444,170 @@ model LivestockLog {
 
   @@index([shopId])
   @@index([livestockId])
+}
+
+// ─── Hospital / Clinic Models ─────────────────────────────
+
+model Doctor {
+  id               String         @id @default(cuid())
+  shopId           String
+  shop             Shop           @relation(fields: [shopId], references: [id])
+  name             String
+  title            String         @default("Dr.")
+  specialization   String
+  qualification    String?
+  bmdc             String?
+  phone            String?
+  visitFee         Float
+  followUpFee      Float?
+  chamberDays      String?
+  chamberStartTime String?
+  chamberEndTime   String?
+  maxPatients      Int?           @default(30)
+  isActive         Boolean        @default(true)
+  opdVisits        OPDVisit[]
+  ipdAdmissions    IPDAdmission[]
+  createdAt        DateTime       @default(now())
+
+  @@index([shopId])
+}
+
+model HospitalPatient {
+  id               String         @id @default(cuid())
+  shopId           String
+  shop             Shop           @relation(fields: [shopId], references: [id])
+  regNumber        String
+  name             String
+  nameBangla       String?
+  phone            String?
+  age              Int?
+  ageUnit          String?        @default("years")
+  gender           String?
+  bloodGroup       String?
+  address          String?
+  nid              String?
+  allergies        String?
+  chronicIllness   String?
+  emergencyContact String?
+  emergencyPhone   String?
+  photoUrl         String?
+  createdAt        DateTime       @default(now())
+  visits           OPDVisit[]
+  admissions       IPDAdmission[]
+
+  @@index([shopId])
+  @@index([phone])
+}
+
+model OPDVisit {
+  id             String           @id @default(cuid())
+  shopId         String
+  shop           Shop             @relation(fields: [shopId], references: [id])
+  visitNumber    String           @unique
+  patientId      String
+  patient        HospitalPatient  @relation(fields: [patientId], references: [id])
+  doctorId       String
+  doctor         Doctor           @relation(fields: [doctorId], references: [id])
+  tokenNumber    Int
+  visitDate      DateTime         @default(now())
+  visitType      String           @default("new")
+  chiefComplaint String?
+  vitalSigns     Json?
+  diagnosis      String?
+  prescription   String?
+  advice         String?
+  nextVisitDate  DateTime?
+  visitFee       Float
+  paidAmount     Float            @default(0)
+  dueAmount      Float            @default(0)
+  status         String           @default("waiting")
+  tests          OPDTestRequest[]
+  createdAt      DateTime         @default(now())
+
+  @@index([shopId])
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([visitDate])
+}
+
+model OPDTestRequest {
+  id       String   @id @default(cuid())
+  shopId   String
+  visitId  String
+  visit    OPDVisit @relation(fields: [visitId], references: [id])
+  testName String
+  note     String?
+  status   String   @default("pending")
+
+  @@index([visitId])
+}
+
+model IPDAdmission {
+  id              String          @id @default(cuid())
+  shopId          String
+  shop            Shop            @relation(fields: [shopId], references: [id])
+  admissionNumber String          @unique
+  patientId       String
+  patient         HospitalPatient @relation(fields: [patientId], references: [id])
+  doctorId        String
+  doctor          Doctor          @relation(fields: [doctorId], references: [id])
+  bedNumber       String
+  ward            String
+  admitDate       DateTime        @default(now())
+  dischargeDate   DateTime?
+  admitDiagnosis  String?
+  finalDiagnosis  String?
+  surgeryDone     Boolean         @default(false)
+  surgeryNote     String?
+  totalBill       Float           @default(0)
+  advancePaid     Float           @default(0)
+  dueAmount       Float           @default(0)
+  status          String          @default("admitted")
+  charges         IPDCharge[]
+  notes           IPDNote[]
+  createdAt       DateTime        @default(now())
+
+  @@index([shopId])
+  @@index([patientId])
+  @@index([doctorId])
+}
+
+model IPDCharge {
+  id           String       @id @default(cuid())
+  shopId       String
+  admissionId  String
+  admission    IPDAdmission @relation(fields: [admissionId], references: [id])
+  chargeType   String
+  description  String
+  amount       Float
+  chargeDate   DateTime     @default(now())
+
+  @@index([admissionId])
+}
+
+model IPDNote {
+  id          String       @id @default(cuid())
+  shopId      String
+  admissionId String
+  admission   IPDAdmission @relation(fields: [admissionId], references: [id])
+  noteType    String
+  note        String
+  writtenById String?
+  writtenAt   DateTime     @default(now())
+
+  @@index([admissionId])
+}
+
+model Bed {
+  id        String @id @default(cuid())
+  shopId    String
+  shop      Shop   @relation(fields: [shopId], references: [id])
+  number    String
+  ward      String
+  type      String @default("general")
+  status    String @default("vacant")
+  dailyRate Float  @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([shopId])
 }

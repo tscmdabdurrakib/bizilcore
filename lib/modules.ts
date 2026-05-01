@@ -52,6 +52,10 @@ import {
   BirdIcon,
   SproutIcon,
   ShoppingBasket,
+  Stethoscope,
+  Activity,
+  HeartPulse,
+  BedDouble as BedDoubleIcon,
   type LucideIcon,
 } from "lucide-react";
 
@@ -69,7 +73,8 @@ export type BusinessType =
   | "lab"
   | "convention"
   | "school"
-  | "farm";
+  | "farm"
+  | "hospital";
 
 export const BUSINESS_TYPES: BusinessType[] = [
   "fcommerce",
@@ -84,6 +89,7 @@ export const BUSINESS_TYPES: BusinessType[] = [
   "convention",
   "school",
   "farm",
+  "hospital",
 ];
 
 export interface BusinessTypeMeta {
@@ -192,6 +198,14 @@ export const BUSINESS_TYPE_META: Record<BusinessType, BusinessTypeMeta> = {
     bgColor: "#F0FDF4",
     icon: Wheat,
   },
+  hospital: {
+    type: "hospital",
+    label: "হাসপাতাল / ক্লিনিক",
+    description: "রোগী দেখি ও চিকিৎসা সেবা দিই",
+    color: "#378ADD",
+    bgColor: "#EFF6FF",
+    icon: Stethoscope,
+  },
 };
 
 /* ─── Sales Channel ─────────────────────────────────────── */
@@ -292,6 +306,10 @@ const BUSINESS_MODULES: Record<BusinessType, string[]> = {
   farm: [
     "dashboard", "lands", "crops", "livestock",
     "harvest", "buyers", "hisab", "reports", "settings",
+  ],
+  hospital: [
+    "dashboard", "doctors", "opd", "ipd", "patients",
+    "billing", "staff", "hisab", "reports", "settings",
   ],
 };
 
@@ -600,6 +618,30 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
       items: [
         { href: "/hisab",              icon: BookOpen,        label: "হিসাব",              module: "hisab"      },
         { href: "/farm/reports",       icon: BarChart2,       label: "রিপোর্ট",             module: "reports"    },
+      ],
+    },
+  ],
+  hospital: [
+    {
+      items: [
+        { href: "/dashboard",              icon: LayoutDashboard, label: "ড্যাশবোর্ড",         module: "dashboard" },
+        { href: "/hospital/opd",           icon: Activity,        label: "OPD",                 module: "opd"       },
+        { href: "/hospital/ipd",           icon: BedDoubleIcon,   label: "IPD ভর্তি",           module: "ipd"       },
+        { href: "/hospital/doctors",       icon: Stethoscope,     label: "ডাক্তার",             module: "doctors"   },
+        { href: "/hospital/patients",      icon: Users,           label: "রোগীর তালিকা",        module: "patients"  },
+      ],
+    },
+    {
+      items: [
+        { href: "/hr",                     icon: UserCog,         label: "স্টাফ",               module: "staff"     },
+      ],
+    },
+    {
+      label: "আর্থিক",
+      items: [
+        { href: "/hospital/billing",       icon: Receipt,         label: "বিলিং",               module: "billing"   },
+        { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",               module: "hisab"     },
+        { href: "/hospital/reports",       icon: BarChart2,       label: "রিপোর্ট",             module: "reports"   },
       ],
     },
   ],

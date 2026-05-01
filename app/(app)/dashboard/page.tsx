@@ -24,6 +24,7 @@ import DashboardLab         from "@/components/dashboards/DashboardLab";
 import DashboardConvention  from "@/components/dashboards/DashboardConvention";
 import DashboardSchool     from "@/components/dashboards/DashboardSchool";
 import DashboardFarm       from "@/components/dashboards/DashboardFarm";
+import DashboardHospital   from "@/components/dashboards/DashboardHospital";
 
 export default async function DashboardPage() {
   const { user, shop } = await requireShop();
@@ -124,6 +125,10 @@ export default async function DashboardPage() {
 
     if (businessType === "farm") {
       return <DashboardFarm />;
+    }
+
+    if (businessType === "hospital") {
+      return <DashboardHospital />;
     }
 
     const [todayAgg, todayTx, pendingCount] = await Promise.all([

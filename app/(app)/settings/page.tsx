@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Check, MessageSquare, Copy, Trash2, Crown, User, ChevronRight, ChevronLeft, Loader2, ArrowLeft, Facebook, Link2, Unlink, X, Store, FileText, Users, Bell, CreditCard, Settings, Target, Moon, Sun, ShieldCheck, ShieldX, Wifi, WifiOff, Eye, EyeOff, Send, BookOpen, MessageCircle, Globe, ExternalLink, Sparkles, RefreshCw, Printer, Truck, RefreshCcw, Plus } from "lucide-react";
+import { Check, MessageSquare, Copy, Trash2, Crown, User, ChevronRight, ChevronLeft, Loader2, ArrowLeft, Facebook, Link2, Unlink, X, Store, FileText, Users, Bell, CreditCard, Settings, Target, Moon, Sun, ShieldCheck, ShieldX, Wifi, WifiOff, Eye, EyeOff, Send, BookOpen, MessageCircle, Globe, ExternalLink, Sparkles, RefreshCw, Printer, Truck, RefreshCcw, Plus, Stethoscope, BedDouble } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 import { PLAN_DISPLAY, PLAN_LIMITS } from "@/lib/features";
 import { BUSINESS_TYPES, BUSINESS_TYPE_META, type BusinessType, SALES_CHANNELS, SALES_CHANNEL_META, type SalesChannel, isValidSalesChannel } from "@/lib/modules";
@@ -19,7 +19,7 @@ interface SMSPrefs {
 const CATEGORIES = ["পোশাক", "জুয়েলারি", "খাবার", "সৌন্দর্য", "গৃহস্থালি", "অন্যান্য"];
 const S = { surface: "var(--c-surface)", border: "var(--c-border)", text: "var(--c-text)", muted: "var(--c-text-muted)", secondary: "var(--c-text-sub)", primary: "var(--c-primary)", bg: "var(--c-bg)" };
 const inp = (f: boolean) => ({ height: "42px", border: `1.5px solid ${f ? "#0F6E56" : S.border}`, borderRadius: "10px", color: S.text, backgroundColor: S.surface, padding: "0 14px", fontSize: "14px", outline: "none", width: "100%", transition: "border-color 0.15s" });
-const TAB_GROUPS = ["আমার", "শপ", "সংযোগ", "টুলস"] as const;
+const TAB_GROUPS = ["আমার", "শপ", "সংযোগ", "টুলস", "হাসপাতাল"] as const;
 
 function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
@@ -295,6 +295,18 @@ function SettingsContent() {
   const [pwForm, setPwForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
   const [savingAccount, setSavingAccount] = useState(false);
   const [savingPw, setSavingPw] = useState(false);
+  const [hospitalConfig, setHospitalConfig] = useState({
+    hospitalFacilityType: "hospital", hospitalRegNumber: "", hospitalEmergencyPhone: "",
+    hospitalTokenResetTime: "00:00", hospitalAdmissionPrefix: "IPD", hospitalOpdPrefix: "OPD",
+    hospitalPatientPrefix: "PAT", hospitalShowVitals: true, hospitalAutoSms: false,
+  });
+  const [hospitalConfigLoaded, setHospitalConfigLoaded] = useState(false);
+  const [savingHospitalConfig, setSavingHospitalConfig] = useState(false);
+  const [beds, setBeds] = useState<{ id: string; number: string; ward: string; type: string; status: string; dailyRate: number }[]>([]);
+  const [bedsLoading, setBedsLoading] = useState(false);
+  const [bedForm, setBedForm] = useState({ number: "", ward: "General", type: "general", dailyRate: "" });
+  const [addingBed, setAddingBed] = useState(false);
+  const [deletingBedId, setDeletingBedId] = useState<string | null>(null);
 
   function showToast(type: "success" | "error", msg: string) {
     setToast({ type, msg }); setTimeout(() => setToast(null), 3500);
@@ -362,6 +374,21 @@ function SettingsContent() {
         })
         .catch(() => {})
         .finally(() => setBlacklistLoading(false));
+    }
+  }, [tab]);
+
+  useEffect(() => {
+    if (tab === "hospitalconfig" && !hospitalConfigLoaded) {
+      fetch("/api/hospital/settings").then(r => r.json()).then(d => {
+        setHospitalConfig(p => ({ ...p, ...d }));
+        setHospitalConfigLoaded(true);
+      }).catch(() => setHospitalConfigLoaded(true));
+    }
+    if (tab === "bedsetup") {
+      setBedsLoading(true);
+      fetch("/api/hospital/beds").then(r => r.json()).then(d => {
+        if (Array.isArray(d)) setBeds(d);
+      }).catch(() => {}).finally(() => setBedsLoading(false));
     }
   }, [tab]);
 
@@ -641,6 +668,10 @@ function SettingsContent() {
     { key: "courier",       label: "কুরিয়ার",        desc: "Pathao, RedX, Steadfast API",  icon: Truck,         color: "#F97316", bg: "#FFF7ED",  group: "সংযোগ"   },
     { key: "ai",            label: "AI সেটিংস",     desc: "AI ব্যবহার ও সীমা",            icon: Sparkles,      color: "#EC4899", bg: "#FDF2F8",  group: "টুলস"    },
     { key: "blacklist",     label: "ব্ল্যাকলিস্ট",   desc: "ফেক অর্ডার সুরক্ষা",           icon: ShieldX,       color: "#DC2626", bg: "#FEF2F2",  group: "টুলস"    },
+    ...(businessType === "hospital" ? [
+      { key: "hospitalconfig", label: "হাসপাতাল কনফিগ", desc: "প্রতিষ্ঠান তথ্য ও prefix",  icon: Stethoscope,   color: "#378ADD", bg: "#EFF6FF",  group: "হাসপাতাল" },
+      { key: "bedsetup",       label: "Bed ব্যবস্থাপনা",  desc: "Ward ও bed সংযোজন",          icon: BedDouble,     color: "#0EA5E9", bg: "#F0F9FF",  group: "হাসপাতাল" },
+    ] : []),
   ];
 
   const activeTab = TABS.find(t => t.key === tab);
@@ -841,6 +872,7 @@ function SettingsContent() {
           </div>
           {TAB_GROUPS.map(group => {
             const groupTabs = TABS.filter(t => t.group === group);
+            if (groupTabs.length === 0) return null;
             return (
               <div key={group} className="mb-5">
                 <p className="text-xs font-black uppercase tracking-widest mb-2.5 px-1" style={{ color: S.muted }}>{group}</p>
@@ -901,6 +933,7 @@ function SettingsContent() {
           <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: S.surface, borderColor: S.border }}>
             {TAB_GROUPS.map((group, gi) => {
               const groupTabs = TABS.filter(t => t.group === group);
+              if (groupTabs.length === 0) return null;
               return (
                 <div key={group}>
                   {gi > 0 && <div className="mx-3" style={{ height: 1, backgroundColor: S.border }} />}
@@ -3183,9 +3216,179 @@ function ReferralPanel() {
         </div>
       )}
 
-      {data && data.referrals.length === 0 && (
+      {data && data.referrals.length === 0 && tab === "referral" && (
         <div className="rounded-2xl p-8 text-center" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
           <p className="text-sm" style={{ color: S.muted }}>এখনো কাউকে refer করেননি। উপরের code share করুন!</p>
+        </div>
+      )}
+
+      {/* ─── Hospital Config Tab ─────────────────────────── */}
+      {tab === "hospitalconfig" && (
+        <div className="space-y-6">
+          {!hospitalConfigLoaded ? (
+            <div className="flex items-center justify-center py-16"><Loader2 className="animate-spin" size={28} style={{ color: "#378ADD" }} /></div>
+          ) : (
+            <>
+              <div className="rounded-2xl p-5 space-y-4" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
+                <h3 className="font-bold text-base" style={{ color: S.text }}>প্রতিষ্ঠান তথ্য</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>প্রতিষ্ঠানের ধরন</label>
+                    <select value={hospitalConfig.hospitalFacilityType} onChange={e => setHospitalConfig(p => ({ ...p, hospitalFacilityType: e.target.value }))}
+                      className="w-full rounded-xl border px-3 text-sm" style={{ height: 42, borderColor: S.border, color: S.text, backgroundColor: S.surface }}>
+                      <option value="hospital">হাসপাতাল</option>
+                      <option value="clinic">ক্লিনিক</option>
+                      <option value="diagnostic">ডায়াগনস্টিক সেন্টার</option>
+                      <option value="chamber">চেম্বার</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>রেজিস্ট্রেশন নম্বর</label>
+                    <input value={hospitalConfig.hospitalRegNumber} onChange={e => setHospitalConfig(p => ({ ...p, hospitalRegNumber: e.target.value }))}
+                      placeholder="DGDA-XXXX-XXXX" style={inp(false)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>জরুরি যোগাযোগ নম্বর</label>
+                    <input value={hospitalConfig.hospitalEmergencyPhone} onChange={e => setHospitalConfig(p => ({ ...p, hospitalEmergencyPhone: e.target.value }))}
+                      placeholder="01XXXXXXXXX" style={inp(false)} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl p-5 space-y-4" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
+                <h3 className="font-bold text-base" style={{ color: S.text }}>Prefix ও Token সেটিং</h3>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>Patient Prefix</label>
+                    <input value={hospitalConfig.hospitalPatientPrefix} onChange={e => setHospitalConfig(p => ({ ...p, hospitalPatientPrefix: e.target.value }))}
+                      placeholder="PAT" maxLength={6} style={inp(false)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>OPD Prefix</label>
+                    <input value={hospitalConfig.hospitalOpdPrefix} onChange={e => setHospitalConfig(p => ({ ...p, hospitalOpdPrefix: e.target.value }))}
+                      placeholder="OPD" maxLength={6} style={inp(false)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>IPD Prefix</label>
+                    <input value={hospitalConfig.hospitalAdmissionPrefix} onChange={e => setHospitalConfig(p => ({ ...p, hospitalAdmissionPrefix: e.target.value }))}
+                      placeholder="IPD" maxLength={6} style={inp(false)} />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>Token রিসেট সময় (প্রতিদিন)</label>
+                  <input type="time" value={hospitalConfig.hospitalTokenResetTime} onChange={e => setHospitalConfig(p => ({ ...p, hospitalTokenResetTime: e.target.value }))}
+                    style={inp(false)} />
+                </div>
+              </div>
+
+              <div className="rounded-2xl p-5 space-y-3" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
+                <h3 className="font-bold text-base" style={{ color: S.text }}>বিকল্প সুবিধা</h3>
+                <Toggle checked={hospitalConfig.hospitalShowVitals} onChange={v => setHospitalConfig(p => ({ ...p, hospitalShowVitals: v }))} label="OPD ভিজিটে vital signs দেখান" />
+                <Toggle checked={hospitalConfig.hospitalAutoSms} onChange={v => setHospitalConfig(p => ({ ...p, hospitalAutoSms: v }))} label="Token ও ভর্তি নিশ্চিতে SMS পাঠান" />
+              </div>
+
+              <button disabled={savingHospitalConfig} onClick={async () => {
+                setSavingHospitalConfig(true);
+                const r = await fetch("/api/hospital/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(hospitalConfig) });
+                setSavingHospitalConfig(false);
+                showToast(r.ok ? "success" : "error", r.ok ? "সেটিংস সংরক্ষিত হয়েছে" : "সংরক্ষণ ব্যর্থ হয়েছে");
+              }} className="w-full py-3.5 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2"
+                style={{ backgroundColor: "#378ADD", opacity: savingHospitalConfig ? 0.7 : 1 }}>
+                {savingHospitalConfig ? <Loader2 size={16} className="animate-spin" /> : null}
+                সংরক্ষণ করুন
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ─── Bed Setup Tab ─────────────────────────────── */}
+      {tab === "bedsetup" && (
+        <div className="space-y-6">
+          <div className="rounded-2xl p-5 space-y-4" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
+            <h3 className="font-bold text-base" style={{ color: S.text }}>নতুন Bed যোগ করুন</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>Bed নম্বর *</label>
+                <input value={bedForm.number} onChange={e => setBedForm(p => ({ ...p, number: e.target.value }))} placeholder="101" style={inp(false)} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>Ward</label>
+                <input value={bedForm.ward} onChange={e => setBedForm(p => ({ ...p, ward: e.target.value }))} placeholder="General" style={inp(false)} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>Bed ধরন</label>
+                <select value={bedForm.type} onChange={e => setBedForm(p => ({ ...p, type: e.target.value }))}
+                  className="w-full rounded-xl border px-3 text-sm" style={{ height: 42, borderColor: S.border, color: S.text, backgroundColor: S.surface }}>
+                  <option value="general">General</option>
+                  <option value="icu">ICU</option>
+                  <option value="cabin">Cabin</option>
+                  <option value="vip">VIP</option>
+                  <option value="maternity">Maternity</option>
+                  <option value="pediatric">Pediatric</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>দৈনিক ভাড়া (৳)</label>
+                <input type="number" value={bedForm.dailyRate} onChange={e => setBedForm(p => ({ ...p, dailyRate: e.target.value }))} placeholder="0" style={inp(false)} />
+              </div>
+            </div>
+            <button disabled={addingBed || !bedForm.number.trim()} onClick={async () => {
+              setAddingBed(true);
+              const r = await fetch("/api/hospital/beds", { method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ number: bedForm.number, ward: bedForm.ward, type: bedForm.type, dailyRate: parseFloat(bedForm.dailyRate) || 0 }) });
+              if (r.ok) {
+                const newBed = await r.json();
+                setBeds(p => [newBed, ...p]);
+                setBedForm({ number: "", ward: "General", type: "general", dailyRate: "" });
+                showToast("success", "Bed যোগ করা হয়েছে");
+              } else { showToast("error", "Bed যোগ ব্যর্থ হয়েছে"); }
+              setAddingBed(false);
+            }} className="w-full py-3 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2"
+              style={{ backgroundColor: "#0EA5E9", opacity: (addingBed || !bedForm.number.trim()) ? 0.6 : 1 }}>
+              {addingBed ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+              Bed যোগ করুন
+            </button>
+          </div>
+
+          <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
+            <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: S.border }}>
+              <h3 className="font-bold text-base" style={{ color: S.text }}>সকল Bed তালিকা</h3>
+              {bedsLoading && <Loader2 size={16} className="animate-spin" style={{ color: S.muted }} />}
+            </div>
+            {beds.length === 0 ? (
+              <div className="p-8 text-center">
+                <BedDouble size={32} style={{ color: S.muted }} className="mx-auto mb-2" />
+                <p className="text-sm" style={{ color: S.muted }}>এখনো কোনো Bed যোগ করা হয়নি</p>
+              </div>
+            ) : (
+              <div className="divide-y" style={{ borderColor: S.border }}>
+                {beds.map(bed => (
+                  <div key={bed.id} className="flex items-center justify-between px-5 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold" style={{ backgroundColor: "#EFF6FF", color: "#378ADD" }}>
+                        {bed.number}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold" style={{ color: S.text }}>{bed.ward} · {bed.type.toUpperCase()}</p>
+                        <p className="text-xs" style={{ color: S.muted }}>৳{bed.dailyRate}/দিন · <span style={{ color: bed.status === "available" ? "#10B981" : "#F59E0B" }}>{bed.status === "available" ? "খালি" : "ব্যস্ত"}</span></p>
+                      </div>
+                    </div>
+                    <button disabled={deletingBedId === bed.id} onClick={async () => {
+                      if (!confirm(`Bed ${bed.number} মুছে দিবেন?`)) return;
+                      setDeletingBedId(bed.id);
+                      const r = await fetch(`/api/hospital/beds/${bed.id}`, { method: "DELETE" });
+                      if (r.ok) { setBeds(p => p.filter(b => b.id !== bed.id)); showToast("success", "Bed মুছে গেছে"); }
+                      else showToast("error", "Bed মুছতে ব্যর্থ");
+                      setDeletingBedId(null);
+                    }} className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#FEF2F2" }}>
+                      {deletingBedId === bed.id ? <Loader2 size={14} className="animate-spin text-red-500" /> : <Trash2 size={14} color="#DC2626" />}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

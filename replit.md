@@ -28,6 +28,17 @@ A SaaS web app for Bangladeshi Facebook sellers — stock management (with produ
 - **Dashboard**: `DashboardLab` component with 4 stat cards, today's queue table with sample collection actions, home collection list, quick navigation links
 - **Features**: Auto-flag (normal/high/low/critical) based on value vs normal range, critical value alerts, auto order number (LAB-YYYY-NNN), home collection support, urgency (normal/urgent), package shortcuts in order form, patient search with new patient creation
 
+## Hospital / Clinic Module (Complete)
+- **Business Type**: `"hospital"` — added to `BusinessType`, `BUSINESS_TYPES`, `BUSINESS_TYPE_META` (blue #378ADD, Stethoscope icon), `BUSINESS_MODULES`, `NAV_BY_TYPE` in `lib/modules.ts`
+- **DB Models**: `Doctor`, `HospitalPatient`, `OPDVisit`, `OPDTestRequest`, `IPDAdmission`, `IPDCharge`, `IPDNote`, `Bed` in `prisma/schema.prisma`; hospital config fields added to `Shop` (`hospitalFacilityType`, `hospitalRegNumber`, `hospitalEmergencyPhone`, `hospitalTokenResetTime`, `hospitalAdmissionPrefix`, `hospitalOpdPrefix`, `hospitalPatientPrefix`, `hospitalShowVitals`, `hospitalAutoSms`); pushed with `npx prisma db push`
+- **API Routes**: `/api/hospital/dashboard-stats`, `/api/hospital/doctors` (CRUD + `[id]`), `/api/hospital/patients` (CRUD + `[id]`), `/api/hospital/opd` (CRUD + `[id]`), `/api/hospital/ipd` (CRUD + `[id]` + charges/notes/discharge), `/api/hospital/beds` (CRUD + `[id]`), `/api/hospital/billing`, `/api/hospital/reports`, `/api/hospital/settings` (GET/PATCH)
+- **Pages**: `/hospital/doctors` (DoctorsBoard), `/hospital/opd` (OPDBoard — 3-step token form + queue management), `/hospital/ipd` (IPDBoard — bed map + admission + charges/notes/discharge), `/hospital/patients` (PatientsBoard — visit history), `/hospital/billing` (BillingBoard), `/hospital/reports` (HospitalReports with recharts)
+- **Dashboard**: `DashboardHospital` with 5 stat cards, today's OPD queue, bed occupancy, ward availability
+- **Settings**: "হাসপাতাল কনফিগ" + "Bed ব্যবস্থাপনা" tabs added to `/settings` page (conditionally shown when businessType === "hospital")
+- **Shared**: `components/hospital/HospitalDisclaimer.tsx` — medical disclaimer shown on all patient-facing pages
+- **Nav**: Dashboard → ডাক্তার → OPD (বহির্বিভাগ) → IPD ভর্তি → রোগী → বিলিং → রিপোর্ট
+- **Features**: Auto patient ID (PAT-YYYY-NNN), OPD token queue with 3-step flow (patient lookup → vitals → prescribe), IPD bed map with ward grouping, charge/note timeline, discharge summary, bed availability tracking
+
 ## Garage / Auto Service Center Module (Phase 6 — Complete)
 - **DB Models**: `Vehicle`, `JobCard`, `JobCardPart`, `JobCardService` added to `prisma/schema.prisma`; `garageJobPrefix` added to `Shop`; `vehicles` relation added to `Customer`; `jobCardParts` added to `Product`
 - **API Routes**: `/api/vehicles`, `/api/vehicles/[id]`, `/api/jobcards`, `/api/jobcards/[id]`, `/api/jobcards/[id]/parts`, `/api/jobcards/[id]/services`, `/api/jobcards/[id]/payment`, `/api/jobcards/[id]/deliver`, `/api/garage/dashboard`, `/api/garage/reports`
