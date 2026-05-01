@@ -228,6 +228,16 @@ model Shop {
   garageVatNumber       String?
   garageAutoSmsReady    Boolean  @default(true)
   garageCommonServices  Json?    @default("[]")
+
+  // Lab / Diagnostic Center module
+  labTests              LabTest[]
+  testPackages          TestPackage[]
+  testOrders            TestOrder[]
+  testResults           TestResult[]
+  labOrderPrefix        String?  @default("LAB")
+  labAutoSmsReady       Boolean  @default(true)
+  labPathologistName    String?
+  labRegistrationNo     String?
 }
 
 model Subscription {
@@ -375,6 +385,7 @@ model Customer {
   tailorOrders  TailorOrder[]
   bookings      Booking[]
   vehicles      Vehicle[]
+  testOrders    TestOrder[]
   createdAt     DateTime       @default(now())
 
   @@index([shopId])
@@ -1878,4 +1889,129 @@ model JobCardService {
   mechanicId  String?
 
   @@index([jobCardId])
+}
+
+/* ─── LAB / DIAGNOSTIC CENTER MODULE ────────────────────── */
+
+model LabTest {
+  id                  String          @id @default(cuid())
+  shopId              String
+  shop                Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name                String
+  banglaName          String?
+  shortCode           String
+  category            String          @default("other")
+  price               Float
+  homeCollectionPrice Float?
+  turnaroundHours     Int             @default(24)
+  sampleType          String?
+  normalRangeMale     String?
+  normalRangeFemale   String?
+  unit                String?
+  isActive            Boolean         @default(true)
+  isPackageItem       Boolean         @default(false)
+  testItems           TestOrderItem[]
+  testResults         TestResult[]
+  packageItems        TestPackageItem[]
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  @@unique([shopId, shortCode])
+  @@index([shopId])
+  @@index([category])
+  @@index([isActive])
+}
+
+model TestPackage {
+  id         String            @id @default(cuid())
+  shopId     String
+  shop       Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name       String
+  banglaName String?
+  price      Float
+  tests      TestPackageItem[]
+  isActive   Boolean           @default(true)
+  createdAt  DateTime          @default(now())
+
+  @@index([shopId])
+}
+
+model TestPackageItem {
+  id        String      @id @default(cuid())
+  packageId String
+  package   TestPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  testId    String
+  test      LabTest     @relation(fields: [testId], references: [id])
+
+  @@index([packageId])
+  @@index([testId])
+}
+
+model TestOrder {
+  id               String          @id @default(cuid())
+  shopId           String
+  shop             Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  orderNumber      String          @unique
+  patientId        String
+  patient          Customer        @relation(fields: [patientId], references: [id])
+  refDoctorName    String?
+  refDoctorPhone   String?
+  collectionType   String          @default("lab")
+  homeAddress      String?
+  homeTime         DateTime?
+  collectorName    String?
+  sampleCollected  Boolean         @default(false)
+  sampleCollectedAt DateTime?
+  status           String          @default("registered")
+  totalAmount      Float
+  discountAmount   Float           @default(0)
+  netAmount        Float
+  paidAmount       Float           @default(0)
+  dueAmount        Float
+  paymentMethod    String?
+  urgency          String          @default("normal")
+  items            TestOrderItem[]
+  results          TestResult[]
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([shopId])
+  @@index([patientId])
+  @@index([status])
+  @@index([shopId, createdAt])
+  @@index([urgency])
+}
+
+model TestOrderItem {
+  id            String    @id @default(cuid())
+  testOrderId   String
+  testOrder     TestOrder @relation(fields: [testOrderId], references: [id], onDelete: Cascade)
+  testId        String
+  test          LabTest   @relation(fields: [testId], references: [id])
+  price         Float
+  resultEntered Boolean   @default(false)
+
+  @@index([testOrderId])
+  @@index([testId])
+}
+
+model TestResult {
+  id          String    @id @default(cuid())
+  shopId      String
+  shop        Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  testOrderId String
+  testOrder   TestOrder @relation(fields: [testOrderId], references: [id], onDelete: Cascade)
+  testId      String
+  test        LabTest   @relation(fields: [testId], references: [id])
+  value       String
+  unit        String?
+  normalRange String?
+  flag        String?
+  note        String?
+  enteredById String?
+  enteredAt   DateTime  @default(now())
+
+  @@index([shopId])
+  @@index([testOrderId])
+  @@index([testId])
 }

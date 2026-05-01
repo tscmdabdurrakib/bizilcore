@@ -34,6 +34,10 @@ import {
   CalendarRange,
   Wrench,
   Car,
+  FlaskConical,
+  TestTube2,
+  Microscope,
+  ClipboardCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -47,7 +51,8 @@ export type BusinessType =
   | "salon"
   | "tailor"
   | "hotel"
-  | "garage";
+  | "garage"
+  | "lab";
 
 export const BUSINESS_TYPES: BusinessType[] = [
   "fcommerce",
@@ -58,6 +63,7 @@ export const BUSINESS_TYPES: BusinessType[] = [
   "tailor",
   "hotel",
   "garage",
+  "lab",
 ];
 
 export interface BusinessTypeMeta {
@@ -133,6 +139,14 @@ export const BUSINESS_TYPE_META: Record<BusinessType, BusinessTypeMeta> = {
     color: "#B45309",
     bgColor: "#FEF3C7",
     icon: Wrench,
+  },
+  lab: {
+    type: "lab",
+    label: "ল্যাব / ডায়াগনস্টিক",
+    description: "রোগ নির্ণয় পরীক্ষা করি",
+    color: "#0891B2",
+    bgColor: "#ECFEFF",
+    icon: FlaskConical,
   },
 };
 
@@ -218,6 +232,10 @@ const BUSINESS_MODULES: Record<BusinessType, string[]> = {
   garage: [
     "dashboard", "jobcards", "vehicles", "inventory",
     "customers", "staff", "hisab", "reports", "settings",
+  ],
+  lab: [
+    "dashboard", "tests", "testorders", "results", "patients",
+    "appointments", "hisab", "reports", "settings",
   ],
 };
 
@@ -431,6 +449,29 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
       items: [
         { href: "/customers",  icon: Users,           label: "কাস্টমার",        module: "customers" },
         { href: "/hr",         icon: UserCog,         label: "মেকানিক / স্টাফ", module: "staff"     },
+      ],
+    },
+    {
+      label: "আর্থিক",
+      items: [
+        { href: "/hisab",   icon: BookOpen,  label: "হিসাব",   module: "hisab"   },
+        { href: "/reports", icon: BarChart2, label: "রিপোর্ট", module: "reports" },
+      ],
+    },
+  ],
+  lab: [
+    {
+      items: [
+        { href: "/dashboard",       icon: LayoutDashboard, label: "ড্যাশবোর্ড",      module: "dashboard"   },
+        { href: "/lab/testorders",  icon: ClipboardCheck,  label: "রোগী রেজিস্ট্রেশন", module: "testorders"  },
+        { href: "/lab/results",     icon: Microscope,      label: "Result এন্ট্রি",   module: "results"     },
+        { href: "/lab/tests",       icon: TestTube2,       label: "পরীক্ষার তালিকা",  module: "tests"       },
+      ],
+    },
+    {
+      items: [
+        { href: "/customers",       icon: Users,           label: "রোগীর তালিকা",    module: "patients"    },
+        { href: "/appointments",    icon: Calendar,        label: "অ্যাপয়েন্টমেন্ট", module: "appointments" },
       ],
     },
     {
