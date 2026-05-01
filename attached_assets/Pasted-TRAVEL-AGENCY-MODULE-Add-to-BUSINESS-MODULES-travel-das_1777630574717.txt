@@ -1,0 +1,237 @@
+TRAVEL AGENCY MODULE ===
+
+Add to BUSINESS_MODULES:
+travel: ["dashboard","packages","bookings","customers",
+         "vendors","visa","hisab","reports","settings"]
+
+Add to onboarding:
+  Name: "ট্রাভেল এজেন্সি"
+  Description: "ট্যুর প্যাকেজ ও টিকেট বুকিং করি"
+
+━━━ DATABASE ━━━
+
+model TourPackage {
+  id            String    @id @default(cuid())
+  shopId        String
+  name          String    -- "Cox's Bazar 3D/2N", "Thailand 5D/4N"
+  destination   String
+  type          String    -- "domestic"|"international"|"hajj"|"umrah"|"honeymoon"|"group"
+  duration      String    -- "3 Days / 2 Nights"
+  inclusions    String[]  -- ["hotel","transport","breakfast","guide"]
+  exclusions    String[]  -- ["visa","lunch","personal expenses"]
+  adultPrice    Float
+  childPrice    Float?
+  infantPrice   Float?
+  maxPersons    Int?
+  description   String?
+  itinerary     Json?     -- [{day: 1, title: "Arrival", details: "..."}]
+  imageUrl      String?
+  isActive      Boolean   @default(true)
+  bookings      TourBooking[]
+}
+
+model TourBooking {
+  id              String      @id @default(cuid())
+  shopId          String
+  bookingNumber   String      @unique -- "TRV-2026-001"
+  packageId       String?
+  package         TourPackage? @relation(fields: [packageId], references: [id])
+  customerId      String?
+  customer        Customer?   @relation(fields: [customerId], references: [id])
+  clientName      String
+  clientPhone     String
+  bookingType     String      -- "package"|"ticket"|"hotel"|"visa"|"hajj_umrah"|"custom"
+  travelDate      DateTime
+  returnDate      DateTime?
+  adults          Int         @default(1)
+  children        Int         @default(0)
+  infants         Int         @default(0)
+  totalPersons    Int
+  destination     String
+  description     String?     -- for custom bookings
+  totalAmount     Float
+  costAmount      Float       @default(0)  -- agency's cost
+  profit          Float       @default(0)  -- auto-calculated
+  advancePaid     Float       @default(0)
+  dueAmount       Float
+  status          String      @default("confirmed")
+  -- "enquiry"|"confirmed"|"advance_paid"|"completed"|"cancelled"
+  tickets         TravelTicket[]
+  visaRequests    VisaRequest[]
+  payments        TravelPayment[]
+  notes           String?
+  createdAt       DateTime    @default(now())
+}
+
+model TravelTicket {
+  id          String       @id @default(cuid())
+  bookingId   String
+  booking     TourBooking  @relation(fields: [bookingId], references: [id])
+  ticketType  String       -- "flight"|"bus"|"train"|"launch"|"hotel"
+  passengerName String
+  pnrNumber   String?      -- PNR or booking reference
+  sector      String?      -- "DAC-CGP", "DAC-BKK"
+  travelDate  DateTime?
+  seatClass   String?      -- "Economy"|"Business"|"AC Chair"
+  vendorName  String?      -- airline/bus company
+  costPrice   Float        @default(0)
+  sellPrice   Float        @default(0)
+  status      String       @default("issued")
+  -- "issued"|"reissued"|"cancelled"|"refunded"
+}
+
+model VisaRequest {
+  id              String      @id @default(cuid())
+  shopId          String
+  bookingId       String?
+  booking         TourBooking? @relation(fields: [bookingId], references: [id])
+  customerId      String?
+  customer        Customer?   @relation(fields: [customerId], references: [id])
+  visaNumber      String      @unique -- "VISA-2026-001"
+  applicantName   String
+  applicantPhone  String
+  passportNumber  String
+  passportExpiry  DateTime
+  country         String
+  visaType        String      -- "tourist"|"business"|"student"|"work"|"medical"
+  applicationDate DateTime    @default(now())
+  submittedDate   DateTime?
+  expectedDate    DateTime?
+  approvedDate    DateTime?
+  rejectedDate    DateTime?
+  status          String      @default("collecting_docs")
+  -- "collecting_docs"|"submitted"|"processing"|"approved"|"rejected"|"delivered"
+  serviceCharge   Float
+  paidAmount      Float       @default(0)
+  documents       String[]    -- checklist of collected docs
+  notes           String?
+}
+
+model TravelVendor {
+  id          String  @id @default(cuid())
+  shopId      String
+  name        String  -- "Biman Bangladesh", "Green Line Bus"
+  type        String  -- "airline"|"bus"|"hotel"|"tour_operator"|"visa_agent"
+  contact     String?
+  accountInfo String? -- payment account details
+  dueToVendor Float   @default(0)
+  notes       String?
+}
+
+model TravelPayment {
+  id        String      @id @default(cuid())
+  bookingId String
+  booking   TourBooking @relation(fields: [bookingId], references: [id])
+  amount    Float
+  method    String
+  note      String?
+  paidAt    DateTime    @default(now())
+}
+
+━━━ TRAVEL DASHBOARD (/dashboard) ━━━
+
+4 stat cards:
+  এই মাসের বুকিং: total bookings this month
+  আসন্ন ট্যুর: bookings where travelDate within 7 days
+  মোট Pending বাকি: sum of all dueAmounts
+  এই মাসের মুনাফা: sum of profit this month
+
+Upcoming travel list (next 14 days):
+  Client name, destination, travel date, persons, due amount badge
+  "Reminder পাঠান" button per booking
+
+Booking type breakdown (mini pie):
+  Package / Ticket / Visa / Hajj/Umrah / Hotel
+
+━━━ TOUR PACKAGES (/packages) ━━━
+
+Package cards: destination photo, name, duration, type badge,
+  adult price, "বুকিং নিন" quick button
+
+"নতুন Package তৈরি করুন" → form:
+  Name*, destination*, type* (dropdown), duration*
+  Prices: Adult*, Child (optional), Infant (optional)
+  Max persons, inclusions (chip input), exclusions (chip input)
+  Itinerary builder (day-by-day: title + details)
+  Description, image upload
+  "সেভ করুন"
+
+━━━ BOOKING MANAGEMENT (/bookings) ━━━
+
+Filter tabs: সব | Package | Ticket | Visa | Hajj/Umrah | Hotel | Custom
+
+"নতুন বুকিং" → 3-step form:
+
+  Step 1 — বুকিং ধরন:
+    Booking type (big icon buttons):
+      ✈️ Package Tour | 🎫 Ticket (Air/Bus/Train) | 🏨 Hotel Only
+      🕌 Hajj/Umrah | 📋 Visa Processing | 🔧 Custom
+
+    If Package: select from package list
+    If Ticket: sector, travel date, class, vendor
+    If Custom: free description
+
+  Step 2 — যাত্রীর তথ্য:
+    Client: search existing or add new (name*, phone*)
+    Travel date*, return date (optional)
+    Persons: Adults, Children, Infants
+    Destination*
+
+  Step 3 — মূল্য ও পেমেন্ট:
+    Total amount*, agency cost (for profit tracking)
+    Profit auto-calculated (total - cost)
+    Advance paid, due
+    "বুকিং নিশ্চিত করুন" →
+      Booking number auto-generated (TRV-YYYY-NNN)
+      SMS to client:
+        "প্রিয় [name], আপনার ট্যুর বুকিং নিশ্চিত হয়েছে।
+         বুকিং নং: [TRV-number]
+         গন্তব্য: [destination] | তারিখ: [date]
+         মোট: ৳[total] | অগ্রিম: ৳[advance] | বাকি: ৳[due]
+         - [AgencyName]"
+
+Booking detail page:
+  Full booking info
+  Tickets section: passenger-wise ticket list
+    "+ টিকেট যোগ করুন": passenger name, PNR, sector, date, vendor, cost, sell price
+  Payment history + "পেমেন্ট নিন"
+  Status update
+  Pre-travel reminder SMS button
+
+━━━ VISA TRACKING (/visa) ━━━
+
+Visa applications list:
+  Filter: সব | Docs সংগ্রহ | Submitted | Processing | Approved | Rejected
+
+Each row: visa number, applicant name, country, type, passport expiry, status badge, days since applied
+
+"নতুন Visa আবেদন" → form:
+  Applicant name*, phone*, passport number*, expiry date*, country*, visa type*
+  Service charge*, advance paid
+  Documents checklist (tick off as collected):
+    ☐ Passport copy  ☐ NID copy  ☐ Photo  ☐ Bank statement
+    ☐ Employment letter  ☐ Hotel booking  ☐ Air ticket
+    ☐ Travel insurance  ☐ Invitation letter (if applicable)
+  Notes
+  "সেভ করুন"
+
+Visa detail: status timeline, documents checklist (tick/untick), notes, SMS to applicant on status change
+
+━━━ VENDOR MANAGEMENT (/vendors) ━━━
+
+Vendor list: airlines, bus companies, hotels, tour operators
+Per vendor: name, type, contact, total bookings, amount due to vendor
+"পেমেন্ট দিয়েছি" button → deducts from vendor due
+
+━━━ REPORTS (/reports) ━━━
+
+Travel-specific:
+  Monthly booking count + revenue (bar chart)
+  Profit margin per booking type
+  Top destinations (bar chart)
+  Vendor-wise ticket volume
+  Visa approval rate
+  Pending payments (due from clients)
+
+All Bangla UI. Same design system.
+Booking numbers auto-generated. Passport expiry dates show warning if < 6 months.
