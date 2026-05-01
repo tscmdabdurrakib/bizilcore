@@ -1,0 +1,298 @@
+SCHOOL / COACHING CENTER MODULE ===
+
+Add to BUSINESS_MODULES:
+school: ["dashboard","students","batches","fees",
+         "attendance","exams","staff","hisab","reports","settings"]
+
+Add to onboarding:
+  Name: "স্কুল / কোচিং সেন্টার"
+  Description: "শিক্ষার্থী ভর্তি ও ফি ব্যবস্থাপনা করি"
+
+━━━ DATABASE ━━━
+
+model Student {
+  id             String    @id @default(cuid())
+  shopId         String
+  regNumber      String    -- "STU-2026-001"
+  name           String
+  nameBangla     String?
+  phone          String?
+  guardianName   String
+  guardianPhone  String
+  guardianRelation String? -- "Father"|"Mother"|"Uncle"|"Other"
+  address        String?
+  dateOfBirth    DateTime?
+  gender         String?
+  bloodGroup     String?
+  previousSchool String?
+  photoUrl       String?
+  admissionDate  DateTime  @default(now())
+  status         String    @default("active")
+  -- "active"|"inactive"|"tc_issued"|"graduated"
+  batchId        String?
+  batch          Batch?    @relation(fields: [batchId], references: [id])
+  fees           FeeRecord[]
+  attendance     AttendanceRecord[]
+  examResults    ExamResult[]
+  notes          String?
+}
+
+model Batch {
+  id           String    @id @default(cuid())
+  shopId       String
+  name         String    -- "Class 8 - Morning", "HSC Bangla Batch A"
+  class        String?   -- "Class 8", "HSC", "SSC"
+  subject      String?   -- "Math", "English", "All Subjects"
+  schedule     String?   -- "Sat, Mon, Wed | 8:00 AM - 10:00 AM"
+  teacherId    String?
+  teacher      StaffMember? @relation(fields: [teacherId], references: [id])
+  room         String?   -- "Room 101"
+  monthlyFee   Float
+  admissionFee Float     @default(0)
+  maxStudents  Int?
+  isActive     Boolean   @default(true)
+  students     Student[]
+  fees         FeeRecord[]
+  attendance   AttendanceRecord[]
+}
+
+model FeeRecord {
+  id          String    @id @default(cuid())
+  shopId      String
+  studentId   String
+  student     Student   @relation(fields: [studentId], references: [id])
+  batchId     String?
+  batch       Batch?    @relation(fields: [batchId], references: [id])
+  feeType     String    @default("monthly")
+  -- "monthly"|"admission"|"exam"|"special"|"other"
+  month       String?   -- "2026-03" for monthly fees
+  description String?   -- "March 2026 Fee" or "Annual Exam Fee"
+  amount      Float
+  discount    Float     @default(0)
+  netAmount   Float
+  paidAmount  Float     @default(0)
+  dueAmount   Float
+  paidDate    DateTime?
+  method      String?   -- "cash"|"bkash"|"nagad"
+  receiptNo   String?
+  status      String    @default("due")
+  -- "due"|"partial"|"paid"
+  note        String?
+  createdAt   DateTime  @default(now())
+}
+
+model AttendanceRecord {
+  id        String    @id @default(cuid())
+  shopId    String
+  studentId String
+  student   Student   @relation(fields: [studentId], references: [id])
+  batchId   String
+  batch     Batch     @relation(fields: [batchId], references: [id])
+  date      DateTime
+  status    String    -- "present"|"absent"|"late"|"leave"
+}
+
+model ExamResult {
+  id          String    @id @default(cuid())
+  shopId      String
+  studentId   String
+  student     Student   @relation(fields: [studentId], references: [id])
+  batchId     String?
+  examName    String    -- "Monthly Test - March 2026"
+  subject     String    -- "Mathematics"
+  totalMark   Int
+  obtainedMark Int
+  percentage  Float
+  grade       String?   -- "A+", "A", "B", "C", "D", "F"
+  position    Int?      -- class position (optional)
+  examDate    DateTime
+  remarks     String?
+}
+
+━━━ SCHOOL DASHBOARD (/dashboard) ━━━
+
+4 stat cards:
+  মোট শিক্ষার্থী: active students count
+  আজকের উপস্থিতি: today's attendance % (if taken)
+  ফি বাকি (এই মাস): count of students with due fees this month
+  এই মাসের আয়: total fees collected this month
+
+Fee collection alert card:
+  "এই মাসে X জনের ফি বাকি (৳[total due])"
+  "সবাইকে SMS পাঠান" button → bulk reminder
+
+Batch-wise student count (mini table):
+  Batch name | Students | Present today | Fee collected %
+
+━━━ STUDENT MANAGEMENT (/students) ━━━
+
+Student list: search + batch filter + status filter
+
+Student card per row:
+  Photo (or avatar with initials), reg number, name, guardian phone,
+  batch badge, fee status badge (Paid/Due/Partial)
+
+"শিক্ষার্থী ভর্তি করুন" button → comprehensive form:
+
+  Personal Info:
+    Name* (English), Bangla name (optional), reg number (auto-generate)
+    Date of birth, gender (Male/Female/Other), blood group
+    Photo upload (optional)
+
+  Guardian Info:
+    Guardian name*, phone*, relationship
+    Alternative phone (optional), address
+
+  Academic Info:
+    Assign batch* (dropdown), admission date
+    Previous school/institution (optional)
+    Notes
+
+  Fee Setup:
+    Admission fee (if applicable)
+    Monthly fee (auto-filled from batch, editable)
+    First month fee: collect now or mark as due
+
+  "ভর্তি করুন" →
+    Auto-generates reg number (STU-YYYY-NNN)
+    Welcome SMS to guardian:
+      "[Student name] কে [BatchName] তে ভর্তি করা হয়েছে।
+       রেজি নং: [reg number]
+       মাসিক ফি: ৳[amount] | ভর্তি ফি: ৳[amount]
+       - [InstitutionName]"
+
+Student Profile page:
+  Info card + edit button
+  Tabs: ফি ইতিহাস | উপস্থিতি | পরীক্ষার ফলাফল | নোট
+  
+  Fee tab: all fee records sorted by month, total paid, total due
+  Attendance tab: monthly calendar view showing present/absent/late
+    Attendance % shown prominently
+  Exam tab: all results with grade badges
+  "TC দিন" button (Transfer Certificate) → marks student inactive
+
+━━━ BATCH MANAGEMENT (/batches) ━━━
+
+Batch cards: name, class, subject, schedule, teacher, student count / max, monthly fee
+
+"নতুন Batch তৈরি করুন" → form:
+  Batch name*, class, subject (or "All Subjects"),
+  Schedule (e.g. "Sat, Mon, Wed | 8:00 AM - 10:00 AM"),
+  Assign teacher (staff dropdown), room, max students (optional),
+  Monthly fee*, admission fee (optional)
+  "তৈরি করুন"
+
+Batch detail:
+  Student list in this batch
+  "শিক্ষার্থী বদলি করুন" → move student to another batch
+  Batch fee collection summary: paid/due/partial counts
+
+━━━ FEE MANAGEMENT (/fees) ━━━
+
+Default view: Current month fee status
+Month selector at top (previous months accessible)
+
+Summary cards:
+  মোট শিক্ষার্থী | পরিশোধ হয়েছে | বাকি আছে | আংশিক
+
+Fee table per student:
+  Photo, name, batch, month, amount, discount, net, paid, due, status badge, actions
+
+Status badges:
+  Paid: bg=#E1F5EE text=#085041
+  Due: bg=#FCEBEB text=#791F1F
+  Partial: bg=#FAEEDA text=#633806
+
+"ফি নিন" button per student → quick payment modal:
+  Student name + month shown (read only)
+  Due amount shown
+  Paid amount input (default = full due)
+  Payment method: Cash / bKash / Nagad
+  Receipt number (optional)
+  Note (optional)
+  "সেভ করুন" → status updates, receipt generates
+
+"এই মাসের ফি তৈরি করুন" button (at top):
+  Creates FeeRecord for all active students based on batch monthly fee
+  Shows preview: X students × ৳Y = ৳Z
+  "নিশ্চিত করুন" → bulk creates
+
+"বাকিদের SMS পাঠান" bulk button:
+  Preview: X students will receive SMS
+  Message template (editable):
+    "[Guardian name], আপনার সন্তান [student name] এর
+     [month] মাসের ফি ৳[due] বাকি আছে।
+     দ্রুত পরিশোধ করুন। - [InstitutionName]"
+  "পাঠান" → sends to all with due fees
+
+Other fee types button: "+ অন্য ফি":
+  Exam fee, admission, special fee — add to individual or all batch students
+
+━━━ ATTENDANCE (/attendance) ━━━
+
+Top: batch selector + date picker (default: today)
+
+Two views:
+  Quick mark: student list with ✓/✗/⏱ buttons (Present/Absent/Late)
+  Calendar view: per student, monthly calendar
+
+Quick mark view:
+  Each row: photo, name, reg number, 3 buttons (Present/Absent/Late)
+  Default: all unmarked (white buttons)
+  After click: selected button highlights
+  "সব উপস্থিত" shortcut button at top
+  "সেভ করুন" → saves all at once with confirmation count
+
+If attendance already taken for date: shows existing data (editable)
+
+Attendance summary per student (on student profile):
+  Monthly: "উপস্থিত: X দিন | অনুপস্থিত: Y দিন | উপস্থিতি: Z%"
+
+Auto SMS for absence (optional, toggle in settings):
+  "আজ [date] তারিখে [student name] অনুপস্থিত ছিল। - [InstitutionName]"
+
+━━━ EXAM RESULTS (/exams) ━━━
+
+"নতুন পরীক্ষার ফলাফল এন্ট্রি" button → form:
+
+  Exam setup:
+    Exam name (e.g. "Monthly Test - March 2026")
+    Subject*, exam date*, total marks*
+    Select batch
+
+  Result entry table:
+    Student name | Obtained marks input | Grade (auto) | Position (optional) | Remarks
+    Grade auto-calculation:
+      80-100%: A+, 70-79%: A, 60-69%: A-, 50-59%: B, 40-49%: C, 33-39%: D, <33%: F
+    
+  "সেভ করুন" → saves all results
+
+Results view:
+  Filter by exam + batch
+  Rank list (sorted by obtained marks)
+  Failed students highlighted (grade=F)
+  Export to PDF option (result sheet format)
+
+━━━ SETTINGS — SCHOOL CONFIG ━━━
+
+In /settings — "School Config":
+  Institution type: স্কুল / কলেজ / কোচিং / মাদ্রাসা / ইংরেজি মাধ্যম
+  Academic year (e.g. "January - December")
+  Fee due date (e.g. 10th of every month)
+  Late fee amount (৳X after due date)
+  Grade scale customization
+  Auto-generate fee on 1st of month (toggle)
+  Absent SMS notification (toggle)
+  Receipt number prefix
+
+All Bangla UI. Same design system.
+Student reg numbers always auto-generated.
+
+
+
+
+
+
+
+
+

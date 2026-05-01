@@ -245,6 +245,21 @@ model Shop {
   hallEvents            HallEvent[]
   conventionEventPrefix String?  @default("EVT")
   conventionMinAdvancePct Int    @default(30)
+
+  // School / Coaching Center module
+  students              Student[]
+  batches               Batch[]
+  feeRecords            FeeRecord[]
+  attendanceRecords     AttendanceRecord[]
+  examResults           ExamResult[]
+  schoolRegPrefix       String?  @default("STU")
+  schoolReceiptPrefix   String?  @default("REC")
+  schoolFeeDueDay       Int      @default(10)
+  schoolLateFeeAmount   Float    @default(0)
+  schoolAutoGenerateFee Boolean  @default(false)
+  schoolAbsentSms       Boolean  @default(false)
+  schoolInstitutionType String?  @default("coaching")
+  schoolAcademicYear    String?  @default("January - December")
 }
 
 model Subscription {
@@ -301,6 +316,7 @@ model StaffMember {
   shiftAssignments ShiftAssignment[]
   appointments     Appointment[]
   defaultServices  Service[]         @relation("ServiceDefaultStaff")
+  teachingBatches  Batch[]           @relation("BatchTeacher")
 
   @@index([shopId])
 }
@@ -2127,4 +2143,125 @@ model EventPayment {
   paidAt  DateTime  @default(now())
 
   @@index([eventId])
+}
+
+// ─── School / Coaching Center Module ─────────────────────────────────────
+
+model Student {
+  id               String             @id @default(cuid())
+  shopId           String
+  shop             Shop               @relation(fields: [shopId], references: [id])
+  regNumber        String
+  name             String
+  nameBangla       String?
+  phone            String?
+  guardianName     String
+  guardianPhone    String
+  guardianRelation String?
+  address          String?
+  dateOfBirth      DateTime?
+  gender           String?
+  bloodGroup       String?
+  previousSchool   String?
+  photoUrl         String?
+  admissionDate    DateTime           @default(now())
+  status           String             @default("active")
+  batchId          String?
+  batch            Batch?             @relation(fields: [batchId], references: [id])
+  fees             FeeRecord[]
+  attendance       AttendanceRecord[]
+  examResults      ExamResult[]
+  notes            String?
+  createdAt        DateTime           @default(now())
+
+  @@index([shopId])
+  @@index([batchId])
+}
+
+model Batch {
+  id           String             @id @default(cuid())
+  shopId       String
+  shop         Shop               @relation(fields: [shopId], references: [id])
+  name         String
+  class        String?
+  subject      String?
+  schedule     String?
+  teacherId    String?
+  teacher      StaffMember?       @relation("BatchTeacher", fields: [teacherId], references: [id])
+  room         String?
+  monthlyFee   Float
+  admissionFee Float              @default(0)
+  maxStudents  Int?
+  isActive     Boolean            @default(true)
+  students     Student[]
+  fees         FeeRecord[]
+  attendance   AttendanceRecord[]
+  createdAt    DateTime           @default(now())
+
+  @@index([shopId])
+}
+
+model FeeRecord {
+  id          String    @id @default(cuid())
+  shopId      String
+  shop        Shop      @relation(fields: [shopId], references: [id])
+  studentId   String
+  student     Student   @relation(fields: [studentId], references: [id])
+  batchId     String?
+  batch       Batch?    @relation(fields: [batchId], references: [id])
+  feeType     String    @default("monthly")
+  month       String?
+  description String?
+  amount      Float
+  discount    Float     @default(0)
+  netAmount   Float
+  paidAmount  Float     @default(0)
+  dueAmount   Float
+  paidDate    DateTime?
+  method      String?
+  receiptNo   String?
+  status      String    @default("due")
+  note        String?
+  createdAt   DateTime  @default(now())
+
+  @@index([shopId])
+  @@index([studentId])
+}
+
+model AttendanceRecord {
+  id        String    @id @default(cuid())
+  shopId    String
+  shop      Shop      @relation(fields: [shopId], references: [id])
+  studentId String
+  student   Student   @relation(fields: [studentId], references: [id])
+  batchId   String
+  batch     Batch     @relation(fields: [batchId], references: [id])
+  date      DateTime
+  status    String
+
+  @@unique([studentId, batchId, date])
+  @@index([shopId])
+  @@index([studentId])
+}
+
+model ExamResult {
+  id           String    @id @default(cuid())
+  shopId       String
+  shop         Shop      @relation(fields: [shopId], references: [id])
+  studentId    String
+  student      Student   @relation(fields: [studentId], references: [id])
+  batchId      String?
+  examName     String
+  subject      String
+  totalMark    Int
+  obtainedMark Int
+  percentage   Float
+  grade        String?
+  position     Int?
+  examDate     DateTime
+  remarks      String?
+  createdAt    DateTime  @default(now())
+
+  @@index([shopId])
+  @@index([studentId])
 }

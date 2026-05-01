@@ -41,6 +41,11 @@ import {
   PartyPopper,
   Building2,
   GalleryHorizontalEnd,
+  GraduationCap,
+  BookOpenCheck,
+  CalendarCheck2,
+  Receipt,
+  ClipboardPen,
   type LucideIcon,
 } from "lucide-react";
 
@@ -56,7 +61,8 @@ export type BusinessType =
   | "hotel"
   | "garage"
   | "lab"
-  | "convention";
+  | "convention"
+  | "school";
 
 export const BUSINESS_TYPES: BusinessType[] = [
   "fcommerce",
@@ -69,6 +75,7 @@ export const BUSINESS_TYPES: BusinessType[] = [
   "garage",
   "lab",
   "convention",
+  "school",
 ];
 
 export interface BusinessTypeMeta {
@@ -160,6 +167,14 @@ export const BUSINESS_TYPE_META: Record<BusinessType, BusinessTypeMeta> = {
     color: "#7C3AED",
     bgColor: "#F5F3FF",
     icon: Building2,
+  },
+  school: {
+    type: "school",
+    label: "স্কুল / কোচিং সেন্টার",
+    description: "শিক্ষার্থী ভর্তি ও ফি ব্যবস্থাপনা করি",
+    color: "#2563EB",
+    bgColor: "#EFF6FF",
+    icon: GraduationCap,
   },
 };
 
@@ -253,6 +268,10 @@ const BUSINESS_MODULES: Record<BusinessType, string[]> = {
   convention: [
     "dashboard", "halls", "events", "packages",
     "vendors", "customers", "hisab", "reports", "settings",
+  ],
+  school: [
+    "dashboard", "students", "batches", "fees",
+    "attendance", "exams", "staff", "hisab", "reports", "settings",
   ],
 };
 
@@ -518,6 +537,30 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
       items: [
         { href: "/hisab",                    icon: BookOpen,  label: "হিসাব",    module: "hisab"   },
         { href: "/convention/reports",       icon: BarChart2, label: "রিপোর্ট",  module: "reports" },
+      ],
+    },
+  ],
+  school: [
+    {
+      items: [
+        { href: "/dashboard",          icon: LayoutDashboard, label: "ড্যাশবোর্ড",      module: "dashboard"  },
+        { href: "/school/students",    icon: GraduationCap,   label: "শিক্ষার্থী",       module: "students"   },
+        { href: "/school/batches",     icon: Users,           label: "ব্যাচ",            module: "batches"    },
+        { href: "/school/fees",        icon: Receipt,         label: "ফি ম্যানেজমেন্ট",  module: "fees"       },
+        { href: "/school/attendance",  icon: CalendarCheck2,  label: "উপস্থিতি",         module: "attendance" },
+        { href: "/school/exams",       icon: BookOpenCheck,   label: "পরীক্ষার ফলাফল",  module: "exams"      },
+      ],
+    },
+    {
+      items: [
+        { href: "/hr",                 icon: UserCog,         label: "শিক্ষক / স্টাফ",  module: "staff"      },
+      ],
+    },
+    {
+      label: "আর্থিক",
+      items: [
+        { href: "/hisab",              icon: BookOpen,        label: "হিসাব",            module: "hisab"      },
+        { href: "/school/reports",     icon: BarChart2,       label: "রিপোর্ট",          module: "reports"    },
       ],
     },
   ],

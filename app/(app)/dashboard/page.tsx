@@ -22,6 +22,7 @@ import DashboardHotel       from "@/components/dashboards/DashboardHotel";
 import DashboardGarage      from "@/components/dashboards/DashboardGarage";
 import DashboardLab         from "@/components/dashboards/DashboardLab";
 import DashboardConvention  from "@/components/dashboards/DashboardConvention";
+import DashboardSchool     from "@/components/dashboards/DashboardSchool";
 
 export default async function DashboardPage() {
   const { user, shop } = await requireShop();
@@ -114,6 +115,10 @@ export default async function DashboardPage() {
         userName={user.name ?? ""}
         userGender={(user as { gender?: string }).gender ?? null}
       />;
+    }
+
+    if (businessType === "school") {
+      return <DashboardSchool />;
     }
 
     const [todayAgg, todayTx, pendingCount] = await Promise.all([
