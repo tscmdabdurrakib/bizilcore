@@ -18,6 +18,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/communications":     "যোগাযোগ কেন্দ্র",
   "/activity-log":       "Activity Log",
   "/settings":           "সেটিংস",
+  "/notifications":      "নোটিফিকেশন",
   "/admin":              "অ্যাডমিন প্যানেল",
   "/tasks":              "টাস্ক ম্যানেজমেন্ট",
 };
@@ -48,16 +49,30 @@ export default function AppTopbar() {
   const title = Object.entries(PAGE_TITLES).find(([k]) => pathname.startsWith(k))?.[1] ?? "BizilCore";
 
   useEffect(() => {
-    fetch("/api/notifications").then(r => r.json()).then(d => {
+    fetch("/api/notifications/count").then(r => r.json()).then(d => {
       setUnread(d.unread ?? 0);
     }).catch(() => {});
+
+    const sessionKey = "bizilcore_session_checks";
+    const last = localStorage.getItem(sessionKey);
+    const now = Date.now();
+    if (!last || now - parseInt(last) > 6 * 60 * 60 * 1000) {
+      localStorage.setItem(sessionKey, String(now));
+      fetch("/api/notifications/plan-expiry", { method: "POST" }).catch(() => {});
+      const week = Math.floor(now / (7 * 24 * 60 * 60 * 1000));
+      const lastTipWeek = localStorage.getItem("bizilcore_last_tip_week");
+      if (lastTipWeek !== String(week)) {
+        localStorage.setItem("bizilcore_last_tip_week", String(week));
+        fetch("/api/notifications/weekly-tip", { method: "POST" }).catch(() => {});
+      }
+    }
 
     const pollReminders = () => {
       fetch("/api/tasks/reminders", { method: "POST" })
         .then(r => r.json())
         .then((d: { reminded?: number }) => {
           if (d.reminded && d.reminded > 0) {
-            fetch("/api/notifications").then(r => r.json()).then(n => {
+            fetch("/api/notifications/count").then(r => r.json()).then(n => {
               setUnread(n.unread ?? 0);
             }).catch(() => {});
           }
@@ -304,10 +319,10 @@ export default function AppTopbar() {
               {/* Footer */}
               {!isEmpty && !loading && (
                 <div className="px-4 py-3 border-t text-center" style={{ borderColor: "var(--c-border)", backgroundColor: "var(--c-bg)" }}>
-                  <button onClick={() => { router.push("/activity-log"); setOpen(false); }}
+                  <button onClick={() => { router.push("/notifications"); setOpen(false); }}
                     className="text-xs font-bold transition-colors hover:underline"
                     style={{ color: "var(--c-primary)" }}>
-                    সব activity দেখুন →
+                    সব নোটিফিকেশন দেখুন →
                   </button>
                 </div>
               )}

@@ -319,3 +319,54 @@ Built on top of the existing basic gamification skeleton (which had `streak`, `l
 - **`app/(app)/settings/achievements/`** (new page): Level badge header with XP bar and all 5 level steps shown; login streak display; 2-col (mobile) / 4-col (desktop) badge grid — earned cards show icon/title/desc/XP/earnedAt date with ✓ badge; locked cards show 🔒 with hover hint tooltip
 - **Settings page**: Added `Trophy` icon import + `{ key: "achievements", label: "পদক ও অর্জন", href: "/settings/achievements" }` to TABS "আমার" group; both mobile grid and desktop sidebar now render `<Link>` for tabs with `href`, `<button>` for regular tabs
 - **Level thresholds**: নতুন বিক্রেতা (0-99) → সক্রিয় বিক্রেতা (100-299) → দক্ষ বিক্রেতা (300-699) → অভিজ্ঞ বিক্রেতা (700-1499) → শীর্ষ বিক্রেতা (1500+)
+
+## In-App Notification System (Growth Feature 4) (Complete)
+
+**Foundation (already existed):**
+- `Notification` model in schema (fields: `userId`, `type`, `title`, `body String?`, `link String?`, `read Boolean @default(false)`, `createdAt`)
+- `/api/notifications/route.ts` — GET (returns notifications + unread count + lowStockProducts + suggestedOrders), PATCH (mark read / mark all read), DELETE (clear read)
+- `components/AppTopbar.tsx` — Bell icon with unread badge, dropdown panel with sections (low stock / suggested orders / system notifications), mark-all-read, clear-read, timeAgo formatting
+
+**New additions:**
+
+**DB:**
+- `NotificationPreference` model added via raw SQL + schema append: fields `lowStock`, `pendingOrders`, `planExpiry`, `achievements`, `referralUpdates`, `weeklyTips`, `promotions`; `notificationPreferences NotificationPreference?` relation added to User
+
+**`lib/notifications.ts`** (new):
+- `createNotification(userId, type, title, body, link?)` — creates a Notification row safely (try/catch)
+- `getNotifPrefs(userId)` / `updateNotifPrefs(userId, prefs)` — raw SQL upsert (Prisma client not regenerated due to memory limits)
+- `getWeeklyTip(weekNumber)` — 7-tip rotating array with Bangla titles/bodies/links
+- NotifType union: achievement | referral | plan_expiry | weekly_tip | low_stock | order | promotion | system
+
+**API Routes (new):**
+- `/api/notifications/count` (GET) — returns `{ unread: number }` for fast polling
+- `/api/notifications/preferences` (GET/PUT) — reads/writes NotificationPreference via raw SQL
+- `/api/notifications/weekly-tip` (POST) — checks weeklyTips pref, creates weekly tip notification (week-number-indexed)
+- `/api/notifications/plan-expiry` (POST) — checks planExpiry pref, creates notification if ≤7 days left (3 severity levels: ≤0, ≤3, ≤7 days)
+
+**Notification triggers:**
+- Badge award → `lib/badges.ts` now calls `createNotification(userId, "achievement", icon + title, desc + XP, "/settings/achievements")` for every new badge earned
+- New user registration → `app/api/register/route.ts` sends welcome notification after user creation
+- Referral success → register route sends referral notification to referrer when someone uses their code
+- Products already had `checkAndAwardBadges` (which now auto-triggers achievement notifications)
+- Plan expiry → checked once per 6 hours via AppTopbar useEffect (localStorage gating)
+- Weekly tips → checked once per calendar week via AppTopbar useEffect (localStorage gating)
+
+**`app/(app)/notifications/page.tsx`** (new full page):
+- Filter tabs: সব | অপঠিত | অর্জন | রেফারেল | টিপস | প্ল্যান | সিস্টেম
+- Notification cards with: type-colored icon (Trophy/Gift/Bell/Lightbulb/Package/ShoppingBag/Star), unread green left-border highlight, timeAgo timestamp, type chip badge, "দেখুন →" link indicator
+- Mark individual read (on click), mark-all-read, clear-read buttons
+- Empty state per filter
+- Skeleton loading state
+
+**Settings — Notifications tab:**
+- Added `InAppNotifPrefs` component (inline function) — 6 toggle rows (achievements, referralUpdates, weeklyTips, planExpiry, pendingOrders, promotions) with Bengali labels and hints; auto-saves on toggle via PUT /api/notifications/preferences
+
+**AppTopbar updates:**
+- Now fetches unread count from `/api/notifications/count` (fast, lightweight)
+- Session-gated plan-expiry + weekly-tip checks (once per 6 hours, weekly tip once per calendar week, via localStorage)
+- Dropdown footer now links to `/notifications` ("সব নোটিফিকেশন দেখুন →") instead of activity-log
+
+**Sidebar navigation:**
+- `Bell` icon imported; `/notifications` → "নোটিফিকেশন" added to both desktop and mobile (more menu) nav groups
+- Page title map in AppTopbar: `/notifications` → "নোটিফিকেশন"

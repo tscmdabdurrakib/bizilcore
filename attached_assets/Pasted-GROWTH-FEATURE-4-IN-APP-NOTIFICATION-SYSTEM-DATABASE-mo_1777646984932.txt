@@ -1,0 +1,152 @@
+GROWTH FEATURE 4: IN-APP NOTIFICATION SYSTEM ===
+
+━━━ DATABASE ━━━
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String
+  -- "system"|"reminder"|"achievement"|"referral"|"promo"|"tip"
+  title     String
+  body      String
+  actionUrl String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model NotificationPreference {
+  id              String  @id @default(cuid())
+  userId          String  @unique
+  user            User    @relation(fields: [userId], references: [id])
+  lowStock        Boolean @default(true)
+  pendingOrders   Boolean @default(true)
+  planExpiry      Boolean @default(true)
+  achievements    Boolean @default(true)
+  referralUpdates Boolean @default(true)
+  weeklyTips      Boolean @default(true)
+  promotions      Boolean @default(false)
+}
+
+━━━ NOTIFICATION BELL (Topbar) ━━━
+
+Bell icon (SVG) in topbar right area.
+Red badge showing unread count (hide if 0).
+Max displayed: 99+ if > 99.
+
+Click → dropdown panel (320px wide, max-height 420px, scrollable):
+  Header row: "বিজ্ঞপ্তি" title + "সব পড়া হয়েছে" button (right)
+  
+  Notification items (newest first):
+    Left: type icon (colored circle)
+      system: ⚙️ gray | reminder: 🔔 amber | achievement: 🏆 green
+      referral: 🤝 purple | tip: 💡 blue | promo: 🎁 teal
+    Middle: title (13px bold) + body (12px muted, max 2 lines)
+    Right: time ago (11px muted) — "এইমাত্র", "২ মিনিট", "৩ ঘন্টা", "গতকাল"
+    Unread items: left border 3px green + slightly highlighted bg
+    
+  Click item:
+    Mark as read
+    Navigate to actionUrl (if set)
+    Close dropdown
+
+  "সব দেখুন" link at bottom → /notifications (full page list)
+
+━━━ NOTIFICATION TRIGGERS (Auto-created via API routes) ━━━
+
+Create /lib/notifications.ts → createNotification(userId, type, title, body, actionUrl?)
+
+Trigger points:
+
+SYSTEM (one-time):
+  After signup: 
+    title: "HisabBoi তে স্বাগতম! 🎉"
+    body: "প্রথম পণ্য যোগ করে শুরু করুন।"
+    actionUrl: "/inventory/new"
+  
+  After first product added:
+    title: "চমৎকার! প্রথম পণ্য যোগ হয়েছে।"
+    body: "এখন প্রথম অর্ডার নিন।"
+    actionUrl: "/orders/new"
+
+REMINDER (daily cron job — runs every morning 9am):
+  Low stock (if preference enabled):
+    Find products where stockQty <= lowStockAt
+    If count > 0:
+      title: "স্টক সতর্কতা"
+      body: "[X] টি পণ্যের stock কম হয়েছে।"
+      actionUrl: "/inventory?filter=low_stock"
+
+  Pending orders (if preference enabled):
+    Find orders where status="pending" AND age > 24 hours
+    If count > 0:
+      title: "Pending অর্ডার আছে"
+      body: "[X] টি অর্ডার এখনো pending। এখনই প্রসেস করুন।"
+      actionUrl: "/orders?status=pending"
+
+PLAN EXPIRY (daily cron):
+  7 days before:
+    title: "Plan মেয়াদ শেষ হচ্ছে"
+    body: "আপনার Pro plan ৭ দিনে শেষ হবে। Renew করুন।"
+    actionUrl: "/settings/subscription"
+  
+  3 days before:
+    title: "⚠️ Plan মেয়াদ শেষ হচ্ছে"
+    body: "মাত্র ৩ দিন বাকি! Renew করুন।"
+    actionUrl: "/settings/subscription"
+  
+  1 day before:
+    title: "🚨 আগামীকাল Plan শেষ!"
+    body: "এখনই Renew করুন নইলে Pro features বন্ধ হবে।"
+    actionUrl: "/settings/subscription"
+
+ACHIEVEMENT (triggered by badge system):
+  title: "🏆 নতুন পদক অর্জন!"
+  body: "'[badge_title]' পদক পেয়েছেন। +[xp] XP"
+  actionUrl: "/settings/achievements"
+
+REFERRAL:
+  On referral qualified:
+    title: "🎁 Referral সফল!"
+    body: "[first_name] HisabBoi ব্যবহার শুরু করেছে। ১ মাস Pro পেয়েছেন!"
+    actionUrl: "/settings/referral"
+
+WEEKLY TIP (every Monday 9am, if preference enabled):
+  Select tip based on businessType and current month/season
+  Tip bank (in DB or hardcoded array):
+    fcommerce: [
+      "Eid এর ২ সপ্তাহ আগে stock বাড়িয়ে রাখুন।",
+      "Customer এর বাকি হিসাব প্রতি সপ্তাহে once check করুন।",
+      "Product ছবি ভালো হলে Facebook এ বিক্রি ৩০% বাড়ে।",
+      ...
+    ]
+    restaurant: [...], pharmacy: [...], etc.
+
+━━━ FULL NOTIFICATIONS PAGE (/notifications) ━━━
+
+All notifications list (paginated, 20 per page):
+  Filter tabs: সব | অপঠিত | Reminder | Achievement | Referral
+  Same card format as dropdown
+  "সব মুছুন" button (clears read notifications older than 30 days)
+
+━━━ NOTIFICATION PREFERENCES (/settings → Notifications tab) ━━━
+
+Toggle list:
+  কম stock সতর্কতা          [toggle — default ON]
+  Pending order reminder     [toggle — default ON]
+  Plan মেয়াদ reminder        [toggle — default ON]
+  Achievement notification   [toggle — default ON]
+  Referral আপডেট            [toggle — default ON]
+  সাপ্তাহিক business tips   [toggle — default ON]
+  Promotional offers         [toggle — default OFF]
+
+"সেভ করুন" → updates NotificationPreference
+
+━━━ UNREAD COUNT API ━━━
+
+GET /api/notifications/count → returns { unread: number }
+Called on every page load (via SWR with 60s refresh)
+Updates bell badge in real time
+
+All Bangla UI. Same design system.
+Dropdown uses same card border-radius as rest of app.

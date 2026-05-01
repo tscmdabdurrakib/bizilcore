@@ -31,6 +31,7 @@ model User {
   xpPoints                   Int                         @default(0)
   level                      String                      @default("নতুন বিক্রেতা")
   earnedBadges               UserBadge[]
+  notificationPreferences    NotificationPreference?
   maxShops                   Int                         @default(1)
   shop                       Shop?
   orders                     Order[]
@@ -3070,4 +3071,17 @@ model UserBadge {
 
   @@unique([userId, badgeKey])
   @@index([userId])
+}
+
+model NotificationPreference {
+  id              String  @id @default(cuid())
+  userId          String  @unique
+  user            User    @relation(fields: [userId], references: [id])
+  lowStock        Boolean @default(true)
+  pendingOrders   Boolean @default(true)
+  planExpiry      Boolean @default(true)
+  achievements    Boolean @default(true)
+  referralUpdates Boolean @default(true)
+  weeklyTips      Boolean @default(true)
+  promotions      Boolean @default(false)
 }

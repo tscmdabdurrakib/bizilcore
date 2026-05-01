@@ -39,6 +39,7 @@ import {
   Tag,
   Star,
   MessageSquare,
+  Bell,
 } from "lucide-react";
 import { getNavGroups, getNavItems, BUSINESS_TYPE_META, type NavItem as ModuleNavItem } from "@/lib/modules";
 import { createPortal } from "react-dom";
@@ -210,6 +211,7 @@ const navGroups: NavGroup[] = [
   {
     items: [
       { href: "/billing",        icon: CreditCard,    label: "Billing" },
+      { href: "/notifications",  icon: Bell,          label: "নোটিফিকেশন" },
       { href: "/communications", icon: MessageCircle, label: "যোগাযোগ" },
       { href: "/activity-log",   icon: ClipboardList, label: "Activity Log" },
       { href: "/support",        icon: Headphones,    label: "সাপোর্ট" },
@@ -319,6 +321,7 @@ const moreMenuGroups = [
     iconBg: "#F5F3FF",
     items: [
       { href: "/billing",        icon: CreditCard,    label: "Billing" },
+      { href: "/notifications",  icon: Bell,          label: "নোটিফিকেশন" },
       { href: "/communications", icon: MessageCircle, label: "SMS" },
       { href: "/activity-log",   icon: ClipboardList, label: "লগ" },
       { href: "/support",        icon: Headphones,    label: "সাপোর্ট" },

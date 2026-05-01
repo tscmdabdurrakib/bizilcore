@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { sendOTPVerificationEmail } from "@/lib/mailer";
+import { createNotification } from "@/lib/notifications";
 
 const AFFILIATE_COMMISSION: Record<string, number> = { pro: 50, business: 150 };
 
@@ -142,6 +143,22 @@ export async function POST(req: NextRequest) {
     sendOTPVerificationEmail(user.email, user.name, otp).catch((err) => {
       console.error("[Register] OTP email failed:", err);
     });
+
+    createNotification(
+      user.id, "system",
+      "🎉 BizilCore-এ স্বাগতম!",
+      "আপনার ব্যবসা পরিচালনা এখন আরও সহজ। ড্যাশবোর্ড থেকে শুরু করুন!",
+      "/dashboard"
+    ).catch(() => {});
+
+    if (referrerId) {
+      createNotification(
+        referrerId, "referral",
+        "🎁 রেফারেল পুরস্কার পেয়েছেন!",
+        `আপনার রেফারেল কোড ব্যবহার করে নতুন একজন সদস্য যোগ দিয়েছেন। ধন্যবাদ!`,
+        "/settings/referral"
+      ).catch(() => {});
+    }
 
     return NextResponse.json({ message: "অ্যাকাউন্ট তৈরি হয়েছে", userId: user.id }, { status: 201 });
   } catch (err) {

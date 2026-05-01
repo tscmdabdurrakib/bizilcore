@@ -1632,6 +1632,8 @@ function SettingsContent() {
             </div>
           </div>
 
+          <InAppNotifPrefs />
+
           {/* ── SMS.net.bd Self-Service ── */}
           <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: S.surface, borderColor: S.border }}>
             {/* Header */}
@@ -2077,6 +2079,76 @@ function SettingsContent() {
 
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ─── In-App Notification Preferences ───────────────── */
+function InAppNotifPrefs() {
+  const [prefs, setPrefs] = useState({
+    achievements: true, referralUpdates: true, weeklyTips: true,
+    planExpiry: true, promotions: false, pendingOrders: true,
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/notifications/preferences").then(r => r.json()).then(d => {
+      if (d && !d.error) setPrefs(p => ({ ...p, ...d }));
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, []);
+
+  async function toggle(key: string, val: boolean) {
+    setPrefs(p => ({ ...p, [key]: val }));
+    setSaving(true);
+    await fetch("/api/notifications/preferences", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [key]: val }),
+    }).catch(() => {});
+    setSaving(false);
+  }
+
+  const rows = [
+    { key: "achievements",    label: "🏆 অর্জন ও ব্যাজ",         hint: "নতুন badge পেলে notify করবে" },
+    { key: "referralUpdates", label: "🎁 রেফারেল আপডেট",         hint: "কেউ আপনার কোড ব্যবহার করলে" },
+    { key: "weeklyTips",      label: "💡 সাপ্তাহিক টিপস",        hint: "ব্যবসার কাজে লাগার মতো টিপস" },
+    { key: "planExpiry",      label: "📅 প্ল্যান মেয়াদ সতর্কতা", hint: "প্ল্যান শেষ হওয়ার আগে জানাবে" },
+    { key: "pendingOrders",   label: "📦 অর্ডার আপডেট",          hint: "অর্ডার স্ট্যাটাস পরিবর্তন হলে" },
+    { key: "promotions",      label: "🎉 প্রমোশন ও অফার",        hint: "BizilCore-এর বিশেষ অফার" },
+  ];
+
+  return (
+    <div className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: "var(--c-surface)", borderColor: "var(--c-border)" }}>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h4 className="font-semibold text-sm" style={{ color: "var(--c-text)" }}>In-App নোটিফিকেশন পছন্দ</h4>
+          <p className="text-xs mt-0.5" style={{ color: "var(--c-text-muted)" }}>কোন ধরনের notification পাবেন বেছে নিন</p>
+        </div>
+        {saving && <span className="text-xs" style={{ color: "var(--c-primary)" }}>সংরক্ষণ হচ্ছে…</span>}
+      </div>
+      {loading ? (
+        <div className="space-y-3 animate-pulse">
+          {[1,2,3].map(i => <div key={i} className="h-10 rounded-xl" style={{ backgroundColor: "var(--c-bg)" }} />)}
+        </div>
+      ) : (
+        <div className="space-y-1 divide-y" style={{ borderColor: "var(--c-border)" }}>
+          {rows.map(({ key, label, hint }) => (
+            <div key={key} className="flex items-center justify-between py-3 gap-3">
+              <div>
+                <p className="text-sm font-medium" style={{ color: "var(--c-text)" }}>{label}</p>
+                <p className="text-xs mt-0.5" style={{ color: "var(--c-text-muted)" }}>{hint}</p>
+              </div>
+              <div className="w-11 h-6 rounded-full flex-shrink-0 flex items-center px-0.5 transition-colors cursor-pointer"
+                style={{ backgroundColor: prefs[key as keyof typeof prefs] ? "var(--c-primary)" : "var(--c-border)" }}
+                onClick={() => toggle(key, !prefs[key as keyof typeof prefs])}>
+                <div className="w-5 h-5 rounded-full bg-white shadow transition-transform"
+                  style={{ transform: prefs[key as keyof typeof prefs] ? "translateX(20px)" : "translateX(0)" }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

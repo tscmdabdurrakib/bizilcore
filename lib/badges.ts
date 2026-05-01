@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { createNotification } from "@/lib/notifications";
 
 export const BADGES = [
   { key: "first_login",      title: "প্রথম পদক্ষেপ",     desc: "প্রথমবার লগইন করলেন",           icon: "👋", xp: 10  },
@@ -147,6 +148,16 @@ export async function checkAndAwardBadges(
           data: { xpPoints: newXp, level: newLevel },
         }),
       ]);
+
+      for (const b of newBadges) {
+        createNotification(
+          userId,
+          "achievement",
+          `${b.icon} অর্জন: ${b.title}`,
+          `${b.desc} • +${b.xp} XP অর্জিত হয়েছে!`,
+          "/settings/achievements"
+        ).catch(() => {});
+      }
     }
 
     return newBadges;
