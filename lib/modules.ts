@@ -38,6 +38,9 @@ import {
   TestTube2,
   Microscope,
   ClipboardCheck,
+  PartyPopper,
+  Building2,
+  GalleryHorizontalEnd,
   type LucideIcon,
 } from "lucide-react";
 
@@ -52,7 +55,8 @@ export type BusinessType =
   | "tailor"
   | "hotel"
   | "garage"
-  | "lab";
+  | "lab"
+  | "convention";
 
 export const BUSINESS_TYPES: BusinessType[] = [
   "fcommerce",
@@ -64,6 +68,7 @@ export const BUSINESS_TYPES: BusinessType[] = [
   "hotel",
   "garage",
   "lab",
+  "convention",
 ];
 
 export interface BusinessTypeMeta {
@@ -147,6 +152,14 @@ export const BUSINESS_TYPE_META: Record<BusinessType, BusinessTypeMeta> = {
     color: "#0891B2",
     bgColor: "#ECFEFF",
     icon: FlaskConical,
+  },
+  convention: {
+    type: "convention",
+    label: "কনভেনশন হল / ইভেন্ট",
+    description: "হল ভাড়া দিই বা ইভেন্ট ম্যানেজ করি",
+    color: "#7C3AED",
+    bgColor: "#F5F3FF",
+    icon: Building2,
   },
 };
 
@@ -236,6 +249,10 @@ const BUSINESS_MODULES: Record<BusinessType, string[]> = {
   lab: [
     "dashboard", "tests", "testorders", "results", "patients",
     "appointments", "hisab", "reports", "settings",
+  ],
+  convention: [
+    "dashboard", "halls", "events", "packages",
+    "vendors", "customers", "hisab", "reports", "settings",
   ],
 };
 
@@ -479,6 +496,28 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
       items: [
         { href: "/hisab",   icon: BookOpen,  label: "হিসাব",   module: "hisab"   },
         { href: "/reports", icon: BarChart2, label: "রিপোর্ট", module: "reports" },
+      ],
+    },
+  ],
+  convention: [
+    {
+      items: [
+        { href: "/dashboard",           icon: LayoutDashboard,      label: "ড্যাশবোর্ড",        module: "dashboard" },
+        { href: "/convention/events",   icon: PartyPopper,          label: "ইভেন্ট বুকিং",      module: "events"    },
+        { href: "/convention/halls",    icon: Building2,            label: "হল ম্যানেজমেন্ট",   module: "halls"     },
+        { href: "/convention/packages", icon: GalleryHorizontalEnd, label: "প্যাকেজ",           module: "packages"  },
+      ],
+    },
+    {
+      items: [
+        { href: "/customers",           icon: Users,                label: "কাস্টমার",           module: "customers" },
+      ],
+    },
+    {
+      label: "আর্থিক",
+      items: [
+        { href: "/hisab",                    icon: BookOpen,  label: "হিসাব",    module: "hisab"   },
+        { href: "/convention/reports",       icon: BarChart2, label: "রিপোর্ট",  module: "reports" },
       ],
     },
   ],

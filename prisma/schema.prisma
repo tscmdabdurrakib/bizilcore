@@ -238,6 +238,13 @@ model Shop {
   labAutoSmsReady       Boolean  @default(true)
   labPathologistName    String?
   labRegistrationNo     String?
+
+  // Convention Hall / Event module
+  halls                 Hall[]
+  eventPackages         EventPackage[]
+  hallEvents            HallEvent[]
+  conventionEventPrefix String?  @default("EVT")
+  conventionMinAdvancePct Int    @default(30)
 }
 
 model Subscription {
@@ -386,6 +393,7 @@ model Customer {
   bookings      Booking[]
   vehicles      Vehicle[]
   testOrders    TestOrder[]
+  hallEvents    HallEvent[]    @relation("CustomerHallEvents")
   createdAt     DateTime       @default(now())
 
   @@index([shopId])
@@ -2014,4 +2022,109 @@ model TestResult {
   @@index([shopId])
   @@index([testOrderId])
   @@index([testId])
+}
+
+// ─── Convention Hall / Event Module ───────────────────────────
+
+model Hall {
+  id          String      @id @default(cuid())
+  shopId      String
+  shop        Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name        String
+  capacity    Int
+  ratePerDay  Float
+  ratePerHour Float?
+  rateHalfDay Float?
+  amenities   String[]
+  floorArea   String?
+  description String?
+  imageUrl    String?
+  isActive    Boolean     @default(true)
+  events      HallEvent[]
+  createdAt   DateTime    @default(now())
+
+  @@index([shopId])
+  @@index([shopId, isActive])
+}
+
+model EventPackage {
+  id          String      @id @default(cuid())
+  shopId      String
+  shop        Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  price       Float
+  includes    Json
+  isActive    Boolean     @default(true)
+  events      HallEvent[]
+  createdAt   DateTime    @default(now())
+
+  @@index([shopId])
+}
+
+model HallEvent {
+  id            String         @id @default(cuid())
+  shopId        String
+  shop          Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  bookingNumber String         @unique
+  hallId        String
+  hall          Hall           @relation(fields: [hallId], references: [id])
+  customerId    String?
+  customer      Customer?      @relation("CustomerHallEvents", fields: [customerId], references: [id])
+  clientName    String
+  clientPhone   String
+  clientAddress String?
+  eventType     String
+  eventDate     DateTime
+  startTime     String
+  endTime       String
+  setupTime     String?
+  guestCount    Int
+  packageId     String?
+  package       EventPackage?  @relation(fields: [packageId], references: [id])
+  customItems   Json?
+  totalAmount   Float
+  advancePaid   Float          @default(0)
+  dueAmount     Float
+  status        String         @default("confirmed")
+  checklist     Json?
+  internalNotes String?
+  vendors       EventVendor[]
+  payments      EventPayment[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([shopId])
+  @@index([hallId])
+  @@index([shopId, eventDate])
+  @@index([shopId, status])
+  @@index([bookingNumber])
+}
+
+model EventVendor {
+  id           String    @id @default(cuid())
+  eventId      String
+  event        HallEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  category     String
+  vendorName   String
+  contactPhone String?
+  quotedAmount Float?
+  paidAmount   Float     @default(0)
+  status       String    @default("confirmed")
+  note         String?
+  createdAt    DateTime  @default(now())
+
+  @@index([eventId])
+}
+
+model EventPayment {
+  id      String    @id @default(cuid())
+  eventId String
+  event   HallEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  amount  Float
+  method  String
+  note    String?
+  paidAt  DateTime  @default(now())
+
+  @@index([eventId])
 }

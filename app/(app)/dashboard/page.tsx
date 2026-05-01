@@ -13,14 +13,15 @@ import TaskQuickComplete from "./TaskQuickComplete";
 import GamificationWidget from "@/components/GamificationWidget";
 import CommunityTipsWidget from "@/components/CommunityTipsWidget";
 import LeaderboardWidget from "@/components/LeaderboardWidget";
-import DashboardRestaurant from "@/components/dashboards/DashboardRestaurant";
-import DashboardPharmacy   from "@/components/dashboards/DashboardPharmacy";
-import DashboardRetail     from "@/components/dashboards/DashboardRetail";
-import DashboardSalon      from "@/components/dashboards/DashboardSalon";
-import DashboardTailor     from "@/components/dashboards/DashboardTailor";
-import DashboardHotel      from "@/components/dashboards/DashboardHotel";
-import DashboardGarage     from "@/components/dashboards/DashboardGarage";
-import DashboardLab        from "@/components/dashboards/DashboardLab";
+import DashboardRestaurant  from "@/components/dashboards/DashboardRestaurant";
+import DashboardPharmacy    from "@/components/dashboards/DashboardPharmacy";
+import DashboardRetail      from "@/components/dashboards/DashboardRetail";
+import DashboardSalon       from "@/components/dashboards/DashboardSalon";
+import DashboardTailor      from "@/components/dashboards/DashboardTailor";
+import DashboardHotel       from "@/components/dashboards/DashboardHotel";
+import DashboardGarage      from "@/components/dashboards/DashboardGarage";
+import DashboardLab         from "@/components/dashboards/DashboardLab";
+import DashboardConvention  from "@/components/dashboards/DashboardConvention";
 
 export default async function DashboardPage() {
   const { user, shop } = await requireShop();
@@ -104,6 +105,14 @@ export default async function DashboardPage() {
       return <DashboardLab
         shopName={shop.name}
         userName={user.name ?? ""}
+      />;
+    }
+
+    if (businessType === "convention") {
+      return <DashboardConvention
+        shopName={shop.name}
+        userName={user.name ?? ""}
+        userGender={(user as { gender?: string }).gender ?? null}
       />;
     }
 
