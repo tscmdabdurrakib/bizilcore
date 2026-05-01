@@ -1,0 +1,217 @@
+PHOTOGRAPHY / VIDEOGRAPHY MODULE ===
+
+Add to BUSINESS_MODULES:
+photography: ["dashboard","bookings","packages","portfolio",
+              "equipment","customers","hisab","reports","settings"]
+
+Add to onboarding:
+  Name: "ফটোগ্রাফি / ভিডিওগ্রাফি"
+  Description: "ফটো ও ভিডিও সেশন ম্যানেজ করি"
+
+━━━ DATABASE ━━━
+
+model PhotoPackage {
+  id           String   @id @default(cuid())
+  shopId       String
+  name         String   -- "Wedding Full Day", "Portrait Session", "Product Shoot"
+  type         String   -- "wedding"|"portrait"|"product"|"corporate"|"event"|"video"|"other"
+  duration     String   -- "Full Day (10 hrs)", "2 Hours", "Half Day"
+  price        Float
+  includes     String[] -- ["2 photographers","drone","album","edited photos 200+"]
+  deliverables String[] -- ["online gallery","USB drive","printed album"]
+  editingDays  Int      @default(7)  -- delivery time in days
+  description  String?
+  isActive     Boolean  @default(true)
+  bookings     PhotoBooking[]
+}
+
+model PhotoBooking {
+  id              String        @id @default(cuid())
+  shopId          String
+  bookingNumber   String        @unique  -- "PHO-2026-001"
+  customerId      String?
+  customer        Customer?     @relation(fields: [customerId], references: [id])
+  clientName      String
+  clientPhone     String
+  packageId       String?
+  package         PhotoPackage? @relation(fields: [packageId], references: [id])
+  eventType       String        -- "wedding"|"birthday"|"corporate"|"portrait"|"product"|"other"
+  eventDate       DateTime
+  eventTime       String?       -- "10:00 AM"
+  venue           String?
+  duration        String?
+  totalAmount     Float
+  costAmount      Float         @default(0)
+  advancePaid     Float         @default(0)
+  dueAmount       Float
+  status          String        @default("confirmed")
+  -- "enquiry"|"confirmed"|"advance_paid"|"shooting_done"
+  -- |"editing"|"delivered"|"cancelled"
+  shootingDone    Boolean       @default(false)
+  editingDone     Boolean       @default(false)
+  deliveryDate    DateTime?
+  deliveredAt     DateTime?
+  driveLink       String?       -- Google Drive / WeTransfer link for delivery
+  team            BookingTeam[]
+  equipment       BookingEquipment[]
+  payments        PhotoPayment[]
+  checklist       Json?
+  notes           String?
+  createdAt       DateTime      @default(now())
+}
+
+model BookingTeam {
+  id        String       @id @default(cuid())
+  bookingId String
+  booking   PhotoBooking @relation(fields: [bookingId], references: [id])
+  staffId   String?
+  staffName String
+  role      String       -- "lead_photographer"|"2nd_photographer"|"videographer"|"drone_operator"|"editor"
+}
+
+model BookingEquipment {
+  id          String       @id @default(cuid())
+  bookingId   String
+  booking     PhotoBooking @relation(fields: [bookingId], references: [id])
+  equipmentId String
+  equipment   PhotoEquipment @relation(fields: [equipmentId], references: [id])
+  quantity    Int          @default(1)
+}
+
+model PhotoEquipment {
+  id           String    @id @default(cuid())
+  shopId       String
+  name         String    -- "Canon 5D Mark IV", "DJI Drone", "Ring Light"
+  category     String    -- "camera"|"lens"|"drone"|"lighting"|"audio"|"accessory"
+  serialNumber String?
+  purchaseDate DateTime?
+  purchaseCost Float?
+  condition    String    @default("good")
+  insuranceExp DateTime?
+  bookings     BookingEquipment[]
+  notes        String?
+}
+
+model PhotoPayment {
+  id        String       @id @default(cuid())
+  bookingId String
+  booking   PhotoBooking @relation(fields: [bookingId], references: [id])
+  amount    Float
+  method    String
+  note      String?
+  paidAt    DateTime     @default(now())
+}
+
+━━━ PHOTOGRAPHY DASHBOARD (/dashboard) ━━━
+
+4 stat cards:
+  এই মাসের বুকিং: bookings this month
+  আসন্ন শুট: shootings within 7 days
+  Editing বাকি: bookings where shooting done but not delivered
+  এই মাসের আয়: revenue this month
+
+Upcoming shoots calendar (next 14 days):
+  Per booking: date, client name, event type, venue, team assigned, due amount
+
+Editing pipeline:
+  "Editing এ আছে" list: client, event date, shoot done date, due delivery date
+  Days since shoot (show warning if > editing days)
+
+━━━ BOOKING MANAGEMENT (/bookings) ━━━
+
+Kanban view (booking pipeline):
+  Enquiry → Confirmed → Advance Paid → Shoot Done → Editing → Delivered
+
+List view filter tabs:
+  সব | এই মাস | আসন্ন শুট | Editing এ | Delivered
+
+"নতুন বুকিং" → 3-step form:
+
+  Step 1 — ইভেন্ট তথ্য:
+    Client: search existing or add new (name*, phone*)
+    Event type* (icons: Wedding/Birthday/Corporate/Portrait/Product/Other)
+    Event date*, time, venue, expected duration
+    Select package (optional — or custom pricing)
+
+  Step 2 — Team ও Equipment:
+    Add team members (dynamic rows):
+      Staff name + role (Lead Photographer/2nd/Videographer/Drone/Editor)
+    Equipment checklist (select from equipment list):
+      Assign what will be taken
+    Internal notes / shoot requirements
+
+  Step 3 — মূল্য ও পেমেন্ট:
+    Total amount*, agency cost (optional for profit tracking)
+    Advance paid, due, method
+    Expected delivery date (auto: event date + editingDays)
+    "বুকিং নিশ্চিত করুন" →
+      Booking number auto-generated (PHO-YYYY-NNN)
+      SMS to client:
+        "প্রিয় [name], আপনার [event_type] এর ফটোগ্রাফি বুকিং নিশ্চিত হয়েছে।
+         বুকিং নং: [PHO-number] | তারিখ: [date]
+         মোট: ৳[total] | অগ্রিম: ৳[advance] | বাকি: ৳[due]
+         ডেলিভারি: [delivery_date] এর মধ্যে
+         - [StudioName]"
+
+Booking detail page:
+  Full info + status update
+  Team list (editable)
+  Equipment list (editable)
+  
+  Status action buttons:
+    "শুট সম্পন্ন" → shootingDone=true, status="editing"
+      SMS: "আপনার [event_type] এর শুটিং সম্পন্ন হয়েছে।
+           এডিটিং চলছে। [delivery_date] এর মধ্যে পাবেন।"
+    
+    "ফাইল Deliver করুন" → delivery form:
+      Google Drive link / WeTransfer link input
+      Delivery note
+      Final payment collection
+      "Deliver নিশ্চিত করুন" → status="delivered"
+      SMS: "আপনার [event_type] এর ছবি/ভিডিও তৈরি হয়েছে!
+           ডাউনলোড করুন: [drive_link]
+           - [StudioName]"
+
+  Pre-shoot checklist (editable JSON):
+    ☐ Advance confirmed  ☐ Venue address confirmed
+    ☐ Shot list discussed  ☐ Equipment packed
+    ☐ Team informed  ☐ Backup battery charged
+
+  Payment history + "পেমেন্ট নিন"
+
+━━━ PACKAGE MANAGEMENT (/packages) ━━━
+
+Package cards: type badge, name, duration, price, includes/deliverables
+"নতুন Package" → form:
+  Name*, type*, duration description*, price*
+  Includes (chip input), Deliverables (chip input)
+  Editing delivery days*, description
+  "সেভ করুন"
+
+━━━ EQUIPMENT TRACKER (/equipment) ━━━
+
+Equipment list: category filter, name, serial, condition badge,
+  "Currently booked" badge if assigned to upcoming booking
+"সরঞ্জাম যোগ করুন" → form with all fields
+Insurance expiry alert: 30 days before
+
+━━━ PORTFOLIO (/portfolio) ━━━
+
+Simple portfolio section:
+  Gallery of completed work (add from delivered bookings)
+  Category filter: Wedding / Portrait / Corporate / Product
+  Each item: event type, date, location (no client names for privacy)
+  Toggle: "Portfolio তে দেখাবে" per booking
+
+━━━ REPORTS (/reports) ━━━
+
+Photography-specific:
+  Monthly bookings + revenue
+  Most popular package type (pie)
+  Average delivery time (target vs actual)
+  Equipment utilization
+  Pending deliveries list
+
+All Bangla UI. Same design system.
+Booking pipeline is the most important view — make it prominent.
+Delivery link (Google Drive) always clickable with copy button.
