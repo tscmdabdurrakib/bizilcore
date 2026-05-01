@@ -1,0 +1,180 @@
+LAUNDRY / DRY CLEANING MODULE ===
+
+Add to BUSINESS_MODULES:
+laundry: ["dashboard","orders","services","customers",
+          "delivery","hisab","reports","settings"]
+
+Add to onboarding:
+  Name: "লন্ড্রি / ড্রাইক্লিনিং"
+  Description: "কাপড় ধোয়া ও পরিষ্কার সেবা দিই"
+
+━━━ DATABASE ━━━
+
+model LaundryService {
+  id          String  @id @default(cuid())
+  shopId      String
+  name        String  -- "Shirt Wash & Iron", "Saree Dry Clean", "Suit Dry Clean"
+  category    String  -- "wash_iron"|"dry_clean"|"wash_only"|"iron_only"|"special"
+  itemType    String  -- "shirt"|"pant"|"saree"|"suit"|"jacket"|"blanket"|"curtain"|"other"
+  price       Float
+  expressPrice Float? -- extra charge for express service
+  isActive    Boolean @default(true)
+}
+
+model LaundryOrder {
+  id            String          @id @default(cuid())
+  shopId        String
+  orderNumber   String          @unique  -- "LDR-2026-001"
+  customerId    String?
+  customer      Customer?       @relation(fields: [customerId], references: [id])
+  clientName    String
+  clientPhone   String
+  clientAddress String?
+  orderType     String          @default("drop_in")
+  -- "drop_in"|"pickup_delivery"
+  pickupDate    DateTime?
+  deliveryDate  DateTime
+  isExpress     Boolean         @default(false)
+  totalAmount   Float
+  advancePaid   Float           @default(0)
+  dueAmount     Float
+  status        String          @default("received")
+  -- "received"|"in_process"|"ready"|"out_for_delivery"|"delivered"|"cancelled"
+  items         LaundryOrderItem[]
+  payments      LaundryPayment[]
+  notes         String?
+  createdAt     DateTime        @default(now())
+}
+
+model LaundryOrderItem {
+  id          String        @id @default(cuid())
+  orderId     String
+  order       LaundryOrder  @relation(fields: [orderId], references: [id])
+  serviceId   String?
+  service     LaundryService? @relation(fields: [serviceId], references: [id])
+  itemName    String        -- "White Shirt", "Blue Saree"
+  quantity    Int           @default(1)
+  unitPrice   Float
+  subtotal    Float
+  condition   String?       -- "stain on collar", "button missing"
+  tag         String?       -- physical tag number for tracking
+}
+
+model LaundryPayment {
+  id        String       @id @default(cuid())
+  orderId   String
+  order     LaundryOrder @relation(fields: [orderId], references: [id])
+  amount    Float
+  method    String
+  paidAt    DateTime     @default(now())
+}
+
+━━━ LAUNDRY DASHBOARD (/dashboard) ━━━
+
+4 stat cards:
+  আজ আসা অর্ডার: new orders today
+  প্রক্রিয়াধীন: in_process count
+  Ready (সংগ্রহের অপেক্ষা): ready count
+  আজকের আয়: revenue today
+
+Status pipeline mini-view:
+  Received: X | In Process: Y | Ready: Z | Out for Delivery: W
+
+Today's ready list:
+  Order number, client name, phone, amount due
+  "SMS পাঠান" button per order: "আপনার কাপড় পরিষ্কার হয়েছে।
+  সংগ্রহ করুন। অর্ডার নং: [LDR-number] - [LaundryName]"
+
+━━━ ORDER MANAGEMENT (/orders) ━━━
+
+Filter tabs: সব | Received | In Process | Ready | Delivered | আজকের
+
+Each row: order number, client name, phone, items count, amount, due, status badge
+
+"নতুন অর্ডার" → form:
+
+  Step 1 — কাস্টমারের তথ্য:
+    Client: search existing or quick add (name*, phone*)
+    Order type: Drop-in (brings clothes) / Pickup & Delivery
+    If Pickup: address, preferred pickup date
+    Express toggle: "জরুরি সার্ভিস" (extra charge applies)
+    Expected delivery date (auto: today + 2 days, express: today + 1)
+
+  Step 2 — কাপড়ের তালিকা:
+    Dynamic item rows (add as many as needed):
+      Service (searchable dropdown) | Quantity | Price (auto-fill) | Tag number | Condition note
+    Common quick-add chips:
+      Shirt | Pant | Saree | Salwar Kameez | Suit | Jacket | Blanket | Curtain
+    Running total (auto)
+    Express surcharge added if express toggle on
+
+  Step 3 — পেমেন্ট:
+    Total, advance paid, due
+    "অর্ডার নিন" →
+      Order number auto-generated (LDR-YYYY-NNN)
+      Physical tag numbers assigned per item
+      Receipt slip shows: order number, client, items, tags, delivery date, amount
+      SMS to client:
+        "আপনার কাপড় পেয়েছি।
+         অর্ডার নং: [LDR-number]
+         আইটেম: X টি
+         ডেলিভারি: [date]
+         মোট: ৳[total] | অগ্রিম: ৳[advance]
+         - [LaundryName]"
+
+Order detail page:
+  Items table (with tag numbers and condition notes)
+  Status update button
+  Process flow:
+    "Processing শুরু করুন" → status=in_process
+    "Ready হয়েছে" → status=ready → auto SMS to client
+    "Delivered" → collect remaining due → status=delivered
+  Payment history + "পেমেন্ট নিন"
+
+━━━ SERVICE PRICING (/services) ━━━
+
+Price list by category:
+  Tabs: সব | Wash & Iron | Dry Clean | Special Items
+
+Service table: item name, category, regular price, express price
+"নতুন Service যোগ করুন" → form:
+  Item name*, category*, regular price*, express price (optional)
+  "সেভ করুন"
+
+Bulk price update option (% increase for all items at once)
+
+━━━ HOME DELIVERY TRACKING (/delivery) ━━━
+
+Orders with orderType="pickup_delivery":
+  Pending pickup list: address, preferred time, "Pickup করা হয়েছে" button
+  Out for delivery list: address, client phone, "Delivered" button
+  Delivery person assignment (optional)
+
+━━━ REGULAR CUSTOMER SYSTEM ━━━
+
+Top customers by order count/revenue
+"Regular Customer" badge auto-assigned after 5+ orders
+Loyalty: offer free service after X orders (configurable in settings)
+
+━━━ REPORTS (/reports) ━━━
+
+Laundry-specific:
+  Daily orders + revenue (bar chart)
+  Most popular services (table)
+  Average turnaround time
+  Express vs regular ratio
+  Pending deliveries list
+
+━━━ SETTINGS — LAUNDRY CONFIG ━━━
+
+In /settings:
+  Standard turnaround days (default: 2)
+  Express turnaround days (default: 1)
+  Express surcharge (% or fixed ৳)
+  Auto-SMS on "Ready" status (toggle)
+  Loyalty: free service after X orders (toggle + X input)
+  Order number prefix (default: "LDR")
+  Working days (for delivery date calculation)
+
+All Bangla UI. Same design system.
+Tag number tracking is critical — show prominently on all order views.

@@ -306,6 +306,15 @@ codStatus (with_courier/collected/returned) — driven by courier booking
 - **Onboarding**: Automatically appears in business type selector (uses BUSINESS_TYPES + BUSINESS_TYPE_META)
 - **Nav**: Dashboard → বুকিং (Kanban) → প্যাকেজ → পোর্টফোলিও → সরঞ্জাম → ক্লায়েন্ট → হিসাব → রিপোর্ট → সেটিংস
 
+## Laundry / Dry Cleaning Module (Complete)
+- **Business Type**: `"laundry"` — added to `BusinessType`, `BUSINESS_TYPES`, `BUSINESS_TYPE_META` (blue #0284C7, Droplets icon), `BUSINESS_MODULES` (8 modules), `NAV_BY_TYPE` in `lib/modules.ts`
+- **DB Models**: `LaundryService`, `LaundryOrder`, `LaundryOrderItem`, `LaundryPayment` — appended to `prisma/schema.prisma`; created in DB via psql directly (no prisma generate due to memory/shadow DB constraints); all queries use `$queryRaw`/`$executeRaw`
+- **API Routes**: `/api/laundry/services` (GET list, POST create, PATCH update, DELETE), `/api/laundry/orders` (GET list with status/search/today filters + POST create with items + payment), `/api/laundry/orders/[id]` (GET detail, PATCH status + payment collection)
+- **Components**: `components/dashboards/DashboardLaundry.tsx` (stat cards, status pipeline, ready orders list, quick links), `components/orders/LaundryOrders.tsx` (3-step new order form: client info → items → payment; status update; collect payment modal; status tabs; search), `components/services/LaundryServices.tsx` (service pricing CRUD by category with toggle active, express price), `components/delivery/LaundryDelivery.tsx` (Ready/Out-for-delivery dual-column layout with action buttons)
+- **Pages**: `app/(app)/orders/page.tsx` → `LaundryOrders`, `app/(app)/services/page.tsx` → `LaundryServices` (refactored to server router; existing salon code moved to `components/services/SalonServices.tsx`), `app/(app)/delivery/page.tsx` → `LaundryDelivery`, `app/(app)/dashboard/page.tsx` → `DashboardLaundry`
+- **Features**: Order number format LDR-YYYY-NNN, 6 statuses (received/in_process/ready/out_for_delivery/delivered/cancelled), Express service flag with delivery date auto-calc, Drop-in vs Pickup & Delivery order types, tag number per item, item condition notes, advance/due payment tracking, service pricing by category (Wash & Iron / Dry Clean / Wash Only / Iron Only / Special), quick-add item chips (Shirt/Pant/Saree etc.), service catalog with express pricing, full Bangla UI
+- **Nav**: Dashboard → অর্ডার → সার্ভিস প্রাইসিং | কাস্টমার → ডেলিভারি | হিসাব → রিপোর্ট | সেটিংস
+
 ## Gamification & Loyalty Module — Phase 2 Upgrade (Complete)
 Built on top of the existing basic gamification skeleton (which had `streak`, `lastLoginDate`, `badges String[]`, a simple `GamificationWidget`, and `/api/gamification`).
 

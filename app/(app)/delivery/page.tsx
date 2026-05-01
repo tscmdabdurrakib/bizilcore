@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import CourierDelivery from "@/components/delivery/CourierDelivery";
 import TailorDelivery from "@/components/delivery/TailorDelivery";
+import LaundryDelivery from "@/components/delivery/LaundryDelivery";
 
 export default async function DeliveryPage() {
   const session = await auth();
@@ -13,9 +14,8 @@ export default async function DeliveryPage() {
     select: { businessType: true },
   });
 
-  if (shop?.businessType === "tailor") {
-    return <TailorDelivery />;
-  }
+  if (shop?.businessType === "tailor")  return <TailorDelivery />;
+  if (shop?.businessType === "laundry") return <LaundryDelivery />;
 
   return <CourierDelivery />;
 }

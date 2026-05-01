@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import FCommerceOrders from "@/components/orders/FCommerceOrders";
 import RestaurantOrders from "@/components/orders/RestaurantOrders";
 import TailorOrders from "@/components/orders/TailorOrders";
+import LaundryOrders from "@/components/orders/LaundryOrders";
 
 export default async function OrdersPage() {
   const session = await auth();
@@ -14,13 +15,9 @@ export default async function OrdersPage() {
     select: { businessType: true },
   });
 
-  if (shop?.businessType === "restaurant") {
-    return <RestaurantOrders />;
-  }
-
-  if (shop?.businessType === "tailor") {
-    return <TailorOrders />;
-  }
+  if (shop?.businessType === "restaurant") return <RestaurantOrders />;
+  if (shop?.businessType === "tailor")     return <TailorOrders />;
+  if (shop?.businessType === "laundry")    return <LaundryOrders />;
 
   return <FCommerceOrders />;
 }

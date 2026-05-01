@@ -3090,3 +3090,72 @@ model NotificationPreference {
   weeklyTips      Boolean @default(true)
   promotions      Boolean @default(false)
 }
+
+model LaundryService {
+  id           String  @id @default(cuid())
+  shopId       String
+  name         String
+  category     String  @default("wash_iron")
+  itemType     String  @default("other")
+  price        Float   @default(0)
+  expressPrice Float?
+  isActive     Boolean @default(true)
+  createdAt    DateTime @default(now())
+
+  @@index([shopId])
+}
+
+model LaundryOrder {
+  id            String   @id @default(cuid())
+  shopId        String
+  orderNumber   String   @unique
+  customerId    String?
+  clientName    String
+  clientPhone   String
+  clientAddress String?
+  orderType     String   @default("drop_in")
+  pickupDate    DateTime?
+  deliveryDate  DateTime
+  isExpress     Boolean  @default(false)
+  totalAmount   Float    @default(0)
+  advancePaid   Float    @default(0)
+  dueAmount     Float    @default(0)
+  status        String   @default("received")
+  notes         String?
+  smsSent       Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  items    LaundryOrderItem[]
+  payments LaundryPayment[]
+
+  @@index([shopId])
+  @@index([shopId, status])
+}
+
+model LaundryOrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     LaundryOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  serviceId String?
+  itemName  String
+  quantity  Int     @default(1)
+  unitPrice Float   @default(0)
+  subtotal  Float   @default(0)
+  condition String?
+  tag       String?
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+}
+
+model LaundryPayment {
+  id      String   @id @default(cuid())
+  orderId String
+  order   LaundryOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amount  Float    @default(0)
+  method  String   @default("cash")
+  paidAt  DateTime @default(now())
+
+  @@index([orderId])
+}

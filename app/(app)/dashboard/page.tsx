@@ -30,6 +30,7 @@ import DashboardHospital   from "@/components/dashboards/DashboardHospital";
 import DashboardTravel    from "@/components/dashboards/DashboardTravel";
 import DashboardGym          from "@/components/dashboards/DashboardGym";
 import DashboardPhotography  from "@/components/dashboards/DashboardPhotography";
+import DashboardLaundry      from "@/components/dashboards/DashboardLaundry";
 
 export default async function DashboardPage() {
   const { user, shop } = await requireShop();
@@ -157,6 +158,56 @@ export default async function DashboardPage() {
         shopName={shop.name}
         userName={user.name ?? ""}
         userGender={(user as { gender?: string }).gender ?? null}
+      />;
+    }
+
+    if (businessType === "laundry") {
+      const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+      const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
+
+      const [todayOrderRows, statusRows, todayPayRows, readyOrderRows] = await Promise.all([
+        prisma.$queryRaw<{ cnt: bigint }[]>`
+          SELECT COUNT(*) AS cnt FROM "LaundryOrder"
+          WHERE "shopId" = ${shop.id} AND "createdAt" >= ${todayStart} AND "createdAt" <= ${todayEnd}
+        `,
+        prisma.$queryRaw<{ status: string; cnt: bigint }[]>`
+          SELECT status, COUNT(*) AS cnt FROM "LaundryOrder"
+          WHERE "shopId" = ${shop.id} AND status NOT IN ('delivered','cancelled')
+          GROUP BY status
+        `,
+        prisma.$queryRaw<{ total: number }[]>`
+          SELECT COALESCE(SUM(lp.amount), 0) AS total
+          FROM "LaundryPayment" lp
+          JOIN "LaundryOrder" lo ON lo.id = lp."orderId"
+          WHERE lo."shopId" = ${shop.id} AND lp."paidAt" >= ${todayStart} AND lp."paidAt" <= ${todayEnd}
+        `,
+        prisma.$queryRaw<any[]>`
+          SELECT id, "orderNumber", "clientName", "clientPhone", "dueAmount", "totalAmount"
+          FROM "LaundryOrder"
+          WHERE "shopId" = ${shop.id} AND status = 'ready'
+          ORDER BY "createdAt" ASC LIMIT 10
+        `,
+      ]);
+
+      const todayOrders = Number(todayOrderRows[0]?.cnt ?? 0);
+      const todayRevenue = Number(todayPayRows[0]?.total ?? 0);
+      const getCount = (s: string) => Number(statusRows.find(r => r.status === s)?.cnt ?? 0);
+
+      return <DashboardLaundry
+        shopName={shop.name}
+        userName={user.name ?? ""}
+        userGender={(user as { gender?: string }).gender ?? null}
+        todayOrders={todayOrders}
+        inProcessCount={getCount("in_process")}
+        readyCount={getCount("ready")}
+        todayRevenue={todayRevenue}
+        receivedCount={getCount("received")}
+        outForDeliveryCount={getCount("out_for_delivery")}
+        readyOrders={readyOrderRows.map(r => ({
+          id: String(r.id), orderNumber: String(r.orderNumber),
+          clientName: String(r.clientName), clientPhone: String(r.clientPhone),
+          dueAmount: Number(r.dueAmount), totalAmount: Number(r.totalAmount),
+        }))}
       />;
     }
 

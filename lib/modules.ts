@@ -64,6 +64,8 @@ import {
   HandCoins,
   Dumbbell,
   Camera,
+  Droplets,
+  Truck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -85,7 +87,8 @@ export type BusinessType =
   | "hospital"
   | "travel"
   | "gym"
-  | "photography";
+  | "photography"
+  | "laundry";
 
 export const BUSINESS_TYPES: BusinessType[] = [
   "fcommerce",
@@ -104,6 +107,7 @@ export const BUSINESS_TYPES: BusinessType[] = [
   "travel",
   "gym",
   "photography",
+  "laundry",
 ];
 
 export interface BusinessTypeMeta {
@@ -244,6 +248,14 @@ export const BUSINESS_TYPE_META: Record<BusinessType, BusinessTypeMeta> = {
     bgColor: "#FDF2F8",
     icon: Camera,
   },
+  laundry: {
+    type: "laundry",
+    label: "লন্ড্রি / ড্রাইক্লিনিং",
+    description: "কাপড় ধোয়া ও পরিষ্কার সেবা দিই",
+    color: "#0284C7",
+    bgColor: "#E0F2FE",
+    icon: Droplets,
+  },
 };
 
 /* ─── Sales Channel ─────────────────────────────────────── */
@@ -360,6 +372,10 @@ const BUSINESS_MODULES: Record<BusinessType, string[]> = {
   photography: [
     "dashboard", "bookings", "packages", "portfolio",
     "equipment", "customers", "hisab", "reports", "settings",
+  ],
+  laundry: [
+    "dashboard", "orders", "services", "customers",
+    "delivery", "hisab", "reports", "settings",
   ],
 };
 
@@ -775,6 +791,34 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
       label: "সিস্টেম",
       items: [
         { href: "/photography/settings",         icon: Settings,        label: "সেটিংস",            module: "settings"  },
+      ],
+    },
+  ],
+  laundry: [
+    {
+      items: [
+        { href: "/dashboard",  icon: LayoutDashboard, label: "ড্যাশবোর্ড",      module: "dashboard" },
+        { href: "/orders",     icon: ClipboardList,   label: "অর্ডার",           module: "orders"    },
+        { href: "/services",   icon: Droplets,        label: "সার্ভিস প্রাইসিং", module: "services"  },
+      ],
+    },
+    {
+      items: [
+        { href: "/customers",  icon: Users,           label: "কাস্টমার",         module: "customers" },
+        { href: "/delivery",   icon: Truck,           label: "ডেলিভারি",         module: "delivery"  },
+      ],
+    },
+    {
+      label: "আর্থিক",
+      items: [
+        { href: "/hisab",    icon: BookOpen,  label: "হিসাব",    module: "hisab"   },
+        { href: "/reports",  icon: BarChart2, label: "রিপোর্ট",  module: "reports" },
+      ],
+    },
+    {
+      label: "সিস্টেম",
+      items: [
+        { href: "/settings", icon: Settings, label: "সেটিংস", module: "settings" },
       ],
     },
   ],
