@@ -62,6 +62,7 @@ import {
   MapPin,
   Stamp,
   HandCoins,
+  Dumbbell,
   type LucideIcon,
 } from "lucide-react";
 
@@ -81,7 +82,8 @@ export type BusinessType =
   | "school"
   | "farm"
   | "hospital"
-  | "travel";
+  | "travel"
+  | "gym";
 
 export const BUSINESS_TYPES: BusinessType[] = [
   "fcommerce",
@@ -98,6 +100,7 @@ export const BUSINESS_TYPES: BusinessType[] = [
   "farm",
   "hospital",
   "travel",
+  "gym",
 ];
 
 export interface BusinessTypeMeta {
@@ -222,6 +225,14 @@ export const BUSINESS_TYPE_META: Record<BusinessType, BusinessTypeMeta> = {
     bgColor: "#ECFEFF",
     icon: Plane,
   },
+  gym: {
+    type: "gym",
+    label: "জিম / ফিটনেস সেন্টার",
+    description: "সদস্যপদ ও ট্রেনিং ম্যানেজ করি",
+    color: "#7C3AED",
+    bgColor: "#F5F3FF",
+    icon: Dumbbell,
+  },
 };
 
 /* ─── Sales Channel ─────────────────────────────────────── */
@@ -330,6 +341,10 @@ const BUSINESS_MODULES: Record<BusinessType, string[]> = {
   travel: [
     "dashboard", "packages", "bookings", "customers",
     "vendors", "visa", "hisab", "reports", "settings",
+  ],
+  gym: [
+    "dashboard", "members", "memberships", "attendance",
+    "trainers", "equipment", "hisab", "reports", "settings",
   ],
 };
 
@@ -691,6 +706,31 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
       label: "সিস্টেম",
       items: [
         { href: "/travel/settings",        icon: Settings,        label: "সেটিংস",              module: "settings"  },
+      ],
+    },
+  ],
+  gym: [
+    {
+      items: [
+        { href: "/dashboard",              icon: LayoutDashboard, label: "ড্যাশবোর্ড",           module: "dashboard"   },
+        { href: "/gym/members",            icon: Users,           label: "সদস্য",                module: "members"     },
+        { href: "/gym/memberships",        icon: Dumbbell,        label: "মেম্বারশিপ প্ল্যান",   module: "memberships" },
+        { href: "/gym/attendance",         icon: CalendarCheck2,  label: "উপস্থিতি",             module: "attendance"  },
+        { href: "/gym/trainers",           icon: UserCog,         label: "ট্রেইনার",             module: "trainers"    },
+        { href: "/gym/equipment",          icon: Wrench,          label: "সরঞ্জাম",              module: "equipment"   },
+      ],
+    },
+    {
+      label: "আর্থিক",
+      items: [
+        { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",                module: "hisab"       },
+        { href: "/gym/reports",            icon: BarChart2,       label: "রিপোর্ট",              module: "reports"     },
+      ],
+    },
+    {
+      label: "সিস্টেম",
+      items: [
+        { href: "/gym/settings",           icon: Settings,        label: "সেটিংস",               module: "settings"    },
       ],
     },
   ],

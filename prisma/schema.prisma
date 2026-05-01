@@ -296,6 +296,16 @@ model Shop {
   travelBookingPrefix   String?  @default("TRV")
   travelVisaPrefix      String?  @default("VISA")
   travelAutoSms         Boolean  @default(true)
+  // Gym relations & config
+  gymMembers            Member[]
+  gymTrainers           GymTrainer[]
+  gymEquipments         Equipment[]
+  membershipPlans       MembershipPlan[]
+  gymMemberPrefix       String?  @default("GYM")
+  gymOpenTime           String?  @default("06:00")
+  gymCloseTime          String?  @default("22:00")
+  gymExpiryAlertDays    Int      @default(7)
+  gymAutoSmsExpiry      Boolean  @default(true)
 }
 
 model Subscription {
@@ -2763,5 +2773,164 @@ model TravelPayment {
   paidAt    DateTime    @default(now())
 
   @@index([bookingId])
+  @@index([shopId])
+}
+
+// ─── GYM / FITNESS CENTER ────────────────────────────────────
+
+model MembershipPlan {
+  id           String   @id @default(cuid())
+  shopId       String
+  shop         Shop     @relation(fields: [shopId], references: [id])
+  name         String
+  duration     Int
+  price        Float
+  admissionFee Float    @default(0)
+  features     String[]
+  maxFreeze    Int      @default(7)
+  isActive     Boolean  @default(true)
+  members      Member[]
+  createdAt    DateTime @default(now())
+
+  @@index([shopId])
+}
+
+model Member {
+  id               String          @id @default(cuid())
+  shopId           String
+  shop             Shop            @relation(fields: [shopId], references: [id])
+  memberId         String          @unique
+  name             String
+  phone            String
+  email            String?
+  gender           String?
+  dateOfBirth      DateTime?
+  address          String?
+  emergencyPhone   String?
+  bloodGroup       String?
+  medicalCondition String?
+  photoUrl         String?
+  planId           String?
+  plan             MembershipPlan? @relation(fields: [planId], references: [id])
+  trainerId        String?
+  trainer          GymTrainer?     @relation(fields: [trainerId], references: [id])
+  joinDate         DateTime        @default(now())
+  membershipStart  DateTime?
+  membershipEnd    DateTime?
+  status           String          @default("active")
+  frozenDays       Int             @default(0)
+  totalPaid        Float           @default(0)
+  goals            String?
+  notes            String?
+  attendance       GymAttendance[]
+  payments         MemberPayment[]
+  bodyStats        BodyStat[]
+  trainingSessions TrainingSession[]
+  createdAt        DateTime        @default(now())
+
+  @@index([shopId])
+  @@index([memberId])
+  @@index([status])
+}
+
+model GymTrainer {
+  id             String            @id @default(cuid())
+  shopId         String
+  shop           Shop              @relation(fields: [shopId], references: [id])
+  name           String
+  phone          String?
+  specialization String?
+  certification  String?
+  salary         Float?
+  commission     Float?
+  isActive       Boolean           @default(true)
+  members        Member[]
+  sessions       TrainingSession[]
+  createdAt      DateTime          @default(now())
+
+  @@index([shopId])
+}
+
+model TrainingSession {
+  id          String     @id @default(cuid())
+  shopId      String
+  memberId    String
+  member      Member     @relation(fields: [memberId], references: [id])
+  trainerId   String
+  trainer     GymTrainer @relation(fields: [trainerId], references: [id])
+  sessionDate DateTime
+  duration    Int        @default(60)
+  sessionType String
+  notes       String?
+  fee         Float      @default(0)
+  paid        Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+
+  @@index([memberId])
+  @@index([trainerId])
+}
+
+model GymAttendance {
+  id        String    @id @default(cuid())
+  shopId    String
+  memberId  String
+  member    Member    @relation(fields: [memberId], references: [id])
+  checkIn   DateTime  @default(now())
+  checkOut  DateTime?
+
+  @@index([shopId])
+  @@index([memberId])
+  @@index([checkIn])
+}
+
+model MemberPayment {
+  id       String   @id @default(cuid())
+  memberId String
+  member   Member   @relation(fields: [memberId], references: [id])
+  shopId   String
+  amount   Float
+  type     String
+  month    String?
+  method   String?
+  note     String?
+  paidAt   DateTime @default(now())
+
+  @@index([memberId])
+  @@index([shopId])
+}
+
+model BodyStat {
+  id         String   @id @default(cuid())
+  memberId   String
+  member     Member   @relation(fields: [memberId], references: [id])
+  recordDate DateTime @default(now())
+  weight     Float?
+  height     Float?
+  bmi        Float?
+  bodyFat    Float?
+  muscle     Float?
+  chest      Float?
+  waist      Float?
+  hip        Float?
+  notes      String?
+
+  @@index([memberId])
+}
+
+model Equipment {
+  id           String    @id @default(cuid())
+  shopId       String
+  shop         Shop      @relation(fields: [shopId], references: [id])
+  name         String
+  category     String
+  quantity     Int       @default(1)
+  purchaseDate DateTime?
+  purchaseCost Float?
+  condition    String    @default("good")
+  lastService  DateTime?
+  nextService  DateTime?
+  notes        String?
+  createdAt    DateTime  @default(now())
+
   @@index([shopId])
 }

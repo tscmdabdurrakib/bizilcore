@@ -1,0 +1,298 @@
+GYM / FITNESS CENTER MODULE ===
+
+Add to BUSINESS_MODULES:
+gym: ["dashboard","members","memberships","attendance",
+      "trainers","equipment","hisab","reports","settings"]
+
+Add to onboarding:
+  Name: "জিম / ফিটনেস সেন্টার"
+  Description: "সদস্যপদ ও ট্রেনিং ম্যানেজ করি"
+
+━━━ DATABASE ━━━
+
+model MembershipPlan {
+  id           String   @id @default(cuid())
+  shopId       String
+  name         String   -- "Monthly Basic", "3 Month Premium", "Annual Gold"
+  duration     Int      -- in days (30, 90, 180, 365)
+  price        Float
+  admissionFee Float    @default(0)
+  features     String[] -- ["gym_access","locker","personal_trainer","diet_plan"]
+  maxFreeze    Int      @default(7)  -- max days member can freeze
+  isActive     Boolean  @default(true)
+  members      Member[]
+}
+
+model Member {
+  id              String         @id @default(cuid())
+  shopId          String
+  memberId        String         @unique  -- "GYM-2026-001"
+  name            String
+  phone           String
+  email           String?
+  gender          String?
+  dateOfBirth     DateTime?
+  address         String?
+  emergencyPhone  String?
+  bloodGroup      String?
+  medicalCondition String?
+  photoUrl        String?
+  planId          String?
+  plan            MembershipPlan? @relation(fields: [planId], references: [id])
+  trainerId       String?
+  trainer         GymTrainer?    @relation(fields: [trainerId], references: [id])
+  joinDate        DateTime       @default(now())
+  membershipStart DateTime?
+  membershipEnd   DateTime?
+  status          String         @default("active")
+  -- "active"|"expired"|"frozen"|"cancelled"
+  frozenDays      Int            @default(0)
+  totalPaid       Float          @default(0)
+  attendance      GymAttendance[]
+  payments        MemberPayment[]
+  bodyStats       BodyStat[]
+  goals           String?
+  notes           String?
+}
+
+model GymTrainer {
+  id           String    @id @default(cuid())
+  shopId       String
+  name         String
+  phone        String?
+  specialization String? -- "Weight Training", "Yoga", "Cardio", "Boxing"
+  certification String?
+  salary       Float?
+  commission   Float?    -- % per personal training session
+  isActive     Boolean   @default(true)
+  members      Member[]
+  sessions     TrainingSession[]
+}
+
+model TrainingSession {
+  id          String     @id @default(cuid())
+  shopId      String
+  memberId    String
+  member      Member     @relation(fields: [memberId], references: [id])
+  trainerId   String
+  trainer     GymTrainer @relation(fields: [trainerId], references: [id])
+  sessionDate DateTime
+  duration    Int        @default(60)  -- minutes
+  sessionType String     -- "personal"|"group"|"assessment"
+  notes       String?
+  fee         Float      @default(0)
+  paid        Boolean    @default(false)
+}
+
+model GymAttendance {
+  id         String   @id @default(cuid())
+  shopId     String
+  memberId   String
+  member     Member   @relation(fields: [memberId], references: [id])
+  checkIn    DateTime @default(now())
+  checkOut   DateTime?
+}
+
+model MemberPayment {
+  id        String   @id @default(cuid())
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id])
+  shopId    String
+  amount    Float
+  type      String   -- "membership"|"personal_training"|"locker"|"other"
+  month     String?  -- "2026-03" for monthly
+  method    String?
+  note      String?
+  paidAt    DateTime @default(now())
+}
+
+model BodyStat {
+  id          String   @id @default(cuid())
+  memberId    String
+  member      Member   @relation(fields: [memberId], references: [id])
+  recordDate  DateTime @default(now())
+  weight      Float?   -- kg
+  height      Float?   -- cm
+  bmi         Float?   -- auto-calculated
+  bodyFat     Float?   -- %
+  muscle      Float?   -- %
+  chest       Float?   -- cm
+  waist       Float?   -- cm
+  hip         Float?   -- cm
+  notes       String?
+}
+
+model Equipment {
+  id           String   @id @default(cuid())
+  shopId       String
+  name         String   -- "Treadmill", "Barbell Set", "Bench Press"
+  category     String   -- "cardio"|"strength"|"flexibility"|"other"
+  quantity     Int      @default(1)
+  purchaseDate DateTime?
+  purchaseCost Float?
+  condition    String   @default("good") -- "good"|"fair"|"maintenance"|"retired"
+  lastService  DateTime?
+  nextService  DateTime?
+  notes        String?
+}
+
+━━━ GYM DASHBOARD (/dashboard) ━━━
+
+4 stat cards:
+  সক্রিয় সদস্য: active members count
+  আজকের উপস্থিতি: today's check-ins count
+  এই মাসের আয়: revenue this month
+  মেয়াদ শেষ হচ্ছে: members expiring within 7 days
+
+Expiry alert card:
+  List of members expiring within 7 days:
+  Name, phone, plan, expiry date, "Renew SMS" button
+
+Today's live attendance:
+  Current members checked in (with check-in time)
+  Total today: X members
+
+Monthly revenue trend (mini bar chart - last 6 months)
+
+━━━ MEMBER MANAGEMENT (/members) ━━━
+
+Member list: photo/avatar, member ID, name, phone, plan badge,
+  membership end date, status badge, attendance this month
+
+Filter: সব | Active | Expired | Frozen
+Search by name, phone, member ID
+
+"নতুন সদস্য ভর্তি" → 3-step form:
+
+  Step 1 — ব্যক্তিগত তথ্য:
+    Name*, phone*, gender, date of birth
+    Emergency contact + phone
+    Blood group, medical condition (optional)
+    Goals (optional: Weight Loss / Muscle Gain / Fitness / Sports)
+    Photo upload
+
+  Step 2 — মেম্বারশিপ:
+    Select plan* (shows plan cards with price + features)
+    Assign trainer (optional, shows trainer list)
+    Start date (default today)
+    End date (auto-calculated from plan duration)
+    Admission fee (if applicable)
+
+  Step 3 — পেমেন্ট:
+    Total (plan price + admission fee)
+    Paid amount, due, method
+    "ভর্তি করুন" →
+      Member ID auto-generated (GYM-YYYY-NNN)
+      Welcome SMS:
+        "স্বাগতম [name]!
+         সদস্য ID: [GYM-number]
+         Plan: [plan name]
+         মেয়াদ: [start] থেকে [end]
+         - [GymName]"
+
+Member Profile page:
+  Info card + edit
+  Membership status bar (days remaining progress bar)
+  
+  Tabs:
+    Body Stats | Attendance | Payments | Training Sessions
+
+  Body Stats tab:
+    Latest measurement card (weight, BMI, body fat)
+    Progress chart: weight over time (line chart)
+    "+ নতুন মাপ নিন" button → body stat entry form:
+      Weight, height (BMI auto-calculated), body fat %, muscle %
+      Measurements: chest, waist, hip
+      Notes
+
+  Attendance tab:
+    Monthly calendar showing present days (green dots)
+    Total visits this month
+
+  Membership renewal:
+    "Renew করুন" button (prominent when < 7 days remaining):
+      Select plan (same or upgrade)
+      Renew from: expiry date or today
+      Payment
+      → Extends membershipEnd date
+
+  Freeze membership:
+    "Freeze করুন" button → days input (max = plan.maxFreeze)
+    → Adds frozen days, extends membership end
+
+━━━ MEMBERSHIP PLANS (/memberships) ━━━
+
+Plan cards: name, duration, price, features list, member count
+
+"নতুন Plan তৈরি করুন" → form:
+  Plan name*, duration (days)*, price*, admission fee (optional)
+  Features (checkboxes):
+    ☐ Gym Access  ☐ Locker  ☐ Personal Trainer  ☐ Diet Plan
+    ☐ Group Class  ☐ Swimming Pool  ☐ Steam/Sauna  ☐ Cardio Zone
+  Max freeze days (default 7)
+  "সেভ করুন"
+
+━━━ ATTENDANCE SYSTEM (/attendance) ━━━
+
+Check-in system:
+  Search by member ID or name → shows member card → "Check In" button
+  Shows current members inside (checked in but not out)
+  "Check Out" button per active member
+
+Manual attendance (for past dates):
+  Date picker → member list → mark present
+
+Attendance stats per member:
+  Days visited this month, total visits ever, avg visits/week
+
+━━━ TRAINER MANAGEMENT (/trainers) ━━━
+
+Trainer profiles: name, specialization, certification, assigned members count
+
+"Trainer যোগ করুন" → form:
+  Name*, phone, specialization, certification, salary/commission
+  "সেভ করুন"
+
+Trainer detail:
+  Assigned members list
+  Training sessions this month
+  Commission earned (if % based)
+
+Personal Training Sessions:
+  Log session: member + trainer + date + duration + fee
+  Session history per member/trainer
+
+━━━ EQUIPMENT TRACKER (/equipment) ━━━
+
+Equipment list: name, category, quantity, condition badge, next service date
+
+"সরঞ্জাম যোগ করুন" → form:
+  Name*, category*, quantity*, purchase date, cost
+  Condition, last service date, next service date
+
+Maintenance alerts:
+  Equipment due for service within 7 days → dashboard alert
+
+━━━ REPORTS (/reports) ━━━
+
+Gym-specific:
+  Monthly new members (bar chart)
+  Revenue by plan type (pie chart)
+  Member retention rate
+  Peak hours attendance (heatmap by hour)
+  Expiring members list (next 30 days)
+  Trainer performance (sessions count)
+
+━━━ SETTINGS — GYM CONFIG ━━━
+
+In /settings — "Gym Config":
+  Gym timing: Opening time, Closing time
+  Expiry reminder days (default: 7 days before)
+  Auto-SMS on expiry (toggle)
+  Member ID prefix (default: "GYM")
+  BMI calculation method
+  Allowed freeze days per plan
+
+All Bangla UI. Same design system.
+BMI auto-calculated: weight(kg) / height(m)². Show BMI category badge.
+Membership expiry bar: green (>30 days) → amber (7-30) → red (<7).

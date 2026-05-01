@@ -28,6 +28,15 @@ A SaaS web app for Bangladeshi Facebook sellers — stock management (with produ
 - **Dashboard**: `DashboardLab` component with 4 stat cards, today's queue table with sample collection actions, home collection list, quick navigation links
 - **Features**: Auto-flag (normal/high/low/critical) based on value vs normal range, critical value alerts, auto order number (LAB-YYYY-NNN), home collection support, urgency (normal/urgent), package shortcuts in order form, patient search with new patient creation
 
+## Gym / Fitness Center Module (Complete)
+- **Business Type**: `"gym"` — added to `BusinessType`, `BUSINESS_TYPES`, `BUSINESS_TYPE_META` (violet #7C3AED, Dumbbell icon), `BUSINESS_MODULES` (9 modules), `NAV_BY_TYPE` in `lib/modules.ts`
+- **DB Models**: `MembershipPlan`, `Member`, `GymTrainer`, `TrainingSession`, `GymAttendance`, `MemberPayment`, `BodyStat`, `Equipment` in `prisma/schema.prisma`; gym relations + config fields (`gymMemberPrefix`, `gymOpenTime`, `gymCloseTime`, `gymExpiryAlertDays`, `gymAutoSmsExpiry`) added to `Shop`; pushed with `npx prisma db push`
+- **API Routes**: `/api/gym/stats` (dashboard), `/api/gym/members` (CRUD + list with search/filter), `/api/gym/members/[id]` (GET profile + PATCH with actions: renew/freeze/payment/body_stat), `/api/gym/memberships` (plan CRUD), `/api/gym/attendance` (GET today/currentlyIn + POST checkin/checkout), `/api/gym/trainers` (CRUD), `/api/gym/equipment` (CRUD)
+- **Pages**: `/gym/members` (MembersBoard — search/filter tabs + 3-step registration with plan cards), `/gym/members/[id]` (MemberDetail — membership status bar with progress, tabs: body stats/attendance/payments/sessions, renew/freeze/payment modals), `/gym/memberships` (plan CRUD with feature checkboxes), `/gym/attendance` (real-time check-in/out, live member list, today's log), `/gym/trainers` (trainer profiles with session/member counts), `/gym/equipment` (CRUD with service alerts), `/gym/reports` (revenue chart + expiring list), `/gym/settings`
+- **Dashboard**: `DashboardGym` with 4 stat cards, expiry alert banner, currently-in-gym live widget, expiring members list; wired into `app/(app)/dashboard/page.tsx`
+- **Features**: Auto member ID (GYM-YYYY-NNN), BMI auto-calculation (weight/height²), membership expiry progress bar (green→amber→red), freeze extension, body stats tracking with weight line chart, real-time attendance (30s auto-refresh), service alerts for equipment due within 7 days, full Bangla UI
+- **Nav**: Dashboard → সদস্য → মেম্বারশিপ প্ল্যান → উপস্থিতি → ট্রেইনার → সরঞ্জাম → হিসাব → রিপোর্ট → সেটিংস
+
 ## Travel Agency Module (Complete)
 - **Business Type**: `"travel"` — added to `BusinessType`, `BUSINESS_TYPES`, `BUSINESS_TYPE_META` (cyan #0891B2, Plane icon), `BUSINESS_MODULES` (9 modules), `NAV_BY_TYPE` in `lib/modules.ts`
 - **DB Models**: `TourPackage`, `TourBooking`, `TravelTicket`, `VisaRequest`, `TravelVendor`, `TravelPayment` in `prisma/schema.prisma`; travel relations + settings (`travelBookingPrefix`, `travelVisaPrefix`, `travelAutoSms`, `travelVendors`) added to `Shop`; `travelBookings`/`visaRequests` added to `Customer`; pushed with `npx prisma db push`
