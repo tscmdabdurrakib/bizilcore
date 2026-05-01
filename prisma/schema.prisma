@@ -260,6 +260,17 @@ model Shop {
   schoolAbsentSms       Boolean  @default(false)
   schoolInstitutionType String?  @default("coaching")
   schoolAcademicYear    String?  @default("January - December")
+  lands                 Land[]
+  cropCycles            CropCycle[]
+  farmActivityLogs      FarmActivityLog[]
+  harvestRecords        HarvestRecord[]
+  harvestSales          HarvestSale[]
+  livestocks            Livestock[]
+  livestockLogs         LivestockLog[]
+  farmType              String?  @default("mixed")
+  farmAreaUnit          String?  @default("bigha")
+  farmWeightUnit        String?  @default("kg")
+  farmVaccinationDays   Int      @default(7)
 }
 
 model Subscription {
@@ -410,6 +421,7 @@ model Customer {
   vehicles      Vehicle[]
   testOrders    TestOrder[]
   hallEvents    HallEvent[]    @relation("CustomerHallEvents")
+  harvestSales  HarvestSale[]
   createdAt     DateTime       @default(now())
 
   @@index([shopId])
@@ -2264,4 +2276,156 @@ model ExamResult {
 
   @@index([shopId])
   @@index([studentId])
+}
+
+model Land {
+  id          String      @id @default(cuid())
+  shopId      String
+  shop        Shop        @relation(fields: [shopId], references: [id])
+  name        String
+  type        String
+  areaBigha   Float
+  areaAcre    Float?
+  location    String?
+  soilType    String?
+  ownership   String      @default("own")
+  leaseAmount Float?
+  leaseFreq   String?
+  isActive    Boolean     @default(true)
+  cycles      CropCycle[]
+  notes       String?
+  createdAt   DateTime    @default(now())
+
+  @@index([shopId])
+}
+
+model CropCycle {
+  id                  String            @id @default(cuid())
+  shopId              String
+  shop                Shop              @relation(fields: [shopId], references: [id])
+  landId              String
+  land                Land              @relation(fields: [landId], references: [id])
+  cropName            String
+  cropType            String
+  season              String?
+  sowingDate          DateTime?
+  expectedHarvestDate DateTime?
+  actualHarvestDate   DateTime?
+  seedSource          String?
+  seedCost            Float             @default(0)
+  fertilizerCost      Float             @default(0)
+  pesticideCost       Float             @default(0)
+  irrigationCost      Float             @default(0)
+  laborCost           Float             @default(0)
+  otherCost           Float             @default(0)
+  expectedYieldKg     Float?
+  actualYieldKg       Float?
+  status              String            @default("planned")
+  logs                FarmActivityLog[]
+  harvests            HarvestRecord[]
+  notes               String?
+  createdAt           DateTime          @default(now())
+
+  @@index([shopId])
+  @@index([landId])
+}
+
+model FarmActivityLog {
+  id           String    @id @default(cuid())
+  shopId       String
+  shop         Shop      @relation(fields: [shopId], references: [id])
+  cycleId      String
+  cycle        CropCycle @relation(fields: [cycleId], references: [id])
+  activityType String
+  description  String
+  quantity     String?
+  cost         Float     @default(0)
+  laborCount   Int?
+  weather      String?
+  activityDate DateTime  @default(now())
+  photoUrl     String?
+
+  @@index([shopId])
+  @@index([cycleId])
+}
+
+model HarvestRecord {
+  id              String        @id @default(cuid())
+  shopId          String
+  shop            Shop          @relation(fields: [shopId], references: [id])
+  cycleId         String
+  cycle           CropCycle     @relation(fields: [cycleId], references: [id])
+  harvestDate     DateTime      @default(now())
+  quantityKg      Float
+  qualityGrade    String?
+  storageLocation String?
+  sellRecords     HarvestSale[]
+  notes           String?
+
+  @@index([shopId])
+  @@index([cycleId])
+}
+
+model HarvestSale {
+  id            String        @id @default(cuid())
+  shopId        String
+  shop          Shop          @relation(fields: [shopId], references: [id])
+  harvestId     String
+  harvest       HarvestRecord @relation(fields: [harvestId], references: [id])
+  buyerId       String?
+  buyer         Customer?     @relation(fields: [buyerId], references: [id])
+  buyerName     String?
+  buyerPhone    String?
+  quantityKg    Float
+  pricePerKg    Float
+  totalAmount   Float
+  saleDate      DateTime      @default(now())
+  paymentStatus String        @default("paid")
+  note          String?
+
+  @@index([shopId])
+  @@index([harvestId])
+}
+
+model Livestock {
+  id           String         @id @default(cuid())
+  shopId       String
+  shop         Shop           @relation(fields: [shopId], references: [id])
+  type         String
+  breed        String?
+  quantity     Int
+  male         Int?
+  female       Int?
+  purchaseDate DateTime?
+  purchaseCost Float          @default(0)
+  currentValue Float?
+  location     String?
+  purpose      String?
+  isActive     Boolean        @default(true)
+  healthLogs   LivestockLog[]
+  notes        String?
+  createdAt    DateTime       @default(now())
+
+  @@index([shopId])
+}
+
+model LivestockLog {
+  id          String     @id @default(cuid())
+  shopId      String
+  shop        Shop       @relation(fields: [shopId], references: [id])
+  livestockId String
+  livestock   Livestock  @relation(fields: [livestockId], references: [id])
+  logType     String
+  description String
+  quantity    Int?
+  pricePerHead Float?
+  totalAmount Float      @default(0)
+  cost        Float      @default(0)
+  vetName     String?
+  logDate     DateTime   @default(now())
+  nextDueDate DateTime?
+  note        String?
+
+  @@index([shopId])
+  @@index([livestockId])
 }

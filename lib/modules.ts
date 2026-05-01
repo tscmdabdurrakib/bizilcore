@@ -46,6 +46,12 @@ import {
   CalendarCheck2,
   Receipt,
   ClipboardPen,
+  Wheat,
+  Tractor,
+  Fish,
+  BirdIcon,
+  SproutIcon,
+  ShoppingBasket,
   type LucideIcon,
 } from "lucide-react";
 
@@ -62,7 +68,8 @@ export type BusinessType =
   | "garage"
   | "lab"
   | "convention"
-  | "school";
+  | "school"
+  | "farm";
 
 export const BUSINESS_TYPES: BusinessType[] = [
   "fcommerce",
@@ -76,6 +83,7 @@ export const BUSINESS_TYPES: BusinessType[] = [
   "lab",
   "convention",
   "school",
+  "farm",
 ];
 
 export interface BusinessTypeMeta {
@@ -176,6 +184,14 @@ export const BUSINESS_TYPE_META: Record<BusinessType, BusinessTypeMeta> = {
     bgColor: "#EFF6FF",
     icon: GraduationCap,
   },
+  farm: {
+    type: "farm",
+    label: "ফার্ম / কৃষি ব্যবসা",
+    description: "চাষাবাদ, মৎস্য বা পশুপালন করি",
+    color: "#16A34A",
+    bgColor: "#F0FDF4",
+    icon: Wheat,
+  },
 };
 
 /* ─── Sales Channel ─────────────────────────────────────── */
@@ -272,6 +288,10 @@ const BUSINESS_MODULES: Record<BusinessType, string[]> = {
   school: [
     "dashboard", "students", "batches", "fees",
     "attendance", "exams", "staff", "hisab", "reports", "settings",
+  ],
+  farm: [
+    "dashboard", "lands", "crops", "livestock",
+    "harvest", "buyers", "hisab", "reports", "settings",
   ],
 };
 
@@ -561,6 +581,25 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
       items: [
         { href: "/hisab",              icon: BookOpen,        label: "হিসাব",            module: "hisab"      },
         { href: "/school/reports",     icon: BarChart2,       label: "রিপোর্ট",          module: "reports"    },
+      ],
+    },
+  ],
+  farm: [
+    {
+      items: [
+        { href: "/dashboard",          icon: LayoutDashboard, label: "ড্যাশবোর্ড",         module: "dashboard"  },
+        { href: "/farm/lands",         icon: Tractor,         label: "জমি ম্যানেজমেন্ট",   module: "lands"      },
+        { href: "/farm/crops",         icon: SproutIcon,      label: "ফসল ব্যবস্থাপনা",    module: "crops"      },
+        { href: "/farm/livestock",     icon: BirdIcon,        label: "পশু / মৎস্য",         module: "livestock"  },
+        { href: "/farm/harvest",       icon: Wheat,           label: "ফসল তোলা ও বিক্রি",  module: "harvest"    },
+        { href: "/farm/buyers",        icon: ShoppingBasket,  label: "ক্রেতা তালিকা",       module: "buyers"     },
+      ],
+    },
+    {
+      label: "আর্থিক",
+      items: [
+        { href: "/hisab",              icon: BookOpen,        label: "হিসাব",              module: "hisab"      },
+        { href: "/farm/reports",       icon: BarChart2,       label: "রিপোর্ট",             module: "reports"    },
       ],
     },
   ],

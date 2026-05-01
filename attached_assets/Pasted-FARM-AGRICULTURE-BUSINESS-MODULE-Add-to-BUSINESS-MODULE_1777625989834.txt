@@ -1,0 +1,295 @@
+FARM / AGRICULTURE BUSINESS MODULE ===
+
+Add to BUSINESS_MODULES:
+farm: ["dashboard","lands","crops","livestock",
+       "harvest","buyers","hisab","reports","settings"]
+
+Add to onboarding:
+  Name: "ফার্ম / কৃষি ব্যবসা"
+  Description: "চাষাবাদ, মৎস্য বা পশুপালন করি"
+
+━━━ DATABASE ━━━
+
+model Land {
+  id          String      @id @default(cuid())
+  shopId      String
+  shop        Shop        @relation(fields: [shopId], references: [id])
+  name        String      -- "উত্তর মাঠ", "পুকুর ১", "ফলের বাগান"
+  type        String      -- "crop_field"|"pond"|"orchard"|"poultry_farm"|"other"
+  areaBigha   Float       -- area in bigha
+  areaAcre    Float?      -- optional: in acres
+  location    String?     -- village/upazila
+  soilType    String?     -- "sandy"|"loamy"|"clay"|"alluvial"
+  ownership   String      @default("own") -- "own"|"leased"|"shared"
+  leaseAmount Float?      -- if leased, monthly/yearly cost
+  isActive    Boolean     @default(true)
+  cycles      CropCycle[]
+  notes       String?
+}
+
+model CropCycle {
+  id                  String     @id @default(cuid())
+  shopId              String
+  landId              String
+  land                Land       @relation(fields: [landId], references: [id])
+  cropName            String     -- "ধান (আমন)", "আলু", "টমেটো", "রুই মাছ"
+  cropType            String
+  -- "rice"|"vegetable"|"fruit"|"fish"|"poultry"|"livestock"|"other"
+  season              String?    -- "রবি (শীত)", "খরিফ-১ (বোরো)", "খরিফ-২ (আমন)"
+  sowingDate          DateTime?
+  expectedHarvestDate DateTime?
+  actualHarvestDate   DateTime?
+  seedSource          String?    -- "নিজস্ব"|"বাজার কেনা"|"কৃষি অফিস"
+  seedCost            Float      @default(0)
+  fertilizerCost      Float      @default(0)
+  pesticideCost       Float      @default(0)
+  irrigationCost      Float      @default(0)
+  laborCost           Float      @default(0)
+  otherCost           Float      @default(0)
+  expectedYieldKg     Float?
+  actualYieldKg       Float?
+  status              String     @default("planned")
+  -- "planned"|"sowing"|"growing"|"harvesting"|"completed"
+  logs                FarmActivityLog[]
+  harvests            HarvestRecord[]
+  notes               String?
+  createdAt           DateTime   @default(now())
+}
+
+model FarmActivityLog {
+  id          String      @id @default(cuid())
+  shopId      String
+  cycleId     String
+  cycle       CropCycle   @relation(fields: [cycleId], references: [id])
+  activityType String
+  -- "land_preparation"|"sowing"|"irrigation"|"fertilizer"
+  -- |"pesticide"|"weeding"|"observation"|"other"
+  description String
+  quantity    String?     -- "20 kg urea", "5 liter pesticide"
+  cost        Float       @default(0)
+  laborCount  Int?        -- number of laborers
+  weather     String?     -- "sunny"|"rainy"|"cloudy"
+  activityDate DateTime   @default(now())
+  photoUrl    String?
+}
+
+model HarvestRecord {
+  id            String      @id @default(cuid())
+  shopId        String
+  cycleId       String
+  cycle         CropCycle   @relation(fields: [cycleId], references: [id])
+  harvestDate   DateTime    @default(now())
+  quantityKg    Float
+  qualityGrade  String?     -- "A", "B", "C" (optional grading)
+  storageLocation String?
+  sellRecords   HarvestSale[]
+  notes         String?
+}
+
+model HarvestSale {
+  id            String        @id @default(cuid())
+  shopId        String
+  harvestId     String
+  harvest       HarvestRecord @relation(fields: [harvestId], references: [id])
+  buyerId       String?
+  buyer         Customer?     @relation(fields: [buyerId], references: [id])
+  buyerName     String?       -- if not in customer list
+  buyerPhone    String?
+  quantityKg    Float
+  pricePerKg    Float
+  totalAmount   Float
+  saleDate      DateTime      @default(now())
+  paymentStatus String        @default("paid") -- "paid"|"due"
+  note          String?
+}
+
+model Livestock {
+  id            String         @id @default(cuid())
+  shopId        String
+  type          String         -- "গরু"|"ছাগল"|"ভেড়া"|"হাঁস"|"মুরগি"|"মাছ"|"অন্যান্য"
+  breed         String?        -- "দেশি"|"হলস্টেইন"|"ব্রয়লার"
+  quantity      Int
+  male          Int?
+  female        Int?
+  purchaseDate  DateTime?
+  purchaseCost  Float          @default(0)
+  currentValue  Float?         -- estimated current market value
+  location      String?        -- which land/shed
+  purpose       String?        -- "dairy"|"meat"|"eggs"|"breeding"
+  isActive      Boolean        @default(true)
+  healthLogs    LivestockLog[]
+  notes         String?
+  createdAt     DateTime       @default(now())
+}
+
+model LivestockLog {
+  id            String      @id @default(cuid())
+  shopId        String
+  livestockId   String
+  livestock     Livestock   @relation(fields: [livestockId], references: [id])
+  logType       String
+  -- "vaccination"|"medicine"|"feed"|"birth"|"death"|"sale"|"purchase"|"observation"
+  description   String
+  quantity      Int?        -- animals affected / born / sold
+  pricePerHead  Float?      -- for sale/purchase logs
+  totalAmount   Float       @default(0)
+  cost          Float       @default(0)
+  vetName       String?     -- for medicine/vaccination
+  logDate       DateTime    @default(now())
+  nextDueDate   DateTime?   -- for vaccination reminders
+  note          String?
+}
+
+━━━ FARM DASHBOARD (/dashboard) ━━━
+
+4 stat cards:
+  সক্রিয় ফসল: active crop cycles count
+  মোট জমি: total land area in bigha
+  Livestock: total animals count
+  এই মাসের আয়: revenue from sales this month
+
+Active crop cycles cards (horizontal scroll):
+  Per cycle: land name, crop name+type icon, days since sowing,
+  Expected harvest (countdown: "X দিন বাকি"),
+  Total cost so far, status badge
+
+Alerts section:
+  Vaccination due (next 7 days from LivestockLog.nextDueDate)
+  Expected harvests (within 14 days)
+  Unsold harvests (harvestRecords with remaining quantity)
+
+━━━ LAND MANAGEMENT (/lands) ━━━
+
+Land list: type icon, name, area in bigha, location, ownership badge, status
+
+"জমি যোগ করুন" → form:
+  Name*, type* (dropdown), area in bigha*, area in acre (auto-convert),
+  Location (village/upazila), soil type, ownership (Own/Leased/Shared),
+  If leased: lease amount + payment frequency (monthly/yearly),
+  Notes
+  "সেভ করুন"
+
+Land detail:
+  Land info card
+  Active crop cycle (if any)
+  Cycle history list
+  Total investment vs revenue over time
+
+━━━ CROP MANAGEMENT (/crops) ━━━
+
+Two tabs: চলমান ফসল | সম্পন্ন
+
+"নতুন ফসল শুরু করুন" → form:
+  Select land*, crop name* (with common suggestions: ধান, আলু, পেঁয়াজ, রসুন, টমেটো, বেগুন, মরিচ, কুমড়া, মাছ, মুরগি)
+  Crop type* (auto-detected from name or manual)
+  Season (dropdown: রবি/খরিফ-১/খরিফ-২/বারোমাসি/Year-round)
+  Sowing date*, expected harvest date
+  Seed source + initial seed cost
+  Initial fertilizer cost (optional, can add later in logs)
+  Expected yield (kg) — optional
+  Notes
+  "ফসল শুরু করুন"
+
+Crop Detail page:
+  Header: crop name + land + status badge + days growing
+
+  Cost Summary card (auto-totals from logs):
+    বীজ/পোনা: ৳X
+    সার/খাদ্য: ৳X
+    কীটনাশক/ওষুধ: ৳X
+    সেচ: ৳X
+    শ্রমিক: ৳X
+    অন্যান্য: ৳X
+    মোট বিনিয়োগ: ৳X (bold green)
+
+  Activity Log section (timeline):
+    "+ কার্যক্রম লগ করুন" button → quick form:
+      Activity type (chips): সেচ | সার প্রয়োগ | কীটনাশক | আগাছা পরিষ্কার | পর্যবেক্ষণ | অন্যান্য
+      Description, quantity (e.g. "২০ কেজি ইউরিয়া"), cost, labor count
+      Date (default today), weather, optional photo
+    Timeline shows all logs chronologically with cost badges
+
+  Harvest section:
+    "ফসল তোলা হয়েছে" button → harvest recording form:
+      Harvest date, quantity in kg, quality grade (A/B/C optional)
+      Storage location
+      Notes
+    Each harvest record shows:
+      Quantity, date, remaining (not yet sold), sold amount
+
+  Sale from harvest:
+    On each harvest: "+ বিক্রি করুন" button:
+      Buyer: search existing or enter name+phone
+      Quantity (kg), price per kg, total (auto), date
+      Payment: Paid / Due
+    Running sale summary: sold X kg @ avg ৳Y/kg = ৳Z total revenue
+
+  Profit/Loss calculation (auto):
+    Total Revenue: ৳X
+    Total Cost: ৳Y
+    Net Profit/Loss: ৳Z (green if profit, red if loss)
+    Margin: Z%
+
+━━━ LIVESTOCK (/livestock) ━━━
+
+Livestock groups by type (cards):
+  Type icon + name, breed, total count (male/female if entered),
+  Purchase cost, estimated current value
+  Health status: "সুস্থ" / "সতর্কতা" (if upcoming vaccination due)
+
+"পশু/মাছ/পোল্ট্রি যোগ করুন" → form:
+  Type*, breed, quantity*, male/female breakdown (optional)
+  Purchase date, purchase cost
+  Current estimated value, location/shed
+  Purpose (Dairy/Meat/Eggs/Breeding)
+  Notes
+  "যোগ করুন"
+
+Livestock Detail page:
+  Info card
+  Activity log timeline (health, feeding, sales)
+  "+ কার্যক্রম লগ করুন" → activity form:
+    Type chips: টিকা | ওষুধ | খাবার | জন্ম | মৃত্যু | বিক্রি | ক্রয় | পর্যবেক্ষণ
+    For vaccination: vet name, vaccine name, next due date (sets reminder)
+    For sale: quantity, price per head, buyer, total
+    For birth/death: quantity change
+    Description, cost, date
+
+  Health summary: last vaccination date, next due date, mortality this cycle
+
+Vaccination reminder: dashboard alert 7 days before next due date
+
+━━━ HARVEST & SALES TRACKER (/harvest) ━━━
+
+All harvests across all crops:
+  Crop, land, harvest date, quantity, sold, remaining, revenue
+
+Buyer/customer list (/buyers):
+  Regular buyers with total purchase history
+  Uses existing Customer model (renamed "ক্রেতা" for farm context)
+
+━━━ REPORTS (/reports) ━━━
+
+Farm-specific:
+  Land-wise profitability (table)
+  Crop-wise profit margin comparison
+  Monthly income vs investment (bar chart)
+  Livestock inventory valuation
+  Seasonal performance analysis
+
+━━━ SETTINGS — FARM CONFIG ━━━
+
+In /settings — "Farm Config":
+  Primary farming type: ফসল / মৎস্য / পোল্ট্রি / মিশ্র
+  Area unit preference: বিঘা / একর / হেক্টর (conversion auto)
+  Weight unit: কেজি / মন / টন
+  Vaccination reminder days (default: 7 days before)
+
+All Bangla UI. Same design system.
+Farm activity log is the heart of this module — make it easy and fast.
+
+
+
+
+
+
