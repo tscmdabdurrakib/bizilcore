@@ -1,0 +1,349 @@
+HOSPITAL / CLINIC MODULE ===
+
+⚠️ IMPORTANT: Add this disclaimer on ALL patient-facing pages:
+"এই সফটওয়্যার শুধুমাত্র প্রশাসনিক ব্যবস্থাপনার জন্য।
+চিকিৎসা সংক্রান্ত যেকোনো সিদ্ধান্তের জন্য অবশ্যই
+যোগ্য ও নিবন্ধিত চিকিৎসকের পরামর্শ গ্রহণ করুন।"
+
+Add to BUSINESS_MODULES:
+hospital: ["dashboard","doctors","opd","ipd","patients",
+           "billing","staff","hisab","reports","settings"]
+
+Add to onboarding:
+  Name: "হাসপাতাল / ক্লিনিক"
+  Description: "রোগী দেখি ও চিকিৎসা সেবা দিই"
+
+━━━ DATABASE ━━━
+
+model Doctor {
+  id               String    @id @default(cuid())
+  shopId           String
+  name             String
+  title            String    -- "Dr.", "Prof. Dr.", "Assoc. Prof. Dr."
+  specialization   String    -- "Medicine"|"Surgery"|"Gynecology"|"Pediatrics"
+  qualification    String?   -- "MBBS, FCPS"
+  bmdc             String?   -- BMDC registration number
+  phone            String?
+  visitFee         Float
+  followUpFee      Float?
+  chamberDays      String?   -- "Sat, Mon, Wed"
+  chamberStartTime String?   -- "5:00 PM"
+  chamberEndTime   String?   -- "8:00 PM"
+  maxPatients      Int?      @default(30) -- per session
+  isActive         Boolean   @default(true)
+  opdVisits        OPDVisit[]
+  ipdAdmissions    IPDAdmission[]
+}
+
+model Patient {
+  id           String         @id @default(cuid())
+  shopId       String
+  regNumber    String         -- "PAT-2026-001"
+  name         String
+  nameBangla   String?
+  phone        String?
+  age          Int?
+  ageUnit      String?        @default("years") -- "years"|"months"|"days"
+  gender       String?        -- "male"|"female"|"other"
+  bloodGroup   String?
+  address      String?
+  nid          String?
+  allergies    String?
+  chronicIllness String?      -- "Diabetes, Hypertension"
+  emergencyContact String?
+  emergencyPhone   String?
+  photoUrl     String?
+  createdAt    DateTime       @default(now())
+  visits       OPDVisit[]
+  admissions   IPDAdmission[]
+}
+
+model OPDVisit {
+  id              String    @id @default(cuid())
+  shopId          String
+  visitNumber     String    @unique  -- "OPD-2026-001"
+  patientId       String
+  patient         Patient   @relation(fields: [patientId], references: [id])
+  doctorId        String
+  doctor          Doctor    @relation(fields: [doctorId], references: [id])
+  tokenNumber     Int       -- daily sequence per doctor
+  visitDate       DateTime  @default(now())
+  visitType       String    @default("new") -- "new"|"follow_up"|"emergency"
+  chiefComplaint  String?
+  vitalSigns      Json?
+  -- { bp: "120/80", pulse: 80, temp: 98.6, weight: 65, height: 170 }
+  diagnosis       String?
+  prescription    String?   -- simple text (not a full EMR)
+  advice          String?
+  nextVisitDate   DateTime?
+  visitFee        Float
+  paidAmount      Float     @default(0)
+  dueAmount       Float
+  status          String    @default("waiting")
+  -- "waiting"|"with_doctor"|"done"|"cancelled"
+  tests           OPDTestRequest[]
+}
+
+model OPDTestRequest {
+  id        String   @id @default(cuid())
+  visitId   String
+  visit     OPDVisit @relation(fields: [visitId], references: [id])
+  testName  String   -- "CBC", "Blood Sugar", "Chest X-Ray"
+  note      String?
+  status    String   @default("pending") -- "pending"|"done"
+}
+
+model IPDAdmission {
+  id              String    @id @default(cuid())
+  shopId          String
+  admissionNumber String    @unique  -- "IPD-2026-001"
+  patientId       String
+  patient         Patient   @relation(fields: [patientId], references: [id])
+  doctorId        String
+  doctor          Doctor    @relation(fields: [doctorId], references: [id])
+  bedNumber       String
+  ward            String    -- "General"|"Cabin"|"ICU"|"CCU"|"Maternity"|"Pediatrics"
+  admitDate       DateTime  @default(now())
+  dischargeDate   DateTime?
+  admitDiagnosis  String?
+  finalDiagnosis  String?
+  surgeryDone     Boolean   @default(false)
+  surgeryNote     String?
+  totalBill       Float     @default(0)
+  advancePaid     Float     @default(0)
+  dueAmount       Float     @default(0)
+  status          String    @default("admitted")
+  -- "admitted"|"discharged"|"transferred"|"absconded"
+  charges         IPDCharge[]
+  notes           IPDNote[]
+}
+
+model IPDCharge {
+  id            String       @id @default(cuid())
+  admissionId   String
+  admission     IPDAdmission @relation(fields: [admissionId], references: [id])
+  chargeType    String
+  -- "room"|"doctor_visit"|"nursing"|"medicine"|"procedure"|"lab"|"other"
+  description   String
+  amount        Float
+  chargeDate    DateTime     @default(now())
+}
+
+model IPDNote {
+  id            String       @id @default(cuid())
+  admissionId   String
+  admission     IPDAdmission @relation(fields: [admissionId], references: [id])
+  noteType      String       -- "doctor"|"nurse"|"general"
+  note          String
+  writtenById   String?
+  writtenAt     DateTime     @default(now())
+}
+
+model Bed {
+  id       String @id @default(cuid())
+  shopId   String
+  number   String
+  ward     String
+  type     String @default("general") -- "general"|"cabin"|"icu"|"ccu"
+  status   String @default("vacant")
+  -- "vacant"|"occupied"|"reserved"|"maintenance"
+  dailyRate Float  @default(0)
+}
+
+━━━ HOSPITAL DASHBOARD (/dashboard) ━━━
+
+4 stat cards:
+  আজকের OPD রোগী: today's OPD visit count
+  ভর্তি রোগী: currently admitted IPD count
+  আজকের আয়: total revenue today
+  অপেক্ষমাণ রোগী: patients with status="waiting"
+
+Doctor-wise today's OPD (table):
+  Doctor name | Specialty | Waiting | Seen | Done
+
+Bed occupancy widget:
+  "X / Y বেড ভর্তি আছে" with mini visual bar per ward
+
+Today's admissions + discharges list
+
+━━━ DOCTOR MANAGEMENT (/doctors) ━━━
+
+Doctor profiles:
+  Title + Name, specialization, BMDC reg, qualification,
+  Visit fee, chamber schedule, today's patient count
+
+"ডাক্তার যোগ করুন" → form:
+  Title (Dr./Prof. Dr./Assoc. Prof.), name*, specialization*,
+  Qualification (MBBS, FCPS etc.), BMDC registration number,
+  Phone, visit fee*, follow-up fee,
+  Chamber days (multi-select: Sat/Sun/Mon/Tue/Wed/Thu/Fri),
+  Chamber start + end time, max patients per session
+  "সেভ করুন"
+
+Doctor schedule view: weekly timetable grid
+
+━━━ OPD MANAGEMENT (/opd) ━━━
+
+Today's queue by doctor (tabs per doctor):
+  Token list: number, patient name, visit type badge, wait time, status badge
+  Status badges:
+    waiting: bg=#FAEEDA text=#633806
+    with_doctor: bg=#EEEDFE text=#3C3489
+    done: bg=#E1F5EE text=#085041
+
+"নতুন রোগী" button → quick registration + token:
+
+  Step 1 — রোগীর তথ্য:
+    Phone number search (existing patient auto-fills)
+    If new: name*, age* + unit (years/months/days), gender*,
+    Blood group, address, allergies (optional)
+
+  Step 2 — ডাক্তার ও সিরিয়াল:
+    Select doctor* (shows today's schedule + current token count)
+    Visit type: New / Follow-up / Emergency
+    Chief complaint (optional, 1-2 lines)
+    Vital signs (optional quick entry):
+      BP, Pulse, Temperature, Weight, Height
+
+  Step 3 — ফি:
+    Visit fee (auto-filled, editable for waivers/discounts)
+    Paid amount, due amount
+    Payment method
+
+  "টোকেন নিন" →
+    Token auto-generated (sequential per doctor per day)
+    Token slip shown/printed:
+      [HospitalName]
+      Token No: [number]
+      Doctor: [title name] | [specialty]
+      Patient: [name] | Age: [X]
+      Time: [current time]
+      Visit Type: [New/Follow-up]
+
+"ডাকুন" button (on waiting token) → status = "with_doctor"
+"সম্পন্ন" button → consultation done form (optional):
+  Diagnosis (free text), prescription (free text),
+  Test requests (add multiple), advice, next visit date
+  Status = "done"
+
+OPD history per patient (on patient profile):
+  All visit records with diagnosis, prescription
+
+━━━ IPD MANAGEMENT (/ipd) ━━━
+
+Bed map visual:
+  Grid of all beds organized by ward tabs:
+  General | Cabin | ICU | CCU | Maternity | Pediatrics (only active wards shown)
+  Each bed: number, status color
+  🟢 Vacant | 🔵 Occupied (patient name on hover) | 🟡 Reserved | 🔴 Maintenance
+
+"রোগী ভর্তি করুন" → form:
+  Patient: search existing or register new (same as OPD step 1)
+  Doctor*, admission diagnosis*
+  Ward + bed number* (only vacant beds shown)
+  Admit date (default now)
+  Advance payment, method
+  "ভর্তি করুন" →
+    Admission number auto-generated (IPD-YYYY-NNN)
+    Bed status → "occupied"
+    SMS to patient/guardian:
+      "[Patient name] কে ভর্তি করা হয়েছে।
+       ভর্তি নং: [IPD-number] | ওয়ার্ড: [ward] | বেড: [number]
+       ডাক্তার: [name]
+       - [HospitalName]"
+
+IPD Patient detail page:
+  Patient info + admission info + doctor
+  Status bar: Admitted → Recovering → Discharged
+
+  Daily Charges section:
+    Charges list: type, description, amount, date
+    "+ চার্জ যোগ করুন":
+      Type (Room/Doctor Visit/Nursing/Medicine/Procedure/Lab/Other)
+      Description, amount, date
+    Total charges auto-sum
+
+  Bill Summary:
+    Total charges: ৳X
+    Advance paid: ৳X
+    Due: ৳X
+    "+ পেমেন্ট নিন" button
+
+  Progress Notes (nursing/doctor notes):
+    Timeline of notes, newest first
+    "+ নোট যোগ করুন": type (Doctor/Nurse/General), note text
+
+  Discharge:
+    "ছাড়পত্র দিন" button → discharge form:
+      Final diagnosis (may differ from admit diagnosis)
+      Surgery done toggle + details
+      Discharge date
+      Final payment settlement
+      "ছাড়পত্র নিশ্চিত করুন" →
+        Bed → "cleaning"
+        Status → "discharged"
+        Discharge summary PDF option
+
+━━━ PATIENT RECORDS (/patients) ━━━
+
+Patient search by name, phone, reg number.
+Patient profile:
+  Personal info card (editable)
+  Visit history: OPD visits + IPD admissions (tabs)
+  Total amount paid to hospital
+  "নতুন ভিজিট" quick button
+
+━━━ BILLING (/billing) ━━━
+
+Bills list: OPD + IPD combined
+  Filter: আজকের | এই মাস | Due আছে
+
+Each bill row: patient name, type (OPD/IPD), amount, paid, due, date
+
+Due payments list:
+  All patients with outstanding dues
+  "পেমেন্ট নিন" button per patient
+
+Monthly revenue summary:
+  OPD revenue | IPD revenue | Total
+
+━━━ BED MANAGEMENT (/settings → Beds) ━━━
+
+In settings — "Bed Setup" tab:
+  Bed list: number, ward, type, daily rate, status
+  "বেড যোগ করুন": number, ward, type, daily rate
+  Ward management: add/remove wards, set bed count
+
+━━━ REPORTS (/reports) ━━━
+
+Hospital-specific:
+  Daily OPD count trend (line chart)
+  Doctor-wise patient count (bar chart)
+  Ward occupancy rate
+  Revenue by type (OPD/IPD/Lab - pie chart)
+  Monthly P&L
+
+━━━ SETTINGS — HOSPITAL CONFIG ━━━
+
+In /settings — "Hospital Config":
+  Facility type: ক্লিনিক / হাসপাতাল / ডায়াগনস্টিক / বিশেষায়িত কেন্দ্র
+  DGDA/Registration number
+  Emergency number
+  Token reset time (daily reset at midnight)
+  Admission number prefix (default: "IPD")
+  OPD visit number prefix (default: "OPD")
+  Show vital signs in OPD form (toggle)
+  Auto-SMS on admission (toggle)
+
+⚠️ Disclaimer shown on:
+  Every prescription page
+  Every test request
+  IPD discharge summary
+  Patient profile page
+
+All Bangla UI. Same design system.
+Blue accent (#378ADD) for doctor-related elements throughout.
+Patient registration number always auto-generated.
+
+
+
