@@ -782,7 +782,7 @@ function SettingsContent() {
       )}
 
       {/* ─── Sales Channel Switch Modal ────────── */}
-      {scModalOpen && (
+      {scModalOpen && businessType !== "fcommerce" && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-4">
           <div className="rounded-2xl w-full max-w-sm" style={{ backgroundColor: "var(--c-surface-raised)" }}>
             <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: S.border }}>
@@ -1209,8 +1209,8 @@ function SettingsContent() {
             );
           })()}
 
-          {/* ─── Sales Channel Section ─── */}
-          {(() => {
+          {/* ─── Sales Channel Section (non-fcommerce only) ─── */}
+          {businessType !== "fcommerce" && (() => {
             const meta = SALES_CHANNEL_META[salesChannel];
             const Icon = meta.icon;
             return (

@@ -119,7 +119,7 @@ export default function OnboardingWizard({ shopName }: { shopName: string }) {
         action: "step1",
         ...form1,
         businessType: businessType || "fcommerce",
-        salesChannel: salesChannel || "both",
+        salesChannel: salesChannel || (businessType === "fcommerce" ? "online" : "both"),
       }),
     });
     setLoading(false);
@@ -201,7 +201,14 @@ export default function OnboardingWizard({ shopName }: { shopName: string }) {
             })}
           </div>
 
-          <button onClick={() => setStep(1)} disabled={!businessType}
+          <button onClick={() => {
+            if (businessType === "fcommerce") {
+              setSalesChannel("online");
+              setStep(2);
+            } else {
+              setStep(1);
+            }
+          }} disabled={!businessType}
             className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-white font-semibold transition-opacity"
             style={{ backgroundColor: "#0F6E56", opacity: businessType ? 1 : 0.4, cursor: businessType ? "pointer" : "not-allowed" }}>
             পরবর্তী ধাপ <ChevronRight size={18} />
