@@ -1,0 +1,252 @@
+LAB / DIAGNOSTIC CENTER MODULE ===
+
+Add to BUSINESS_MODULES:
+lab: ["dashboard","tests","testorders","results","patients",
+      "appointments","hisab","reports","settings"]
+
+Add to onboarding:
+  Name: "ল্যাব / ডায়াগনস্টিক"
+  Description: "রোগ নির্ণয় পরীক্ষা করি"
+
+━━━ DATABASE ━━━
+
+model LabTest {
+  id                  String  @id @default(cuid())
+  shopId              String
+  name                String  -- "Complete Blood Count"
+  banglaName          String? -- "সম্পূর্ণ রক্ত গণনা"
+  shortCode           String  -- "CBC"
+  category            String
+  -- "hematology"|"biochemistry"|"microbiology"
+  -- |"serology"|"urine"|"stool"|"hormones"|"imaging"|"other"
+  price               Float
+  homeCollectionPrice Float?
+  turnaroundHours     Int     @default(24)
+  sampleType          String? -- "Blood"|"Urine"|"Stool"|"Swab"
+  normalRangeMale     String?
+  normalRangeFemale   String?
+  unit                String? -- "g/dL", "mg/dL", "million/μL"
+  isActive            Boolean @default(true)
+  isPackageItem       Boolean @default(false)
+  testItems           TestOrderItem[]
+}
+
+model TestPackage {
+  id       String        @id @default(cuid())
+  shopId   String
+  name     String        -- "Diabetic Screening Package"
+  banglaName String?
+  price    Float
+  tests    TestPackageItem[]
+  isActive Boolean       @default(true)
+}
+
+model TestPackageItem {
+  id        String      @id @default(cuid())
+  packageId String
+  package   TestPackage @relation(fields: [packageId], references: [id])
+  testId    String
+  test      LabTest     @relation(fields: [testId], references: [id])
+}
+
+model TestOrder {
+  id               String          @id @default(cuid())
+  shopId           String
+  orderNumber      String          @unique -- "LAB-2026-001"
+  patientId        String
+  patient          Customer        @relation(fields: [patientId], references: [id])
+  refDoctorName    String?
+  refDoctorPhone   String?
+  collectionType   String          @default("lab")
+  -- "lab"|"home"
+  homeAddress      String?
+  homeTime         DateTime?
+  collectorName    String?
+  sampleCollected  Boolean         @default(false)
+  sampleCollectedAt DateTime?
+  status           String          @default("registered")
+  -- "registered"|"sample_collected"|"processing"|"ready"|"delivered"
+  totalAmount      Float
+  discountAmount   Float           @default(0)
+  netAmount        Float
+  paidAmount       Float           @default(0)
+  dueAmount        Float
+  paymentMethod    String?
+  urgency          String          @default("normal") -- "normal"|"urgent"
+  items            TestOrderItem[]
+  results          TestResult[]
+  createdAt        DateTime        @default(now())
+}
+
+model TestOrderItem {
+  id          String    @id @default(cuid())
+  testOrderId String
+  testOrder   TestOrder @relation(fields: [testOrderId], references: [id])
+  testId      String
+  test        LabTest   @relation(fields: [testId], references: [id])
+  price       Float
+  resultEntered Boolean @default(false)
+}
+
+model TestResult {
+  id          String    @id @default(cuid())
+  shopId      String
+  testOrderId String
+  testOrder   TestOrder @relation(fields: [testOrderId], references: [id])
+  testId      String
+  test        LabTest   @relation(fields: [testId], references: [id])
+  value       String    -- "4.8" or "Positive" or paragraph
+  unit        String?
+  normalRange String?
+  flag        String?   -- "normal"|"high"|"low"|"critical"
+  note        String?   -- pathologist's comment
+  enteredById String?
+  enteredAt   DateTime  @default(now())
+}
+
+━━━ LAB DASHBOARD (/dashboard) ━━━
+
+4 stat cards:
+  আজকের রোগী: new test orders today
+  Sample বাকি: orders where sampleCollected=false
+  Result Ready: orders where status=ready
+  আজকের আয়: today's revenue
+
+Today's queue table:
+  Order number, patient name, tests (comma separated), status badge,
+  registration time, urgency badge (🔴 Urgent / ⚪ Normal)
+  Action: "Sample নিন" → marks sample collected
+  Action: "Result দিন" → goes to result entry
+
+Home collection list:
+  Pending home collections for today with address + time + assigned collector
+
+━━━ TEST CATALOG (/tests) ━━━
+
+Category tabs: সব | Hematology | Biochemistry | Microbiology | Serology | Urine/Stool | Hormones | Other
+
+Test list table: name + bangla name, code, sample type, price, turnaround, status toggle
+  Search by name or code
+
+"নতুন Test যোগ করুন" button → form:
+  Test name (English), Bangla name, short code*, category*,
+  Sample type, price*, home collection price (optional),
+  Turnaround hours, normal range male, normal range female, unit
+  "সেভ করুন"
+
+Bulk add: common Bangladesh lab tests pre-loaded via seed data:
+  CBC, ESR, Blood Group, Blood Sugar (F/PP/Random), HbA1c,
+  Lipid Profile, LFT, RFT, Thyroid (TSH/T3/T4), Urine R/E,
+  Stool R/E, HBsAg, HIV, Pregnancy Test (Serum/Urine),
+  Widal Test, CRP, Dengue NS1/IgG/IgM, COVID Antigen...
+
+━━━ TEST PACKAGES (/tests/packages) ━━━
+
+Pre-built packages:
+  Diabetic Package: FBS + HbA1c + Urine R/E + Creatinine
+  Thyroid Package: TSH + FT3 + FT4
+  Liver Package: LFT (SGPT + SGOT + ALP + Bilirubin)
+  Kidney Package: RFT (Creatinine + Urea + Uric Acid)
+  Heart Package: ECG + CBC + Lipid Profile + Blood Sugar
+  Pre-Marriage: Blood Group + VDRL + HBsAg + HIV
+
+"নতুন Package তৈরি করুন" button:
+  Package name, bangla name, select tests (multi-select with prices),
+  Package price (shows individual total vs package price savings)
+
+━━━ TEST ORDER (/testorders) ━━━
+
+"নতুন রোগী রেজিস্ট্রেশন" button → 3-step form:
+
+  Step 1 — রোগীর তথ্য:
+    Search existing patient by phone or name
+    If not found → add new:
+      Name*, phone*, age*, gender (Male/Female/Other),
+      Blood group (optional), address (optional)
+    Referring doctor name + phone (optional)
+    Collection type: Lab এ আসবে / Home Collection
+    If Home: address + preferred date + time
+    Urgency: Normal / Urgent (urgent = priority in queue)
+
+  Step 2 — পরীক্ষা নির্বাচন:
+    Search box: type test name or code → instant results
+    Package shortcuts row (chips): Diabetic | Thyroid | Liver | Kidney | Heart | Pre-Marriage
+    Selected tests appear as removable chips below search
+    Running total shows as each test added
+    Discount field (৳ or %)
+    Net amount (auto)
+
+  Step 3 — পেমেন্ট:
+    Paid amount, payment method, due amount
+    "রেজিস্ট্রেশন করুন" →
+      Auto-generates order number (LAB-YYYY-NNN)
+      Prints token slip:
+        Token: LAB-2026-001
+        Patient: [name] | Age: [X] | Sex: [M/F]
+        Tests: [list]
+        Date: [datetime]
+        Amount: ৳[net] | Paid: ৳[paid] | Due: ৳[due]
+
+Order list: filter by date, status, urgency
+  "Sample নিন" action on each registered order
+  "Result এন্ট্রি করুন" action on sample-collected orders
+
+━━━ RESULT ENTRY (/results) ━━━
+
+List: orders pending result entry (status=sample_collected or processing)
+
+Click order → result entry form:
+  Patient info header (name, age, sex, order date, doctor)
+  
+  One input row per test in order:
+    Test name | Value input | Unit (shown) | Normal range (shown as hint)
+    Flag auto-set by comparing value to normal range:
+      If numeric and within range → "Normal" (green)
+      If above range → "High" (amber)  
+      If below range → "Low" (blue)
+      If critical (preset thresholds) → "Critical" (red, show alert)
+    Comment/note field per test (optional)
+
+  Critical value alert: if any flag=critical:
+    Red banner: "সতর্কতা: [test name] এর মান অত্যন্ত অস্বাভাবিক।
+    অনুগ্রহ করে রোগীকে অবিলম্বে জানান।"
+
+  Pathologist's overall comment (optional textarea)
+
+  "Result সেভ করুন" → status=ready
+    Auto SMS:
+      "[Patient name] এর রিপোর্ট তৈরি হয়েছে।
+       রিপোর্ট নং: [order number]
+       সংগ্রহ করুন বা এখানে দেখুন: [app_url]/results/[token]
+       - [LabName]"
+
+Result View page (/results/[orderNumber]) — printable:
+  Header: Lab logo, name, address, phone, email
+  Patient info box: name, age, sex, blood group, order date, doctor
+  Tests table:
+    Column: Test Name | Result | Unit | Normal Range | Flag
+    Flagged rows: bold + color (high=amber, low=blue, critical=red)
+    Normal: black text
+  Pathologist note section (if any)
+  Footer: "এই রিপোর্ট শুধুমাত্র চিকিৎসা সহায়তার জন্য।
+  চিকিৎসার জন্য অবশ্যই বিশেষজ্ঞ ডাক্তারের পরামর্শ নিন।"
+  Print button → triggers browser print
+
+━━━ PATIENT HISTORY (/patients) ━━━
+
+Patient list: search by name/phone.
+Patient profile:
+  All previous test orders (date, tests, amount)
+  "পুনরায় পরীক্ষা করুন" button → pre-fills same tests in new order form
+
+━━━ REPORTS (/reports) ━━━
+
+Lab-specific:
+  Most requested tests (top 10 bar chart)
+  Daily patient count (line chart - 30 days)
+  Revenue by test category (pie chart)
+  Home collection vs lab visit split
+  Pending payments list (due amounts)
+
+All Bangla UI. Same design system.
+Disclaimer on all result pages (mandatory).
