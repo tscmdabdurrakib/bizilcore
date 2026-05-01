@@ -287,6 +287,15 @@ model Shop {
   hospitalPatientPrefix String?  @default("PAT")
   hospitalShowVitals    Boolean  @default(true)
   hospitalAutoSms       Boolean  @default(false)
+
+  // Travel Agency module
+  tourPackages          TourPackage[]
+  tourBookings          TourBooking[]
+  visaRequests          VisaRequest[]
+  travelVendors         TravelVendor[]
+  travelBookingPrefix   String?  @default("TRV")
+  travelVisaPrefix      String?  @default("VISA")
+  travelAutoSms         Boolean  @default(true)
 }
 
 model Subscription {
@@ -438,6 +447,8 @@ model Customer {
   testOrders    TestOrder[]
   hallEvents    HallEvent[]    @relation("CustomerHallEvents")
   harvestSales  HarvestSale[]
+  tourBookings  TourBooking[]
+  visaRequests  VisaRequest[]
   createdAt     DateTime       @default(now())
 
   @@index([shopId])
@@ -2609,5 +2620,148 @@ model Bed {
   dailyRate Float  @default(0)
   createdAt DateTime @default(now())
 
+  @@index([shopId])
+}
+
+// ─── Travel Agency Models ─────────────────────────────────
+
+model TourPackage {
+  id          String        @id @default(cuid())
+  shopId      String
+  shop        Shop          @relation(fields: [shopId], references: [id])
+  name        String
+  destination String
+  type        String
+  duration    String
+  inclusions  String[]
+  exclusions  String[]
+  adultPrice  Float
+  childPrice  Float?
+  infantPrice Float?
+  maxPersons  Int?
+  description String?
+  itinerary   Json?
+  imageUrl    String?
+  isActive    Boolean       @default(true)
+  bookings    TourBooking[]
+  createdAt   DateTime      @default(now())
+
+  @@index([shopId])
+}
+
+model TourBooking {
+  id            String          @id @default(cuid())
+  shopId        String
+  shop          Shop            @relation(fields: [shopId], references: [id])
+  bookingNumber String          @unique
+  packageId     String?
+  package       TourPackage?    @relation(fields: [packageId], references: [id])
+  customerId    String?
+  customer      Customer?       @relation(fields: [customerId], references: [id])
+  clientName    String
+  clientPhone   String
+  bookingType   String
+  travelDate    DateTime
+  returnDate    DateTime?
+  adults        Int             @default(1)
+  children      Int             @default(0)
+  infants       Int             @default(0)
+  totalPersons  Int
+  destination   String
+  description   String?
+  totalAmount   Float
+  costAmount    Float           @default(0)
+  profit        Float           @default(0)
+  advancePaid   Float           @default(0)
+  dueAmount     Float
+  status        String          @default("confirmed")
+  notes         String?
+  tickets       TravelTicket[]
+  visaRequests  VisaRequest[]
+  payments      TravelPayment[]
+  createdAt     DateTime        @default(now())
+
+  @@index([shopId])
+  @@index([customerId])
+  @@index([travelDate])
+}
+
+model TravelTicket {
+  id            String      @id @default(cuid())
+  shopId        String
+  bookingId     String
+  booking       TourBooking @relation(fields: [bookingId], references: [id])
+  ticketType    String
+  passengerName String
+  pnrNumber     String?
+  sector        String?
+  travelDate    DateTime?
+  seatClass     String?
+  vendorName    String?
+  costPrice     Float       @default(0)
+  sellPrice     Float       @default(0)
+  status        String      @default("issued")
+  createdAt     DateTime    @default(now())
+
+  @@index([bookingId])
+  @@index([shopId])
+}
+
+model VisaRequest {
+  id              String       @id @default(cuid())
+  shopId          String
+  shop            Shop         @relation(fields: [shopId], references: [id])
+  bookingId       String?
+  booking         TourBooking? @relation(fields: [bookingId], references: [id])
+  customerId      String?
+  customer        Customer?    @relation(fields: [customerId], references: [id])
+  visaNumber      String       @unique
+  applicantName   String
+  applicantPhone  String
+  passportNumber  String
+  passportExpiry  DateTime
+  country         String
+  visaType        String
+  applicationDate DateTime     @default(now())
+  submittedDate   DateTime?
+  expectedDate    DateTime?
+  approvedDate    DateTime?
+  rejectedDate    DateTime?
+  status          String       @default("collecting_docs")
+  serviceCharge   Float
+  paidAmount      Float        @default(0)
+  documents       String[]
+  notes           String?
+
+  @@index([shopId])
+  @@index([bookingId])
+}
+
+model TravelVendor {
+  id          String   @id @default(cuid())
+  shopId      String
+  shop        Shop     @relation(fields: [shopId], references: [id])
+  name        String
+  type        String
+  contact     String?
+  accountInfo String?
+  dueToVendor Float    @default(0)
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  @@index([shopId])
+}
+
+model TravelPayment {
+  id        String      @id @default(cuid())
+  shopId    String
+  bookingId String
+  booking   TourBooking @relation(fields: [bookingId], references: [id])
+  amount    Float
+  method    String
+  note      String?
+  paidAt    DateTime    @default(now())
+
+  @@index([bookingId])
   @@index([shopId])
 }

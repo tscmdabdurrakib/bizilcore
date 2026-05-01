@@ -28,6 +28,15 @@ A SaaS web app for Bangladeshi Facebook sellers — stock management (with produ
 - **Dashboard**: `DashboardLab` component with 4 stat cards, today's queue table with sample collection actions, home collection list, quick navigation links
 - **Features**: Auto-flag (normal/high/low/critical) based on value vs normal range, critical value alerts, auto order number (LAB-YYYY-NNN), home collection support, urgency (normal/urgent), package shortcuts in order form, patient search with new patient creation
 
+## Travel Agency Module (Complete)
+- **Business Type**: `"travel"` — added to `BusinessType`, `BUSINESS_TYPES`, `BUSINESS_TYPE_META` (cyan #0891B2, Plane icon), `BUSINESS_MODULES` (9 modules), `NAV_BY_TYPE` in `lib/modules.ts`
+- **DB Models**: `TourPackage`, `TourBooking`, `TravelTicket`, `VisaRequest`, `TravelVendor`, `TravelPayment` in `prisma/schema.prisma`; travel relations + settings (`travelBookingPrefix`, `travelVisaPrefix`, `travelAutoSms`, `travelVendors`) added to `Shop`; `travelBookings`/`visaRequests` added to `Customer`; pushed with `npx prisma db push`
+- **API Routes**: `/api/travel/stats` (dashboard stats), `/api/travel/packages` (CRUD tour packages), `/api/travel/bookings` (GET list + POST create + DELETE), `/api/travel/bookings/payment` (record payment), `/api/travel/visa` (CRUD visa requests + status update), `/api/travel/vendors` (CRUD with due tracking)
+- **Pages**: `/travel/packages` (PackagesBoard — card grid CRUD), `/travel/bookings` (BookingsBoard — 3-step booking form with type tabs, detail panel, payment modal), `/travel/visa` (VisaBoard — status tabs, inline status update, creation modal), `/travel/vendors` (VendorsBoard — vendor CRUD with payment flow), `/travel/reports` (recharts bar chart + pending due table), `/travel/settings` (agency config + numbering + SMS toggle)
+- **Dashboard**: `DashboardTravel` with 4 stat cards, upcoming travel list (7 days), booking type breakdown, quick action links; wired into `app/(app)/dashboard/page.tsx`
+- **Features**: Auto-booking number (TRV-YYYY-NNN), auto-visa number (VISA-YYYY-NNN), booking types (package/ticket/hotel/hajj_umrah/visa/custom), visa status tracking (submitted/processing/approved/rejected/collected), vendor due tracking with partial payment flow, 7-day upcoming travel widget, full Bangla UI
+- **Nav**: Dashboard → ট্যুর প্যাকেজ → বুকিং → ভিসা ট্র্যাকিং → Vendor → কাস্টমার → হিসাব → রিপোর্ট → সেটিংস
+
 ## Hospital / Clinic Module (Complete)
 - **Business Type**: `"hospital"` — added to `BusinessType`, `BUSINESS_TYPES`, `BUSINESS_TYPE_META` (blue #378ADD, Stethoscope icon), `BUSINESS_MODULES`, `NAV_BY_TYPE` in `lib/modules.ts`
 - **DB Models**: `Doctor`, `HospitalPatient`, `OPDVisit`, `OPDTestRequest`, `IPDAdmission`, `IPDCharge`, `IPDNote`, `Bed` in `prisma/schema.prisma`; hospital config fields added to `Shop` (`hospitalFacilityType`, `hospitalRegNumber`, `hospitalEmergencyPhone`, `hospitalTokenResetTime`, `hospitalAdmissionPrefix`, `hospitalOpdPrefix`, `hospitalPatientPrefix`, `hospitalShowVitals`, `hospitalAutoSms`); pushed with `npx prisma db push`

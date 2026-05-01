@@ -25,6 +25,7 @@ import {
   DollarSign,
   Palette,
   Image,
+  Settings,
   Settings2,
   Tag,
   Star,
@@ -56,6 +57,11 @@ import {
   Activity,
   HeartPulse,
   BedDouble as BedDoubleIcon,
+  Plane,
+  Ticket,
+  MapPin,
+  Stamp,
+  HandCoins,
   type LucideIcon,
 } from "lucide-react";
 
@@ -74,7 +80,8 @@ export type BusinessType =
   | "convention"
   | "school"
   | "farm"
-  | "hospital";
+  | "hospital"
+  | "travel";
 
 export const BUSINESS_TYPES: BusinessType[] = [
   "fcommerce",
@@ -90,6 +97,7 @@ export const BUSINESS_TYPES: BusinessType[] = [
   "school",
   "farm",
   "hospital",
+  "travel",
 ];
 
 export interface BusinessTypeMeta {
@@ -206,6 +214,14 @@ export const BUSINESS_TYPE_META: Record<BusinessType, BusinessTypeMeta> = {
     bgColor: "#EFF6FF",
     icon: Stethoscope,
   },
+  travel: {
+    type: "travel",
+    label: "ট্রাভেল এজেন্সি",
+    description: "ট্যুর প্যাকেজ ও টিকেট বুকিং করি",
+    color: "#0891B2",
+    bgColor: "#ECFEFF",
+    icon: Plane,
+  },
 };
 
 /* ─── Sales Channel ─────────────────────────────────────── */
@@ -310,6 +326,10 @@ const BUSINESS_MODULES: Record<BusinessType, string[]> = {
   hospital: [
     "dashboard", "doctors", "opd", "ipd", "patients",
     "billing", "staff", "hisab", "reports", "settings",
+  ],
+  travel: [
+    "dashboard", "packages", "bookings", "customers",
+    "vendors", "visa", "hisab", "reports", "settings",
   ],
 };
 
@@ -642,6 +662,35 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
         { href: "/hospital/billing",       icon: Receipt,         label: "বিলিং",               module: "billing"   },
         { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",               module: "hisab"     },
         { href: "/hospital/reports",       icon: BarChart2,       label: "রিপোর্ট",             module: "reports"   },
+      ],
+    },
+  ],
+  travel: [
+    {
+      items: [
+        { href: "/dashboard",              icon: LayoutDashboard, label: "ড্যাশবোর্ড",         module: "dashboard" },
+        { href: "/travel/packages",        icon: MapPin,          label: "ট্যুর প্যাকেজ",       module: "packages"  },
+        { href: "/travel/bookings",        icon: Ticket,          label: "বুকিং",               module: "bookings"  },
+        { href: "/travel/visa",            icon: Stamp,           label: "ভিসা ট্র্যাকিং",      module: "visa"      },
+        { href: "/travel/vendors",         icon: HandCoins,       label: "Vendor",               module: "vendors"   },
+      ],
+    },
+    {
+      items: [
+        { href: "/customers",              icon: Users,           label: "কাস্টমার",             module: "customers" },
+      ],
+    },
+    {
+      label: "আর্থিক",
+      items: [
+        { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",               module: "hisab"     },
+        { href: "/travel/reports",         icon: BarChart2,       label: "রিপোর্ট",             module: "reports"   },
+      ],
+    },
+    {
+      label: "সিস্টেম",
+      items: [
+        { href: "/travel/settings",        icon: Settings,        label: "সেটিংস",              module: "settings"  },
       ],
     },
   ],
