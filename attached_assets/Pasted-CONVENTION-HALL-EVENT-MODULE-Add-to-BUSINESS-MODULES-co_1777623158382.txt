@@ -1,0 +1,240 @@
+CONVENTION HALL / EVENT MODULE ===
+
+Add to BUSINESS_MODULES:
+convention: ["dashboard","halls","events","packages",
+             "vendors","customers","hisab","reports","settings"]
+
+Add to onboarding:
+  Name: "কনভেনশন হল / ইভেন্ট"
+  Description: "হল ভাড়া দিই বা ইভেন্ট ম্যানেজ করি"
+
+━━━ DATABASE ━━━
+
+model Hall {
+  id           String  @id @default(cuid())
+  shopId       String
+  name         String  -- "Main Hall", "VIP Lounge", "Garden Area"
+  capacity     Int     -- max guests
+  ratePerDay   Float
+  ratePerHour  Float?
+  rateHalfDay  Float?
+  amenities    String[] -- ["ac","stage","sound_system","projector",
+                         --  "parking","catering_kitchen","decoration_allowed"]
+  floorArea    String?  -- "5000 sqft"
+  description  String?
+  imageUrl     String?
+  isActive     Boolean @default(true)
+  events       HallEvent[]
+}
+
+model EventPackage {
+  id          String  @id @default(cuid())
+  shopId      String
+  name        String  -- "Basic", "Silver", "Gold", "Royal"
+  description String?
+  price       Float
+  includes    Json    -- [{"item": "Catering 200 pax", "value": "200pax"}]
+  isActive    Boolean @default(true)
+}
+
+model HallEvent {
+  id            String        @id @default(cuid())
+  shopId        String
+  bookingNumber String        @unique -- "EVT-2026-001"
+  hallId        String
+  hall          Hall          @relation(fields: [hallId], references: [id])
+  customerId    String?
+  customer      Customer?     @relation(fields: [customerId], references: [id])
+  clientName    String
+  clientPhone   String
+  clientAddress String?
+  eventType     String
+  -- "wedding"|"birthday"|"aqiqa"|"corporate"|
+  -- "seminar"|"mehndi"|"reception"|"other"
+  eventDate     DateTime
+  startTime     String        -- "10:00 AM"
+  endTime       String        -- "10:00 PM"
+  setupTime     String?       -- "8:00 AM" (setup before event)
+  guestCount    Int
+  packageId     String?
+  package       EventPackage? @relation(fields: [packageId], references: [id])
+  customItems   Json?         -- extra items added beyond package
+  totalAmount   Float
+  advancePaid   Float         @default(0)
+  dueAmount     Float
+  status        String        @default("confirmed")
+  -- "enquiry"|"confirmed"|"advance_paid"|"completed"|"cancelled"
+  checklist     Json?         -- [{task, done, dueTime}]
+  internalNotes String?
+  vendors       EventVendor[]
+  payments      EventPayment[]
+  createdAt     DateTime      @default(now())
+}
+
+model EventVendor {
+  id          String     @id @default(cuid())
+  eventId     String
+  event       HallEvent  @relation(fields: [eventId], references: [id])
+  category    String     -- "catering"|"decoration"|"photography"|
+                         --  "dj_music"|"cake"|"transport"|"other"
+  vendorName  String
+  contactPhone String?
+  quotedAmount Float?
+  paidAmount   Float     @default(0)
+  status       String    @default("confirmed")
+  note         String?
+}
+
+model EventPayment {
+  id        String    @id @default(cuid())
+  eventId   String
+  event     HallEvent @relation(fields: [eventId], references: [id])
+  amount    Float
+  method    String    -- "cash"|"bkash"|"nagad"|"bank"
+  note      String?
+  paidAt    DateTime  @default(now())
+}
+
+━━━ CONVENTION DASHBOARD (/dashboard) ━━━
+
+4 stat cards:
+  এই মাসের বুকিং: total events this month
+  আজকের ইভেন্ট: events happening today
+  মোট Advance: sum of advance payments received
+  মোট Pending বাকি: sum of all due amounts
+
+Upcoming events timeline (next 14 days):
+  Each event: date pill, client name, event type badge, hall, guest count, due amount
+  Color coding: Today=green, Tomorrow=amber, Future=gray
+  If due > 0: red "বাকি ৳X" badge
+
+Hall utilization this month:
+  Per hall: booked days / total days = utilization %
+
+━━━ HALL MANAGEMENT (/halls) ━━━
+
+Hall cards:
+  Photo (or placeholder), name, capacity, rate/day, amenities tags
+  Availability status: today's status
+
+"হল যোগ করুন" button → form:
+  Name*, capacity*, rate per day*, rate per hour (optional),
+  Half-day rate (optional), floor area, description
+  Amenities checkboxes:
+    ☐ AC  ☐ Stage  ☐ Sound System  ☐ Projector/Screen
+    ☐ Parking  ☐ Catering Kitchen  ☐ Dressing Room
+    ☐ WiFi  ☐ Generator Backup  ☐ Decoration Allowed
+  Image upload
+  "সেভ করুন"
+
+━━━ PACKAGE BUILDER (/packages) ━━━
+
+Package list: name, price, includes summary, status
+
+"নতুন Package তৈরি করুন" → form:
+  Package name*, price*
+  Includes items (dynamic add/remove rows):
+    Item description + value (e.g. "Catering" | "200 pax included")
+  Description
+  "সেভ করুন"
+
+Example pre-filled packages:
+  Basic Package (৳50,000): Hall only, Chairs 200, Tables 20, Basic lighting
+  Silver Package (৳80,000): Hall + Catering 200 pax + Basic decoration + Sound
+  Gold Package (৳1,20,000): Hall + Catering 300 pax + Full decoration + Stage + Sound + Photography
+  Royal Package (৳2,00,000): All above + DJ + Wedding car + Cake + Professional photography
+
+━━━ EVENT BOOKING (/events) ━━━
+
+Two views (toggle):
+  📅 Calendar | 📋 List
+
+Calendar view:
+  Month calendar. Booked dates highlighted per hall.
+  Multi-hall view: each hall in a different color row
+  Click date → "এই তারিখে বুকিং নিন" or see existing bookings
+  Conflict detection: if hall already booked → shows "বুকড" and doesn't allow double-booking
+
+List view filter tabs:
+  সব | এই মাস | আসন্ন | সম্পন্ন | বাতিল
+
+"নতুন বুকিং" button → multi-step form:
+
+  Step 1 — ইভেন্ট তথ্য:
+    Client name*, phone*, address (optional)
+    Event type* (dropdown with icons):
+      💍 বিবাহ | 🎂 জন্মদিন | 👶 আকিকা | 💼 Corporate
+      🎓 Seminar | 💃 Mehndi/Reception | 🎉 অন্যান্য
+    Event date* (date picker — shows availability)
+    Start time + End time (time pickers)
+    Setup time (optional — when they can come for decoration)
+    Expected guests*
+    Select hall* (available halls for that date auto-shown)
+    → Conflict check: if selected hall+date conflicts:
+        "এই তারিখে [HallName] বুকড আছে। অন্য তারিখ বা হল বেছে নিন।"
+
+  Step 2 — Package ও অতিরিক্ত সেবা:
+    Package selector cards (click to select):
+      Each card: package name, price, includes list
+      "Custom" option: no package, add items manually
+    If custom or need extras:
+      Add extra items (dynamic rows): description + price
+    Running total
+    Discount (৳ or %)
+    Grand total
+
+  Step 3 — Vendor Assignment (optional):
+    "Vendor যোগ করুন" button (multiple allowed):
+      Category (Catering/Decoration/Photography/DJ/Cake/Transport/Other)
+      Vendor name, contact, quoted amount
+    Internal notes (for own staff)
+
+  Step 4 — পেমেন্ট ও নিশ্চিতকরণ:
+    Total amount, advance required (show minimum 30% suggestion)
+    Advance paid*, payment method, due auto-calculated
+    "বুকিং নিশ্চিত করুন" →
+      Status = "advance_paid" (if advance > 0) or "confirmed"
+      Booking number auto-generated (EVT-YYYY-NNN)
+      SMS to client:
+        "প্রিয় [name], আপনার ইভেন্ট বুকিং নিশ্চিত হয়েছে।
+         বুকিং নং: [EVT-number]
+         হল: [hall name] | তারিখ: [date]
+         সময়: [start] - [end] | অতিথি: [count] জন
+         মোট: ৳[total] | অগ্রিম: ৳[advance] | বাকি: ৳[due]
+         - [HallName]"
+
+Event Detail page:
+  All booking info + edit option
+  Status update button (Confirmed → Completed → etc.)
+  Payment history: list of all payments with dates
+  "পেমেন্ট নিন" button → modal: amount + method + note
+  Vendor list with status (each vendor: confirm/cancel)
+  Event checklist:
+    Pre-loaded tasks based on event type:
+      Wedding: ☐ Decoration setup by [setup_time] ☐ Catering team arrival ☐ Stage lighting test ☐ Sound check ☐ Parking arrangement
+    Add custom tasks with due time
+    Check off tasks on event day
+  Print booking summary option
+
+Reminder system:
+  7 days before: "আপনার ইভেন্ট [date] তে। বাকি: ৳[due]"
+  2 days before: same reminder
+  Day before: "আগামীকাল আপনার ইভেন্ট। সবকিছু প্রস্তুত আছে তো?"
+
+━━━ REPORTS (/reports) ━━━
+
+Convention-specific:
+  Monthly booking count + revenue (bar chart)
+  Event type breakdown (pie chart - wedding vs birthday vs corporate)
+  Hall utilization % per hall
+  Average booking value
+  Advance vs total collected analysis
+  Top clients by booking value
+
+All Bangla UI. Same design system.
+High-value booking amounts formatted: ৳১,২০,০০০ (comma formatted)
+
+
+
+
+
