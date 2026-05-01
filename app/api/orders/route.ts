@@ -273,7 +273,7 @@ export async function POST(req: NextRequest) {
   });
 
   // Award badges in background — never block the order response
-  checkAndAwardBadges(session.user.id).catch(() => {});
+  checkAndAwardBadges(session.user.id, "order_created").catch(() => {});
 
   // Side-effects outside transaction (failures here don't roll back the order)
   const customerName = newCustomerName || "";

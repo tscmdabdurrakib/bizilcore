@@ -28,6 +28,9 @@ model User {
   totalOrders                Int                         @default(0)
   reviewRequestedAt          DateTime?
   badges                     String[]                    @default([])
+  xpPoints                   Int                         @default(0)
+  level                      String                      @default("নতুন বিক্রেতা")
+  earnedBadges               UserBadge[]
   maxShops                   Int                         @default(1)
   shop                       Shop?
   orders                     Order[]
@@ -3056,4 +3059,15 @@ model PhotoPayment {
 
   @@index([bookingId])
   @@index([shopId])
+}
+
+model UserBadge {
+  id       String   @id @default(cuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id])
+  badgeKey String
+  earnedAt DateTime @default(now())
+
+  @@unique([userId, badgeKey])
+  @@index([userId])
 }

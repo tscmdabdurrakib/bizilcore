@@ -5,6 +5,7 @@ import AppSidebar from "@/components/AppSidebar";
 import AppTopbar from "@/components/AppTopbar";
 import AccountStatusModal from "@/components/AccountStatusModal";
 import GrowthPrompts from "@/components/growth/GrowthPrompts";
+import BadgeToast from "@/components/BadgeToast";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -42,6 +43,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           statusReason={user.statusReason ?? null}
         />
       )}
+      <BadgeToast />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { cacheGet, cacheSet, cacheDel, CK, TTL } from "@/lib/cache";
 import { logActivity } from "@/lib/logActivity";
+import { checkAndAwardBadges } from "@/lib/badges";
 
 async function getShopId(userId: string) {
   const shop = await prisma.shop.findUnique({ where: { userId } });
@@ -106,5 +107,6 @@ export async function POST(req: NextRequest) {
     action: "নতুন পণ্য যোগ",
     detail: `${product.name}${product.sku ? ` (SKU: ${product.sku})` : ""} · স্টক: ${product.stockQty}`,
   });
+  checkAndAwardBadges(session.user.id, "product_added").catch(() => {});
   return NextResponse.json(product, { status: 201 });
 }

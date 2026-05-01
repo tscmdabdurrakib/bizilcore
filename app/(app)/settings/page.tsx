@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Check, MessageSquare, Copy, Trash2, Crown, User, ChevronRight, ChevronLeft, Loader2, ArrowLeft, Facebook, Link2, Unlink, X, Store, FileText, Users, Bell, CreditCard, Settings, Target, Moon, Sun, ShieldCheck, ShieldX, Wifi, WifiOff, Eye, EyeOff, Send, BookOpen, MessageCircle, Globe, ExternalLink, Sparkles, RefreshCw, Printer, Truck, RefreshCcw, Plus, Stethoscope, BedDouble } from "lucide-react";
+import { Check, MessageSquare, Copy, Trash2, Crown, User, ChevronRight, ChevronLeft, Loader2, ArrowLeft, Facebook, Link2, Unlink, X, Store, FileText, Users, Bell, CreditCard, Settings, Target, Moon, Sun, ShieldCheck, ShieldX, Wifi, WifiOff, Eye, EyeOff, Send, BookOpen, MessageCircle, Globe, ExternalLink, Sparkles, RefreshCw, Printer, Truck, RefreshCcw, Plus, Stethoscope, BedDouble, Trophy } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 import { PLAN_DISPLAY, PLAN_LIMITS } from "@/lib/features";
 import { BUSINESS_TYPES, BUSINESS_TYPE_META, type BusinessType, SALES_CHANNELS, SALES_CHANNEL_META, type SalesChannel, isValidSalesChannel } from "@/lib/modules";
@@ -656,9 +656,10 @@ function SettingsContent() {
 
 
   const TABS = [
-    { key: "account",       label: "অ্যাকাউন্ট",   desc: "প্রোফাইল ও পাসওয়ার্ড",         icon: User,          color: "#6366F1", bg: "#EEF2FF",  group: "আমার"    },
-    { key: "subscription",  label: "Subscription",  desc: "Plan ও billing",               icon: CreditCard,    color: "#F59E0B", bg: "#FFFBEB",  group: "আমার"    },
-    { key: "referral",      label: "Referral",      desc: "বন্ধুকে invite করুন",           icon: Target,        color: "#10B981", bg: "#ECFDF5",  group: "আমার"    },
+    { key: "account",        label: "অ্যাকাউন্ট",   desc: "প্রোফাইল ও পাসওয়ার্ড",         icon: User,          color: "#6366F1", bg: "#EEF2FF",  group: "আমার", href: undefined },
+    { key: "subscription",  label: "Subscription",  desc: "Plan ও billing",               icon: CreditCard,    color: "#F59E0B", bg: "#FFFBEB",  group: "আমার", href: undefined },
+    { key: "referral",      label: "Referral",      desc: "বন্ধুকে invite করুন",           icon: Target,        color: "#10B981", bg: "#ECFDF5",  group: "আমার", href: undefined },
+    { key: "achievements",  label: "পদক ও অর্জন",   desc: "XP, লেভেল ও পদক দেখুন",        icon: Trophy,        color: "#F59E0B", bg: "#FFFBEB",  group: "আমার", href: "/settings/achievements" },
     { key: "shop",          label: "Shop তথ্য",     desc: "শপের নাম ও ঠিকানা",             icon: Store,         color: "#0F6E56", bg: "#ECFDF5",  group: "শপ"      },
     { key: "invoice",       label: "Invoice",       desc: "কাস্টম invoice সেটিংস",         icon: FileText,      color: "#0EA5E9", bg: "#F0F9FF",  group: "শপ"      },
     { key: "slip",          label: "অর্ডার স্লিপ",   desc: "পেকিং স্লিপ কাস্টমাইজ করুন",  icon: Printer,       color: "#64748B", bg: "#F8FAFC",  group: "শপ"      },
@@ -879,10 +880,10 @@ function SettingsContent() {
                 <div className="grid grid-cols-2 gap-2">
                   {groupTabs.map(t => {
                     const MIcon = t.icon;
-                    return (
-                      <button key={t.key} onClick={() => { setTab(t.key); setMobileView("content"); }}
-                        className="flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all active:scale-95"
-                        style={{ backgroundColor: S.surface, borderColor: S.border }}>
+                    const cardClass = "flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all active:scale-95";
+                    const cardStyle = { backgroundColor: S.surface, borderColor: S.border };
+                    const inner = (
+                      <>
                         <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: t.bg }}>
                           <MIcon size={16} style={{ color: t.color }} />
                         </div>
@@ -890,7 +891,12 @@ function SettingsContent() {
                           <p className="text-sm font-bold truncate" style={{ color: S.text }}>{t.label}</p>
                           <p className="text-[10px] truncate mt-0.5" style={{ color: S.muted }}>{t.desc}</p>
                         </div>
-                      </button>
+                      </>
+                    );
+                    return t.href ? (
+                      <Link key={t.key} href={t.href} className={cardClass} style={cardStyle}>{inner}</Link>
+                    ) : (
+                      <button key={t.key} onClick={() => { setTab(t.key); setMobileView("content"); }} className={cardClass} style={cardStyle}>{inner}</button>
                     );
                   })}
                 </div>
@@ -943,10 +949,10 @@ function SettingsContent() {
                   {groupTabs.map(t => {
                     const Icon = t.icon;
                     const isActive = tab === t.key;
-                    return (
-                      <button key={t.key} onClick={() => setTab(t.key)}
-                        className="w-full flex items-center gap-2.5 px-2.5 py-2 mx-0.5 mb-0.5 rounded-xl transition-all text-left"
-                        style={{ backgroundColor: isActive ? t.bg : "transparent" }}>
+                    const rowClass = "w-full flex items-center gap-2.5 px-2.5 py-2 mx-0.5 mb-0.5 rounded-xl transition-all text-left";
+                    const rowStyle = { backgroundColor: isActive ? t.bg : "transparent" };
+                    const rowInner = (
+                      <>
                         <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
                           style={{ backgroundColor: isActive ? t.color : S.border }}>
                           <Icon size={13} color={isActive ? "white" : S.secondary} />
@@ -955,7 +961,12 @@ function SettingsContent() {
                           <p className="text-sm font-semibold truncate" style={{ color: isActive ? t.color : S.text }}>{t.label}</p>
                         </div>
                         {isActive && <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: t.color }} />}
-                      </button>
+                      </>
+                    );
+                    return t.href ? (
+                      <Link key={t.key} href={t.href} className={rowClass} style={rowStyle}>{rowInner}</Link>
+                    ) : (
+                      <button key={t.key} onClick={() => setTab(t.key)} className={rowClass} style={rowStyle}>{rowInner}</button>
                     );
                   })}
                   <div className="pb-2" />

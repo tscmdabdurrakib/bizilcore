@@ -1,28 +1,32 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Flame, Trophy, Star } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Flame, Trophy, ChevronRight } from "lucide-react";
 
-const S = { surface: "var(--c-surface)", border: "var(--c-border)", text: "var(--c-text)", muted: "var(--c-text-muted)", secondary: "var(--c-text-sub)", primary: "var(--c-primary)", bg: "var(--c-bg)" };
-
-const BADGE_EMOJI: Record<string, string> = {
-  "first_order": "🎉",
-  "streak_7": "🔥",
-  "streak_30": "🏆",
-  "orders_10": "⭐",
-  "orders_50": "💫",
-  "orders_100": "👑",
-  "orders_500": "🚀",
+const S = {
+  surface: "var(--c-surface)",
+  border: "var(--c-border)",
+  text: "var(--c-text)",
+  muted: "var(--c-text-muted)",
+  primary: "var(--c-primary)",
+  bg: "var(--c-bg)",
 };
 
-interface GamificationData {
+interface GamData {
   streak: number;
-  totalOrders: number;
-  badges: string[];
+  xp: number;
+  level: string;
+  nextLevelXp: number;
+  weeklyRank: number | null;
+  topThree: Array<{ label: string; orders: number }>;
+  category: string | null;
+  earnedBadges: Array<{ key: string; title: string; icon: string }>;
 }
 
 export default function GamificationWidget() {
-  const [data, setData] = useState<GamificationData | null>(null);
+  const router = useRouter();
+  const [data, setData] = useState<GamData | null>(null);
 
   useEffect(() => {
     fetch("/api/gamification")
@@ -31,60 +35,104 @@ export default function GamificationWidget() {
       .catch(() => {});
   }, []);
 
-  if (!data || (data.streak === 0 && data.badges.length === 0)) return null;
+  if (!data) return null;
+  if (data.streak === 0 && data.xp === 0 && data.earnedBadges.length === 0) return null;
+
+  const xpPct = Math.min(100, Math.round((data.xp / data.nextLevelXp) * 100));
 
   return (
-    <div className="rounded-2xl border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-      <div className="flex items-center gap-2 px-5 pt-5 pb-4">
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#FFF3E0" }}>
-          <Trophy size={17} style={{ color: "#F59E0B" }} />
+    <div className="space-y-3">
+      {/* Compact streak + level + XP row */}
+      <div
+        className="rounded-2xl border px-4 py-3 flex items-center gap-3 cursor-pointer hover:opacity-90 transition-opacity"
+        style={{ backgroundColor: S.surface, borderColor: S.border }}
+        onClick={() => router.push("/settings/achievements")}
+      >
+        {/* Streak */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Flame size={17} style={{ color: data.streak >= 7 ? "#F59E0B" : S.muted }} />
+          <span className="text-sm font-bold" style={{ color: data.streak >= 7 ? "#F59E0B" : S.text }}>
+            {data.streak} দিন
+          </span>
         </div>
-        <h3 className="font-bold text-sm" style={{ color: S.text }}>আপনার অর্জন</h3>
+
+        <div className="w-px h-5 shrink-0" style={{ backgroundColor: S.border }} />
+
+        {/* Level pill */}
+        <span
+          className="text-xs font-semibold px-2.5 py-1 rounded-full shrink-0"
+          style={{ backgroundColor: "#FEF3C7", color: "#92400E" }}
+        >
+          {data.level}
+        </span>
+
+        {/* XP bar */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs" style={{ color: S.muted }}>{data.xp} XP</span>
+            <span className="text-xs" style={{ color: S.muted }}>{data.nextLevelXp} XP</span>
+          </div>
+          <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: S.bg }}>
+            <div
+              className="h-full rounded-full transition-all duration-700"
+              style={{ width: `${xpPct}%`, backgroundColor: "#F59E0B" }}
+            />
+          </div>
+        </div>
+
+        <ChevronRight size={14} style={{ color: S.muted, flexShrink: 0 }} />
       </div>
 
-      <div className="px-5 pb-5 space-y-4">
-        {/* Streak */}
-        {data.streak > 0 && (
-          <div className="flex items-center gap-3 rounded-xl p-3" style={{ backgroundColor: data.streak >= 7 ? "#FFF8E7" : S.bg }}>
-            <Flame size={22} style={{ color: data.streak >= 7 ? "#F59E0B" : S.muted }} />
-            <div>
-              <p className="font-semibold text-sm" style={{ color: S.text }}>{data.streak} দিনের Streak</p>
-              <p className="text-xs" style={{ color: S.muted }}>
-                {data.streak >= 30 ? "অসাধারণ! এক মাস ধরে লগইন করছেন" :
-                  data.streak >= 7 ? "দুর্দান্ত! সাত দিন ধরে active আছেন" :
-                    "প্রতিদিন login করলে streak বাড়বে"}
-              </p>
+      {/* Weekly leaderboard card */}
+      {data.weeklyRank !== null && (
+        <div
+          className="rounded-2xl border overflow-hidden"
+          style={{ backgroundColor: S.surface, borderColor: S.border }}
+        >
+          <div className="px-4 pt-4 pb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#FEF3C7" }}>
+                <Trophy size={15} style={{ color: "#F59E0B" }} />
+              </div>
+              <div>
+                <p className="text-xs font-bold" style={{ color: S.text }}>এই সপ্তাহে আপনার rank</p>
+                {data.category && (
+                  <p className="text-xs" style={{ color: S.muted }}>{data.category} বিক্রেতাদের মধ্যে</p>
+                )}
+              </div>
+            </div>
+            <div
+              className="text-2xl font-black"
+              style={{ color: data.weeklyRank <= 3 ? "#F59E0B" : S.text }}
+            >
+              #{data.weeklyRank}
             </div>
           </div>
-        )}
 
-        {/* Badges */}
-        {data.badges.length > 0 && (
-          <div>
-            <p className="text-xs font-semibold mb-2" style={{ color: S.muted }}>অর্জিত Badge</p>
-            <div className="flex flex-wrap gap-2">
-              {data.badges.map(badge => (
-                <div key={badge} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium" style={{ borderColor: S.border, color: S.text, backgroundColor: S.bg }}>
-                  <span>{BADGE_EMOJI[badge] ?? <Star size={12} />}</span>
-                  <span>{
-                    badge === "first_order" ? "প্রথম অর্ডার" :
-                    badge === "streak_7" ? "৭ দিনের Streak" :
-                    badge === "streak_30" ? "৩০ দিনের Streak" :
-                    badge === "orders_10" ? "১০টি অর্ডার" :
-                    badge === "orders_50" ? "৫০টি অর্ডার" :
-                    badge === "orders_100" ? "১০০টি অর্ডার" :
-                    badge === "orders_500" ? "৫০০টি অর্ডার" : badge
-                  }</span>
+          {data.topThree.length > 0 && (
+            <div className="px-4 pb-4 space-y-1.5">
+              {data.topThree.map((t, i) => (
+                <div key={i} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <span style={{ color: i === 0 ? "#F59E0B" : i === 1 ? "#9CA3AF" : "#CD7F32" }}>
+                      {i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"}
+                    </span>
+                    <span style={{ color: S.muted }}>{t.label}</span>
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          )}
 
-        <p className="text-xs" style={{ color: S.muted }}>
-          মোট অর্ডার: <strong style={{ color: S.text }}>{data.totalOrders}টি</strong>
-        </p>
-      </div>
+          <div
+            className="px-4 py-2.5 border-t text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity text-center"
+            style={{ borderColor: S.border, color: S.primary }}
+            onClick={() => router.push("/community")}
+          >
+            পূর্ণ leaderboard দেখুন →
+          </div>
+        </div>
+      )}
     </div>
   );
 }

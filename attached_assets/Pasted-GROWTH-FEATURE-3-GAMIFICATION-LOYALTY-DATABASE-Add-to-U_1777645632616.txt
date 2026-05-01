@@ -1,0 +1,111 @@
+GROWTH FEATURE 3: GAMIFICATION & LOYALTY ===
+
+━━━ DATABASE ━━━
+
+Add to User model:
+  loginStreak    Int       @default(0)
+  lastLoginDate  DateTime?
+  xpPoints       Int       @default(0)
+  level          String    @default("new")
+
+model UserBadge {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  badgeKey  String
+  earnedAt  DateTime @default(now())
+  @@unique([userId, badgeKey])
+}
+
+━━━ BADGE DEFINITIONS (/lib/badges.ts) ━━━
+
+export const BADGES = [
+  { key: "first_login",      title: "প্রথম পদক্ষেপ",     desc: "প্রথমবার লগইন করলেন",          xp: 10  },
+  { key: "profile_complete", title: "পরিপূর্ণ প্রোফাইল",  desc: "Shop profile সম্পূর্ণ করলেন",  xp: 20  },
+  { key: "first_product",    title: "প্রথম পণ্য",          desc: "প্রথম পণ্য যোগ করলেন",         xp: 30  },
+  { key: "first_sale",       title: "প্রথম বিক্রি",        desc: "প্রথম অর্ডার পেলেন",            xp: 50  },
+  { key: "orders_10",        title: "সক্রিয় বিক্রেতা",    desc: "১০টি অর্ডার সম্পন্ন",           xp: 100 },
+  { key: "orders_100",       title: "শত অর্ডার",           desc: "১০০টি অর্ডার সম্পন্ন",          xp: 300 },
+  { key: "orders_1000",      title: "হাজার অর্ডার",        desc: "১০০০টি অর্ডার — অসাধারণ!",      xp: 1000},
+  { key: "revenue_50k",      title: "পঞ্চাশ হাজার",        desc: "মোট বিক্রি ৳৫০,০০০ ছাড়াল",     xp: 200 },
+  { key: "revenue_1lakh",    title: "লক্ষপতি",             desc: "মোট বিক্রি ৳১,০০,০০০ ছাড়াল",   xp: 500 },
+  { key: "streak_7",         title: "৭ দিন সক্রিয়",       desc: "টানা ৭ দিন লগইন করলেন",         xp: 50  },
+  { key: "streak_30",        title: "মাসব্যাপী সক্রিয়",   desc: "টানা ৩০ দিন active",            xp: 200 },
+  { key: "first_referral",   title: "বন্ধু আনলেন",         desc: "প্রথম referral সফল হয়েছে",      xp: 100 },
+  { key: "referrals_5",      title: "দলনেতা",              desc: "৫ জনকে refer করলেন",            xp: 300 },
+  { key: "pro_upgrade",      title: "Pro সদস্য",           desc: "Pro plan এ upgrade করলেন",       xp: 150 },
+]
+
+Level thresholds:
+  0–99:    "নতুন বিক্রেতা"
+  100–299: "সক্রিয় বিক্রেতা"
+  300–699: "দক্ষ বিক্রেতা"
+  700–1499:"অভিজ্ঞ বিক্রেতা"
+  1500+:   "শীর্ষ বিক্রেতা"
+
+━━━ BADGE CHECK FUNCTION ━━━
+
+Create checkAndAwardBadges(userId, trigger) in /lib/badges.ts:
+  trigger values: "login"|"product_added"|"order_created"|"order_completed"|"revenue_updated"|"referral_success"|"plan_upgraded"
+
+  On each trigger:
+    Fetch user stats (order count, revenue total, streak, etc.)
+    Check each relevant badge condition
+    If condition met AND badge not yet awarded:
+      Create UserBadge record
+      Add XP to user
+      Update user level if threshold crossed
+      Return newly earned badges (for toast notification)
+
+Call this function after every relevant action in API routes.
+
+━━━ LOGIN STREAK ━━━
+
+In /api/auth/[...nextauth] callback (on sign in):
+  Check user.lastLoginDate
+  If lastLoginDate = yesterday → increment loginStreak
+  If lastLoginDate = today → no change (already logged in)
+  If lastLoginDate < yesterday → reset loginStreak to 1
+  Update lastLoginDate = today
+  Check streak badges (7, 30 days)
+
+━━━ ACHIEVEMENTS PAGE (/settings/achievements) ━━━
+
+Header: Level badge (big) + XP bar with progress to next level
+  Example: "🔥 দক্ষ বিক্রেতা | 450 XP | পরের level এর জন্য আরো 250 XP দরকার"
+
+Login streak display:
+  "🔥 [X] দিন টানা active আছেন!"
+
+Badge grid (2 columns on mobile, 4 on desktop):
+  Earned badges: colored card with icon, title, description, earned date
+  Locked badges: grayed out with 🔒, title shown, desc hidden ("???" until earned)
+  Hover/click locked badge: shows hint "X টি অর্ডার করলে অর্জন হবে"
+
+━━━ BADGE TOAST NOTIFICATION ━━━
+
+When badge earned → show toast (bottom center, 5 seconds):
+  Green animated card slides up:
+    "🏆 নতুন পদক অর্জন!"
+    "[badge title]"
+    "[badge description]"
+    "+[xp] XP"
+  Confetti animation (use canvas-confetti library)
+  Click toast → goes to /settings/achievements
+
+━━━ DASHBOARD WIDGETS ━━━
+
+Add to dashboard (compact row below greeting):
+  Streak: "🔥 [X] দিন" (tap → achievements page)
+  Level: "[level name]" badge pill
+  XP bar (mini, 100px wide)
+
+Weekly leaderboard card (bottom of dashboard):
+  "এই সপ্তাহে আপনার rank"
+  Category: [business type] বিক্রেতাদের মধ্যে
+  Rank: #[X]
+  Top 3 (anonymous: "ব. — ১২৫ অর্ডার")
+  "পূর্ণ leaderboard দেখুন" → /community
+
+All Bangla UI. Same design system.
+canvas-confetti: import from CDN for badge celebration animation.
