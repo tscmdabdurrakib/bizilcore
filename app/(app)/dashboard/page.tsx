@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import TaskQuickComplete from "./TaskQuickComplete";
 import GamificationWidget from "@/components/GamificationWidget";
+import SetupChecklist from "@/components/SetupChecklist";
+import DemoDataBanner from "@/components/DemoDataBanner";
 import CommunityTipsWidget from "@/components/CommunityTipsWidget";
 import LeaderboardWidget from "@/components/LeaderboardWidget";
 import DashboardRestaurant  from "@/components/dashboards/DashboardRestaurant";
@@ -362,6 +364,12 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-5 max-w-7xl mx-auto pb-6">
+
+      {/* ── Onboarding Setup Checklist ───────────────────────────── */}
+      <SetupChecklist />
+
+      {/* ── Demo Data Banner ────────────────────────────────────── */}
+      <DemoDataBanner />
 
       {/* ── Hero Banner ─────────────────────────────────────────── */}
       <div

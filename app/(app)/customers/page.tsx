@@ -11,6 +11,8 @@ import {
 import { formatBDT, formatRelativeDate } from "@/lib/utils";
 import { downloadExcel } from "@/lib/excel";
 import Papa from "papaparse";
+import PageHint from "@/components/PageHint";
+import DemoDataBanner from "@/components/DemoDataBanner";
 
 interface Customer {
   id: string; name: string; phone: string | null; address: string | null;
@@ -507,6 +509,12 @@ export default function CustomersPage() {
           <Plus size={16} /> কাস্টমার যোগ করুন
         </Link>
       </div>
+
+      {/* ── Page Hint ── */}
+      <PageHint page="customers" text="এখানে আপনার সব কাস্টমারের তথ্য দেখুন। VIP, বাকি থাকা কাস্টমার আলাদা করে ফিল্টার করুন এবং SMS campaign পাঠান।" />
+
+      {/* ── Demo Data Banner ── */}
+      <DemoDataBanner />
 
       {/* ── Stats Cards ── */}
       {mainTab === "list" && (

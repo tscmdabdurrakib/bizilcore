@@ -59,6 +59,7 @@ export default function AppTopbar() {
     if (!last || now - parseInt(last) > 6 * 60 * 60 * 1000) {
       localStorage.setItem(sessionKey, String(now));
       fetch("/api/notifications/plan-expiry", { method: "POST" }).catch(() => {});
+      fetch("/api/cron/sms-drip", { method: "POST" }).catch(() => {});
       const week = Math.floor(now / (7 * 24 * 60 * 60 * 1000));
       const lastTipWeek = localStorage.getItem("bizilcore_last_tip_week");
       if (lastTipWeek !== String(week)) {

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { cacheGet, cacheSet, cacheDel, CK, TTL } from "@/lib/cache";
 import { logActivity } from "@/lib/logActivity";
 import { checkAndAwardBadges } from "@/lib/badges";
+import { markSetupTask } from "@/lib/setupProgress";
 
 async function getShopId(userId: string) {
   const shop = await prisma.shop.findUnique({ where: { userId } });
@@ -108,5 +109,6 @@ export async function POST(req: NextRequest) {
     detail: `${product.name}${product.sku ? ` (SKU: ${product.sku})` : ""} · স্টক: ${product.stockQty}`,
   });
   checkAndAwardBadges(session.user.id, "product_added").catch(() => {});
+  markSetupTask(session.user.id, "first_product").catch(() => {});
   return NextResponse.json(product, { status: 201 });
 }

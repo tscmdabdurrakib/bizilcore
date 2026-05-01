@@ -10,6 +10,8 @@ import Papa from "papaparse";
 import { downloadExcel } from "@/lib/excel";
 import ProductEditPanel from "@/components/inventory/ProductEditPanel";
 import ProductCreatePanel from "@/components/inventory/ProductCreatePanel";
+import PageHint from "@/components/PageHint";
+import DemoDataBanner from "@/components/DemoDataBanner";
 
 const BarcodeScanner = dynamic(() => import("@/components/BarcodeScanner"), { ssr: false });
 
@@ -489,6 +491,12 @@ export default function InventoryPage() {
         </div>
       </div>
 
+      {/* ── Page Hint (first visit) ── */}
+      <PageHint page="inventory" text="এখানে আপনার সব পণ্য দেখুন ও পরিচালনা করুন। '+' বাটনে ক্লিক করে নতুন পণ্য যোগ করুন অথবা CSV ফাইল থেকে import করুন।" />
+
+      {/* ── Demo Data Banner ── */}
+      <DemoDataBanner />
+
       {/* ── Stats Cards ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
@@ -665,14 +673,26 @@ export default function InventoryPage() {
               {[1, 2, 3, 4, 5].map((i) => <div key={i} className="h-14 bg-gray-100 rounded-xl" />)}
             </div>
           ) : filtered.length === 0 ? (
-            <div className="text-center py-20">
+            <div className="text-center py-16">
               <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Package size={28} className="text-gray-400" />
               </div>
-              <p className="text-gray-500 text-sm font-medium mb-2">কোনো পণ্য নেই</p>
-              <button onClick={() => setCreateProductPanelOpen(true)} className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:underline">
-                <Plus size={14} /> পণ্য যোগ করুন
-              </button>
+              <p className="text-gray-500 text-sm font-medium mb-4">
+                {products.length === 0 ? "এখনো কোনো পণ্য নেই।" : "কোনো পণ্য পাওয়া যায়নি"}
+              </p>
+              <div className="flex items-center justify-center gap-3 flex-wrap">
+                <button onClick={() => setCreateProductPanelOpen(true)} className="inline-flex items-center gap-1.5 text-sm font-bold px-4 py-2 rounded-xl text-white" style={{ backgroundColor: "#0F6E56" }}>
+                  <Plus size={14} /> পণ্য যোগ করুন
+                </button>
+                {products.length === 0 && (
+                  <button onClick={async () => {
+                    await fetch("/api/demo-data", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "products" }) });
+                    window.location.reload();
+                  }} className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl border" style={{ borderColor: "#D97706", color: "#D97706" }}>
+                    Demo data দিয়ে দেখুন
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             <div className="overflow-x-auto">

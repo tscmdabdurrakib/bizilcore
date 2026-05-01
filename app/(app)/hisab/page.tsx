@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { formatBDT, formatBanglaDate } from "@/lib/utils";
+import PageHint from "@/components/PageHint";
 
 interface Transaction {
   id: string; type: string; amount: number; category: string | null;
@@ -318,6 +319,9 @@ export default function HisabPage() {
           isDesktop={isDesktop}
         />
       )}
+
+      {/* ── Page Hint ── */}
+      <PageHint page="hisab" text="হিসাব বইতে প্রতিদিনের আয় ও খরচ রেকর্ড করুন। মাসভিত্তিক রিপোর্ট ও ক্যাটাগরি চার্ট দেখে ব্যবসার আর্থিক অবস্থা বুঝুন।" />
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between gap-3 flex-wrap">

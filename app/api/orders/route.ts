@@ -5,6 +5,7 @@ import { logActivity } from "@/lib/logActivity";
 import { triggerOrderSMS } from "@/lib/sms";
 import { createAutoTask } from "@/lib/autoTasks";
 import { checkAndAwardBadges } from "@/lib/badges";
+import { markSetupTask } from "@/lib/setupProgress";
 import { detectFakeOrder, type RiskResult } from "@/lib/fakeOrderDetector";
 
 export async function GET(req: NextRequest) {
@@ -274,6 +275,7 @@ export async function POST(req: NextRequest) {
 
   // Award badges in background — never block the order response
   checkAndAwardBadges(session.user.id, "order_created").catch(() => {});
+  markSetupTask(session.user.id, "first_order").catch(() => {});
 
   // Side-effects outside transaction (failures here don't roll back the order)
   const customerName = newCustomerName || "";

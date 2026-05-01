@@ -8,6 +8,8 @@ import { formatBDT, formatRelativeDate, getStatusStyle } from "@/lib/utils";
 import { downloadExcel } from "@/lib/excel";
 import OrderCreatePanel from "./OrderCreatePanel";
 import RiskBadge from "./RiskBadge";
+import PageHint from "@/components/PageHint";
+import DemoDataBanner from "@/components/DemoDataBanner";
 
 interface Order {
   id: string; status: string; totalAmount: number; paidAmount: number; dueAmount: number;
@@ -299,6 +301,12 @@ export default function FCommerceOrders() {
   return (
     <div className="max-w-7xl mx-auto space-y-4">
       {toast && <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg" style={{ backgroundColor: toast.type === "success" ? "#1D9E75" : "#E24B4A" }}>{toast.msg}</div>}
+
+      {/* ── Page Hint ── */}
+      <PageHint page="orders" text="এখানে সব অর্ডার ট্র্যাক করুন। অর্ডারের status পরিবর্তন করতে পারবেন এবং কুরিয়ার ট্র্যাকিং যোগ করতে পারবেন।" />
+
+      {/* ── Demo Data Banner ── */}
+      <DemoDataBanner />
 
       {/* Bulk Action Bar */}
       {selectedIds.size > 0 && (

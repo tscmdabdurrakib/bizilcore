@@ -370,3 +370,55 @@ Built on top of the existing basic gamification skeleton (which had `streak`, `l
 **Sidebar navigation:**
 - `Bell` icon imported; `/notifications` → "নোটিফিকেশন" added to both desktop and mobile (more menu) nav groups
 - Page title map in AppTopbar: `/notifications` → "নোটিফিকেশন"
+
+---
+
+## Onboarding Optimization (Growth Feature — Complete)
+
+**DB columns** (added via raw psql, reflected in schema.prisma):
+- `User.setupProgress JSONB` — stores per-task completion + snooze/dismiss state
+- `User.smsDripSentDays INTEGER[]` — tracks which drip days (1/3/7/30) have been sent
+- `Product.isDemoData BOOLEAN @default(false)`, `Order.isDemoData`, `Customer.isDemoData`
+
+**`lib/setupProgress.ts`:**
+- `SETUP_TASKS` — 6 tasks: profile_complete, first_product, first_customer, first_order, first_transaction, invite_team (each with XP, title, description, link)
+- `getSetupProgress(userId)` / `markSetupTask(userId, taskId)` / `updateSetupProgress(userId, update)` / `calcPercent(progress)` — all use `$queryRaw/$executeRaw`
+
+**API Routes:**
+- `/api/onboarding/progress` (GET/PATCH) — returns tasks array + percent + dismissed/snoozed state; PATCH handles `{ task }`, `{ dismiss: true }`, `{ snooze: true }`
+- `/api/demo-data` (GET/POST/DELETE) — GET checks isDemoData, POST creates 5 sample products + 3 customers, DELETE removes all isDemoData rows
+- `/api/cron/sms-drip` (POST) — checks days since signup, sends day-1/3/7/30 drip SMS via Twilio if not already sent (tracks via `smsDripSentDays` array_append)
+
+**Task completion triggers** wired into existing API routes:
+- `products/route.ts` → `markSetupTask(userId, "first_product")`
+- `customers/route.ts` → `markSetupTask(userId, "first_customer")`
+- `orders/route.ts` → `markSetupTask(userId, "first_order")`
+- `transactions/route.ts` → `markSetupTask(userId, "first_transaction")`
+- `settings/route.ts` → `markSetupTask(userId, "profile_complete")` on name/phone update
+
+**`components/SetupChecklist.tsx`** (client component, wired into dashboard):
+- Fetches progress from `/api/onboarding/progress`
+- Progress bar with percentage + XP earned
+- Each task row: checkbox, title, description, XP badge, "করুন →" button
+- Confetti on 100% completion (canvas-confetti CDN)
+- Snooze 24h button, dismiss at 70%+ (once dismissed, no longer shows)
+- Mounted in `app/(app)/dashboard/page.tsx` at top of fcommerce dashboard
+
+**`components/PageHint.tsx`** (client component):
+- localStorage-gated per-page hint (key: `bizil_hints_seen`)
+- Shows once per page, dismissed with "বুঝেছি" or ✕
+- Added to: inventory, orders (FCommerceOrders), customers, hisab, reports pages with page-specific Bangla hint text
+- Animated slide-in, green left-border design
+
+**`components/DemoDataBanner.tsx`** (client component):
+- Checks `/api/demo-data` GET, shows yellow warning banner when demo data exists
+- "সব Demo Data মুছুন" button calls DELETE `/api/demo-data`
+- Fires `demo-data-deleted` CustomEvent on deletion
+- Mounted in dashboard (top) and inventory page
+
+**Empty state upgrade** (`app/(app)/inventory/page.tsx`):
+- When `products.length === 0`, empty state shows both "পণ্য যোগ করুন" + "Demo data দিয়ে দেখুন" buttons
+- Demo button POSTs to `/api/demo-data` then reloads page
+
+**SMS Drip trigger:**
+- `AppTopbar.tsx` fires `POST /api/cron/sms-drip` inside the 6-hour session-gated block (alongside plan-expiry)

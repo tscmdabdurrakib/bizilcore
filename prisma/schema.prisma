@@ -32,6 +32,8 @@ model User {
   level                      String                      @default("নতুন বিক্রেতা")
   earnedBadges               UserBadge[]
   notificationPreferences    NotificationPreference?
+  setupProgress              Json?                       @default("{}")
+  smsDripSentDays            Int[]                       @default([])
   maxShops                   Int                         @default(1)
   shop                       Shop?
   orders                     Order[]
@@ -421,6 +423,7 @@ model Product {
   storeOrderItems StoreOrderItem[]
   storeReviews    StoreReview[]
   jobCardParts    JobCardPart[]
+  isDemoData      Boolean           @default(false)
   createdAt       DateTime          @default(now())
 
   @@index([shopId])
@@ -472,6 +475,7 @@ model Customer {
   tourBookings  TourBooking[]
   visaRequests  VisaRequest[]
   photoBookings PhotoBooking[]
+  isDemoData    Boolean        @default(false)
   createdAt     DateTime       @default(now())
 
   @@index([shopId])
@@ -508,6 +512,7 @@ model Order {
   items           OrderItem[]
   returns         OrderReturn[]
   tasks           Task[]
+  isDemoData      Boolean       @default(false)
   createdAt       DateTime      @default(now())
 
   @@index([userId])

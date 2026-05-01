@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/logActivity";
+import { markSetupTask } from "@/lib/setupProgress";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -88,5 +89,6 @@ export async function POST(req: NextRequest) {
     action: "নতুন কাস্টমার যোগ",
     detail: `${customer.name}${customer.phone ? ` · ${customer.phone}` : ""}`,
   });
+  markSetupTask(session.user.id, "first_customer").catch(() => {});
   return NextResponse.json(customer, { status: 201 });
 }

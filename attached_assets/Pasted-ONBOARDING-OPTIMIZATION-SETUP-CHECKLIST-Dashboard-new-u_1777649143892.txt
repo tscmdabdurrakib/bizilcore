@@ -1,0 +1,115 @@
+ONBOARDING OPTIMIZATION ===
+
+━━━ SETUP CHECKLIST (Dashboard — new users only) ━━━
+
+Show checklist card on dashboard until:
+  All tasks completed OR user dismisses after 70%+ complete
+
+Database addition to User:
+  setupProgress Json? -- stores which tasks are done
+
+Checklist tasks (auto-checked when action is done):
+  [✓] Account তৈরি করেছেন           +10 XP  (always checked)
+  [ ] Shop profile সম্পূর্ণ করুন    +20 XP  → /settings
+  [ ] প্রথম পণ্য যোগ করুন            +30 XP  → /inventory/new
+  [ ] প্রথম customer যোগ করুন        +20 XP  → /customers/new
+  [ ] প্রথম অর্ডার তৈরি করুন         +50 XP  → /orders/new
+  [ ] প্রথম হিসাব এন্ট্রি করুন       +20 XP  → /hisab
+
+Checklist card UI:
+  Header: "Setup সম্পন্ন করুন" + progress percentage (e.g. "৪০%")
+  Progress bar (green fill, animated)
+  Each task row:
+    Checkbox (checked = green filled) | Task text | XP badge | "করুন →" button
+    Completed tasks: strikethrough + faded
+  
+  At 100%:
+    Confetti animation
+    Card transforms to: "🎉 Setup সম্পন্ন! আপনি এখন প্রস্তুত।"
+    Auto-hides after 5 seconds
+  
+  "এখন না" button: hides card for 24 hours (not permanent dismiss)
+  After 70% complete: "Dismiss" button appears (permanent hide)
+
+Auto-check tasks:
+  After POST /api/shops/update (with all required fields) → mark "profile_complete"
+  After POST /api/products (first product) → mark "first_product"
+  After POST /api/customers (first customer) → mark "first_customer"
+  After POST /api/orders (first order) → mark "first_order"
+  After POST /api/transactions (first transaction) → mark "first_transaction"
+
+━━━ SAMPLE DATA OPTION ━━━
+
+On empty state pages (inventory, orders, customers) — first visit only:
+
+Empty state card:
+  Illustration (simple SVG — empty box/folder)
+  Text: "এখনো কোনো পণ্য নেই।"
+  Two buttons:
+    "পণ্য যোগ করুন" (primary)
+    "Demo data দিয়ে দেখুন" (secondary, outline)
+
+On "Demo data দিয়ে দেখুন":
+  For inventory: creates 5 sample products (পোশাক category by default):
+    থ্রি-পিস কটন (buy ৳৪৫০, sell ৳৬৫০, stock 20)
+    সিল্ক শাড়ি (buy ৳৮০০, sell ৳১২০০, stock 8)
+    কুর্তি সেট (buy ৳৩৫০, sell ৳৫৫০, stock 15)
+    পাঞ্জাবি (buy ৳৩০০, sell ৳৪৮০, stock 12)
+    শার্ট (buy ৳২৫০, sell ৳৪০০, stock 25)
+  
+  For customers: creates 3 sample customers
+  For orders: creates 2 sample orders
+
+After sample data load:
+  Yellow info banner at top of page:
+    "⚠️ এগুলো demo data — শুরু করার আগে মুছে ফেলুন।"
+    "সব Demo Data মুছুন" button → deletes all sample records
+
+Sample data toggle in /settings:
+  "সব Demo Data মুছুন" button (shows only if sample data exists)
+
+━━━ TOOLTIP HINTS (First visit per page) ━━━
+
+Store seen pages in localStorage: "hints_seen" = ["inventory", "orders", ...]
+
+On first visit to each page (if not in hints_seen):
+  Show one contextual tooltip pointing to the main CTA button:
+    /inventory: Arrow pointing to "+ পণ্য যোগ করুন" button
+      Text: "এখানে আপনার সব পণ্য থাকবে। এই বাটন দিয়ে নতুন পণ্য যোগ করুন।"
+    /orders: Arrow pointing to "+ নতুন অর্ডার" button
+      Text: "Facebook এ অর্ডার পেলে এখানে এন্ট্রি করুন।"
+    /customers: Arrow pointing to "+ কাস্টমার যোগ করুন"
+      Text: "নিয়মিত কাস্টমারদের এখানে রাখুন। বাকি হিসাব track হবে।"
+    /hisab: Arrow pointing to "+ আয় যোগ করুন"
+      Text: "প্রতিদিনের আয়-ব্যয় এখানে লিখলে লাভ-ক্ষতি দেখতে পাবেন।"
+    /reports: Arrow pointing to date filter
+      Text: "এখানে আপনার business এর সব report দেখতে পাবেন।"
+  
+  Tooltip UI: small card with arrow, green border, white bg
+  "বুঝেছি" button → marks page as seen, never shows again
+
+━━━ SMS DRIP CAMPAIGN ━━━
+
+Create background job (runs daily, checks user signup date):
+
+Day 1 (if no product added yet):
+  SMS: "BizilCore তে স্বাগতম! প্রথম পণ্য যোগ করতে মাত্র ২ মিনিট লাগবে।
+        এখনই শুরু করুন: bizilcore.com/inventory/new"
+
+Day 3 (if no order yet but has products):
+  SMS: "আপনার পণ্য ready! এখন প্রথম অর্ডার এন্ট্রি করুন।
+        bizilcore.com/orders/new"
+
+Day 7 (if active but not Pro):
+  SMS: "HisabBoi Pro তে courier booking, auto SMS সহ অনেক সুবিধা।
+        দেখুন: bizilcore.com/pricing"
+
+Day 30 (if active, has 5+ orders, not yet referred anyone):
+  SMS: "বন্ধুকে invite করুন — উভয়ই ১ মাস Pro free পাবেন।
+        আপনার code: [referral_code] | bizilcore.com/settings/referral"
+
+Each SMS sends only once per user (track in DB or user flags).
+
+All Bangla UI. Same design system.
+Checklist is the highest-impact feature — implement first.
+

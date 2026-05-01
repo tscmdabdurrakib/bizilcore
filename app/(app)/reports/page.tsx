@@ -15,6 +15,7 @@ import {
   ArrowDownRight, Zap, Target, Activity,
 } from "lucide-react";
 import { downloadExcel, downloadExcelMultiSheet } from "@/lib/excel";
+import PageHint from "@/components/PageHint";
 
 interface OrderItem { quantity: number; unitPrice: number; subtotal: number; comboId?: string | null; comboSnapshot?: unknown; product: { id: string; name: string; buyPrice: number } | null }
 interface Order {
@@ -531,6 +532,9 @@ export default function ReportsPage() {
   return (
     <PlanGate feature="reports">
     <div className="max-w-7xl mx-auto space-y-4">
+
+      {/* ── Page Hint ── */}
+      <PageHint page="reports" text="রিপোর্ট পেজে বিক্রি, লাভ ও পণ্যের পারফরম্যান্স দেখুন। তারিখ ফিল্টার করে নির্দিষ্ট সময়ের বিশ্লেষণ করুন এবং Excel-এ export করুন।" />
 
       {/* Page Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
