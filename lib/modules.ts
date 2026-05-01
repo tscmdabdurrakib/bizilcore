@@ -63,6 +63,7 @@ import {
   Stamp,
   HandCoins,
   Dumbbell,
+  Camera,
   type LucideIcon,
 } from "lucide-react";
 
@@ -83,7 +84,8 @@ export type BusinessType =
   | "farm"
   | "hospital"
   | "travel"
-  | "gym";
+  | "gym"
+  | "photography";
 
 export const BUSINESS_TYPES: BusinessType[] = [
   "fcommerce",
@@ -101,6 +103,7 @@ export const BUSINESS_TYPES: BusinessType[] = [
   "hospital",
   "travel",
   "gym",
+  "photography",
 ];
 
 export interface BusinessTypeMeta {
@@ -233,6 +236,14 @@ export const BUSINESS_TYPE_META: Record<BusinessType, BusinessTypeMeta> = {
     bgColor: "#F5F3FF",
     icon: Dumbbell,
   },
+  photography: {
+    type: "photography",
+    label: "ফটোগ্রাফি / ভিডিওগ্রাফি",
+    description: "ফটো ও ভিডিও সেশন ম্যানেজ করি",
+    color: "#DB2777",
+    bgColor: "#FDF2F8",
+    icon: Camera,
+  },
 };
 
 /* ─── Sales Channel ─────────────────────────────────────── */
@@ -345,6 +356,10 @@ const BUSINESS_MODULES: Record<BusinessType, string[]> = {
   gym: [
     "dashboard", "members", "memberships", "attendance",
     "trainers", "equipment", "hisab", "reports", "settings",
+  ],
+  photography: [
+    "dashboard", "bookings", "packages", "portfolio",
+    "equipment", "customers", "hisab", "reports", "settings",
   ],
 };
 
@@ -731,6 +746,35 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
       label: "সিস্টেম",
       items: [
         { href: "/gym/settings",           icon: Settings,        label: "সেটিংস",               module: "settings"    },
+      ],
+    },
+  ],
+  photography: [
+    {
+      items: [
+        { href: "/dashboard",                    icon: LayoutDashboard, label: "ড্যাশবোর্ড",       module: "dashboard" },
+        { href: "/photography/bookings",         icon: CalendarRange,   label: "বুকিং",             module: "bookings"  },
+        { href: "/photography/packages",         icon: Package,         label: "প্যাকেজ",           module: "packages"  },
+        { href: "/photography/portfolio",        icon: Image,           label: "পোর্টফোলিও",        module: "portfolio" },
+        { href: "/photography/equipment",        icon: Camera,          label: "সরঞ্জাম",           module: "equipment" },
+      ],
+    },
+    {
+      items: [
+        { href: "/customers",                    icon: Users,           label: "ক্লায়েন্ট",         module: "customers" },
+      ],
+    },
+    {
+      label: "আর্থিক",
+      items: [
+        { href: "/hisab",                        icon: BookOpen,        label: "হিসাব",             module: "hisab"     },
+        { href: "/photography/reports",          icon: BarChart2,       label: "রিপোর্ট",           module: "reports"   },
+      ],
+    },
+    {
+      label: "সিস্টেম",
+      items: [
+        { href: "/photography/settings",         icon: Settings,        label: "সেটিংস",            module: "settings"  },
       ],
     },
   ],

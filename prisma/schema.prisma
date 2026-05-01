@@ -306,6 +306,14 @@ model Shop {
   gymCloseTime          String?  @default("22:00")
   gymExpiryAlertDays    Int      @default(7)
   gymAutoSmsExpiry      Boolean  @default(true)
+
+  // Photography / Videography module
+  photoPackages         PhotoPackage[]
+  photoBookings         PhotoBooking[]
+  photoEquipments       PhotoEquipment[]
+  photoBookingPrefix    String?  @default("PHO")
+  photoAutoSms          Boolean  @default(true)
+  photoStudioName       String?
 }
 
 model Subscription {
@@ -459,6 +467,7 @@ model Customer {
   harvestSales  HarvestSale[]
   tourBookings  TourBooking[]
   visaRequests  VisaRequest[]
+  photoBookings PhotoBooking[]
   createdAt     DateTime       @default(now())
 
   @@index([shopId])
@@ -2932,5 +2941,119 @@ model Equipment {
   notes        String?
   createdAt    DateTime  @default(now())
 
+  @@index([shopId])
+}
+
+// ─── PHOTOGRAPHY / VIDEOGRAPHY ────────────────────────────────────
+
+model PhotoPackage {
+  id           String         @id @default(cuid())
+  shopId       String
+  shop         Shop           @relation(fields: [shopId], references: [id])
+  name         String
+  type         String
+  duration     String
+  price        Float
+  includes     String[]
+  deliverables String[]
+  editingDays  Int            @default(7)
+  description  String?
+  isActive     Boolean        @default(true)
+  bookings     PhotoBooking[]
+  createdAt    DateTime       @default(now())
+
+  @@index([shopId])
+}
+
+model PhotoBooking {
+  id            String             @id @default(cuid())
+  shopId        String
+  shop          Shop               @relation(fields: [shopId], references: [id])
+  bookingNumber String             @unique
+  customerId    String?
+  customer      Customer?          @relation(fields: [customerId], references: [id])
+  clientName    String
+  clientPhone   String
+  packageId     String?
+  package       PhotoPackage?      @relation(fields: [packageId], references: [id])
+  eventType     String
+  eventDate     DateTime
+  eventTime     String?
+  venue         String?
+  duration      String?
+  totalAmount   Float
+  costAmount    Float              @default(0)
+  advancePaid   Float              @default(0)
+  dueAmount     Float
+  status        String             @default("confirmed")
+  shootingDone  Boolean            @default(false)
+  editingDone   Boolean            @default(false)
+  deliveryDate  DateTime?
+  deliveredAt   DateTime?
+  driveLink     String?
+  team          BookingTeamMember[]
+  equipment     BookingEquipmentItem[]
+  payments      PhotoPayment[]
+  checklist     Json?
+  notes         String?
+  showInPortfolio Boolean         @default(false)
+  createdAt     DateTime          @default(now())
+
+  @@index([shopId])
+  @@index([status])
+  @@index([eventDate])
+}
+
+model BookingTeamMember {
+  id        String       @id @default(cuid())
+  bookingId String
+  booking   PhotoBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  staffName String
+  role      String
+
+  @@index([bookingId])
+}
+
+model BookingEquipmentItem {
+  id          String         @id @default(cuid())
+  bookingId   String
+  booking     PhotoBooking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  equipmentId String
+  equipment   PhotoEquipment @relation(fields: [equipmentId], references: [id])
+  quantity    Int            @default(1)
+
+  @@index([bookingId])
+  @@index([equipmentId])
+}
+
+model PhotoEquipment {
+  id           String                @id @default(cuid())
+  shopId       String
+  shop         Shop                  @relation(fields: [shopId], references: [id])
+  name         String
+  category     String
+  serialNumber String?
+  purchaseDate DateTime?
+  purchaseCost Float?
+  condition    String                @default("good")
+  insuranceExp DateTime?
+  notes        String?
+  bookings     BookingEquipmentItem[]
+  createdAt    DateTime              @default(now())
+
+  @@index([shopId])
+}
+
+model PhotoPayment {
+  id        String       @id @default(cuid())
+  bookingId String
+  booking   PhotoBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  shopId    String
+  amount    Float
+  method    String
+  note      String?
+  paidAt    DateTime     @default(now())
+
+  @@index([bookingId])
   @@index([shopId])
 }
