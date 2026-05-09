@@ -28,6 +28,8 @@ const PROTECTED_PATHS = [
   "/shops",
   "/suppliers",
   "/printing",
+  "/realestate",
+  "/petshop",
 ];
 
 const AUTH_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", "/verify-email"];

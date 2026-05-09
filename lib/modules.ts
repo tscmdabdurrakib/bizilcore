@@ -67,6 +67,8 @@ import {
   Droplets,
   Truck,
   Printer,
+  Home,
+  PawPrint,
   type LucideIcon,
 } from "lucide-react";
 
@@ -90,7 +92,9 @@ export type BusinessType =
   | "gym"
   | "photography"
   | "laundry"
-  | "printing";
+  | "printing"
+  | "realestate"
+  | "petshop";
 
 export const BUSINESS_TYPES: BusinessType[] = [
   "fcommerce",
@@ -111,6 +115,8 @@ export const BUSINESS_TYPES: BusinessType[] = [
   "photography",
   "laundry",
   "printing",
+  "realestate",
+  "petshop",
 ];
 
 export interface BusinessTypeMeta {
@@ -267,6 +273,22 @@ export const BUSINESS_TYPE_META: Record<BusinessType, BusinessTypeMeta> = {
     bgColor: "#F5F3FF",
     icon: Printer,
   },
+  realestate: {
+    type: "realestate",
+    label: "রিয়েল এস্টেট",
+    description: "বাড়ি, ফ্ল্যাট বা জমি বিক্রি/ভাড়া দিই",
+    color: "#0891B2",
+    bgColor: "#E0F2FE",
+    icon: Home,
+  },
+  petshop: {
+    type: "petshop",
+    label: "পেট শপ / ভেটেরিনারি",
+    description: "পশু-পাখির সেবা ও পণ্য বিক্রি করি",
+    color: "#EA580C",
+    bgColor: "#FFF7ED",
+    icon: PawPrint,
+  },
 };
 
 /* ─── Sales Channel ─────────────────────────────────────── */
@@ -391,6 +413,14 @@ const BUSINESS_MODULES: Record<BusinessType, string[]> = {
   printing: [
     "dashboard", "orders", "services", "customers",
     "inventory", "hisab", "reports", "settings",
+  ],
+  realestate: [
+    "dashboard", "properties", "leads", "deals",
+    "clients", "owners", "hisab", "reports", "settings",
+  ],
+  petshop: [
+    "dashboard", "pets", "appointments", "inventory",
+    "customers", "hisab", "reports", "settings",
   ],
 };
 
@@ -862,6 +892,63 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
       label: "সিস্টেম",
       items: [
         { href: "/settings",           icon: Settings,        label: "সেটিংস",             module: "settings"  },
+      ],
+    },
+  ],
+  realestate: [
+    {
+      items: [
+        { href: "/dashboard",              icon: LayoutDashboard, label: "ড্যাশবোর্ড",          module: "dashboard"   },
+        { href: "/realestate/properties",  icon: Home,            label: "Property তালিকা",     module: "properties"  },
+        { href: "/realestate/leads",       icon: Users,           label: "Lead ম্যানেজমেন্ট",   module: "leads"       },
+        { href: "/realestate/deals",       icon: HandCoins,       label: "Deal ট্র্যাকিং",      module: "deals"       },
+      ],
+    },
+    {
+      items: [
+        { href: "/customers",              icon: Users,           label: "ক্লায়েন্ট",           module: "clients"     },
+        { href: "/realestate/owners",      icon: UserCog,         label: "Property Owner",       module: "owners"      },
+      ],
+    },
+    {
+      label: "আর্থিক",
+      items: [
+        { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",                module: "hisab"       },
+        { href: "/realestate/reports",     icon: BarChart2,       label: "রিপোর্ট",              module: "reports"     },
+      ],
+    },
+    {
+      label: "সিস্টেম",
+      items: [
+        { href: "/settings",               icon: Settings,        label: "সেটিংস",               module: "settings"    },
+      ],
+    },
+  ],
+  petshop: [
+    {
+      items: [
+        { href: "/dashboard",              icon: LayoutDashboard, label: "ড্যাশবোর্ড",           module: "dashboard"    },
+        { href: "/petshop/pets",           icon: PawPrint,        label: "পশু-পাখি রেজিস্ট্রি",  module: "pets"         },
+        { href: "/appointments",           icon: Calendar,        label: "অ্যাপয়েন্টমেন্ট",     module: "appointments" },
+        { href: "/inventory",              icon: Package,         label: "পণ্য স্টক",             module: "inventory"    },
+      ],
+    },
+    {
+      items: [
+        { href: "/customers",              icon: Users,           label: "কাস্টমার",              module: "customers"    },
+      ],
+    },
+    {
+      label: "আর্থিক",
+      items: [
+        { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",                 module: "hisab"        },
+        { href: "/petshop/reports",        icon: BarChart2,       label: "রিপোর্ট",               module: "reports"      },
+      ],
+    },
+    {
+      label: "সিস্টেম",
+      items: [
+        { href: "/settings",               icon: Settings,        label: "সেটিংস",                module: "settings"     },
       ],
     },
   ],

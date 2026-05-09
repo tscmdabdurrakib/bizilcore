@@ -1,0 +1,398 @@
+REAL ESTATE MODULE ===
+
+Add to BUSINESS_MODULES:
+realestate: ["dashboard","properties","leads","deals",
+             "clients","owners","hisab","reports","settings"]
+
+Add to onboarding:
+  Name: "রিয়েল এস্টেট"
+  Description: "বাড়ি, ফ্ল্যাট বা জমি বিক্রি/ভাড়া দিই"
+
+━━━ DATABASE ━━━
+
+model Property {
+  id              String    @id @default(cuid())
+  shopId          String
+  propertyCode    String    @unique  -- "PROP-2026-001"
+  title           String    -- "3 BHK Flat in Dhanmondi", "5 Katha Plot in Bashundhara"
+  type            String    -- "flat"|"house"|"plot"|"commercial"|"office"|"warehouse"
+  listingType     String    -- "sale"|"rent"|"both"
+  area            Float     -- sqft or katha
+  areaUnit        String    @default("sqft")  -- "sqft"|"katha"|"bigha"|"acre"
+  floor           Int?
+  totalFloors     Int?
+  bedrooms        Int?
+  bathrooms       Int?
+  location        String    -- "Dhanmondi, Dhaka"
+  address         String?
+  salePrice       Float?
+  rentPrice       Float?    -- per month
+  negotiable      Boolean   @default(true)
+  ownerId         String?
+  owner           PropertyOwner? @relation(fields: [ownerId], references: [id])
+  amenities       String[]  -- ["parking","elevator","generator","gym","rooftop"]
+  facing          String?   -- "East","West","North","South"
+  readyToMove     Boolean   @default(true)
+  handoverDate    DateTime?
+  images          String[]
+  description     String?
+  status          String    @default("available")
+  -- "available"|"under_negotiation"|"sold"|"rented"|"withdrawn"
+  leads           PropertyLead[]
+  deals           Deal[]
+  createdAt       DateTime  @default(now())
+}
+
+model PropertyOwner {
+  id         String     @id @default(cuid())
+  shopId     String
+  name       String
+  phone      String
+  nid        String?
+  address    String?
+  bankInfo   String?
+  note       String?
+  properties Property[]
+}
+
+model PropertyLead {
+  id           String    @id @default(cuid())
+  shopId       String
+  propertyId   String?
+  property     Property? @relation(fields: [propertyId], references: [id])
+  clientName   String
+  clientPhone  String
+  requirement  String?   -- "3 BHK, budget 1 crore, Dhanmondi area"
+  budget       Float?
+  preferredArea String?
+  leadSource   String    -- "facebook"|"referral"|"website"|"walk_in"|"phone"
+  stage        String    @default("new")
+  -- "new"|"contacted"|"site_visit_done"|"negotiating"|"deal_done"|"lost"
+  interestedIn String?   -- "sale"|"rent"
+  followUpDate DateTime?
+  notes        String?
+  createdAt    DateTime  @default(now())
+}
+
+model Deal {
+  id              String    @id @default(cuid())
+  shopId          String
+  dealNumber      String    @unique  -- "DEAL-2026-001"
+  propertyId      String
+  property        Property  @relation(fields: [propertyId], references: [id])
+  clientName      String
+  clientPhone     String
+  dealType        String    -- "sale"|"rent"
+  agreedAmount    Float     -- agreed sale/monthly rent price
+  commissionRate  Float     -- % commission earned by agency
+  commissionAmount Float    -- auto-calculated
+  advanceReceived Float     @default(0)
+  status          String    @default("in_progress")
+  -- "in_progress"|"completed"|"cancelled"
+  dealDate        DateTime  @default(now())
+  completionDate  DateTime?
+  documents       String[]  -- checklist: deed, registry, etc.
+  notes           String?
+}
+
+━━━ REAL ESTATE DASHBOARD (/dashboard) ━━━
+
+4 stat cards:
+  মোট Property: active listings
+  নতুন Lead (এই মাস): new leads this month
+  চলমান Deal: in_progress deals
+  এই মাসের কমিশন: commission earned this month
+
+Pipeline overview:
+  Leads by stage (Kanban summary):
+  New | Contacted | Site Visit | Negotiating | Deal Done | Lost
+
+Properties by status (mini pie):
+  Available | Under Negotiation | Sold | Rented
+
+Follow-up reminders:
+  Leads where followUpDate = today or past (overdue)
+  "Follow-up করুন" button → log contact + set next date
+
+━━━ PROPERTY LISTINGS (/properties) ━━━
+
+Property cards (grid view):
+  Main image, title, area, floor, location, price, status badge
+  Type badge: Flat/House/Plot/Commercial
+
+Filter: Type | Listing type (Sale/Rent) | Area range | Price range | Status
+Search: by title, location, area
+
+"নতুন Property যোগ করুন" → comprehensive form:
+
+  Basic Info:
+    Title*, type*, listing type* (Sale/Rent/Both)
+    Location* (neighborhood, city), full address
+
+  Details:
+    Area* + unit, floor + total floors (for flats)
+    Bedrooms, bathrooms (for residential)
+    Facing direction, ready to move toggle, handover date
+
+  Pricing:
+    Sale price (if sale), Rent price/month (if rent)
+    Negotiable toggle
+
+  Owner:
+    Select existing owner or add new:
+      Name*, phone*, NID, address, bank info
+
+  Features:
+    Amenities (checkboxes):
+      ☐ Parking  ☐ Elevator  ☐ Generator  ☐ Gym
+      ☐ Rooftop  ☐ Security  ☐ Gas Line  ☐ Municipality Water
+      ☐ CCTV  ☐ Swimming Pool
+
+  Images: upload up to 10 photos
+  Description (textarea)
+
+  "সেভ করুন" → property code auto-generated (PROP-YYYY-NNN)
+
+Property detail page:
+  Image gallery, all info
+  Active leads for this property
+  Deal history
+  "Lead যোগ করুন" quick button
+  Status update (Available → Under Negotiation → Sold/Rented)
+
+━━━ LEAD MANAGEMENT (/leads) ━━━
+
+Kanban board:
+  নতুন | যোগাযোগ হয়েছে | সাইট ভিজিট | আলোচনায় | Deal হয়েছে | Lost
+
+Each lead card:
+  Client name, phone, requirement summary, budget,
+  Interested property (if any), lead source badge, follow-up date
+
+"নতুন Lead" → form:
+  Client name*, phone*
+  Requirement (what they're looking for)
+  Budget, preferred area, interested in (Sale/Rent)
+  Source: Facebook/Referral/Website/Walk-in/Phone
+  Interested property: link to specific property (optional)
+  Follow-up date
+  "সেভ করুন"
+
+Lead detail:
+  All info + stage update
+  Notes/call log (add notes with timestamp)
+  "Site Visit হয়েছে" → stage update + date recorded
+  "Deal করুন" button → opens deal form
+
+━━━ DEAL MANAGEMENT (/deals) ━━━
+
+Active deals list with status
+
+"নতুন Deal" → form:
+  Select property*, client name*, phone*
+  Deal type (Sale/Rent)*, agreed amount*
+  Commission rate % (auto-suggests from settings), commission amount (auto)
+  Advance received
+  Documents checklist:
+    ☐ Bayna agreement signed  ☐ Registry done
+    ☐ Mutation done  ☐ Power of Attorney (if applicable)
+  Notes
+  "Deal তৈরি করুন" → deal number auto-generated (DEAL-YYYY-NNN)
+
+Deal completion:
+  "Deal সম্পন্ন হয়েছে" → completion date + final payment
+  → Property status → Sold/Rented
+  → Commission added to Hisab as income
+
+━━━ CLIENT & OWNER DIRECTORIES ━━━
+
+/clients: All buyer/renter leads with history
+/owners: All property owners with their listings + dues to owners
+
+Owner payment tracking:
+  When rent collected: portion goes to owner
+  Track owner's share separately
+
+━━━ REPORTS (/reports) ━━━
+
+Real estate-specific:
+  Monthly listings added (bar chart)
+  Lead conversion funnel (funnel chart)
+  Commission earned per month (line chart)
+  Property type breakdown (pie)
+  Average days to close a deal
+
+━━━ SETTINGS — REAL ESTATE CONFIG ━━━
+
+Default commission rate % (sale and rent separate)
+Property code prefix (default: "PROP")
+Deal number prefix (default: "DEAL")
+Follow-up reminder days (default: next day)
+Area unit preference: sqft / katha / bigha
+
+All Bangla UI. Same design system.
+Property images are critical — use good image layout.
+Commission tracking is the core financial feature here.
+
+
+
+========================================================
+
+
+
+
+=== PHASE 8 — PET SHOP / VETERINARY MODULE ===
+
+Add to BUSINESS_MODULES:
+petshop: ["dashboard","pets","appointments","inventory",
+          "customers","hisab","reports","settings"]
+
+Add to onboarding selector:
+  Name: "পেট শপ / ভেটেরিনারি"
+  Description: "পশু-পাখির সেবা ও পণ্য বিক্রি করি"
+
+━━━ DATABASE ━━━
+
+model Pet {
+  id            String         @id @default(cuid())
+  shopId        String
+  customerId    String
+  customer      Customer       @relation(fields: [customerId], references: [id])
+  name          String
+  type          String         -- "dog"|"cat"|"bird"|"fish"|"rabbit"|"turtle"|"other"
+  breed         String?
+  gender        String?        -- "male"|"female"|"unknown"
+  dateOfBirth   DateTime?
+  weight        Float?
+  color         String?
+  photoUrl      String?
+  microchipId   String?
+  allergies     String?
+  chronicIllness String?
+  isActive      Boolean        @default(true)
+  healthLogs    PetHealthLog[]
+  appointments  PetAppointment[]
+  createdAt     DateTime       @default(now())
+}
+
+model PetHealthLog {
+  id           String    @id @default(cuid())
+  shopId       String
+  petId        String
+  pet          Pet       @relation(fields: [petId], references: [id])
+  logType      String
+  -- "vaccination"|"deworming"|"flea_treatment"|"surgery"
+  -- |"medicine"|"checkup"|"observation"
+  description  String
+  medicineName String?
+  dosage       String?
+  vetName      String?
+  cost         Float     @default(0)
+  nextDueDate  DateTime?
+  logDate      DateTime  @default(now())
+  notes        String?
+}
+
+model PetAppointment {
+  id          String    @id @default(cuid())
+  shopId      String
+  petId       String
+  pet         Pet       @relation(fields: [petId], references: [id])
+  type        String    -- "checkup"|"grooming"|"vaccination"|"surgery"|"boarding"
+  date        DateTime
+  duration    Int?      @default(30)
+  staffId     String?
+  status      String    @default("scheduled")
+  -- "scheduled"|"confirmed"|"done"|"cancelled"
+  fee         Float     @default(0)
+  paidAmount  Float     @default(0)
+  note        String?
+}
+
+━━━ PET SHOP DASHBOARD (/dashboard) ━━━
+
+4 stat cards:
+  রেজিস্টার্ড পশু-পাখি: total active pets
+  আজকের অ্যাপয়েন্টমেন্ট: today's appointments count
+  Vaccination due (৭ দিনের মধ্যে): count from nextDueDate
+  আজকের আয়: today's revenue
+
+Vaccination due alert list:
+  Pet name + type icon + owner name + phone + vaccine type + due date
+  "SMS পাঠান" button per row:
+    "[Pet name] এর [vaccine] দেওয়ার সময় হয়েছে।
+     অ্যাপয়েন্টমেন্ট নিতে call করুন: [shop_phone] - [ShopName]"
+
+Today's appointment timeline (sorted by time)
+
+━━━ PET MANAGEMENT (/pets) ━━━
+
+Pet list with owner filter + type filter (Dog/Cat/Bird/Fish/Other):
+  Pet card: photo/type-icon, name, type+breed, owner name+phone,
+  Last visit date, vaccination due badge (red if overdue)
+
+"নতুন পশু-পাখি রেজিস্ট্রেশন" → form:
+  Owner: search existing customer or add new (name*, phone*)
+  Pet name*, type* (dropdown with icons), breed (optional)
+  Gender, date of birth, color, weight (kg)
+  Microchip ID (optional)
+  Allergies, chronic illness (optional)
+  Photo upload (optional)
+  "রেজিস্ট্রেশন করুন"
+
+Pet profile page (/pets/[id]):
+  Info card + owner card side by side
+  
+  Health Log tab (timeline):
+    All logs sorted newest first
+    "+ Health Log যোগ করুন" button → modal:
+      Log type (chips): টিকা | Deworming | ওষুধ | Checkup | অপারেশন | পর্যবেক্ষণ
+      Description*, medicine name, dosage, vet name
+      Cost, next due date (for recurring treatments)
+      "সেভ করুন"
+    Each log: type badge + description + vet name + cost + date
+    Upcoming due dates highlighted
+
+  Appointments tab:
+    Past + upcoming appointments
+    "+ অ্যাপয়েন্টমেন্ট" quick button
+
+━━━ APPOINTMENTS (/appointments) ━━━
+
+Same appointment calendar as Salon module.
+Types: Checkup | Grooming | Vaccination | Surgery | Boarding
+
+Booking form:
+  Search pet (by pet name or owner phone)
+  Service type, date + time, staff/vet assign (optional)
+  Fee, advance paid
+  Notes
+
+SMS on appointment confirmation:
+  "[Pet name] ([type]) এর [service_type] appointment নিশ্চিত হয়েছে।
+   তারিখ: [date] [time]
+   - [ShopName]"
+
+Reminder SMS (day before):
+  "আগামীকাল [time] তে [pet_name] এর appointment আছে। - [ShopName]"
+
+━━━ INVENTORY (/inventory) ━━━
+
+Same as existing inventory but with pet-specific default categories:
+  পশু খাদ্য | ওষুধ ও সাপ্লিমেন্ট | Grooming Products | Accessories | Other
+
+━━━ REPORTS (/reports) ━━━
+
+Pet shop specific:
+  Most common services (bar chart)
+  Pet type breakdown (pie — Dog/Cat/Bird/etc.)
+  Monthly revenue
+  Vaccination compliance rate
+  Top clients (by visit count)
+
+All Bangla UI. Same design system.
+Pet type icons: use simple SVG shapes (circle=cat, triangle=dog, etc.)
+
+
+
+

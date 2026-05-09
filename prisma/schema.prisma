@@ -331,6 +331,25 @@ model Shop {
   printRequireApproval  Boolean  @default(true)
   printMinAdvancePct    Int      @default(50)
   printAutoSms          Boolean  @default(true)
+
+  // Real Estate module
+  properties              Property[]
+  propertyOwners          PropertyOwner[]
+  propertyLeads           PropertyLead[]
+  deals                   Deal[]
+  propPrefix              String?  @default("PROP")
+  dealPrefix              String?  @default("DEAL")
+  defaultSaleCommission   Float    @default(2)
+  defaultRentCommission   Float    @default(50)
+  propAreaUnit            String?  @default("sqft")
+  propAutoSms             Boolean  @default(true)
+
+  // Pet Shop / Veterinary module
+  pets                    Pet[]
+  petHealthLogs           PetHealthLog[]
+  petAppointments         PetAppointment[]
+  petAutoSms              Boolean  @default(true)
+  petReminderDays         Int      @default(1)
 }
 
 model Subscription {
@@ -487,6 +506,7 @@ model Customer {
   visaRequests  VisaRequest[]
   photoBookings PhotoBooking[]
   printOrders   PrintOrder[]
+  pets          Pet[]
   isDemoData    Boolean        @default(false)
   createdAt     DateTime       @default(now())
 
@@ -3251,4 +3271,180 @@ model PrintPayment {
   paidAt    DateTime   @default(now())
 
   @@index([orderId])
+}
+
+// ─── Real Estate Module ─────────────────────────────────────
+
+model PropertyOwner {
+  id         String     @id @default(cuid())
+  shopId     String
+  shop       Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name       String
+  phone      String
+  nid        String?
+  address    String?
+  bankInfo   String?
+  note       String?
+  properties Property[]
+  createdAt  DateTime   @default(now())
+
+  @@index([shopId])
+}
+
+model Property {
+  id            String         @id @default(cuid())
+  shopId        String
+  shop          Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  propertyCode  String         @unique
+  title         String
+  type          String         @default("flat")
+  listingType   String         @default("sale")
+  area          Float          @default(0)
+  areaUnit      String         @default("sqft")
+  floor         Int?
+  totalFloors   Int?
+  bedrooms      Int?
+  bathrooms     Int?
+  location      String
+  address       String?
+  salePrice     Float?
+  rentPrice     Float?
+  negotiable    Boolean        @default(true)
+  ownerId       String?
+  owner         PropertyOwner? @relation(fields: [ownerId], references: [id])
+  amenities     String[]       @default([])
+  facing        String?
+  readyToMove   Boolean        @default(true)
+  handoverDate  DateTime?
+  images        String[]       @default([])
+  description   String?
+  status        String         @default("available")
+  leads         PropertyLead[]
+  deals         Deal[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([shopId])
+  @@index([shopId, status])
+  @@index([shopId, type])
+}
+
+model PropertyLead {
+  id            String    @id @default(cuid())
+  shopId        String
+  shop          Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  propertyId    String?
+  property      Property? @relation(fields: [propertyId], references: [id])
+  clientName    String
+  clientPhone   String
+  requirement   String?
+  budget        Float?
+  preferredArea String?
+  leadSource    String    @default("phone")
+  stage         String    @default("new")
+  interestedIn  String?
+  followUpDate  DateTime?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([shopId])
+  @@index([shopId, stage])
+  @@index([shopId, followUpDate])
+}
+
+model Deal {
+  id               String    @id @default(cuid())
+  shopId           String
+  shop             Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  dealNumber       String    @unique
+  propertyId       String
+  property         Property  @relation(fields: [propertyId], references: [id])
+  clientName       String
+  clientPhone      String
+  dealType         String    @default("sale")
+  agreedAmount     Float     @default(0)
+  commissionRate   Float     @default(2)
+  commissionAmount Float     @default(0)
+  advanceReceived  Float     @default(0)
+  status           String    @default("in_progress")
+  dealDate         DateTime  @default(now())
+  completionDate   DateTime?
+  documents        String[]  @default([])
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([shopId])
+  @@index([shopId, status])
+}
+
+// ─── Pet Shop / Veterinary Module ───────────────────────────
+
+model Pet {
+  id             String           @id @default(cuid())
+  shopId         String
+  shop           Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customerId     String
+  customer       Customer         @relation(fields: [customerId], references: [id])
+  name           String
+  type           String           @default("dog")
+  breed          String?
+  gender         String?
+  dateOfBirth    DateTime?
+  weight         Float?
+  color          String?
+  photoUrl       String?
+  microchipId    String?
+  allergies      String?
+  chronicIllness String?
+  isActive       Boolean          @default(true)
+  healthLogs     PetHealthLog[]
+  appointments   PetAppointment[]
+  createdAt      DateTime         @default(now())
+
+  @@index([shopId])
+  @@index([shopId, customerId])
+  @@index([shopId, type])
+}
+
+model PetHealthLog {
+  id           String   @id @default(cuid())
+  shopId       String
+  shop         Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  petId        String
+  pet          Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  logType      String   @default("checkup")
+  description  String
+  medicineName String?
+  dosage       String?
+  vetName      String?
+  cost         Float    @default(0)
+  nextDueDate  DateTime?
+  logDate      DateTime @default(now())
+  notes        String?
+
+  @@index([petId])
+  @@index([shopId, nextDueDate])
+}
+
+model PetAppointment {
+  id          String   @id @default(cuid())
+  shopId      String
+  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  petId       String
+  pet         Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  type        String   @default("checkup")
+  date        DateTime
+  duration    Int?     @default(30)
+  staffId     String?
+  status      String   @default("scheduled")
+  fee         Float    @default(0)
+  paidAmount  Float    @default(0)
+  note        String?
+  createdAt   DateTime @default(now())
+
+  @@index([shopId])
+  @@index([shopId, date])
+  @@index([petId])
 }
