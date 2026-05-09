@@ -3,7 +3,7 @@ import { requireShop } from "@/lib/getShop";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
-  const shop = await requireShop();
+  const { shop } = await requireShop();
   const { searchParams } = new URL(req.url);
   const search = searchParams.get("search") ?? "";
   const activeOnly = searchParams.get("active") !== "false";
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const shop = await requireShop();
+  const { shop } = await requireShop();
   const body = await req.json();
 
   const doctor = await prisma.doctor.create({

@@ -3,7 +3,7 @@ import { requireShop } from "@/lib/getShop";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  const shop = await requireShop();
+  const { shop } = await requireShop();
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
 

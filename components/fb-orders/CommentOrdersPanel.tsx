@@ -129,7 +129,7 @@ export default function CommentOrdersPanel() {
     const updated = await res.json();
     if (updated?.id) {
       setOrders((prev) => prev.map((o) => (o.id === updated.id ? { ...o, status: updated.status } : o)));
-      setActive((prev) => prev?.id === updated.id ? { ...prev, status: updated.status } : prev);
+      setActive((prev) => prev?.id === updated.id ? { ...prev, status: updated.status } as typeof prev : prev);
     }
   };
 

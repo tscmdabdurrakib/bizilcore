@@ -3,7 +3,7 @@ import { requireShop } from "@/lib/getShop";
 import { prisma } from "@/lib/prisma";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const shop = await requireShop();
+  const { shop } = await requireShop();
   const { id } = await params;
   const body = await req.json();
 
@@ -22,7 +22,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const shop = await requireShop();
+  const { shop } = await requireShop();
   const { id } = await params;
 
   await prisma.bed.deleteMany({ where: { id, shopId: shop.id } });

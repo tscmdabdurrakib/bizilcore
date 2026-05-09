@@ -3,7 +3,7 @@ import { requireShop } from "@/lib/getShop";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
-  const shop = await requireShop();
+  const { shop } = await requireShop();
   const { searchParams } = new URL(req.url);
   const year = Number(searchParams.get("year") ?? new Date().getFullYear());
 

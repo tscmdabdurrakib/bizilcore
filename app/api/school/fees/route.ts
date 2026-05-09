@@ -3,7 +3,7 @@ import { requireShop } from "@/lib/getShop";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
-  const shop = await requireShop();
+  const { shop } = await requireShop();
   const { searchParams } = new URL(req.url);
   const month = searchParams.get("month") ?? `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
   const batchId = searchParams.get("batchId") ?? "";
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const shop = await requireShop();
+  const { shop } = await requireShop();
   const body = await req.json();
 
   // bulk create monthly fees for all active students in a batch (or all batches)

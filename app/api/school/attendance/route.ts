@@ -3,7 +3,7 @@ import { requireShop } from "@/lib/getShop";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
-  const shop = await requireShop();
+  const { shop } = await requireShop();
   const { searchParams } = new URL(req.url);
   const batchId = searchParams.get("batchId") ?? "";
   const dateStr = searchParams.get("date") ?? new Date().toISOString().split("T")[0];
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const shop = await requireShop();
+  const { shop } = await requireShop();
   const body = await req.json();
   // body: { batchId, date, records: [{studentId, status}] }
   const date = new Date(body.date);

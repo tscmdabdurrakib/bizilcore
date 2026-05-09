@@ -3,7 +3,7 @@ import { requireShop } from "@/lib/getShop";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  const shop = await requireShop();
+  const { shop } = await requireShop();
   const batches = await prisma.batch.findMany({
     where: { shopId: shop.id },
     include: {
@@ -16,7 +16,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const shop = await requireShop();
+  const { shop } = await requireShop();
   const body = await req.json();
   const batch = await prisma.batch.create({
     data: {

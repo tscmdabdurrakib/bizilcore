@@ -3,7 +3,7 @@ import { requireShop } from "@/lib/getShop";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  const shop = await requireShop();
+  const { shop } = await requireShop();
   const now = new Date();
   const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());

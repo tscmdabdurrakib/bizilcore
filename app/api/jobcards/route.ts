@@ -116,9 +116,9 @@ export async function POST(req: NextRequest) {
   }
 
   const prefix = shop.garageJobPrefix || "JOB";
-  const year = new Date().getFullYear();
+  const jobYear = new Date().getFullYear();
   const count = await prisma.jobCard.count({ where: { shopId: shop.id } });
-  const jobNumber = `${prefix}-${year}-${String(count + 1).padStart(3, "0")}`;
+  const jobNumber = `${prefix}-${jobYear}-${String(count + 1).padStart(3, "0")}`;
 
   const laborCharge = (services || []).reduce((sum: number, s: { laborCost: number }) => sum + Number(s.laborCost || 0), 0);
   const advance = Number(advancePaid || 0);

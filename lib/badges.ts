@@ -86,7 +86,7 @@ export async function checkAndAwardBadges(
     const revenue = revenueResult._sum.totalAmount ?? 0;
 
     const referralCount = await prisma.referral.count({
-      where: { referrerId: userId, status: "completed" },
+      where: { referrerId: userId, rewardGiven: true },
     }).catch(() => 0);
 
     const subscription = await prisma.subscription.findFirst({

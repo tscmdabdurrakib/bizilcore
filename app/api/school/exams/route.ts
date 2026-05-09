@@ -13,7 +13,7 @@ function calcGrade(pct: number): string {
 }
 
 export async function GET(req: NextRequest) {
-  const shop = await requireShop();
+  const { shop } = await requireShop();
   const { searchParams } = new URL(req.url);
   const batchId = searchParams.get("batchId") ?? "";
   const examName = searchParams.get("examName") ?? "";
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const shop = await requireShop();
+  const { shop } = await requireShop();
   const body = await req.json();
   // body: { examName, subject, examDate, totalMark, batchId, results: [{studentId, obtainedMark, position, remarks}] }
 

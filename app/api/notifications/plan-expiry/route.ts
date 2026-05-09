@@ -10,14 +10,14 @@ export async function POST() {
   const prefs = await getNotifPrefs(session.user.id);
   if (!prefs.planExpiry) return NextResponse.json({ skipped: true });
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { planExpiry: true, plan: true },
+  const subscription = await prisma.subscription.findFirst({
+    where: { userId: session.user.id },
+    select: { endDate: true, plan: true },
   });
 
-  if (!user?.planExpiry) return NextResponse.json({ ok: true, noExpiry: true });
+  if (!subscription?.endDate) return NextResponse.json({ ok: true, noExpiry: true });
 
-  const msLeft = new Date(user.planExpiry).getTime() - Date.now();
+  const msLeft = new Date(subscription.endDate).getTime() - Date.now();
   const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
 
   if (daysLeft <= 0) {
@@ -31,7 +31,7 @@ export async function POST() {
     await createNotification(
       session.user.id, "plan_expiry",
       `⏰ প্ল্যান মাত্র ${daysLeft} দিন বাকি!`,
-      `আপনার ${user.plan ?? "বর্তমান"} প্ল্যান ${daysLeft} দিনে শেষ হবে। এখনই রিনিউ করুন।`,
+      `আপনার ${subscription.plan ?? "বর্তমান"} প্ল্যান ${daysLeft} দিনে শেষ হবে। এখনই রিনিউ করুন।`,
       "/settings/billing"
     );
   } else if (daysLeft <= 7) {

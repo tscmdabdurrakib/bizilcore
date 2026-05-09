@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   Ticket, Plus, X, Loader2, ChevronRight, Search,
-  Plane, Hotel, Bus, Stamp, Wrench, Mosque,
+  Plane, Hotel, Bus, Stamp, Wrench, Building2,
   CheckCircle, Clock, XCircle, AlertCircle,
 } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
@@ -55,7 +55,7 @@ const BOOKING_TYPES = [
   { value: "package",    label: "প্যাকেজ ট্যুর",    icon: Plane,   color: "#0891B2", bg: "#ECFEFF" },
   { value: "ticket",     label: "টিকেট",             icon: Ticket,  color: "#7C3AED", bg: "#F5F3FF" },
   { value: "hotel",      label: "হোটেল",             icon: Hotel,   color: "#B45309", bg: "#FEF3C7" },
-  { value: "hajj_umrah", label: "হজ/উমরাহ",          icon: Mosque,  color: "#0F6E56", bg: "#E1F5EE" },
+  { value: "hajj_umrah", label: "হজ/উমরাহ",          icon: Building2,  color: "#0F6E56", bg: "#E1F5EE" },
   { value: "visa",       label: "ভিসা প্রসেসিং",     icon: Stamp,   color: "#DC2626", bg: "#FEE2E2" },
   { value: "custom",     label: "কাস্টম",            icon: Wrench,  color: "#6B7280", bg: "#F3F4F6" },
 ];

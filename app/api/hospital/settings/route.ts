@@ -3,7 +3,7 @@ import { requireShop } from "@/lib/getShop";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  const shop = await requireShop();
+  const { shop } = await requireShop();
   return NextResponse.json({
     hospitalFacilityType: shop.hospitalFacilityType ?? "hospital",
     hospitalRegNumber: shop.hospitalRegNumber ?? "",
@@ -18,7 +18,7 @@ export async function GET() {
 }
 
 export async function PATCH(req: NextRequest) {
-  const shop = await requireShop();
+  const { shop } = await requireShop();
   const body = await req.json();
 
   await prisma.shop.update({

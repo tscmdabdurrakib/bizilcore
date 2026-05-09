@@ -3,7 +3,7 @@ import { requireShop } from "@/lib/getShop";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const shop = await requireShop();
+  const { shop } = await requireShop();
   const { id } = await params;
 
   const visit = await prisma.oPDVisit.findFirst({
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const shop = await requireShop();
+  const { shop } = await requireShop();
   const { id } = await params;
   const body = await req.json();
 

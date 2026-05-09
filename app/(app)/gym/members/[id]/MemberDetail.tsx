@@ -341,7 +341,7 @@ export default function MemberDetail({ id }: { id: string }) {
                 ))}
               </div>
               <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: S.text }}>
-                <input type="checkbox" checked={renewForm.fromExpiry} onChange={e => setRenewForm(f => ({ ...f, fromExpiry: e.target.checked })} />
+                <input type="checkbox" checked={renewForm.fromExpiry} onChange={e => setRenewForm(f => ({ ...f, fromExpiry: e.target.checked }))} />
                 মেয়াদ শেষ তারিখ থেকে শুরু করুন
               </label>
               <div className="grid grid-cols-2 gap-2">

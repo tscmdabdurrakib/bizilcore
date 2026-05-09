@@ -69,9 +69,9 @@ export async function POST() {
   `;
   const referralCode = refRows[0]?.code ?? "—";
 
-  const smsPrefs = await prisma.smsNotificationPreferences.findUnique({ where: { userId } });
-  if (!smsPrefs?.apiKey) return NextResponse.json({ skipped: true, reason: "no_sms_key" });
-  const apiKey = decryptApiKey(smsPrefs.apiKey);
+  const smsSettings = await prisma.smsSettings.findUnique({ where: { userId } });
+  if (!smsSettings?.apiKey) return NextResponse.json({ skipped: true, reason: "no_sms_key" });
+  const apiKey = decryptApiKey(smsSettings.apiKey);
 
   const daysToCheck = [1, 3, 7, 30];
   const sent: number[] = [];
