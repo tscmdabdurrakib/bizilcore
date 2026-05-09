@@ -1,0 +1,168 @@
+PRINTING / PRESS MODULE ===
+
+Add to BUSINESS_MODULES:
+printing: ["dashboard","orders","services","customers",
+           "inventory","hisab","reports","settings"]
+
+Add to onboarding:
+  Name: "প্রিন্টিং / প্রেস"
+  Description: "ছাপানো ও প্রিন্টিং সেবা দিই"
+
+━━━ DATABASE ━━━
+
+model PrintService {
+  id           String  @id @default(cuid())
+  shopId       String
+  name         String  -- "Business Card", "Flex Banner", "Brochure A4"
+  category     String
+  -- "card"|"banner"|"brochure"|"poster"|"sticker"|"envelope"
+  -- |"letterhead"|"book"|"calendar"|"other"
+  unit         String  -- "pcs"|"sqft"|"page"
+  pricePerUnit Float
+  minQuantity  Int     @default(100)
+  description  String?
+  isActive     Boolean @default(true)
+}
+
+model PrintOrder {
+  id            String          @id @default(cuid())
+  shopId        String
+  orderNumber   String          @unique  -- "PRT-2026-001"
+  customerId    String?
+  customer      Customer?       @relation(fields: [customerId], references: [id])
+  clientName    String
+  clientPhone   String
+  totalAmount   Float
+  costAmount    Float           @default(0)
+  advancePaid   Float           @default(0)
+  dueAmount     Float
+  deliveryDate  DateTime
+  isUrgent      Boolean         @default(false)
+  status        String          @default("received")
+  -- "received"|"design_approval"|"printing"|"finishing"|"ready"|"delivered"
+  designApproved Boolean        @default(false)
+  designFiles   String[]        -- file names/links
+  items         PrintOrderItem[]
+  payments      PrintPayment[]
+  notes         String?
+  createdAt     DateTime        @default(now())
+}
+
+model PrintOrderItem {
+  id          String     @id @default(cuid())
+  orderId     String
+  order       PrintOrder @relation(fields: [orderId], references: [id])
+  serviceId   String?
+  service     PrintService? @relation(fields: [serviceId], references: [id])
+  itemName    String
+  size        String?    -- "3.5x2 inch", "4x6 ft", "A4"
+  quantity    Int
+  unitPrice   Float
+  subtotal    Float
+  paperType   String?    -- "Matte", "Glossy", "Normal"
+  colorMode   String?    -- "Full Color", "Black & White"
+  sides       String?    -- "Single Side", "Double Side"
+  designNote  String?    -- "Design attached", "Customer will provide"
+}
+
+model PrintPayment {
+  id        String     @id @default(cuid())
+  orderId   String
+  order     PrintOrder @relation(fields: [orderId], references: [id])
+  amount    Float
+  method    String
+  paidAt    DateTime   @default(now())
+}
+
+━━━ PRINTING DASHBOARD (/dashboard) ━━━
+
+4 stat cards:
+  আজ আসা অর্ডার: new orders today
+  Design Approval অপেক্ষায়: pending approval count
+  Printing চলছে: in_process count
+  Ready অর্ডার: ready count
+
+Pipeline view:
+  Received → Design Approval → Printing → Finishing → Ready → Delivered
+  Count per stage with clickable filter
+
+Urgent orders alert:
+  List of urgent orders with deadline countdown
+
+━━━ ORDER MANAGEMENT (/orders) ━━━
+
+Filter tabs: সব | Design Approval | Printing | Ready | Delivered | Urgent
+
+"নতুন অর্ডার" → form:
+
+  Step 1 — কাস্টমারের তথ্য:
+    Client: search/add, name*, phone*
+    Urgent toggle (extra charge)
+    Delivery date*
+
+  Step 2 — প্রিন্টিং আইটেম (dynamic rows):
+    Service (dropdown) | Size | Quantity | Paper type | Color mode | Sides
+    Price auto-fills from service, editable
+    Design note per item (attached/to be provided/design needed)
+    "+ আইটেম যোগ করুন" for multiple items
+
+    Quick common items:
+      Business Card (standard) | Flex Banner | A4 Flyer | Poster | Sticker
+
+  Step 3 — পেমেন্ট:
+    Total, advance (minimum suggestion: 50%), due
+    Design files: note if customer will bring files or needs design work
+    "অর্ডার নিন" →
+      Order number auto-generated (PRT-YYYY-NNN)
+      SMS: "আপনার প্রিন্টিং অর্ডার পেয়েছি।
+            অর্ডার নং: [PRT-number]
+            ডেলিভারি: [date]
+            মোট: ৳[total] | অগ্রিম: ৳[advance]
+            - [PressName]"
+
+Order detail page:
+  Items table with all specs
+  Design approval section:
+    "Design Approved করুন" button → designApproved=true
+    → Can now move to printing
+    SMS on approval: "আপনার design approve হয়েছে। Printing শুরু হচ্ছে।"
+  
+  Status pipeline (click to advance):
+    received → design_approval → printing → finishing → ready → delivered
+  
+  "Ready" → SMS: "আপনার প্রিন্টিং কাজ সম্পন্ন।
+    সংগ্রহ করুন। অর্ডার নং: [PRT-number]
+    বাকি: ৳[due] - [PressName]"
+
+━━━ SERVICE PRICING (/services) ━━━
+
+Category tabs: সব | Card | Banner | Brochure | Sticker | Book | Other
+Service table: name, unit, price/unit, min qty
+"নতুন Service" → form with all fields
+
+━━━ PAPER/INK INVENTORY ━━━
+
+Uses existing /inventory but with printing-specific categories:
+  Paper (A4/A3/Glossy/Matte/Flex) | Ink | Toner | Finishing Materials
+
+Stock alerts: low paper/ink → dashboard warning
+
+━━━ REPORTS (/reports) ━━━
+
+Printing-specific:
+  Daily orders + revenue
+  Most ordered services (bar chart)
+  Paper/ink consumption tracking
+  Average turnaround time
+  Pending deliveries
+
+━━━ SETTINGS — PRINTING CONFIG ━━━
+
+Standard delivery days, urgent delivery days
+Urgent surcharge (% or ৳)
+Design approval required (toggle — if off, auto-approve)
+Minimum advance % required
+Order number prefix (default: "PRT")
+
+All Bangla UI. Same design system.
+Design approval step is unique to printing — make it very visible.

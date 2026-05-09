@@ -320,6 +320,17 @@ model Shop {
   photoBookingPrefix    String?  @default("PHO")
   photoAutoSms          Boolean  @default(true)
   photoStudioName       String?
+
+  // Printing / Press module
+  printServices         PrintService[]
+  printOrders           PrintOrder[]
+  printOrderPrefix      String?  @default("PRT")
+  printDeliveryDays     Int      @default(3)
+  printUrgentDays       Int      @default(1)
+  printUrgentSurcharge  Float    @default(0)
+  printRequireApproval  Boolean  @default(true)
+  printMinAdvancePct    Int      @default(50)
+  printAutoSms          Boolean  @default(true)
 }
 
 model Subscription {
@@ -475,6 +486,7 @@ model Customer {
   tourBookings  TourBooking[]
   visaRequests  VisaRequest[]
   photoBookings PhotoBooking[]
+  printOrders   PrintOrder[]
   isDemoData    Boolean        @default(false)
   createdAt     DateTime       @default(now())
 
@@ -3156,6 +3168,87 @@ model LaundryPayment {
   amount  Float    @default(0)
   method  String   @default("cash")
   paidAt  DateTime @default(now())
+
+  @@index([orderId])
+}
+
+// ─── Printing / Press Module ───────────────────────────────
+
+model PrintService {
+  id           String  @id @default(cuid())
+  shopId       String
+  shop         Shop    @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name         String
+  category     String  @default("other")
+  unit         String  @default("pcs")
+  pricePerUnit Float   @default(0)
+  minQuantity  Int     @default(100)
+  description  String?
+  isActive     Boolean @default(true)
+  createdAt    DateTime @default(now())
+
+  orderItems   PrintOrderItem[]
+
+  @@index([shopId])
+  @@index([shopId, category])
+}
+
+model PrintOrder {
+  id             String   @id @default(cuid())
+  shopId         String
+  shop           Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  orderNumber    String   @unique
+  customerId     String?
+  customer       Customer? @relation(fields: [customerId], references: [id])
+  clientName     String
+  clientPhone    String
+  totalAmount    Float    @default(0)
+  costAmount     Float    @default(0)
+  advancePaid    Float    @default(0)
+  dueAmount      Float    @default(0)
+  deliveryDate   DateTime
+  isUrgent       Boolean  @default(false)
+  status         String   @default("received")
+  designApproved Boolean  @default(false)
+  designFiles    String[] @default([])
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  items    PrintOrderItem[]
+  payments PrintPayment[]
+
+  @@index([shopId])
+  @@index([shopId, status])
+  @@index([shopId, isUrgent])
+}
+
+model PrintOrderItem {
+  id         String        @id @default(cuid())
+  orderId    String
+  order      PrintOrder    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  serviceId  String?
+  service    PrintService? @relation(fields: [serviceId], references: [id])
+  itemName   String
+  size       String?
+  quantity   Int           @default(1)
+  unitPrice  Float         @default(0)
+  subtotal   Float         @default(0)
+  paperType  String?
+  colorMode  String?
+  sides      String?
+  designNote String?
+
+  @@index([orderId])
+}
+
+model PrintPayment {
+  id        String     @id @default(cuid())
+  orderId   String
+  order     PrintOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amount    Float      @default(0)
+  method    String     @default("cash")
+  paidAt    DateTime   @default(now())
 
   @@index([orderId])
 }

@@ -27,6 +27,7 @@ const PROTECTED_PATHS = [
   "/support",
   "/shops",
   "/suppliers",
+  "/printing",
 ];
 
 const AUTH_PATHS = ["/login", "/signup", "/forgot-password", "/reset-password", "/verify-email"];
