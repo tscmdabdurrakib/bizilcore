@@ -1,6 +1,7 @@
 modules = ["nodejs-20", "web", "bash", "postgresql-16"]
 [agent]
 expertMode = true
+stack = "BEST_EFFORT_FALLBACK"
 
 [nix]
 channel = "stable-25_05"
@@ -21,13 +22,13 @@ args = "Start application"
 name = "Start application"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
-
-[workflows.workflow.metadata]
-outputType = "webview"
 
 [[ports]]
 localPort = 5000
@@ -39,7 +40,6 @@ externalPort = 80
 AUTH_SECRET = "8371665139ac5457f09fa184a4737e896460968eaaefe3e360034f2ea82cba73"
 BKASH_BASE_URL = "https://tokenized.pay.bka.sh/v1.2.0-beta"
 NAGAD_BASE_URL = "https://api.mynagad.com/remote-payment-gateway-1.0"
-SUPABASE_DIRECT_URL = "postgresql://postgres.qoliepmmquycarvospag:[XM4PecUuPiaGBPOI]@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres"
 EMAIL_FROM_NAME = "BizilCore"
 NEXT_PUBLIC_APP_URL = "https://bizilcore.com"
 

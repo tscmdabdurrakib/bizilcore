@@ -5,11 +5,10 @@
 import nodemailer from "nodemailer";
 import { Resend } from "resend";
 
-// Credentials embedded in source so they survive project remixes.
-const EMAIL_USER = process.env.EMAIL_USER ?? "mdabdurrakib806@gmail.com";
-const EMAIL_PASS = process.env.EMAIL_PASS ?? "xciy gekq cxgo pqww";
+const EMAIL_USER = process.env.EMAIL_USER ?? "";
+const EMAIL_PASS = process.env.EMAIL_PASS ?? "";
 const FROM_NAME  = process.env.EMAIL_FROM_NAME ?? "BizilCore";
-const RESEND_KEY = process.env.EMAIL_RESEND_API_KEY ?? "re_JQojA4UV_QK5Z7BDbHrbwuYkUsHkMxuh7";
+const RESEND_KEY = process.env.EMAIL_RESEND_API_KEY ?? "";
 
 // ─── Provider initializers ────────────────────────────────────────────────────
 
