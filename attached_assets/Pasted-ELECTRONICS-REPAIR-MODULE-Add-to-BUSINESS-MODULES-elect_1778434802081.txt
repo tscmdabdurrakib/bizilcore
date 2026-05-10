@@ -1,0 +1,161 @@
+ELECTRONICS REPAIR MODULE ===
+
+Add to BUSINESS_MODULES:
+electronics: ["dashboard","jobcards","devices","inventory",
+              "customers","staff","hisab","reports","settings"]
+
+Add to onboarding selector:
+  Name: "ইলেকট্রনিক্স রিপেয়ার"
+  Description: "মোবাইল, ল্যাপটপ ও ইলেকট্রনিক্স মেরামত করি"
+
+━━━ DATABASE ━━━
+
+(Reuse existing JobCard, JobCardPart, JobCardService models from Garage module)
+(Add Device model as the vehicle equivalent)
+
+model Device {
+  id           String    @id @default(cuid())
+  shopId       String
+  customerId   String
+  customer     Customer  @relation(fields: [customerId], references: [id])
+  type         String
+  -- "smartphone"|"laptop"|"tablet"|"tv"|"ac"|"fridge"
+  -- |"washing_machine"|"microwave"|"router"|"other"
+  brand        String    -- "Samsung", "Walton", "LG", "Apple"
+  model        String    -- "Galaxy A54", "IdeaPad 3"
+  imei         String?   -- for phones (IMEI 1)
+  imei2        String?   -- IMEI 2 for dual SIM
+  serialNumber String?
+  color        String?
+  storageGB    String?   -- "128GB", "256GB"
+  condition    String?   -- physical condition at intake
+  accessories  String[]  -- ["charger","case","earphone","box"]
+  notes        String?
+  jobCards     JobCard[]
+  createdAt    DateTime  @default(now())
+}
+
+Add to JobCard model (new fields for electronics):
+  deviceId     String?
+  device       Device?  @relation(fields: [deviceId], references: [id])
+  lockCode     String?  -- encrypted, phone PIN/pattern
+  dataBackedUp Boolean  @default(false)
+  warrantyDays Int?     -- warranty period after repair
+  warrantyNote String?
+
+━━━ ELECTRONICS DASHBOARD (/dashboard) ━━━
+
+4 stat cards:
+  আজ আসা ডিভাইস: new job cards today
+  Ready ডিভাইস: status=ready count
+  চলমান মেরামত: in-progress count
+  আজকের আয়: today's revenue
+
+Ready for pickup list:
+  Job number + device (brand model) + customer phone + amount due
+  "SMS পাঠান" per device
+
+━━━ JOB CARD SYSTEM (/jobcards) ━━━
+
+Kanban board (same as Garage):
+  ডিভাইস এসেছে → Diagnosis → Parts অপেক্ষা → মেরামত → Quality Check → Ready → Delivered
+
+"নতুন Job Card" → intake form:
+
+  Step 1 — ডিভাইসের তথ্য:
+    IMEI or Serial search: if found → auto-fill device + owner
+    Device type* (dropdown with icons):
+      📱 Smartphone | 💻 Laptop | 📱 Tablet | 📺 TV | ❄️ AC | 🧊 Fridge | 🫧 Washing Machine | Other
+    Brand*, model*
+    Color, IMEI (for phones), serial number (optional)
+    Storage (for phones/laptops)
+    Physical condition (dropdown: Excellent/Good/Fair/Damaged/Cracked Screen)
+    Accessories received (checkboxes):
+      ☐ Charger  ☐ Case/Cover  ☐ Earphone  ☐ Original Box  ☐ Memory Card  ☐ Other
+
+  Step 2 — কাজের বিবরণ:
+    Owner: search existing or add (name*, phone*)
+    Customer complaint* (textarea)
+    Quick complaint chips:
+      "স্ক্রিন নষ্ট" "চার্জ হচ্ছে না" "On হচ্ছে না" "ক্যামেরা কাজ করছে না"
+      "নেটওয়ার্ক নেই" "Hang করছে" "পানি পড়েছে" "ব্যাটারি দুর্বল"
+    Lock code/PIN (optional, encrypted storage):
+      "ডিভাইসের PIN/Pattern (ঐচ্ছিক)"
+    Data backup toggle: "Data backup নেওয়া হয়েছে"
+    Assign technician (staff dropdown)
+    Priority: Normal / Urgent
+    Estimated delivery date + time
+    Estimated cost (optional)
+
+  Step 3 — Advance Payment:
+    Advance collected, method, due
+    "Job Card তৈরি করুন" →
+      Job number: ELC-YYYY-NNN (sequential)
+      Intake slip printed/shown:
+        Job No: ELC-2026-001
+        Date: [datetime]
+        Device: [brand model] | [type]
+        IMEI: [if phone]
+        Customer: [name] [phone]
+        Complaint: [text]
+        Accessories: [list]
+        Technician: [name]
+        Est. Delivery: [date]
+        Advance: ৳[amount]
+
+Job Card Detail page:
+  Device info + customer info + status bar
+  
+  Diagnosis section:
+    "Diagnosis লিখুন" textarea → tech fills after inspection
+    Estimated cost update (revise after diagnosis)
+    "Customer কে জানান" button → SMS:
+      "আপনার [brand model] এর diagnosis সম্পন্ন।
+       সমস্যা: [diagnosis]
+       আনুমানিক খরচ: ৳[estimate]
+       অনুমোদন দিন: [phone] - [ShopName]"
+  
+  Parts section: same as Garage
+  Services section: same as Garage
+  
+  Warranty section (on delivery):
+    Warranty days input (0 = no warranty, default 30)
+    Warranty note (e.g. "শুধু একই সমস্যার জন্য")
+  
+  Delivered job: shows warranty badge if within warranty
+  
+  Ready SMS:
+    "আপনার [brand model] মেরামত সম্পন্ন।
+     মোট বিল: ৳[total] | বাকি: ৳[due]
+     নিয়ে যেতে পারেন। Job No: [ELC-number] - [ShopName]"
+
+━━━ DEVICE LIST (/devices) ━━━
+
+Search by IMEI, serial, or customer phone.
+Device card: type icon, brand+model, IMEI (last 6 shown), owner name+phone
+  Service history: "X বার মেরামত হয়েছে"
+  Total spent at shop
+
+━━━ WARRANTY TRACKING (/jobcards?filter=warranty) ━━━
+
+Active warranties list:
+  Device, job number, delivery date, warranty expiry, customer phone
+  Red badge if customer returns within warranty period:
+    "Warranty Claim" button → creates new job card linked to original
+
+━━━ REPORTS (/reports) ━━━
+
+Electronics-specific:
+  Most common device types repaired (pie)
+  Most common repairs (top 10 bar)
+  Average repair time by device type
+  Monthly revenue vs parts cost = profit
+  Warranty claim rate
+
+All Bangla UI. Same design system.
+Job number prefix: "ELC" (distinct from Garage's "JOB").
+IMEI shown partially masked for privacy in lists.
+
+
+
+
