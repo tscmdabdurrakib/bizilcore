@@ -1,0 +1,206 @@
+LEGAL SERVICES / LAWYER CHAMBER MODULE ===
+
+Add to BUSINESS_MODULES:
+legal: ["dashboard","cases","clients","hearings",
+        "documents","fees","hisab","reports","settings"]
+
+Add to onboarding selector:
+  Name: "আইনি সেবা / চেম্বার"
+  Description: "আইনি পরামর্শ ও মামলা পরিচালনা করি"
+
+━━━ DATABASE ━━━
+
+model LegalCase {
+  id             String         @id @default(cuid())
+  shopId         String
+  caseNumber     String         @unique  -- "CASE-2026-001"
+  clientId       String
+  client         Customer       @relation(fields: [clientId], references: [id])
+  title          String         -- "বাদী vs প্রতিবাদী সম্পত্তি বিরোধ"
+  caseType       String
+  -- "civil"|"criminal"|"family"|"property"|"labor"|"business"|"constitutional"|"other"
+  court          String         -- "জেলা জজ আদালত, ঢাকা"
+  caseRef        String?        -- official court case number
+  filingDate     DateTime?
+  opposingParty  String?
+  opposingLawyer String?
+  assignedTo     String?        -- lawyer name (if firm)
+  status         String         @default("active")
+  -- "active"|"hearing_pending"|"judgement_pending"|"decided"|"appealed"|"closed"
+  verdict        String?
+  verdictDate    DateTime?
+  totalFee       Float          @default(0)
+  retainerFee    Float          @default(0)
+  paidFee        Float          @default(0)
+  dueFee         Float          @default(0)
+  nextHearing    DateTime?
+  hearings       CaseHearing[]
+  documents      CaseDocument[]
+  payments       CaseFeePayment[]
+  notes          String?
+  createdAt      DateTime       @default(now())
+}
+
+model CaseHearing {
+  id          String     @id @default(cuid())
+  shopId      String
+  caseId      String
+  case        LegalCase  @relation(fields: [caseId], references: [id])
+  hearingDate DateTime
+  court       String?
+  judgeRef    String?    -- judge/bench name (optional)
+  purpose     String?    -- "argument"|"witness"|"judgement"|"adjournment"|"order"
+  outcome     String?    -- what happened at this hearing
+  attended    Boolean    @default(false)
+  nextDate    DateTime?
+  appearanceFee Float    @default(0)
+  note        String?
+}
+
+model CaseDocument {
+  id         String    @id @default(cuid())
+  caseId     String
+  case       LegalCase @relation(fields: [caseId], references: [id])
+  docName    String    -- "আর্জি", "কাউন্টার", "দলিল"
+  docType    String    -- "petition"|"counter"|"deed"|"affidavit"|"order"|"other"
+  fileUrl    String?
+  submittedAt DateTime?
+  note       String?
+  addedAt    DateTime  @default(now())
+}
+
+model CaseFeePayment {
+  id        String    @id @default(cuid())
+  caseId    String
+  case      LegalCase @relation(fields: [caseId], references: [id])
+  amount    Float
+  feeType   String    -- "retainer"|"appearance"|"filing"|"other"
+  method    String?
+  note      String?
+  paidAt    DateTime  @default(now())
+}
+
+━━━ LEGAL DASHBOARD (/dashboard) ━━━
+
+4 stat cards:
+  সক্রিয় মামলা: active cases count
+  আজকের শুনানি: hearings today count
+  এই সপ্তাহের শুনানি: this week count
+  Pending ফি: total dueFee sum
+
+Today's hearing list:
+  Case title (short), client name, court, time, purpose
+  "উপস্থিত হয়েছি" button → marks attended=true
+
+Upcoming hearing calendar (next 7 days):
+  Day-wise list of scheduled hearings
+
+Overdue fees alert:
+  Cases where dueFee > 0 AND lastPayment > 30 days ago
+
+━━━ CASE MANAGEMENT (/cases) ━━━
+
+Case list filter: সব | Active | Hearing Pending | Decided | Closed
+Search by case title, client name, court case ref
+
+Case card: case number, title (truncated), client name, type badge,
+  court, next hearing date (highlighted if soon), status badge, due fee badge
+
+"নতুন মামলা" → form:
+
+  Case Info:
+    Title* (brief description of case)
+    Case type* (dropdown)
+    Court name* (with common BD courts as suggestions:
+      "জেলা জজ আদালত" | "দায়রা জজ আদালত" | "চিফ জুডিসিয়াল ম্যাজিস্ট্রেট আদালত"
+      "হাইকোর্ট বিভাগ" | "শ্রম আদালত" | "পারিবারিক আদালত" | Other)
+    Court case reference number (optional)
+    Filing date
+
+  Parties:
+    Client* (search existing or add new)
+    Opposing party name (optional)
+    Opposing lawyer (optional)
+    Assigned to (if law firm, which lawyer)
+
+  Fee Setup:
+    Retainer fee (upfront fee), already paid amount
+    Due calculated automatically
+
+  "মামলা রেজিস্ট্রেশন করুন" →
+    Case number: CASE-YYYY-NNN
+    SMS to client:
+      "আপনার মামলা রেজিস্টার্ড হয়েছে।
+       মামলা নং: [CASE-number]
+       ধরন: [type] | আদালত: [court]
+       - [ChamberName]"
+
+Case Detail page (/cases/[id]):
+  Case summary card (all info + edit)
+  Status update button
+
+  Hearing History tab:
+    Timeline of all hearings (newest first)
+    Each: date, purpose, attended badge, outcome, next date
+    "+ নতুন শুনানি" button → hearing form:
+      Date*, court (pre-filled), purpose, attendance toggle
+      Outcome/what happened (textarea)
+      Next hearing date (sets case.nextHearing)
+      Appearance fee (optional)
+      "সেভ করুন"
+    
+    Reminder system: 
+      2 days before nextHearing → SMS to lawyer (own phone):
+        "আগামীকাল: [case_title] | আদালত: [court] | [client_name]"
+      SMS to client (optional toggle):
+        "আপনার মামলার শুনানি [date] তে আছে।
+         আদালত: [court] - [ChamberName]"
+
+  Documents tab:
+    Document list: name, type badge, submitted date, file link (if uploaded)
+    "+ Document যোগ করুন" → form:
+      Doc name*, type, submitted date, file upload (optional), note
+    
+  Fee tab:
+    Fee summary: Total ৳X | Paid ৳Y | Due ৳Z
+    Payment history table
+    "+ পেমেন্ট নিন" → amount, fee type, method, note
+
+━━━ COURT SCHEDULE (/hearings) ━━━
+
+Calendar view: all upcoming hearings as events
+  Month view + Day view toggle
+  Click hearing → goes to that case detail
+
+List view: sorted by date
+  Today's hearings | This week | This month
+
+━━━ CLIENT DIRECTORY (/clients) ━━━
+
+Uses existing Customer model (renamed "ক্লায়েন্ট")
+Client profile: personal info + all cases list + total fees
+
+━━━ REPORTS (/reports) ━━━
+
+Legal-specific:
+  Active cases by type (pie chart)
+  Monthly new cases + revenue (bar chart)
+  Case outcome summary (decided: won/lost/settled)
+  Hearing attendance rate
+  Pending fee collection list
+
+━━━ SETTINGS — LEGAL CONFIG ━━━
+
+Chamber/firm name, bar council registration number
+Hearing reminder days (default: 2 days before)
+Auto-SMS to client on hearing reminder (toggle)
+Case number prefix (default: "CASE")
+Default courts list (editable)
+
+All Bangla UI. Same design system.
+All case information is confidential — add note in UI:
+  "এই তথ্য সম্পূর্ণ গোপনীয়। শুধুমাত্র আপনার জন্য সংরক্ষিত।"
+
+
+
+
