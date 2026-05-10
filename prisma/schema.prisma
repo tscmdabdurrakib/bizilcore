@@ -400,6 +400,15 @@ model Shop {
   spaAdvanceBookingDays   Int      @default(0)
   spaOpenTime             String?  @default("09:00")
   spaCloseTime            String?  @default("21:00")
+
+  // Catering Service module
+  cateringEvents           CateringEvent[]
+  cateringMenuTemplates    CateringMenuTemplate[]
+  cateringBookingPrefix    String?  @default("CAT")
+  cateringDefaultMargin    Float    @default(30)
+  cateringMinAdvancePct    Int      @default(40)
+  cateringAutoShoppingList Boolean  @default(true)
+  cateringStaffPer100      Int      @default(10)
 }
 
 model Subscription {
@@ -560,6 +569,7 @@ model Customer {
   devices       Device[]
   rentalBookings RentalBooking[]
   legalCases    LegalCase[]
+  cateringEvents CateringEvent[]
   isDemoData    Boolean        @default(false)
   createdAt     DateTime       @default(now())
 
@@ -3829,4 +3839,92 @@ model CaseFeePayment {
 
   @@index([caseId])
   @@index([shopId])
+}
+
+model CateringMenuTemplate {
+  id            String                 @id @default(cuid())
+  shopId        String
+  shop          Shop                   @relation(fields: [shopId], references: [id])
+  name          String
+  type          String
+  perHeadPrice  Float
+  items         CateringTemplateItem[]
+  cateringEvents CateringEvent[]
+  isActive      Boolean                @default(true)
+  createdAt     DateTime               @default(now())
+
+  @@index([shopId])
+}
+
+model CateringTemplateItem {
+  id          String               @id @default(cuid())
+  templateId  String
+  template    CateringMenuTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  itemName    String
+  category    String
+  perHeadCost Float
+  quantity    String?
+}
+
+model CateringEvent {
+  id            String               @id @default(cuid())
+  shopId        String
+  shop          Shop                 @relation(fields: [shopId], references: [id])
+  bookingNumber String               @unique
+  customerId    String?
+  customer      Customer?            @relation(fields: [customerId], references: [id])
+  clientName    String
+  clientPhone   String
+  clientAddress String?
+  eventType     String
+  eventDate     DateTime
+  eventTime     String?
+  venue         String
+  guestCount    Int
+  mealTypes     String[]
+  templateId    String?
+  template      CateringMenuTemplate? @relation(fields: [templateId], references: [id])
+  customItems   CateringEventItem[]
+  perHeadCost   Float                @default(0)
+  totalCost     Float                @default(0)
+  totalAmount   Float
+  profit        Float                @default(0)
+  advancePaid   Float                @default(0)
+  dueAmount     Float
+  staffNeeded   Int?
+  equipmentNote String?
+  status        String               @default("confirmed")
+  shoppingList  Json?
+  checklist     Json?
+  payments      CateringPayment[]
+  notes         String?
+  createdAt     DateTime             @default(now())
+
+  @@index([shopId])
+  @@index([eventDate])
+}
+
+model CateringEventItem {
+  id          String        @id @default(cuid())
+  eventId     String
+  event       CateringEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  itemName    String
+  category    String
+  perHeadCost Float
+  quantity    String?
+  subtotal    Float
+
+  @@index([eventId])
+}
+
+model CateringPayment {
+  id      String        @id @default(cuid())
+  eventId String
+  event   CateringEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  amount  Float
+  method  String
+  note    String?
+  paidAt  DateTime      @default(now())
+
+  @@index([eventId])
 }

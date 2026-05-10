@@ -1,0 +1,223 @@
+CATERING SERVICE MODULE ===
+
+Add to BUSINESS_MODULES:
+catering: ["dashboard","events","menus","ingredients",
+           "staff","customers","hisab","reports","settings"]
+
+Add to onboarding selector:
+  Name: "ক্যাটারিং সার্ভিস"
+  Description: "অনুষ্ঠানে খাবার সরবরাহ করি"
+
+━━━ DATABASE ━━━
+
+model CateringMenuTemplate {
+  id           String  @id @default(cuid())
+  shopId       String
+  name         String  -- "Standard Wedding", "Corporate Lunch", "Birthday Party"
+  type         String  -- "wedding"|"corporate"|"birthday"|"aqiqa"|"custom"
+  perHeadPrice Float   -- total per person
+  items        CateringTemplateItem[]
+  isActive     Boolean @default(true)
+}
+
+model CateringTemplateItem {
+  id         String               @id @default(cuid())
+  templateId String
+  template   CateringMenuTemplate @relation(fields: [templateId], references: [id])
+  itemName   String               -- "Kacchi Biriyani", "Borhani", "Dessert"
+  category   String               -- "main"|"starter"|"drink"|"dessert"|"snack"
+  perHeadCost Float               -- cost per person for this item
+  quantity   String?              -- "0.5 kg per person", "1 piece per person"
+}
+
+model CateringEvent {
+  id             String              @id @default(cuid())
+  shopId         String
+  bookingNumber  String              @unique  -- "CAT-2026-001"
+  customerId     String?
+  customer       Customer?           @relation(fields: [customerId], references: [id])
+  clientName     String
+  clientPhone    String
+  clientAddress  String?
+  eventType      String              -- "wedding"|"birthday"|"aqiqa"|"corporate"|"mehndi"|"other"
+  eventDate      DateTime
+  eventTime      String              -- "1:00 PM"
+  venue          String
+  guestCount     Int
+  mealTypes      String[]            -- ["lunch","dinner","snacks"]
+  templateId     String?
+  template       CateringMenuTemplate? @relation(fields: [templateId], references: [id])
+  customItems    CateringEventItem[]
+  perHeadCost    Float               @default(0)
+  totalCost      Float               @default(0)  -- our expense
+  totalAmount    Float               -- client pays
+  profit         Float               @default(0)
+  advancePaid    Float               @default(0)
+  dueAmount      Float
+  staffNeeded    Int?
+  equipmentNote  String?
+  status         String              @default("confirmed")
+  -- "enquiry"|"confirmed"|"advance_paid"|"preparation"|"completed"|"cancelled"
+  shoppingList   Json?               -- auto-generated ingredient list
+  checklist      Json?
+  payments       CateringPayment[]
+  notes          String?
+  createdAt      DateTime            @default(now())
+}
+
+model CateringEventItem {
+  id        String        @id @default(cuid())
+  eventId   String
+  event     CateringEvent @relation(fields: [eventId], references: [id])
+  itemName  String
+  category  String
+  perHeadCost Float
+  quantity  String?
+  subtotal  Float         -- perHeadCost × guestCount
+}
+
+model CateringPayment {
+  id        String        @id @default(cuid())
+  eventId   String
+  event     CateringEvent @relation(fields: [eventId], references: [id])
+  amount    Float
+  method    String
+  note      String?
+  paidAt    DateTime      @default(now())
+}
+
+━━━ CATERING DASHBOARD (/dashboard) ━━━
+
+4 stat cards:
+  এই মাসের ইভেন্ট: events this month
+  আসন্ন ইভেন্ট (৭ দিনের মধ্যে): upcoming count
+  মোট Pending বাকি: sum of dueAmounts
+  এই মাসের মুনাফা: total profit this month
+
+Upcoming events timeline:
+  Date, client name, event type badge, venue, guest count, status badge
+  "Preparation শুরু করুন" button for events within 3 days
+
+Staff planning alert:
+  "আগামী সপ্তাহে X টি ইভেন্ট আছে। মোট Y জন staff দরকার।"
+
+━━━ MENU TEMPLATES (/menus) ━━━
+
+Template cards: name, type badge, per head price, item count
+
+"নতুন Menu Template তৈরি করুন" → form:
+  Template name*, type*
+  Items (dynamic rows, add/remove):
+    Item name | Category | Per head cost | Quantity note
+    "+" button to add more items
+  Total per head (auto-sum)
+  "সেভ করুন"
+
+Pre-loaded default templates:
+  Standard Wedding (৳৩৫০/head):
+    Kacchi Biriyani (main, ৳১৮০, 0.5kg/person)
+    Mutton Roast (main, ৳৮০, 1 piece)
+    Borhani (drink, ৳২০, 250ml)
+    Zarda (dessert, ৳৩০, 100g)
+    Mishti Doi (dessert, ৳৪০, 100g)
+  
+  Corporate Lunch (৳২০০/head):
+    Polao (main, ৳৮০)
+    Chicken Curry (main, ৳৬০)
+    Dal (side, ৳২০)
+    Salad (side, ৳১৫)
+    Soft Drink (drink, ৳২৫)
+
+━━━ EVENT BOOKING (/events) ━━━
+
+Calendar view: events as colored bars by month
+
+List filter: সব | এই মাস | আসন্ন | Preparation | Completed
+
+"নতুন ইভেন্ট বুকিং" → multi-step form:
+
+  Step 1 — ইভেন্ট তথ্য:
+    Client: search/add (name*, phone*)
+    Event type*, date*, time, venue*, guest count*
+    Meal types (checkboxes): সকালের নাস্তা / দুপুরের খাবার / রাতের খাবার / স্ন্যাকস
+
+  Step 2 — Menu নির্বাচন:
+    Option A: Select template
+      Template cards → click to select → shows items + per head price
+      Guest count × per head = total cost (auto)
+    Option B: Custom menu
+      Add items manually (same as template item form)
+    
+    Additional custom items (even after template):
+      "+ আইটেম যোগ করুন" for extras beyond template
+    
+    Summary:
+      Items list with per head cost
+      Total per head: ৳X
+      Total cost (our expense): ৳X × Y guests = ৳Z
+      Selling price (to client): ৳[editable] (suggested: cost × 1.3)
+      Profit: ৳[auto]
+
+  Step 3 — Planning:
+    Staff needed (number input)
+    Equipment note (textarea: "Need 50 plates, 10 serving trays")
+    Auto-generate shopping list button:
+      Calculates: each item's quantity × guest count
+      Shows: ingredient name + total quantity needed
+      "Shopping List সেভ করুন"
+
+  Step 4 — পেমেন্ট:
+    Total amount, advance (minimum 40% suggested), due
+    "বুকিং নিশ্চিত করুন" →
+      Booking number: CAT-YYYY-NNN
+      SMS to client:
+        "আপনার catering বুকিং নিশ্চিত হয়েছে।
+         বুকিং নং: [CAT-number]
+         ইভেন্ট: [date] | স্থান: [venue]
+         অতিথি: [guest_count] জন
+         মোট: ৳[total] | অগ্রিম: ৳[advance]
+         - [CateringName]"
+
+Event Detail page:
+  All info + edit
+  Menu items table with per head + subtotal
+  Shopping list (formatted for printing):
+    "কেনার তালিকা — [event_date] [client_name] এর অনুষ্ঠান"
+    Item | Total Quantity | Unit
+    "Print করুন" button
+  Staff assignment (names + roles)
+  Checklist:
+    Auto-generated based on event type:
+      ☐ Menu confirm করা হয়েছে
+      ☐ Ingredients কেনা হয়েছে
+      ☐ Staff confirmed
+      ☐ Equipment ready
+      ☐ Venue contact নেওয়া হয়েছে
+      ☐ [event_date]: সময়মতো পৌঁছানো
+    Add custom tasks
+  Payment history + "পেমেন্ট নিন"
+  Status update: Confirmed → Preparation → Completed
+
+Post-event:
+  "ইভেন্ট সম্পন্ন" → confirm actual guest count (may differ)
+    If different from estimate → recalculate final bill
+
+━━━ REPORTS (/reports) ━━━
+
+Catering-specific:
+  Monthly events + revenue (bar chart)
+  Most common event types (pie)
+  Average profit margin %
+  Ingredient cost analysis
+  Client repeat rate
+
+━━━ SETTINGS — CATERING CONFIG ━━━
+
+Default profit margin % (suggested selling price = cost × factor)
+Minimum advance % (default: 40%)
+Auto shopping list generation (toggle)
+Default staff per 100 guests (for staff planning)
+
+All Bangla UI. Same design system.
+Shopping list print view is critical — make it clean and printable.
+

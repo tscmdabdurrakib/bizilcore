@@ -103,7 +103,8 @@ export type BusinessType =
   | "kindergarten"
   | "carrental"
   | "legal"
-  | "spa";
+  | "spa"
+  | "catering";
 
 export const BUSINESS_TYPES: BusinessType[] = [
   "fcommerce",
@@ -131,6 +132,7 @@ export const BUSINESS_TYPES: BusinessType[] = [
   "carrental",
   "legal",
   "spa",
+  "catering",
 ];
 
 export interface BusinessTypeMeta {
@@ -343,6 +345,14 @@ export const BUSINESS_TYPE_META: Record<BusinessType, BusinessTypeMeta> = {
     bgColor: "#FAF5FF",
     icon: Sparkle,
   },
+  catering: {
+    type: "catering",
+    label: "ক্যাটারিং সার্ভিস",
+    description: "অনুষ্ঠানে খাবার সরবরাহ করি",
+    color: "#EA580C",
+    bgColor: "#FFF7ED",
+    icon: ChefHat,
+  },
 };
 
 /* ─── Sales Channel ─────────────────────────────────────── */
@@ -495,6 +505,10 @@ const BUSINESS_MODULES: Record<BusinessType, string[]> = {
   spa: [
     "dashboard", "appointments", "services", "rooms",
     "therapists", "customers", "hisab", "reports", "settings",
+  ],
+  catering: [
+    "dashboard", "events", "menus", "ingredients",
+    "staff", "customers", "hisab", "reports", "settings",
   ],
 };
 
@@ -1155,6 +1169,30 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
       label: "সিস্টেম",
       items: [
         { href: "/settings",               icon: Settings,        label: "সেটিংস",                 module: "settings"     },
+      ],
+    },
+  ],
+  catering: [
+    {
+      items: [
+        { href: "/dashboard",              icon: LayoutDashboard, label: "ড্যাশবোর্ড",             module: "dashboard" },
+        { href: "/catering/events",        icon: CalendarRange,   label: "ইভেন্ট বুকিং",           module: "events"    },
+        { href: "/catering/menus",         icon: ScrollText,      label: "Menu Templates",          module: "menus"     },
+        { href: "/customers",              icon: Users,           label: "কাস্টমার",               module: "customers" },
+        { href: "/hr",                     icon: UserCog,         label: "স্টাফ",                  module: "staff"     },
+      ],
+    },
+    {
+      label: "আর্থিক",
+      items: [
+        { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",                  module: "hisab"     },
+        { href: "/catering/reports",       icon: BarChart2,       label: "রিপোর্ট",                module: "reports"   },
+      ],
+    },
+    {
+      label: "সিস্টেম",
+      items: [
+        { href: "/settings",               icon: Settings,        label: "সেটিংস",                 module: "settings"  },
       ],
     },
   ],

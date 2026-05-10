@@ -39,6 +39,7 @@ import DashboardKindergarten    from "@/components/dashboards/DashboardKindergar
 import DashboardCarRental       from "@/components/dashboards/DashboardCarRental";
 import DashboardLegal           from "@/components/dashboards/DashboardLegal";
 import DashboardSpa             from "@/components/dashboards/DashboardSpa";
+import DashboardCatering        from "@/components/dashboards/DashboardCatering";
 
 export default async function DashboardPage() {
   const { user, shop } = await requireShop();
@@ -214,6 +215,14 @@ export default async function DashboardPage() {
 
     if (businessType === "spa") {
       return <DashboardSpa
+        shopName={shop.name}
+        userName={user.name ?? ""}
+        userGender={(user as { gender?: string }).gender ?? null}
+      />;
+    }
+
+    if (businessType === "catering") {
+      return <DashboardCatering
         shopName={shop.name}
         userName={user.name ?? ""}
         userGender={(user as { gender?: string }).gender ?? null}
