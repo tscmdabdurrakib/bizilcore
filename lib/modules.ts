@@ -72,6 +72,7 @@ import {
   Smartphone,
   Fuel,
   Scale,
+  Sparkle,
   type LucideIcon,
 } from "lucide-react";
 
@@ -101,7 +102,8 @@ export type BusinessType =
   | "electronics"
   | "kindergarten"
   | "carrental"
-  | "legal";
+  | "legal"
+  | "spa";
 
 export const BUSINESS_TYPES: BusinessType[] = [
   "fcommerce",
@@ -128,6 +130,7 @@ export const BUSINESS_TYPES: BusinessType[] = [
   "kindergarten",
   "carrental",
   "legal",
+  "spa",
 ];
 
 export interface BusinessTypeMeta {
@@ -332,6 +335,14 @@ export const BUSINESS_TYPE_META: Record<BusinessType, BusinessTypeMeta> = {
     bgColor: "#EFF6FF",
     icon: Scale,
   },
+  spa: {
+    type: "spa",
+    label: "স্পা / ওয়েলনেস সেন্টার",
+    description: "সৌন্দর্য ও সুস্থতা সেবা প্রদান করি",
+    color: "#9333EA",
+    bgColor: "#FAF5FF",
+    icon: Sparkle,
+  },
 };
 
 /* ─── Sales Channel ─────────────────────────────────────── */
@@ -480,6 +491,10 @@ const BUSINESS_MODULES: Record<BusinessType, string[]> = {
   legal: [
     "dashboard", "cases", "clients", "hearings",
     "documents", "fees", "hisab", "reports", "settings",
+  ],
+  spa: [
+    "dashboard", "appointments", "services", "rooms",
+    "therapists", "customers", "hisab", "reports", "settings",
   ],
 };
 
@@ -1111,6 +1126,35 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
       label: "সিস্টেম",
       items: [
         { href: "/settings",               icon: Settings,        label: "সেটিংস",                 module: "settings"  },
+      ],
+    },
+  ],
+  spa: [
+    {
+      items: [
+        { href: "/dashboard",              icon: LayoutDashboard, label: "ড্যাশবোর্ড",            module: "dashboard"    },
+        { href: "/appointments",           icon: Calendar,        label: "অ্যাপয়েন্টমেন্ট",       module: "appointments" },
+        { href: "/services",               icon: Sparkle,         label: "সার্ভিস",                module: "services"     },
+        { href: "/spa/rooms",              icon: Bed,             label: "ট্রিটমেন্ট রুম",         module: "rooms"        },
+        { href: "/spa/therapists",         icon: UserCog,         label: "থেরাপিস্ট",              module: "therapists"   },
+      ],
+    },
+    {
+      items: [
+        { href: "/customers",              icon: Users,           label: "কাস্টমার",               module: "customers"    },
+      ],
+    },
+    {
+      label: "আর্থিক",
+      items: [
+        { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",                  module: "hisab"        },
+        { href: "/spa/reports",            icon: BarChart2,       label: "রিপোর্ট",                module: "reports"      },
+      ],
+    },
+    {
+      label: "সিস্টেম",
+      items: [
+        { href: "/settings",               icon: Settings,        label: "সেটিংস",                 module: "settings"     },
       ],
     },
   ],

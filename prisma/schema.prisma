@@ -389,6 +389,17 @@ model Shop {
   legalHearingReminderDays Int     @default(2)
   legalAutoSmsClient      Boolean  @default(true)
   legalChamberName        String?
+
+  // Spa / Wellness Center module
+  treatmentRooms          TreatmentRoom[]
+  spaBookingPrefix        String?  @default("SPA")
+  spaSlotDuration         Int      @default(30)
+  spaCleaningBuffer       Int      @default(15)
+  spaCoupleEnabled        Boolean  @default(true)
+  spaGenderPrefEnabled    Boolean  @default(true)
+  spaAdvanceBookingDays   Int      @default(0)
+  spaOpenTime             String?  @default("09:00")
+  spaCloseTime            String?  @default("21:00")
 }
 
 model Subscription {
@@ -1539,6 +1550,9 @@ model Service {
   defaultStaffId   String?
   defaultStaff     StaffMember?      @relation("ServiceDefaultStaff", fields: [defaultStaffId], references: [id])
   appointmentItems AppointmentItem[]
+  therapistGender  String?
+  isCouple         Boolean           @default(false)
+  requiresRoom     Boolean           @default(true)
   createdAt        DateTime          @default(now())
 
   @@index([shopId])
@@ -1547,31 +1561,52 @@ model Service {
 }
 
 model Appointment {
-  id             String            @id @default(cuid())
-  shopId         String
-  shop           Shop              @relation(fields: [shopId], references: [id])
-  customerId     String?
-  customer       Customer?         @relation(fields: [customerId], references: [id])
-  staffId        String?
-  staff          StaffMember?      @relation(fields: [staffId], references: [id])
-  customerName   String
-  customerPhone  String?
-  date           DateTime          @db.Date
-  startTime      String
-  endTime        String?
-  status         String            @default("scheduled")
-  note           String?
-  totalAmount    Float             @default(0)
-  commissionPaid Boolean           @default(false)
-  items          AppointmentItem[]
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  id                   String            @id @default(cuid())
+  shopId               String
+  shop                 Shop              @relation(fields: [shopId], references: [id])
+  customerId           String?
+  customer             Customer?         @relation(fields: [customerId], references: [id])
+  staffId              String?
+  staff                StaffMember?      @relation(fields: [staffId], references: [id])
+  roomId               String?
+  room                 TreatmentRoom?    @relation(fields: [roomId], references: [id])
+  customerName         String
+  customerPhone        String?
+  date                 DateTime          @db.Date
+  startTime            String
+  endTime              String?
+  status               String            @default("scheduled")
+  note                 String?
+  totalAmount          Float             @default(0)
+  commissionPaid       Boolean           @default(false)
+  therapistGenderPref  String?
+  persons              Int               @default(1)
+  items                AppointmentItem[]
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
 
   @@index([shopId])
   @@index([shopId, date])
   @@index([shopId, status])
   @@index([staffId])
   @@index([customerId])
+  @@index([roomId])
+}
+
+model TreatmentRoom {
+  id           String        @id @default(cuid())
+  shopId       String
+  shop         Shop          @relation(fields: [shopId], references: [id])
+  name         String
+  type         String        @default("standard")
+  capacity     Int           @default(1)
+  amenities    String[]
+  rateExtra    Float         @default(0)
+  isActive     Boolean       @default(true)
+  appointments Appointment[]
+  createdAt    DateTime      @default(now())
+
+  @@index([shopId])
 }
 
 model AppointmentItem {
