@@ -1,0 +1,127 @@
+SPA / WELLNESS CENTER MODULE ===
+
+Add to BUSINESS_MODULES:
+spa: ["dashboard","appointments","services","rooms",
+      "therapists","customers","hisab","reports","settings"]
+
+Add to onboarding selector:
+  Name: "স্পা / ওয়েলনেস সেন্টার"
+  Description: "সৌন্দর্য ও সুস্থতা সেবা প্রদান করি"
+
+━━━ DATABASE ━━━
+
+(Reuse Appointment, Service, StaffMember models from Salon module)
+(Add spa-specific models)
+
+Add to Service model (spa extras):
+  therapistGender String? -- "male"|"female"|"any"
+  isCouple       Boolean  @default(false)
+  requiresRoom   Boolean  @default(true)
+
+model TreatmentRoom {
+  id          String  @id @default(cuid())
+  shopId      String
+  name        String  -- "Room 1", "Couple Suite", "VIP Room"
+  type        String  -- "standard"|"vip"|"couple"|"group"
+  capacity    Int     @default(1)
+  amenities   String[] -- ["bath","shower","steam","jacuzzi"]
+  rateExtra   Float   @default(0)  -- extra charge for VIP room
+  isActive    Boolean @default(true)
+}
+
+Add to Appointment model (spa extras):
+  roomId          String?
+  room            TreatmentRoom? @relation(fields: [roomId], references: [id])
+  therapistGenderPref String?   -- customer preference
+  persons         Int            @default(1)  -- for couple packages
+
+━━━ SPA DASHBOARD (/dashboard) ━━━
+
+4 stat cards:
+  আজকের অ্যাপয়েন্টমেন্ট: today's count
+  Available Therapist: not currently in session
+  Room Occupancy: X/Y rooms occupied
+  আজকের আয়: revenue today
+
+Room status grid (like hotel rooms):
+  Each room card: name, type, current client (if in use), status
+  🟢 Available | 🔵 In Session | 🟡 Cleaning | 🔴 Maintenance
+
+Today's appointment timeline (sorted by time):
+  Time, client name, service, room, therapist
+
+━━━ APPOINTMENT SYSTEM (/appointments) ━━━
+
+Same as Salon appointment system with additions:
+
+Booking form additions:
+  Room selection: show available rooms for requested time
+  Therapist gender preference: কোনো পছন্দ নেই / পুরুষ / মহিলা
+  Persons: 1 (single) or 2 (couple — auto-selects couple service)
+  Package deals option
+
+Multi-service booking:
+  Add multiple services in one appointment
+  e.g. "Facial (60 min) + Massage (90 min) = 2.5 hrs total"
+  Room blocked for total duration
+
+━━━ SERVICE CATALOG (/services) ━━━
+
+Categories: Massage | Facial | Body Treatment | Hair Treatment |
+  Manicure/Pedicure | Waxing | Steam/Sauna | Couple Package
+
+Service card shows: name, duration, price, therapist gender (if specified)
+
+Package builder:
+  "Relaxation Package": Full body massage (90min) + Facial (60min) = ৳3,500 (save ৳500)
+  "Couple Package": 2× Swedish massage = ৳5,000
+
+━━━ TREATMENT ROOM MANAGEMENT (/rooms) ━━━
+
+Room cards: name, type badge, capacity, amenities, extra rate (if any)
+"Room যোগ করুন" → form:
+  Name*, type, capacity, amenities (checkboxes), extra charge (optional)
+
+Room booking conflicts:
+  When booking appointment: check room availability for that time slot
+  Show conflict warning if room already booked
+
+━━━ THERAPIST MANAGEMENT (/therapists) ━━━
+
+Same as Salon staff management.
+Additional field: gender (male/female) — shown to match client preference
+Specializations: Swedish Massage | Deep Tissue | Aromatherapy | Reflexology | Facial | Waxing
+
+Therapist schedule view:
+  Weekly calendar showing each therapist's appointments
+
+━━━ MEMBERSHIP PACKAGES ━━━
+
+(Optional feature — add if needed)
+Monthly membership: unlimited visits or X sessions
+  Model same as Gym membership plan
+  Member card: name, plan, sessions remaining, expiry
+
+━━━ REPORTS (/reports) ━━━
+
+Spa-specific:
+  Most popular services (bar chart)
+  Room utilization rate (%)
+  Therapist performance (sessions + revenue)
+  Peak hours analysis
+  Package vs single service ratio
+
+━━━ SETTINGS — SPA CONFIG ━━━
+
+Operating hours, appointment slot duration (default 30 min)
+Therapist gender preference option (show/hide this field)
+Room cleaning time between sessions (buffer time)
+Couple booking enabled (toggle)
+Advance booking required days
+
+All Bangla UI. Same design system.
+Therapist gender preference is culturally important in Bangladesh — show clearly.
+Room conflict checking is critical — always prevent double-booking.
+
+
+
