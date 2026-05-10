@@ -5,11 +5,11 @@ import Link from "next/link";
 import { formatBDT } from "@/lib/utils";
 import {
   ArrowLeft, Car, Clock, Wrench, Package, Plus, Trash2,
-  CheckCircle, Loader2, AlertCircle, Truck, X,
+  CheckCircle, Loader2, AlertCircle, Truck, X, Smartphone,
 } from "lucide-react";
 
 const STATUS_STEPS = [
-  { key: "received",      label: "গাড়ি এসেছে" },
+  { key: "received",      label: "এসেছে" },
   { key: "diagnosing",    label: "Diagnosis" },
   { key: "waiting_parts", label: "Parts অপেক্ষা" },
   { key: "repairing",     label: "মেরামত" },
@@ -37,6 +37,11 @@ const S = {
   primary: "#B45309",
 };
 
+const DEVICE_ICONS: Record<string, string> = {
+  smartphone: "📱", laptop: "💻", tablet: "📱", tv: "📺", ac: "❄️",
+  fridge: "🧊", washing_machine: "🫧", microwave: "📦", router: "📡", other: "🔧",
+};
+
 type JobCardData = {
   id: string;
   jobNumber: string;
@@ -52,12 +57,16 @@ type JobCardData = {
   totalAmount: number;
   advancePaid: number;
   dueAmount: number;
+  lockCode?: string | null;
+  dataBackedUp?: boolean;
+  warrantyDays?: number | null;
+  warrantyNote?: string | null;
   mileageIn?: number | null;
   mileageOut?: number | null;
   estimatedDone?: string | null;
   deliveredAt?: string | null;
   createdAt: string;
-  vehicle: {
+  vehicle?: {
     id: string;
     regNumber: string;
     type: string;
@@ -70,7 +79,22 @@ type JobCardData = {
       name: string;
       phone?: string | null;
     } | null;
-  };
+  } | null;
+  device?: {
+    id: string;
+    type: string;
+    brand: string;
+    model: string;
+    imei?: string | null;
+    serialNumber?: string | null;
+    color?: string | null;
+    storageGB?: string | null;
+    customer?: {
+      id: string;
+      name: string;
+      phone?: string | null;
+    } | null;
+  } | null;
   parts: Array<{
     id: string;
     partName: string;
@@ -255,7 +279,10 @@ export default function JobCardDetail({ id }: { id: string }) {
 
   const prio = PRIORITY_CONFIG[job.priority] ?? PRIORITY_CONFIG.normal;
   const stepIndex = STATUS_STEPS.findIndex(s => s.key === job.status);
-  const icon = VEHICLE_ICONS[job.vehicle.type] ?? "🚗";
+  const isElectronics = !!job.device;
+  const icon = isElectronics
+    ? (DEVICE_ICONS[job.device!.type] ?? "🔧")
+    : (VEHICLE_ICONS[job.vehicle?.type ?? ""] ?? "🚗");
   const isDelivered = job.status === "delivered";
 
   return (
@@ -300,29 +327,80 @@ export default function JobCardDetail({ id }: { id: string }) {
         )}
       </div>
 
-      {/* Vehicle + customer info */}
+      {/* Device / Vehicle + customer info */}
       <div className="rounded-xl p-4 space-y-3" style={{ background: S.surface, border: `1px solid ${S.border}` }}>
         <div className="flex items-start gap-3">
           <span className="text-3xl">{icon}</span>
           <div>
-            <p className="font-bold text-lg" style={{ color: S.text }}>{job.vehicle.regNumber}</p>
-            <p className="text-sm" style={{ color: S.muted }}>{job.vehicle.brand} {job.vehicle.model} {job.vehicle.year ? `(${job.vehicle.year})` : ""} · {job.vehicle.color || ""}</p>
+            {isElectronics ? (
+              <>
+                <p className="font-bold text-lg" style={{ color: S.text }}>{job.device!.brand} {job.device!.model}</p>
+                <p className="text-sm" style={{ color: S.muted }}>
+                  {job.device!.type}
+                  {job.device!.color ? ` · ${job.device!.color}` : ""}
+                  {job.device!.storageGB ? ` · ${job.device!.storageGB}` : ""}
+                </p>
+                {job.device!.imei && (
+                  <p className="text-xs font-mono" style={{ color: S.muted }}>IMEI: {job.device!.imei}</p>
+                )}
+                {job.device!.serialNumber && (
+                  <p className="text-xs font-mono" style={{ color: S.muted }}>S/N: {job.device!.serialNumber}</p>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="font-bold text-lg" style={{ color: S.text }}>{job.vehicle?.regNumber}</p>
+                <p className="text-sm" style={{ color: S.muted }}>
+                  {job.vehicle?.brand} {job.vehicle?.model}
+                  {job.vehicle?.year ? ` (${job.vehicle.year})` : ""}
+                  {job.vehicle?.color ? ` · ${job.vehicle.color}` : ""}
+                </p>
+              </>
+            )}
           </div>
         </div>
-        {job.vehicle.customer && (
+
+        {/* Customer */}
+        {(isElectronics ? job.device?.customer : job.vehicle?.customer) && (
           <div className="flex items-center gap-2 p-2 rounded-lg" style={{ background: "#F9FAFB" }}>
             <span className="text-sm">👤</span>
             <div>
-              <p className="text-sm font-medium" style={{ color: S.text }}>{job.vehicle.customer.name}</p>
-              <p className="text-xs" style={{ color: S.muted }}>{job.vehicle.customer.phone}</p>
+              <p className="text-sm font-medium" style={{ color: S.text }}>
+                {isElectronics ? job.device!.customer!.name : job.vehicle!.customer!.name}
+              </p>
+              <p className="text-xs" style={{ color: S.muted }}>
+                {isElectronics ? job.device!.customer!.phone : job.vehicle!.customer!.phone}
+              </p>
             </div>
           </div>
         )}
+
+        {/* Electronics-specific fields */}
+        {isElectronics && (
+          <div className="flex gap-3 flex-wrap">
+            {job.lockCode && (
+              <span className="text-xs px-2 py-1 rounded-full" style={{ background: "#FEF3C7", color: "#B45309" }}>
+                🔒 Lock: {job.lockCode}
+              </span>
+            )}
+            {job.dataBackedUp && (
+              <span className="text-xs px-2 py-1 rounded-full" style={{ background: "#DCFCE7", color: "#166534" }}>
+                ✓ Data Backed Up
+              </span>
+            )}
+            {job.warrantyDays && job.warrantyDays > 0 && (
+              <span className="text-xs px-2 py-1 rounded-full" style={{ background: "#EFF6FF", color: "#1D4ED8" }}>
+                🛡️ {job.warrantyDays} দিন ওয়ারেন্টি
+              </span>
+            )}
+          </div>
+        )}
+
         <div className="text-sm" style={{ color: S.text }}>
           <span className="font-medium">অভিযোগ: </span>
           <span style={{ color: S.muted }}>{job.complaint}</span>
         </div>
-        {job.mileageIn && <p className="text-xs" style={{ color: S.muted }}>মাইলেজ (ইন): {job.mileageIn} km</p>}
+        {!isElectronics && job.mileageIn && <p className="text-xs" style={{ color: S.muted }}>মাইলেজ (ইন): {job.mileageIn} km</p>}
         {job.estimatedDone && <p className="text-xs" style={{ color: S.muted }}>অনুমানিত ডেলিভারি: {new Date(job.estimatedDone).toLocaleDateString("bn-BD")}</p>}
       </div>
 

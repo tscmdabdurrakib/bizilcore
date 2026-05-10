@@ -15,25 +15,26 @@ import SetupChecklist from "@/components/SetupChecklist";
 import DemoDataBanner from "@/components/DemoDataBanner";
 import CommunityTipsWidget from "@/components/CommunityTipsWidget";
 import LeaderboardWidget from "@/components/LeaderboardWidget";
-import DashboardRestaurant  from "@/components/dashboards/DashboardRestaurant";
-import DashboardPharmacy    from "@/components/dashboards/DashboardPharmacy";
-import DashboardRetail      from "@/components/dashboards/DashboardRetail";
-import DashboardSalon       from "@/components/dashboards/DashboardSalon";
-import DashboardTailor      from "@/components/dashboards/DashboardTailor";
-import DashboardHotel       from "@/components/dashboards/DashboardHotel";
-import DashboardGarage      from "@/components/dashboards/DashboardGarage";
-import DashboardLab         from "@/components/dashboards/DashboardLab";
-import DashboardConvention  from "@/components/dashboards/DashboardConvention";
-import DashboardSchool     from "@/components/dashboards/DashboardSchool";
-import DashboardFarm       from "@/components/dashboards/DashboardFarm";
-import DashboardHospital   from "@/components/dashboards/DashboardHospital";
-import DashboardTravel    from "@/components/dashboards/DashboardTravel";
-import DashboardGym          from "@/components/dashboards/DashboardGym";
-import DashboardPhotography  from "@/components/dashboards/DashboardPhotography";
-import DashboardLaundry      from "@/components/dashboards/DashboardLaundry";
-import DashboardPrinting     from "@/components/dashboards/DashboardPrinting";
-import DashboardRealEstate   from "@/components/dashboards/DashboardRealEstate";
-import DashboardPetShop      from "@/components/dashboards/DashboardPetShop";
+import DashboardRestaurant    from "@/components/dashboards/DashboardRestaurant";
+import DashboardPharmacy      from "@/components/dashboards/DashboardPharmacy";
+import DashboardRetail        from "@/components/dashboards/DashboardRetail";
+import DashboardSalon         from "@/components/dashboards/DashboardSalon";
+import DashboardTailor        from "@/components/dashboards/DashboardTailor";
+import DashboardHotel         from "@/components/dashboards/DashboardHotel";
+import DashboardGarage        from "@/components/dashboards/DashboardGarage";
+import DashboardLab           from "@/components/dashboards/DashboardLab";
+import DashboardConvention    from "@/components/dashboards/DashboardConvention";
+import DashboardSchool        from "@/components/dashboards/DashboardSchool";
+import DashboardFarm          from "@/components/dashboards/DashboardFarm";
+import DashboardHospital      from "@/components/dashboards/DashboardHospital";
+import DashboardTravel        from "@/components/dashboards/DashboardTravel";
+import DashboardGym           from "@/components/dashboards/DashboardGym";
+import DashboardPhotography   from "@/components/dashboards/DashboardPhotography";
+import DashboardLaundry       from "@/components/dashboards/DashboardLaundry";
+import DashboardPrinting      from "@/components/dashboards/DashboardPrinting";
+import DashboardRealEstate    from "@/components/dashboards/DashboardRealEstate";
+import DashboardPetShop       from "@/components/dashboards/DashboardPetShop";
+import DashboardElectronics   from "@/components/dashboards/DashboardElectronics";
 
 export default async function DashboardPage() {
   const { user, shop } = await requireShop();
@@ -185,6 +186,13 @@ export default async function DashboardPage() {
         shopName={shop.name}
         userName={user.name ?? ""}
         userGender={(user as { gender?: string }).gender ?? null}
+      />;
+    }
+
+    if (businessType === "electronics") {
+      return <DashboardElectronics
+        shopName={shop.name}
+        userName={user.name ?? ""}
       />;
     }
 

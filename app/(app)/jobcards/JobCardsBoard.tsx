@@ -6,17 +6,28 @@ import Link from "next/link";
 import {
   ClipboardList, LayoutGrid, List, Search, Plus, Loader2,
   RefreshCw, Car, Clock, AlertCircle, CheckCircle, Wrench,
-  X, ChevronRight, ChevronLeft,
+  X, ChevronRight, ChevronLeft, Smartphone,
 } from "lucide-react";
 
-const STATUS_COLUMNS = [
-  { key: "received",      label: "গাড়ি এসেছে",   color: "#0C447C", bg: "#E6F1FB" },
-  { key: "diagnosing",    label: "Diagnosis",     color: "#B45309", bg: "#FEF3C7" },
-  { key: "waiting_parts", label: "Parts অপেক্ষা", color: "#7C3AED", bg: "#EDE9FE" },
-  { key: "repairing",     label: "মেরামত",        color: "#0F6E56", bg: "#E1F5EE" },
-  { key: "quality_check", label: "Quality Check", color: "#0369A1", bg: "#E0F2FE" },
-  { key: "ready",         label: "Ready",         color: "#166534", bg: "#DCFCE7" },
+const GARAGE_STATUS_COLUMNS = [
+  { key: "received",      label: "গাড়ি এসেছে",    color: "#0C447C", bg: "#E6F1FB" },
+  { key: "diagnosing",    label: "Diagnosis",      color: "#B45309", bg: "#FEF3C7" },
+  { key: "waiting_parts", label: "Parts অপেক্ষা",  color: "#7C3AED", bg: "#EDE9FE" },
+  { key: "repairing",     label: "মেরামত",         color: "#0F6E56", bg: "#E1F5EE" },
+  { key: "quality_check", label: "Quality Check",  color: "#0369A1", bg: "#E0F2FE" },
+  { key: "ready",         label: "Ready",          color: "#166534", bg: "#DCFCE7" },
 ];
+
+const ELECTRONICS_STATUS_COLUMNS = [
+  { key: "received",      label: "ডিভাইস এসেছে",  color: "#0C447C", bg: "#E6F1FB" },
+  { key: "diagnosing",    label: "Diagnosis",      color: "#B45309", bg: "#FEF3C7" },
+  { key: "waiting_parts", label: "Parts অপেক্ষা",  color: "#7C3AED", bg: "#EDE9FE" },
+  { key: "repairing",     label: "মেরামত",         color: "#0F6E56", bg: "#E1F5EE" },
+  { key: "quality_check", label: "Quality Check",  color: "#0369A1", bg: "#E0F2FE" },
+  { key: "ready",         label: "Ready",          color: "#166534", bg: "#DCFCE7" },
+];
+
+const STATUS_COLUMNS = GARAGE_STATUS_COLUMNS;
 
 const ALL_STATUSES = [...STATUS_COLUMNS.map(s => s.key), "delivered"];
 
@@ -99,7 +110,44 @@ function timeSince(dateStr: string) {
   return `${days}d আগে`;
 }
 
-export default function JobCardsBoard() {
+const DEVICE_TYPES = [
+  { value: "smartphone",      label: "Smartphone",       icon: "📱" },
+  { value: "laptop",          label: "Laptop",            icon: "💻" },
+  { value: "tablet",          label: "Tablet",            icon: "📱" },
+  { value: "tv",              label: "TV",                icon: "📺" },
+  { value: "ac",              label: "AC",                icon: "❄️" },
+  { value: "fridge",          label: "Fridge",            icon: "🧊" },
+  { value: "washing_machine", label: "Washing Machine",   icon: "🫧" },
+  { value: "microwave",       label: "Microwave",         icon: "📦" },
+  { value: "router",          label: "Router",            icon: "📡" },
+  { value: "other",           label: "Other",             icon: "🔧" },
+];
+
+const DEVICE_ICONS: Record<string, string> = {
+  smartphone: "📱", laptop: "💻", tablet: "📱", tv: "📺", ac: "❄️",
+  fridge: "🧊", washing_machine: "🫧", microwave: "📦", router: "📡", other: "🔧",
+};
+
+const ELECTRONICS_COMPLAINT_SHORTCUTS = [
+  "ডিসপ্লে নষ্ট", "চার্জ হচ্ছে না", "পাওয়ার অন হচ্ছে না", "ক্যামেরা কাজ করছে না",
+  "স্পিকার নষ্ট", "মাইক্রোফোন সমস্যা", "ব্যাটারি দ্রুত শেষ", "WiFi সমস্যা",
+  "টাচস্ক্রিন কাজ করছে না", "বাঁকা হয়ে গেছে", "পানিতে পড়েছিল", "অন্যান্য",
+];
+
+const ELECTRONICS_SERVICES = [
+  "Display Replacement", "Battery Replacement", "Charging Port Repair",
+  "Camera Repair", "Speaker Repair", "Mic Repair", "Software Flash",
+  "IC Level Repair", "Motherboard Repair", "Data Recovery",
+  "Screen Guard", "Casing Replacement",
+];
+
+export default function JobCardsBoard({ businessType = "garage" }: { businessType?: string }) {
+  const isElectronics = businessType === "electronics";
+  const primaryColor = isElectronics ? "#3B82F6" : "#B45309";
+  const statusColumns = isElectronics ? ELECTRONICS_STATUS_COLUMNS : GARAGE_STATUS_COLUMNS;
+  const complaintShortcuts = isElectronics ? ELECTRONICS_COMPLAINT_SHORTCUTS : COMPLAINT_SHORTCUTS;
+  const defaultServices = isElectronics ? ELECTRONICS_SERVICES : DEFAULT_SERVICES;
+
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -117,15 +165,24 @@ export default function JobCardsBoard() {
   const [error, setError] = useState("");
   const [staff, setStaff] = useState<Staff[]>([]);
 
+  // Garage: vehicle search
   const [vehicleSearch, setVehicleSearch] = useState("");
   const [foundVehicle, setFoundVehicle] = useState<{ id: string; regNumber: string; brand: string; model: string; customer?: { name: string; phone: string } | null } | null>(null);
   const [searchingVehicle, setSearchingVehicle] = useState(false);
   const [showNewVehicle, setShowNewVehicle] = useState(false);
 
+  // Electronics: device search
+  const [deviceSearch, setDeviceSearch] = useState("");
+  const [foundDevice, setFoundDevice] = useState<{ id: string; type: string; brand: string; model: string; imei?: string | null; customer?: { id: string; name: string; phone: string } | null } | null>(null);
+  const [searchingDevice, setSearchingDevice] = useState(false);
+  const [showNewDevice, setShowNewDevice] = useState(false);
+
   const [form, setForm] = useState({
+    // Garage vehicle fields
     vehicleId: "",
     regNumber: "",
     vehicleType: "car",
+    // Shared device/vehicle fields
     brand: "",
     model: "",
     year: "",
@@ -133,9 +190,19 @@ export default function JobCardsBoard() {
     fuelType: "petrol",
     engineCC: "",
     mileageIn: "",
+    // Electronics device fields
+    deviceId: "",
+    deviceType: "smartphone",
+    imei: "",
+    serialNumber: "",
+    storageGB: "",
+    lockCode: "",
+    dataBackedUp: false,
+    // Customer
     customerId: "",
     customerName: "",
     customerPhone: "",
+    // Work
     complaint: "",
     selectedServices: [] as string[],
     priority: "normal",
@@ -149,7 +216,8 @@ export default function JobCardsBoard() {
     if (silent) setRefreshing(true);
     else setLoading(true);
     try {
-      let url = "/api/jobcards?";
+      const apiUrl = isElectronics ? "/api/electronics/jobcards?" : "/api/jobcards?";
+      let url = apiUrl;
       if (statusFilter) url += `status=${statusFilter}&`;
       if (filterTab === "today") url += "today=1&";
       if (search) url += `search=${encodeURIComponent(search)}&`;
@@ -160,7 +228,7 @@ export default function JobCardsBoard() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [search, statusFilter, filterTab]);
+  }, [search, statusFilter, filterTab, isElectronics]);
 
   useEffect(() => { fetchJobs(); }, [fetchJobs]);
 
@@ -200,16 +268,59 @@ export default function JobCardsBoard() {
     finally { setSearchingVehicle(false); }
   };
 
+  const searchDevice = async () => {
+    if (!deviceSearch.trim()) return;
+    setSearchingDevice(true);
+    setFoundDevice(null);
+    try {
+      const res = await fetch(`/api/devices?search=${encodeURIComponent(deviceSearch)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.length > 0) {
+          const d = data[0];
+          setFoundDevice(d);
+          setForm(f => ({
+            ...f,
+            deviceId: d.id,
+            deviceType: d.type,
+            brand: d.brand,
+            model: d.model,
+            imei: d.imei || "",
+            customerId: d.customer?.id || "",
+            customerName: d.customer?.name || "",
+            customerPhone: d.customer?.phone || "",
+          }));
+          setShowNewDevice(false);
+        } else {
+          setShowNewDevice(true);
+          setForm(f => ({ ...f, deviceId: "" }));
+        }
+      }
+    } catch {}
+    finally { setSearchingDevice(false); }
+  };
+
   const next = () => {
     setError("");
     if (step === 1) {
-      if (!form.vehicleId && (!form.regNumber || !form.brand || !form.model)) {
-        setError("রেজিস্ট্রেশন নম্বর, ব্র্যান্ড ও মডেল আবশ্যক");
-        return;
-      }
-      if (!form.vehicleId && !form.customerId && (!form.customerName || !form.customerPhone)) {
-        setError("মালিকের নাম ও ফোন নম্বর আবশ্যক");
-        return;
+      if (isElectronics) {
+        if (!form.deviceId && (!form.brand || !form.model || !form.deviceType)) {
+          setError("ডিভাইসের ধরন, ব্র্যান্ড ও মডেল আবশ্যক");
+          return;
+        }
+        if (!form.deviceId && !form.customerId && (!form.customerName || !form.customerPhone)) {
+          setError("মালিকের নাম ও ফোন নম্বর আবশ্যক");
+          return;
+        }
+      } else {
+        if (!form.vehicleId && (!form.regNumber || !form.brand || !form.model)) {
+          setError("রেজিস্ট্রেশন নম্বর, ব্র্যান্ড ও মডেল আবশ্যক");
+          return;
+        }
+        if (!form.vehicleId && !form.customerId && (!form.customerName || !form.customerPhone)) {
+          setError("মালিকের নাম ও ফোন নম্বর আবশ্যক");
+          return;
+        }
       }
     }
     if (step === 2) {
@@ -226,7 +337,8 @@ export default function JobCardsBoard() {
     setError("");
     try {
       const services = form.selectedServices.map(name => ({ serviceName: name, laborCost: 0 }));
-      const res = await fetch("/api/jobcards", {
+      const endpoint = isElectronics ? "/api/electronics/jobcards" : "/api/jobcards";
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, services }),
@@ -247,16 +359,16 @@ export default function JobCardsBoard() {
     return true;
   });
 
-  const getStatusLabel = (status: string) => STATUS_COLUMNS.find(s => s.key === status) ?? STATUS_COLUMNS[0];
+  const getStatusLabel = (status: string) => statusColumns.find(s => s.key === status) ?? statusColumns[0];
 
   return (
     <div className="p-4 md:p-6 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <ClipboardList size={20} style={{ color: S.primary }} />
+          <ClipboardList size={20} style={{ color: primaryColor }} />
           <h1 className="text-lg font-bold" style={{ color: S.text }}>জব কার্ড</h1>
-          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#FEF3C7", color: "#B45309" }}>
+          <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: isElectronics ? "#EFF6FF" : "#FEF3C7", color: primaryColor }}>
             {filteredJobs.length}
           </span>
         </div>
@@ -272,9 +384,9 @@ export default function JobCardsBoard() {
             {view === "kanban" ? <List size={14} style={{ color: S.muted }} /> : <LayoutGrid size={14} style={{ color: S.muted }} />}
           </button>
           <button
-            onClick={() => { setShowModal(true); setStep(1); setFoundVehicle(null); setShowNewVehicle(false); setVehicleSearch(""); }}
+            onClick={() => { setShowModal(true); setStep(1); setFoundVehicle(null); setShowNewVehicle(false); setVehicleSearch(""); setFoundDevice(null); setShowNewDevice(false); setDeviceSearch(""); }}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-white text-sm font-medium"
-            style={{ background: S.primary }}
+            style={{ background: primaryColor }}
           >
             <Plus size={14} />
             নতুন Job Card
@@ -291,7 +403,7 @@ export default function JobCardsBoard() {
               onClick={() => { setFilterTab(tab.key); setStatusFilter(""); }}
               className="px-3 py-1.5 rounded-md text-xs font-medium transition"
               style={{
-                background: filterTab === tab.key ? S.primary : "transparent",
+                background: filterTab === tab.key ? primaryColor : "transparent",
                 color: filterTab === tab.key ? "#fff" : S.muted,
               }}
             >
@@ -304,7 +416,7 @@ export default function JobCardsBoard() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="রেজিস্ট্রেশন / নাম খুঁজুন..."
+            placeholder={isElectronics ? "IMEI / ব্র্যান্ড / নাম খুঁজুন..." : "রেজিস্ট্রেশন / নাম খুঁজুন..."}
             className="flex-1 text-sm bg-transparent outline-none"
             style={{ color: S.text }}
           />
@@ -313,13 +425,13 @@ export default function JobCardsBoard() {
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <Loader2 className="animate-spin" style={{ color: S.primary }} size={28} />
+          <Loader2 className="animate-spin" style={{ color: primaryColor }} size={28} />
         </div>
       ) : view === "kanban" ? (
         /* ── Kanban View ── */
         <div className="overflow-x-auto -mx-4 px-4">
           <div className="flex gap-3 min-w-max pb-4">
-            {STATUS_COLUMNS.map(col => {
+            {statusColumns.map(col => {
               const colJobs = filteredJobs.filter(j => j.status === col.key);
               return (
                 <div key={col.key} className="w-64 shrink-0">
@@ -330,15 +442,20 @@ export default function JobCardsBoard() {
                   <div className="space-y-2">
                     {colJobs.map(job => {
                       const prio = PRIORITY_CONFIG[job.priority] ?? PRIORITY_CONFIG.normal;
-                      const icon = VEHICLE_ICONS[job.vehicle.type] ?? "🚗";
+                      const icon = isElectronics
+                        ? (DEVICE_ICONS[(job as any).device?.type || "other"] ?? "🔧")
+                        : (VEHICLE_ICONS[job.vehicle?.type] ?? "🚗");
+                      const displayName = isElectronics
+                        ? `${(job as any).device?.brand || ""} ${(job as any).device?.model || ""}`
+                        : job.vehicle?.regNumber;
+                      const customerName = isElectronics
+                        ? (job as any).device?.customer?.name
+                        : job.vehicle?.customer?.name;
                       return (
                         <Link key={job.id} href={`/jobcards/${job.id}`}>
                           <div
                             className="rounded-lg p-3 cursor-pointer hover:opacity-90 transition"
-                            style={{
-                              background: S.surface,
-                              border: `1.5px solid ${prio.border}`,
-                            }}
+                            style={{ background: S.surface, border: `1.5px solid ${prio.border}` }}
                           >
                             <div className="flex items-start justify-between mb-1">
                               <span className="text-xs" style={{ color: S.muted }}>{job.jobNumber}</span>
@@ -348,13 +465,13 @@ export default function JobCardsBoard() {
                             </div>
                             <div className="flex items-center gap-1.5 mb-1">
                               <span className="text-sm">{icon}</span>
-                              <span className="font-bold text-sm" style={{ color: S.text }}>{job.vehicle.regNumber}</span>
+                              <span className="font-bold text-sm" style={{ color: S.text }}>{displayName}</span>
                             </div>
                             <p className="text-xs mb-1.5 line-clamp-2" style={{ color: S.muted }}>
                               {job.complaint.slice(0, 50)}
                             </p>
                             <div className="flex items-center justify-between">
-                              <span className="text-xs" style={{ color: S.muted }}>{job.vehicle.customer?.name}</span>
+                              <span className="text-xs" style={{ color: S.muted }}>{customerName}</span>
                               <span className="text-xs" style={{ color: S.muted }}>{timeSince(job.createdAt)}</span>
                             </div>
                             {job.estimatedAmt && (
@@ -387,7 +504,15 @@ export default function JobCardsBoard() {
           {filteredJobs.map(job => {
             const prio = PRIORITY_CONFIG[job.priority] ?? PRIORITY_CONFIG.normal;
             const stCol = getStatusLabel(job.status);
-            const icon = VEHICLE_ICONS[job.vehicle.type] ?? "🚗";
+            const icon = isElectronics
+              ? (DEVICE_ICONS[(job as any).device?.type || "other"] ?? "🔧")
+              : (VEHICLE_ICONS[job.vehicle?.type] ?? "🚗");
+            const displayName = isElectronics
+              ? `${(job as any).device?.brand || ""} ${(job as any).device?.model || ""}`
+              : job.vehicle?.regNumber;
+            const subLine = isElectronics
+              ? `${(job as any).device?.customer?.name || ""} · ${(job as any).device?.brand || ""} ${(job as any).device?.model || ""}`
+              : `${job.vehicle?.customer?.name || ""} · ${job.vehicle?.brand || ""} ${job.vehicle?.model || ""}`;
             return (
               <Link key={job.id} href={`/jobcards/${job.id}`}>
                 <div
@@ -397,11 +522,11 @@ export default function JobCardsBoard() {
                   <span className="text-xl">{icon}</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm" style={{ color: S.text }}>{job.vehicle.regNumber}</span>
+                      <span className="font-bold text-sm" style={{ color: S.text }}>{displayName}</span>
                       <span className="text-xs" style={{ color: S.muted }}>{job.jobNumber}</span>
                     </div>
                     <p className="text-xs truncate" style={{ color: S.muted }}>{job.complaint}</p>
-                    <p className="text-xs" style={{ color: S.muted }}>{job.vehicle.customer?.name} · {job.vehicle.brand} {job.vehicle.model}</p>
+                    <p className="text-xs" style={{ color: S.muted }}>{subLine}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: stCol.bg, color: stCol.color }}>
@@ -433,15 +558,15 @@ export default function JobCardsBoard() {
             {/* Step indicators */}
             <div className="flex gap-1 px-4 pt-3">
               {[1, 2, 3].map(n => (
-                <div key={n} className="flex-1 h-1 rounded-full" style={{ background: step >= n ? S.primary : S.border }} />
+                <div key={n} className="flex-1 h-1 rounded-full" style={{ background: step >= n ? primaryColor : S.border }} />
               ))}
             </div>
 
             <div className="p-4 space-y-4">
               {error && <div className="text-sm p-3 rounded-lg bg-red-50 text-red-600">{error}</div>}
 
-              {/* Step 1: Vehicle */}
-              {step === 1 && (
+              {/* Step 1: Vehicle (Garage) OR Device (Electronics) */}
+              {step === 1 && !isElectronics && (
                 <div className="space-y-3">
                   <h3 className="font-semibold text-sm" style={{ color: S.text }}>গাড়ির তথ্য</h3>
 
@@ -454,12 +579,7 @@ export default function JobCardsBoard() {
                       className="flex-1 border rounded-lg px-3 py-2 text-sm outline-none"
                       style={{ borderColor: S.border, color: S.text, background: S.surface }}
                     />
-                    <button
-                      onClick={searchVehicle}
-                      disabled={searchingVehicle}
-                      className="px-3 py-2 rounded-lg text-white text-sm"
-                      style={{ background: S.primary }}
-                    >
+                    <button onClick={searchVehicle} disabled={searchingVehicle} className="px-3 py-2 rounded-lg text-white text-sm" style={{ background: primaryColor }}>
                       {searchingVehicle ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
                     </button>
                   </div>
@@ -475,12 +595,7 @@ export default function JobCardsBoard() {
                     <div className="space-y-2 p-3 rounded-lg" style={{ border: `1px dashed ${S.border}` }}>
                       <p className="text-xs font-medium" style={{ color: S.muted }}>নতুন গাড়ির তথ্য</p>
                       <div className="grid grid-cols-2 gap-2">
-                        <select
-                          value={form.vehicleType}
-                          onChange={e => setForm(f => ({ ...f, vehicleType: e.target.value }))}
-                          className="col-span-2 border rounded-lg px-3 py-2 text-sm outline-none"
-                          style={{ borderColor: S.border, color: S.text, background: S.surface }}
-                        >
+                        <select value={form.vehicleType} onChange={e => setForm(f => ({ ...f, vehicleType: e.target.value }))} className="col-span-2 border rounded-lg px-3 py-2 text-sm outline-none" style={{ borderColor: S.border, color: S.text, background: S.surface }}>
                           {VEHICLE_TYPES.map(t => <option key={t.value} value={t.value}>{t.value} {t.label}</option>)}
                         </select>
                         <input value={form.brand} onChange={e => setForm(f => ({ ...f, brand: e.target.value }))} placeholder="ব্র্যান্ড *" className="border rounded-lg px-3 py-2 text-sm outline-none" style={{ borderColor: S.border, color: S.text, background: S.surface }} />
@@ -502,6 +617,76 @@ export default function JobCardsBoard() {
                 </div>
               )}
 
+              {/* Step 1: Device (Electronics) */}
+              {step === 1 && isElectronics && (
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm" style={{ color: S.text }}>ডিভাইসের তথ্য</h3>
+
+                  <div className="flex gap-2">
+                    <input
+                      value={deviceSearch}
+                      onChange={e => setDeviceSearch(e.target.value)}
+                      onKeyDown={e => e.key === "Enter" && searchDevice()}
+                      placeholder="IMEI, সিরিয়াল বা ফোন নম্বর দিয়ে খুঁজুন"
+                      className="flex-1 border rounded-lg px-3 py-2 text-sm outline-none"
+                      style={{ borderColor: S.border, color: S.text, background: S.surface }}
+                    />
+                    <button onClick={searchDevice} disabled={searchingDevice} className="px-3 py-2 rounded-lg text-white text-sm" style={{ background: primaryColor }}>
+                      {searchingDevice ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                    </button>
+                  </div>
+                  <button onClick={() => { setShowNewDevice(true); setFoundDevice(null); setForm(f => ({ ...f, deviceId: "" })); }} className="text-xs" style={{ color: primaryColor }}>
+                    + নতুন ডিভাইস যোগ করুন
+                  </button>
+
+                  {foundDevice && (
+                    <div className="p-3 rounded-lg" style={{ background: "#EFF6FF", border: "1px solid #BFDBFE" }}>
+                      <p className="text-sm font-semibold" style={{ color: "#1E40AF" }}>✓ ডিভাইস পাওয়া গেছে</p>
+                      <p className="text-xs" style={{ color: "#1D4ED8" }}>{foundDevice.brand} {foundDevice.model} {foundDevice.imei ? `· ${foundDevice.imei.slice(-6)}` : ""} · {foundDevice.customer?.name} · {foundDevice.customer?.phone}</p>
+                    </div>
+                  )}
+
+                  {showNewDevice && !foundDevice && (
+                    <div className="space-y-2 p-3 rounded-lg" style={{ border: `1px dashed ${S.border}` }}>
+                      <p className="text-xs font-medium" style={{ color: S.muted }}>নতুন ডিভাইস</p>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {DEVICE_TYPES.map(t => (
+                          <button
+                            key={t.value}
+                            onClick={() => setForm(f => ({ ...f, deviceType: t.value }))}
+                            className="flex flex-col items-center gap-1 p-2 rounded-lg border text-xs transition"
+                            style={{
+                              borderColor: form.deviceType === t.value ? primaryColor : S.border,
+                              background: form.deviceType === t.value ? "#EFF6FF" : S.surface,
+                              color: form.deviceType === t.value ? primaryColor : S.muted,
+                            }}
+                          >
+                            <span className="text-lg">{t.icon}</span>
+                            <span className="text-[10px] leading-tight text-center">{t.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <input value={form.brand} onChange={e => setForm(f => ({ ...f, brand: e.target.value }))} placeholder="ব্র্যান্ড *" className="border rounded-lg px-3 py-2 text-sm outline-none" style={{ borderColor: S.border, color: S.text, background: S.surface }} />
+                        <input value={form.model} onChange={e => setForm(f => ({ ...f, model: e.target.value }))} placeholder="মডেল *" className="border rounded-lg px-3 py-2 text-sm outline-none" style={{ borderColor: S.border, color: S.text, background: S.surface }} />
+                        <input value={form.imei} onChange={e => setForm(f => ({ ...f, imei: e.target.value }))} placeholder="IMEI (ঐচ্ছিক)" className="border rounded-lg px-3 py-2 text-sm outline-none" style={{ borderColor: S.border, color: S.text, background: S.surface }} />
+                        <input value={form.color} onChange={e => setForm(f => ({ ...f, color: e.target.value }))} placeholder="রং (ঐচ্ছিক)" className="border rounded-lg px-3 py-2 text-sm outline-none" style={{ borderColor: S.border, color: S.text, background: S.surface }} />
+                      </div>
+                      <p className="text-xs font-medium mt-2" style={{ color: S.muted }}>মালিকের তথ্য</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <input value={form.customerName} onChange={e => setForm(f => ({ ...f, customerName: e.target.value }))} placeholder="নাম *" className="border rounded-lg px-3 py-2 text-sm outline-none" style={{ borderColor: S.border, color: S.text, background: S.surface }} />
+                        <input value={form.customerPhone} onChange={e => setForm(f => ({ ...f, customerPhone: e.target.value }))} placeholder="ফোন *" className="border rounded-lg px-3 py-2 text-sm outline-none" style={{ borderColor: S.border, color: S.text, background: S.surface }} />
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <input type="checkbox" id="dataBackedUp" checked={form.dataBackedUp} onChange={e => setForm(f => ({ ...f, dataBackedUp: e.target.checked }))} />
+                        <label htmlFor="dataBackedUp" className="text-xs" style={{ color: S.muted }}>ডেটা ব্যাকআপ নেওয়া হয়েছে</label>
+                      </div>
+                      <input value={form.lockCode} onChange={e => setForm(f => ({ ...f, lockCode: e.target.value }))} placeholder="লক কোড / পাসওয়ার্ড (ঐচ্ছিক)" className="w-full border rounded-lg px-3 py-2 text-sm outline-none" style={{ borderColor: S.border, color: S.text, background: S.surface }} />
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Step 2: Work info */}
               {step === 2 && (
                 <div className="space-y-3">
@@ -518,7 +703,7 @@ export default function JobCardsBoard() {
                       placeholder="কাস্টমার কী সমস্যার কথা বলেছেন..."
                     />
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {COMPLAINT_SHORTCUTS.map(s => (
+                      {complaintShortcuts.map(s => (
                         <button
                           key={s}
                           onClick={() => setForm(f => ({ ...f, complaint: f.complaint ? f.complaint + ", " + s : s }))}
@@ -534,7 +719,7 @@ export default function JobCardsBoard() {
                   <div>
                     <label className="text-xs mb-1 block" style={{ color: S.muted }}>সার্ভিস চেকলিস্ট</label>
                     <div className="grid grid-cols-2 gap-1">
-                      {DEFAULT_SERVICES.map(svc => (
+                      {defaultServices.map(svc => (
                         <label key={svc} className="flex items-center gap-2 text-sm cursor-pointer">
                           <input
                             type="checkbox"
@@ -573,7 +758,7 @@ export default function JobCardsBoard() {
                       </div>
                     </div>
                     <div>
-                      <label className="text-xs mb-1 block" style={{ color: S.muted }}>মেকানিক</label>
+                      <label className="text-xs mb-1 block" style={{ color: S.muted }}>{isElectronics ? "টেকনিশিয়ান" : "মেকানিক"}</label>
                       <select
                         value={form.assignedToId}
                         onChange={e => setForm(f => ({ ...f, assignedToId: e.target.value }))}

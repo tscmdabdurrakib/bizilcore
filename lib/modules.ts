@@ -69,6 +69,7 @@ import {
   Printer,
   Home,
   PawPrint,
+  Smartphone,
   type LucideIcon,
 } from "lucide-react";
 
@@ -94,7 +95,8 @@ export type BusinessType =
   | "laundry"
   | "printing"
   | "realestate"
-  | "petshop";
+  | "petshop"
+  | "electronics";
 
 export const BUSINESS_TYPES: BusinessType[] = [
   "fcommerce",
@@ -117,6 +119,7 @@ export const BUSINESS_TYPES: BusinessType[] = [
   "printing",
   "realestate",
   "petshop",
+  "electronics",
 ];
 
 export interface BusinessTypeMeta {
@@ -289,6 +292,14 @@ export const BUSINESS_TYPE_META: Record<BusinessType, BusinessTypeMeta> = {
     bgColor: "#FFF7ED",
     icon: PawPrint,
   },
+  electronics: {
+    type: "electronics",
+    label: "ইলেকট্রনিক্স রিপেয়ার",
+    description: "মোবাইল, ল্যাপটপ ও ইলেকট্রনিক্স মেরামত করি",
+    color: "#3B82F6",
+    bgColor: "#EFF6FF",
+    icon: Smartphone,
+  },
 };
 
 /* ─── Sales Channel ─────────────────────────────────────── */
@@ -421,6 +432,10 @@ const BUSINESS_MODULES: Record<BusinessType, string[]> = {
   petshop: [
     "dashboard", "pets", "appointments", "inventory",
     "customers", "hisab", "reports", "settings",
+  ],
+  electronics: [
+    "dashboard", "jobcards", "devices", "inventory",
+    "customers", "staff", "hisab", "reports", "settings",
   ],
 };
 
@@ -949,6 +964,35 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
       label: "সিস্টেম",
       items: [
         { href: "/settings",               icon: Settings,        label: "সেটিংস",                module: "settings"     },
+      ],
+    },
+  ],
+  electronics: [
+    {
+      items: [
+        { href: "/dashboard",              icon: LayoutDashboard, label: "ড্যাশবোর্ড",            module: "dashboard" },
+        { href: "/jobcards",               icon: ClipboardList,   label: "জব কার্ড",               module: "jobcards"  },
+        { href: "/devices",               icon: Smartphone,      label: "ডিভাইস তালিকা",          module: "devices"   },
+        { href: "/inventory",              icon: Package,         label: "পার্টস স্টক",             module: "inventory" },
+      ],
+    },
+    {
+      items: [
+        { href: "/customers",              icon: Users,           label: "কাস্টমার",               module: "customers" },
+        { href: "/hr",                     icon: UserCog,         label: "টেকনিশিয়ান / স্টাফ",    module: "staff"     },
+      ],
+    },
+    {
+      label: "আর্থিক",
+      items: [
+        { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",                  module: "hisab"     },
+        { href: "/electronics/reports",    icon: BarChart2,       label: "রিপোর্ট",                module: "reports"   },
+      ],
+    },
+    {
+      label: "সিস্টেম",
+      items: [
+        { href: "/settings",               icon: Settings,        label: "সেটিংস",                 module: "settings"  },
       ],
     },
   ],

@@ -15,6 +15,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     where: { id, shopId: shop.id },
     include: {
       vehicle: { include: { customer: true } },
+      device: { include: { customer: true } },
       parts: { include: { product: { select: { id: true, name: true, stockQty: true } } } },
       services: true,
     },
@@ -57,6 +58,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     },
     include: {
       vehicle: { include: { customer: true } },
+      device: { include: { customer: true } },
       parts: { include: { product: { select: { id: true, name: true, stockQty: true } } } },
       services: true,
     },
