@@ -34,7 +34,8 @@ import DashboardLaundry       from "@/components/dashboards/DashboardLaundry";
 import DashboardPrinting      from "@/components/dashboards/DashboardPrinting";
 import DashboardRealEstate    from "@/components/dashboards/DashboardRealEstate";
 import DashboardPetShop       from "@/components/dashboards/DashboardPetShop";
-import DashboardElectronics   from "@/components/dashboards/DashboardElectronics";
+import DashboardElectronics      from "@/components/dashboards/DashboardElectronics";
+import DashboardKindergarten    from "@/components/dashboards/DashboardKindergarten";
 
 export default async function DashboardPage() {
   const { user, shop } = await requireShop();
@@ -194,6 +195,10 @@ export default async function DashboardPage() {
         shopName={shop.name}
         userName={user.name ?? ""}
       />;
+    }
+
+    if (businessType === "kindergarten") {
+      return <DashboardKindergarten />;
     }
 
     if (businessType === "laundry") {

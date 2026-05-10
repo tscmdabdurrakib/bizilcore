@@ -96,7 +96,8 @@ export type BusinessType =
   | "printing"
   | "realestate"
   | "petshop"
-  | "electronics";
+  | "electronics"
+  | "kindergarten";
 
 export const BUSINESS_TYPES: BusinessType[] = [
   "fcommerce",
@@ -120,6 +121,7 @@ export const BUSINESS_TYPES: BusinessType[] = [
   "realestate",
   "petshop",
   "electronics",
+  "kindergarten",
 ];
 
 export interface BusinessTypeMeta {
@@ -300,6 +302,14 @@ export const BUSINESS_TYPE_META: Record<BusinessType, BusinessTypeMeta> = {
     bgColor: "#EFF6FF",
     icon: Smartphone,
   },
+  kindergarten: {
+    type: "kindergarten",
+    label: "কিন্ডারগার্টেন / প্লে স্কুল",
+    description: "ছোট শিশুদের পরিচর্যা ও শিক্ষা দিই",
+    color: "#F59E0B",
+    bgColor: "#FFFBEB",
+    icon: GraduationCap,
+  },
 };
 
 /* ─── Sales Channel ─────────────────────────────────────── */
@@ -436,6 +446,10 @@ const BUSINESS_MODULES: Record<BusinessType, string[]> = {
   electronics: [
     "dashboard", "jobcards", "devices", "inventory",
     "customers", "staff", "hisab", "reports", "settings",
+  ],
+  kindergarten: [
+    "dashboard", "children", "classes", "attendance",
+    "meals", "fees", "daily_report", "hisab", "reports", "settings",
   ],
 };
 
@@ -993,6 +1007,32 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
       label: "সিস্টেম",
       items: [
         { href: "/settings",               icon: Settings,        label: "সেটিংস",                 module: "settings"  },
+      ],
+    },
+  ],
+  kindergarten: [
+    {
+      items: [
+        { href: "/dashboard",              icon: LayoutDashboard, label: "ড্যাশবোর্ড",            module: "dashboard"    },
+        { href: "/children",               icon: Users,           label: "শিশু তালিকা",            module: "children"     },
+        { href: "/school/batches",         icon: BookOpen,        label: "ক্লাস / গ্রুপ",          module: "classes"      },
+        { href: "/school/attendance",      icon: CalendarCheck2,  label: "উপস্থিতি",               module: "attendance"   },
+        { href: "/meals",                  icon: ChefHat,         label: "খাবার ট্র্যাকিং",        module: "meals"        },
+        { href: "/daily-report",           icon: ClipboardPen,    label: "ডেইলি রিপোর্ট",          module: "daily_report" },
+        { href: "/school/fees",            icon: Receipt,         label: "ফি ম্যানেজমেন্ট",        module: "fees"         },
+      ],
+    },
+    {
+      label: "আর্থিক",
+      items: [
+        { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",                  module: "hisab"        },
+        { href: "/kindergarten/reports",   icon: BarChart2,       label: "রিপোর্ট",                module: "reports"      },
+      ],
+    },
+    {
+      label: "সিস্টেম",
+      items: [
+        { href: "/settings",               icon: Settings,        label: "সেটিংস",                 module: "settings"     },
       ],
     },
   ],

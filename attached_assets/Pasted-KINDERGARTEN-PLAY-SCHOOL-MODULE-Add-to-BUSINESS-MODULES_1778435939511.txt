@@ -1,0 +1,187 @@
+KINDERGARTEN / PLAY SCHOOL MODULE ===
+
+Add to BUSINESS_MODULES:
+kindergarten: ["dashboard","children","classes","attendance",
+               "meals","fees","daily_report","hisab","reports","settings"]
+
+Add to onboarding selector:
+  Name: "কিন্ডারগার্টেন / প্লে স্কুল"
+  Description: "ছোট শিশুদের পরিচর্যা ও শিক্ষা দিই"
+
+━━━ DATABASE ━━━
+
+(Reuse existing Student, Batch, FeeRecord, AttendanceRecord from School module)
+(Add kindergarten-specific models)
+
+Add to Student model (kindergarten extras):
+  section        String?   -- "Playgroup"|"Nursery"|"KG-1"|"KG-2"|"Pre-School"
+  foodAllergies  String?   -- CRITICAL: "Peanut allergy", "Lactose intolerant"
+  pickupPerson1  String?   -- "Father - Karim" (who can pick up)
+  pickupPhone1   String?
+  pickupPerson2  String?   -- backup person
+  pickupPhone2   String?
+  medicalNote    String?   -- doctor contact, conditions
+
+model MealRecord {
+  id        String   @id @default(cuid())
+  shopId    String
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id])
+  date      DateTime
+  mealType  String   -- "breakfast"|"lunch"|"snack"|"water"
+  status    String   -- "ate_all"|"ate_half"|"didnt_eat"|"brought_from_home"
+  note      String?
+  @@unique([studentId, date, mealType])
+}
+
+model DailyReport {
+  id           String   @id @default(cuid())
+  shopId       String
+  studentId    String
+  student      Student  @relation(fields: [studentId], references: [id])
+  reportDate   DateTime
+  mood         String?  -- "happy"|"sad"|"cranky"|"tired"|"energetic"
+  activities   String?  -- "drawing, singing, outdoor play"
+  ate          String?  -- summary of meals
+  napped       Boolean  @default(false)
+  napDuration  Int?     -- minutes
+  teacherNote  String?
+  sentToParent Boolean  @default(false)
+  sentAt       DateTime?
+  @@unique([studentId, reportDate])
+}
+
+━━━ KINDERGARTEN DASHBOARD (/dashboard) ━━━
+
+4 stat cards:
+  মোট শিশু: active children count
+  আজকের উপস্থিতি: present today count
+  Food Allergy সতর্কতা: count of children with food allergies
+  এই মাসের আয়: fee revenue this month
+
+Today's allergy alert banner (if any child with allergy is present today):
+  Red banner: "⚠️ আজ উপস্থিত শিশুদের মধ্যে food allergy আছে:"
+  List: child name + allergy type
+  Always visible, cannot dismiss (safety critical)
+
+Today's attendance quick summary:
+  উপস্থিত: X | অনুপস্থিত: Y | Total: Z
+
+Daily report status:
+  "আজকের [X/Y] শিশুর report পাঠানো হয়েছে"
+  "বাকি [Z] জনের report পাঠান" button
+
+━━━ CHILDREN MANAGEMENT (/children) ━━━
+
+Child list: photo/avatar, name, section badge, guardian name+phone,
+  Food allergy badge (red, if any), attendance this month %
+
+"নতুন শিশু ভর্তি করুন" → form:
+
+  শিশুর তথ্য:
+    Name*, date of birth*, gender*
+    Section* (Playgroup/Nursery/KG-1/KG-2/Pre-School)
+    Blood group, food allergies (IMPORTANT — highlight this field red)
+    Medical conditions, doctor name + phone
+    Photo upload
+
+  অভিভাবকের তথ্য:
+    Guardian 1: name*, relation* (Father/Mother/Guardian), phone*
+    Guardian 2 (backup pickup): name, relation, phone
+    Home address*
+
+  ক্লাস/ব্যাচ:
+    Assign to batch, admission date, monthly fee
+
+  "ভর্তি করুন" →
+    SMS to guardian:
+      "[Child name] কে [section] তে ভর্তি করা হয়েছে।
+       ক্লাস শুরু: [date]
+       মাসিক ফি: ৳[amount]
+       - [SchoolName]"
+
+Child profile:
+  Info card + allergy alert (if any, shown in red)
+  Pickup persons card (both persons listed)
+  Tabs: উপস্থিতি | খাবার | Daily Report | ফি
+
+━━━ ATTENDANCE (/attendance) ━━━
+
+Same as School module attendance.
+Additional: when marking absent, optional SMS to guardian:
+  "[Child name] আজ অনুপস্থিত আছে। সব ঠিক আছে তো?
+   আমাদের জানান: [shop_phone] - [SchoolName]"
+
+━━━ MEAL TRACKING (/meals) ━━━
+
+Date picker (default today) + section filter
+
+Meal type tabs: সকালের নাস্তা | দুপুরের খাবার | বিকেলের নাস্তা
+
+Student list per section:
+  Each row: child name, allergy badge (if any), 4 status buttons:
+    "সব খেয়েছে" (green) | "আধা খেয়েছে" (amber) | "খায়নি" (red) | "বাসা থেকে এনেছে" (blue)
+  Click to select status
+
+Allergy reminder: if child has allergy → show allergy note next to name
+
+"সেভ করুন" → saves all meal records for this session
+
+Meal summary report (per child, per month):
+  How many days ate well, ate half, didn't eat
+
+━━━ DAILY REPORT (/daily-report) ━━━
+
+Date picker (default today).
+One report card per present child:
+
+Report form (quick fill):
+  Child name + photo
+  Mood (emoji buttons): 😊 Happy | 😢 Sad | 😤 Cranky | 😴 Tired | ⚡ Energetic
+  Activities today (chips — multi-select):
+    Drawing | Singing | Dancing | Outdoor Play | Story Time | Craft | Nap
+  Ate well toggle (quick)
+  Nap: toggle + duration (if yes)
+  Teacher note (optional textarea)
+
+"সবার রিপোর্ট পাঠান" bulk button:
+  Preview: X guardians will get SMS
+  SMS per child:
+    "প্রিয় [guardian_name],
+     আজ [child_name] এর দিন:
+     মুড: [mood_emoji] | খাবার: [ate_status]
+     কার্যক্রম: [activities]
+     শিক্ষকের কথা: [note]
+     - [SchoolName]"
+  "পাঠান"
+
+Children without report: highlighted in list to remind teacher
+
+━━━ FEE MANAGEMENT (/fees) ━━━
+
+Same as School module fee system.
+Additional: Admission fee collection at enrollment.
+
+━━━ REPORTS (/reports) ━━━
+
+Kindergarten-specific:
+  Daily attendance trend (line chart - 30 days)
+  Meal consumption rate (how often children eat well)
+  Section-wise attendance %
+  Fee collection status (current month)
+
+━━━ SETTINGS — KINDERGARTEN CONFIG ━━━
+
+School hours: Opening + Closing time
+Meal times: Breakfast / Lunch / Snack time settings
+Auto absent SMS (toggle)
+Daily report SMS (toggle + send time)
+Section list (add/remove custom sections)
+
+All Bangla UI. Same design system.
+Food allergy info ALWAYS displayed in red — safety critical.
+Pickup person info prominently displayed on child profile.
+
+
+
+

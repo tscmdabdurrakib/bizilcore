@@ -258,6 +258,8 @@ model Shop {
   feeRecords            FeeRecord[]
   attendanceRecords     AttendanceRecord[]
   examResults           ExamResult[]
+  mealRecords           MealRecord[]
+  dailyReports          DailyReport[]
   schoolRegPrefix       String?  @default("STU")
   schoolReceiptPrefix   String?  @default("REC")
   schoolFeeDueDay       Int      @default(10)
@@ -266,6 +268,16 @@ model Shop {
   schoolAbsentSms       Boolean  @default(false)
   schoolInstitutionType String?  @default("coaching")
   schoolAcademicYear    String?  @default("January - December")
+  // Kindergarten extras
+  kgOpenTime            String?  @default("08:00")
+  kgCloseTime           String?  @default("14:00")
+  kgBreakfastTime       String?  @default("09:00")
+  kgLunchTime           String?  @default("12:00")
+  kgSnackTime           String?  @default("13:00")
+  kgAbsentSms           Boolean  @default(false)
+  kgDailyReportSms      Boolean  @default(false)
+  kgReportSendTime      String?  @default("15:00")
+  kgSections            String[] @default(["Playgroup","Nursery","KG-1","KG-2","Pre-School"])
   lands                 Land[]
   cropCycles            CropCycle[]
   farmActivityLogs      FarmActivityLog[]
@@ -2286,6 +2298,47 @@ model EventPayment {
   @@index([eventId])
 }
 
+// ─── Kindergarten / Play School Module ───────────────────────────────────
+
+model MealRecord {
+  id        String   @id @default(cuid())
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id])
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id])
+  date      DateTime
+  mealType  String
+  status    String
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@unique([studentId, date, mealType])
+  @@index([shopId])
+  @@index([studentId])
+}
+
+model DailyReport {
+  id           String    @id @default(cuid())
+  shopId       String
+  shop         Shop      @relation(fields: [shopId], references: [id])
+  studentId    String
+  student      Student   @relation(fields: [studentId], references: [id])
+  reportDate   DateTime
+  mood         String?
+  activities   String[]
+  ate          String?
+  napped       Boolean   @default(false)
+  napDuration  Int?
+  teacherNote  String?
+  sentToParent Boolean   @default(false)
+  sentAt       DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@unique([studentId, reportDate])
+  @@index([shopId])
+  @@index([studentId])
+}
+
 // ─── School / Coaching Center Module ─────────────────────────────────────
 
 model Student {
@@ -2312,8 +2365,18 @@ model Student {
   fees             FeeRecord[]
   attendance       AttendanceRecord[]
   examResults      ExamResult[]
+  mealRecords      MealRecord[]
+  dailyReports     DailyReport[]
   notes            String?
   createdAt        DateTime           @default(now())
+  // Kindergarten extras
+  section          String?
+  foodAllergies    String?
+  pickupPerson1    String?
+  pickupPhone1     String?
+  pickupPerson2    String?
+  pickupPhone2     String?
+  medicalNote      String?
 
   @@index([shopId])
   @@index([batchId])
