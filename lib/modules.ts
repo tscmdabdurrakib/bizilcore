@@ -71,6 +71,7 @@ import {
   PawPrint,
   Smartphone,
   Fuel,
+  Scale,
   type LucideIcon,
 } from "lucide-react";
 
@@ -99,7 +100,8 @@ export type BusinessType =
   | "petshop"
   | "electronics"
   | "kindergarten"
-  | "carrental";
+  | "carrental"
+  | "legal";
 
 export const BUSINESS_TYPES: BusinessType[] = [
   "fcommerce",
@@ -125,6 +127,7 @@ export const BUSINESS_TYPES: BusinessType[] = [
   "electronics",
   "kindergarten",
   "carrental",
+  "legal",
 ];
 
 export interface BusinessTypeMeta {
@@ -321,6 +324,14 @@ export const BUSINESS_TYPE_META: Record<BusinessType, BusinessTypeMeta> = {
     bgColor: "#FEF2F2",
     icon: Car,
   },
+  legal: {
+    type: "legal",
+    label: "আইনি সেবা / চেম্বার",
+    description: "আইনি পরামর্শ ও মামলা পরিচালনা করি",
+    color: "#1D4ED8",
+    bgColor: "#EFF6FF",
+    icon: Scale,
+  },
 };
 
 /* ─── Sales Channel ─────────────────────────────────────── */
@@ -465,6 +476,10 @@ const BUSINESS_MODULES: Record<BusinessType, string[]> = {
   carrental: [
     "dashboard", "fleet", "bookings", "drivers",
     "fuel", "customers", "hisab", "reports", "settings",
+  ],
+  legal: [
+    "dashboard", "cases", "clients", "hearings",
+    "documents", "fees", "hisab", "reports", "settings",
   ],
 };
 
@@ -1067,6 +1082,29 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
       items: [
         { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",                  module: "hisab"     },
         { href: "/carrental/reports",      icon: BarChart2,       label: "রিপোর্ট",                module: "reports"   },
+      ],
+    },
+    {
+      label: "সিস্টেম",
+      items: [
+        { href: "/settings",               icon: Settings,        label: "সেটিংস",                 module: "settings"  },
+      ],
+    },
+  ],
+  legal: [
+    {
+      items: [
+        { href: "/dashboard",              icon: LayoutDashboard, label: "ড্যাশবোর্ড",             module: "dashboard" },
+        { href: "/cases",                  icon: Scale,           label: "মামলা",                  module: "cases"     },
+        { href: "/hearings",               icon: Calendar,        label: "শুনানি সূচি",             module: "hearings"  },
+        { href: "/customers",             icon: Users,           label: "ক্লায়েন্ট",              module: "clients"   },
+      ],
+    },
+    {
+      label: "আর্থিক",
+      items: [
+        { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",                  module: "hisab"     },
+        { href: "/legal/reports",          icon: BarChart2,       label: "রিপোর্ট",                module: "reports"   },
       ],
     },
     {

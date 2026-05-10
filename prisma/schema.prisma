@@ -381,6 +381,14 @@ model Shop {
   carMinAdvancePct        Int      @default(30)
   carAutoSms              Boolean  @default(true)
   carServiceDays          Int      @default(30)
+
+  // Legal / Lawyer Chamber module
+  legalCases              LegalCase[]
+  legalCasePrefix         String?  @default("CASE")
+  legalBarCouncilNo       String?
+  legalHearingReminderDays Int     @default(2)
+  legalAutoSmsClient      Boolean  @default(true)
+  legalChamberName        String?
 }
 
 model Subscription {
@@ -540,6 +548,7 @@ model Customer {
   pets          Pet[]
   devices       Device[]
   rentalBookings RentalBooking[]
+  legalCases    LegalCase[]
   isDemoData    Boolean        @default(false)
   createdAt     DateTime       @default(now())
 
@@ -3696,5 +3705,93 @@ model RentalPayment {
   paidAt      DateTime      @default(now())
 
   @@index([bookingId])
+  @@index([shopId])
+}
+
+// ─── Legal / Lawyer Chamber Module ──────────────────────────────────────────
+
+model LegalCase {
+  id             String           @id @default(cuid())
+  shopId         String
+  shop           Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  caseNumber     String           @unique
+  clientId       String
+  client         Customer         @relation(fields: [clientId], references: [id])
+  title          String
+  caseType       String
+  court          String
+  caseRef        String?
+  filingDate     DateTime?
+  opposingParty  String?
+  opposingLawyer String?
+  assignedTo     String?
+  status         String           @default("active")
+  verdict        String?
+  verdictDate    DateTime?
+  totalFee       Float            @default(0)
+  retainerFee    Float            @default(0)
+  paidFee        Float            @default(0)
+  dueFee         Float            @default(0)
+  nextHearing    DateTime?
+  hearings       CaseHearing[]
+  documents      CaseDocument[]
+  payments       CaseFeePayment[]
+  notes          String?
+  createdAt      DateTime         @default(now())
+
+  @@index([shopId])
+  @@index([shopId, status])
+  @@index([clientId])
+}
+
+model CaseHearing {
+  id            String    @id @default(cuid())
+  shopId        String
+  caseId        String
+  case          LegalCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  hearingDate   DateTime
+  court         String?
+  judgeRef      String?
+  purpose       String?
+  outcome       String?
+  attended      Boolean   @default(false)
+  nextDate      DateTime?
+  appearanceFee Float     @default(0)
+  note          String?
+  createdAt     DateTime  @default(now())
+
+  @@index([caseId])
+  @@index([shopId])
+  @@index([hearingDate])
+}
+
+model CaseDocument {
+  id          String    @id @default(cuid())
+  shopId      String
+  caseId      String
+  case        LegalCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  docName     String
+  docType     String
+  fileUrl     String?
+  submittedAt DateTime?
+  note        String?
+  addedAt     DateTime  @default(now())
+
+  @@index([caseId])
+  @@index([shopId])
+}
+
+model CaseFeePayment {
+  id      String    @id @default(cuid())
+  shopId  String
+  caseId  String
+  case    LegalCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  amount  Float
+  feeType String
+  method  String?
+  note    String?
+  paidAt  DateTime  @default(now())
+
+  @@index([caseId])
   @@index([shopId])
 }
