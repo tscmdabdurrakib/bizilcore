@@ -1,0 +1,245 @@
+CAR RENTAL / VEHICLE HIRE MODULE ===
+
+Add to BUSINESS_MODULES:
+carrental: ["dashboard","fleet","bookings","drivers",
+            "fuel","customers","hisab","reports","settings"]
+
+Add to onboarding selector:
+  Name: "কার রেন্টাল / গাড়ি ভাড়া"
+  Description: "গাড়ি ভাড়া দিই ও ট্রিপ ম্যানেজ করি"
+
+━━━ DATABASE ━━━
+
+model RentalVehicle {
+  id           String          @id @default(cuid())
+  shopId       String
+  regNumber    String          @unique
+  type         String          -- "car"|"microbus"|"bus"|"motorcycle"|"cng"|"pickup"
+  brand        String
+  model        String
+  year         Int?
+  color        String
+  seats        Int
+  fuelType     String          -- "petrol"|"diesel"|"cng"|"hybrid"
+  acAvailable  Boolean         @default(false)
+  dailyRate    Float
+  halfDayRate  Float?
+  hourlyRate   Float?
+  monthlyRate  Float?
+  defaultDriverId String?
+  defaultDriver   RentalDriver? @relation(fields: [defaultDriverId], references: [id])
+  status       String          @default("available")
+  -- "available"|"on_trip"|"maintenance"|"retired"
+  nextService  DateTime?
+  imageUrl     String?
+  notes        String?
+  bookings     RentalBooking[]
+  fuelLogs     FuelLog[]
+}
+
+model RentalDriver {
+  id           String          @id @default(cuid())
+  shopId       String
+  name         String
+  phone        String
+  licenseNo    String?
+  licenseType  String?         -- "Light"|"Heavy"|"Professional"
+  licenseExp   DateTime?
+  nid          String?
+  address      String?
+  salary       Float?
+  salaryType   String?         @default("monthly") -- "monthly"|"per_trip"
+  perTripRate  Float?
+  status       String          @default("available")
+  -- "available"|"on_trip"|"off"|"terminated"
+  photoUrl     String?
+  vehicles     RentalVehicle[]
+  bookings     RentalBooking[]
+}
+
+model RentalBooking {
+  id             String        @id @default(cuid())
+  shopId         String
+  bookingNumber  String        @unique  -- "CAR-2026-001"
+  vehicleId      String
+  vehicle        RentalVehicle @relation(fields: [vehicleId], references: [id])
+  customerId     String?
+  customer       Customer?     @relation(fields: [customerId], references: [id])
+  driverId       String?
+  driver         RentalDriver? @relation(fields: [driverId], references: [id])
+  clientName     String
+  clientPhone    String
+  clientNID      String?
+  purpose        String?       -- "wedding"|"airport"|"tour"|"corporate"|"other"
+  startDateTime  DateTime
+  endDateTime    DateTime
+  pickupLocation String?
+  dropLocation   String?
+  startKm        Int?
+  endKm          Int?
+  rateType       String        -- "hourly"|"half_day"|"daily"|"monthly"
+  units          Float         -- hours / days / months
+  ratePerUnit    Float
+  extraKmCharge  Float         @default(0)
+  extraHrCharge  Float         @default(0)
+  totalAmount    Float
+  advancePaid    Float         @default(0)
+  dueAmount      Float
+  status         String        @default("confirmed")
+  -- "confirmed"|"on_trip"|"completed"|"cancelled"
+  notes          String?
+  payments       RentalPayment[]
+  createdAt      DateTime      @default(now())
+}
+
+model FuelLog {
+  id        String        @id @default(cuid())
+  shopId    String
+  vehicleId String
+  vehicle   RentalVehicle @relation(fields: [vehicleId], references: [id])
+  liters    Float
+  costPerL  Float?
+  totalCost Float
+  kmAtFill  Int?
+  station   String?
+  fuelDate  DateTime      @default(now())
+  note      String?
+}
+
+model RentalPayment {
+  id        String        @id @default(cuid())
+  bookingId String
+  booking   RentalBooking @relation(fields: [bookingId], references: [id])
+  amount    Float
+  method    String
+  paidAt    DateTime      @default(now())
+}
+
+━━━ RENTAL DASHBOARD (/dashboard) ━━━
+
+Fleet status grid (like hotel room map):
+  Each vehicle card: reg number, type icon, brand+model, status color
+  🟢 Available | 🔵 On Trip (return time shown) | 🔴 Maintenance
+
+4 stat cards:
+  Available গাড়ি: X / total
+  আজকের ট্রিপ: active bookings today
+  আজকের আয়: today's revenue
+  Overdue return: trips past endDateTime
+
+Overdue alerts:
+  Bookings where endDateTime < now AND status=on_trip
+  Client name + vehicle + due time + phone
+  "Call করুন" button (tel: link)
+
+━━━ FLEET MANAGEMENT (/fleet) ━━━
+
+Vehicle cards grid: photo, reg, type, brand+model, seats, AC badge,
+  Daily rate, status badge, next service date
+
+"গাড়ি যোগ করুন" → form:
+  Reg number*, type*, brand*, model*, year, color*
+  Seats*, fuel type*, AC available toggle
+  Rates: Daily*, Half-day, Hourly, Monthly
+  Default driver (optional, assign from driver list)
+  Next service date
+  Image upload, notes
+  "সেভ করুন"
+
+Vehicle detail:
+  All info + edit
+  Booking history (last 10)
+  Fuel consumption chart (km per liter)
+  Total revenue earned
+
+━━━ BOOKING MANAGEMENT (/bookings) ━━━
+
+Calendar view (month): bookings as colored bars per vehicle
+  Different color per vehicle type
+  Click date → bookings on that date
+
+List view filter: সব | আজকের | On Trip | Upcoming | Completed
+
+"নতুন বুকিং" → 3-step form:
+
+  Step 1 — তারিখ ও গাড়ি:
+    Start date + time*, end date + time*
+    → Auto-show available vehicles for this period
+      (Unavailable vehicles grayed with "বুকড" label)
+    Rate type: Hourly / Half Day / Full Day / Monthly
+    → Auto-calculate units + total based on selection
+    Select vehicle*
+    Assign driver (optional — from driver list)
+
+  Step 2 — গ্রাহকের তথ্য:
+    Client: search existing or add new (name*, phone*, NID optional)
+    Pickup location, drop location (optional)
+    Purpose (Wedding/Airport/Tour/Corporate/Other)
+    Notes
+
+  Step 3 — পেমেন্ট:
+    Rate breakdown: X units × ৳Y = ৳Z
+    Extra km limit (optional: e.g. 100km/day, ৳5/extra km)
+    Advance paid, due, method
+    "বুকিং নিশ্চিত করুন" →
+      Booking number: CAR-YYYY-NNN
+      Vehicle status → "on_trip" at startDateTime (auto via cron)
+      SMS to client:
+        "আপনার গাড়ি বুকিং নিশ্চিত হয়েছে।
+         বুকিং নং: [CAR-number]
+         গাড়ি: [brand model] ([reg])
+         Driver: [name] [phone]
+         শুরু: [datetime]
+         মোট: ৳[total] | অগ্রিম: ৳[advance]
+         - [CompanyName]"
+
+Booking detail:
+  Full info + status update
+  "ট্রিপ শুরু" button: enter start km
+  "ট্রিপ শেষ" button: enter end km
+    → Auto-calculate total km
+    → If over limit: calculate extra km charge
+    → Show final bill
+    → Collect remaining payment
+    → Status = completed, vehicle → available
+
+━━━ DRIVER MANAGEMENT (/drivers) ━━━
+
+Driver list: photo, name, phone, license type, current status badge
+"Driver যোগ করুন" → form with all fields
+Driver detail: assigned vehicle, booking history, salary info
+
+Driver duty log:
+  Each completed trip logged: date, vehicle, client, km, hours, trip fee
+  Monthly trip count + earnings (if per-trip salary)
+
+━━━ FUEL LOG (/fuel) ━━━
+
+Vehicle selector → fuel log history
+"জ্বালানি লগ করুন" → form:
+  Vehicle*, liters*, cost*, km at fill, station name (optional), date
+Average fuel consumption per vehicle (km per liter)
+Monthly fuel cost by vehicle
+
+━━━ REPORTS (/reports) ━━━
+
+Rental-specific:
+  Monthly booking count + revenue (bar chart)
+  Vehicle utilization % (days rented vs available)
+  Most booked vehicle
+  Fuel cost vs revenue per vehicle
+  Driver performance (trips completed)
+
+━━━ SETTINGS — RENTAL CONFIG ━━━
+
+Default extra km rate (৳ per km)
+Default extra hour rate
+Advance required % (e.g. 30%)
+Auto SMS on booking confirmation (toggle)
+Booking number prefix (default: "CAR")
+Maintenance reminder days before service
+
+All Bangla UI. Same design system.
+Vehicle availability check is critical — always prevent double-booking.
+
+

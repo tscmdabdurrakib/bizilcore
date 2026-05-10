@@ -70,6 +70,7 @@ import {
   Home,
   PawPrint,
   Smartphone,
+  Fuel,
   type LucideIcon,
 } from "lucide-react";
 
@@ -97,7 +98,8 @@ export type BusinessType =
   | "realestate"
   | "petshop"
   | "electronics"
-  | "kindergarten";
+  | "kindergarten"
+  | "carrental";
 
 export const BUSINESS_TYPES: BusinessType[] = [
   "fcommerce",
@@ -122,6 +124,7 @@ export const BUSINESS_TYPES: BusinessType[] = [
   "petshop",
   "electronics",
   "kindergarten",
+  "carrental",
 ];
 
 export interface BusinessTypeMeta {
@@ -310,6 +313,14 @@ export const BUSINESS_TYPE_META: Record<BusinessType, BusinessTypeMeta> = {
     bgColor: "#FFFBEB",
     icon: GraduationCap,
   },
+  carrental: {
+    type: "carrental",
+    label: "কার রেন্টাল / গাড়ি ভাড়া",
+    description: "গাড়ি ভাড়া দিই ও ট্রিপ ম্যানেজ করি",
+    color: "#DC2626",
+    bgColor: "#FEF2F2",
+    icon: Car,
+  },
 };
 
 /* ─── Sales Channel ─────────────────────────────────────── */
@@ -450,6 +461,10 @@ const BUSINESS_MODULES: Record<BusinessType, string[]> = {
   kindergarten: [
     "dashboard", "children", "classes", "attendance",
     "meals", "fees", "daily_report", "hisab", "reports", "settings",
+  ],
+  carrental: [
+    "dashboard", "fleet", "bookings", "drivers",
+    "fuel", "customers", "hisab", "reports", "settings",
   ],
 };
 
@@ -1033,6 +1048,31 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
       label: "সিস্টেম",
       items: [
         { href: "/settings",               icon: Settings,        label: "সেটিংস",                 module: "settings"     },
+      ],
+    },
+  ],
+  carrental: [
+    {
+      items: [
+        { href: "/dashboard",              icon: LayoutDashboard, label: "ড্যাশবোর্ড",             module: "dashboard" },
+        { href: "/carrental/fleet",        icon: Car,             label: "ফ্লিট / গাড়ি",           module: "fleet"     },
+        { href: "/carrental/bookings",     icon: CalendarRange,   label: "বুকিং",                  module: "bookings"  },
+        { href: "/carrental/drivers",      icon: UserCog,         label: "ড্রাইভার",               module: "drivers"   },
+        { href: "/carrental/fuel",         icon: Fuel,            label: "জ্বালানি লগ",             module: "fuel"      },
+        { href: "/customers",             icon: Users,           label: "কাস্টমার",               module: "customers" },
+      ],
+    },
+    {
+      label: "আর্থিক",
+      items: [
+        { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",                  module: "hisab"     },
+        { href: "/carrental/reports",      icon: BarChart2,       label: "রিপোর্ট",                module: "reports"   },
+      ],
+    },
+    {
+      label: "সিস্টেম",
+      items: [
+        { href: "/settings",               icon: Settings,        label: "সেটিংস",                 module: "settings"  },
       ],
     },
   ],

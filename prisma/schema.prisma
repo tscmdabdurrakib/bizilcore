@@ -368,6 +368,19 @@ model Shop {
   electronicsJobPrefix    String?  @default("ELC")
   electronicsAutoSmsReady Boolean  @default(true)
   electronicsWarrantyDays Int      @default(30)
+
+  // Car Rental module
+  rentalVehicles          RentalVehicle[]
+  rentalDrivers           RentalDriver[]
+  rentalBookings          RentalBooking[]
+  fuelLogs                FuelLog[]
+  rentalPayments          RentalPayment[]
+  carBookingPrefix        String?  @default("CAR")
+  carExtraKmRate          Float    @default(5)
+  carExtraHrRate          Float    @default(100)
+  carMinAdvancePct        Int      @default(30)
+  carAutoSms              Boolean  @default(true)
+  carServiceDays          Int      @default(30)
 }
 
 model Subscription {
@@ -526,6 +539,7 @@ model Customer {
   printOrders   PrintOrder[]
   pets          Pet[]
   devices       Device[]
+  rentalBookings RentalBooking[]
   isDemoData    Boolean        @default(false)
   createdAt     DateTime       @default(now())
 
@@ -3552,4 +3566,135 @@ model PetAppointment {
   @@index([shopId])
   @@index([shopId, date])
   @@index([petId])
+}
+
+// ─── Car Rental / Vehicle Hire Module ───────────────────────
+
+model RentalVehicle {
+  id              String          @id @default(cuid())
+  shopId          String
+  shop            Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  regNumber       String
+  type            String          @default("car")
+  brand           String
+  model           String
+  year            Int?
+  color           String
+  seats           Int             @default(4)
+  fuelType        String          @default("petrol")
+  acAvailable     Boolean         @default(false)
+  dailyRate       Float
+  halfDayRate     Float?
+  hourlyRate      Float?
+  monthlyRate     Float?
+  defaultDriverId String?
+  defaultDriver   RentalDriver?   @relation("DriverDefaultVehicles", fields: [defaultDriverId], references: [id])
+  status          String          @default("available")
+  nextService     DateTime?
+  imageUrl        String?
+  notes           String?
+  bookings        RentalBooking[]
+  fuelLogs        FuelLog[]
+  createdAt       DateTime        @default(now())
+
+  @@unique([shopId, regNumber])
+  @@index([shopId])
+  @@index([shopId, status])
+}
+
+model RentalDriver {
+  id              String          @id @default(cuid())
+  shopId          String
+  shop            Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name            String
+  phone           String
+  licenseNo       String?
+  licenseType     String?
+  licenseExp      DateTime?
+  nid             String?
+  address         String?
+  salary          Float?
+  salaryType      String?         @default("monthly")
+  perTripRate     Float?
+  status          String          @default("available")
+  photoUrl        String?
+  defaultVehicles RentalVehicle[] @relation("DriverDefaultVehicles")
+  bookings        RentalBooking[]
+  createdAt       DateTime        @default(now())
+
+  @@index([shopId])
+  @@index([shopId, status])
+}
+
+model RentalBooking {
+  id              String          @id @default(cuid())
+  shopId          String
+  shop            Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  bookingNumber   String          @unique
+  vehicleId       String
+  vehicle         RentalVehicle   @relation(fields: [vehicleId], references: [id])
+  customerId      String?
+  customer        Customer?       @relation(fields: [customerId], references: [id])
+  driverId        String?
+  driver          RentalDriver?   @relation(fields: [driverId], references: [id])
+  clientName      String
+  clientPhone     String
+  clientNID       String?
+  purpose         String?
+  startDateTime   DateTime
+  endDateTime     DateTime
+  pickupLocation  String?
+  dropLocation    String?
+  startKm         Int?
+  endKm           Int?
+  rateType        String          @default("daily")
+  units           Float           @default(1)
+  ratePerUnit     Float
+  extraKmCharge   Float           @default(0)
+  extraHrCharge   Float           @default(0)
+  totalAmount     Float
+  advancePaid     Float           @default(0)
+  dueAmount       Float           @default(0)
+  status          String          @default("confirmed")
+  notes           String?
+  payments        RentalPayment[]
+  createdAt       DateTime        @default(now())
+
+  @@index([shopId])
+  @@index([shopId, status])
+  @@index([vehicleId])
+}
+
+model FuelLog {
+  id          String        @id @default(cuid())
+  shopId      String
+  shop        Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  vehicleId   String
+  vehicle     RentalVehicle @relation(fields: [vehicleId], references: [id])
+  liters      Float
+  costPerL    Float?
+  totalCost   Float
+  kmAtFill    Int?
+  station     String?
+  fuelDate    DateTime      @default(now())
+  note        String?
+  createdAt   DateTime      @default(now())
+
+  @@index([shopId])
+  @@index([vehicleId])
+}
+
+model RentalPayment {
+  id          String        @id @default(cuid())
+  shopId      String
+  shop        Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  bookingId   String
+  booking     RentalBooking @relation(fields: [bookingId], references: [id])
+  amount      Float
+  method      String        @default("cash")
+  note        String?
+  paidAt      DateTime      @default(now())
+
+  @@index([bookingId])
+  @@index([shopId])
 }
