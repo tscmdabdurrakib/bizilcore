@@ -1,0 +1,255 @@
+IT / FREELANCE SERVICE MODULE ===
+
+Add to BUSINESS_MODULES:
+freelance: ["dashboard","projects","clients","invoices",
+            "timelog","hisab","reports","settings"]
+
+Add to onboarding selector:
+  Name: "IT / ফ্রিল্যান্স সার্ভিস"
+  Description: "ওয়েবসাইট, ডিজাইন বা IT সেবা দিই"
+
+━━━ DATABASE ━━━
+
+model FreelanceProject {
+  id             String              @id @default(cuid())
+  shopId         String
+  projectNumber  String              @unique  -- "PRJ-2026-001"
+  clientId       String
+  client         Customer            @relation(fields: [clientId], references: [id])
+  title          String              -- "E-commerce Website for XYZ"
+  type           String
+  -- "web_development"|"app_development"|"graphic_design"
+  -- |"digital_marketing"|"content_writing"|"seo"|"data_entry"|"other"
+  description    String?
+  platform       String?             -- "Fiverr", "Upwork", "Direct"
+  startDate      DateTime?
+  deadline       DateTime?
+  totalAmount    Float
+  currency       String              @default("BDT")  -- "BDT"|"USD"|"EUR"|"GBP"
+  exchangeRate   Float               @default(1)
+  totalAmountBDT Float               -- auto-calculated
+  advancePaid    Float               @default(0)
+  dueAmount      Float
+  status         String              @default("in_progress")
+  -- "proposal"|"in_progress"|"review"|"revision"|"completed"|"on_hold"|"cancelled"
+  milestones     ProjectMilestone[]
+  timeLogs       TimeLog[]
+  invoices       FreelanceInvoice[]
+  notes          String?
+  createdAt      DateTime            @default(now())
+}
+
+model ProjectMilestone {
+  id          String           @id @default(cuid())
+  projectId   String
+  project     FreelanceProject @relation(fields: [projectId], references: [id])
+  title       String           -- "Design Mockup Approval"
+  description String?
+  amount      Float
+  currency    String           @default("BDT")
+  dueDate     DateTime?
+  status      String           @default("pending")
+  -- "pending"|"in_progress"|"submitted"|"revision"|"approved"|"paid"
+  completedAt DateTime?
+  note        String?
+}
+
+model TimeLog {
+  id          String           @id @default(cuid())
+  shopId      String
+  projectId   String
+  project     FreelanceProject @relation(fields: [projectId], references: [id])
+  task        String           -- "Header design", "API integration"
+  hours       Float
+  hourlyRate  Float?           -- for time-based billing
+  billable    Boolean          @default(true)
+  logDate     DateTime         @default(now())
+  note        String?
+}
+
+model FreelanceInvoice {
+  id            String            @id @default(cuid())
+  shopId        String
+  invoiceNumber String            @unique  -- "INV-2026-001"
+  projectId     String?
+  project       FreelanceProject? @relation(fields: [projectId], references: [id])
+  clientId      String
+  client        Customer          @relation(fields: [clientId], references: [id])
+  items         Json
+  -- [{description, quantity, rate, total}]
+  subtotal      Float
+  discountAmt   Float             @default(0)
+  taxRate       Float             @default(0)
+  taxAmount     Float             @default(0)
+  totalAmount   Float
+  currency      String            @default("BDT")
+  dueDate       DateTime?
+  status        String            @default("draft")
+  -- "draft"|"sent"|"viewed"|"paid"|"overdue"|"cancelled"
+  paidAt        DateTime?
+  paymentNote   String?
+  createdAt     DateTime          @default(now())
+}
+
+━━━ FREELANCE DASHBOARD (/dashboard) ━━━
+
+4 stat cards:
+  সক্রিয় প্রজেক্ট: in_progress count
+  এই মাসের আয় (৳): BDT revenue this month
+  Pending Invoice: unpaid invoice total
+  Overdue: projects past deadline
+
+Project pipeline (Kanban mini-view):
+  Proposal | In Progress | Review | Completed
+  Count per stage
+
+Overdue alerts:
+  Projects where deadline < today AND status != completed
+
+Currency summary:
+  If has USD/other currency projects:
+    "USD income this month: $X (≈৳Y)"
+
+━━━ PROJECT MANAGEMENT (/projects) ━━━
+
+Kanban board view (drag to change status):
+  Proposal → In Progress → Review → Revision → Completed
+
+Each project card:
+  Title, client name, type badge, currency + amount,
+  Deadline (red if overdue), progress bar (milestones done/total)
+
+List view: filter by status, type, client
+
+"নতুন প্রজেক্ট" → form:
+
+  প্রজেক্ট তথ্য:
+    Title*, type* (dropdown)
+    Client* (search existing or add: name*, email, phone, company)
+    Platform: Direct Client / Fiverr / Upwork / Freelancer / Other
+    Description (textarea)
+    Start date, deadline
+
+  মূল্য ও Currency:
+    Currency* (BDT / USD / EUR / GBP)
+    Total amount*
+    If not BDT: exchange rate input (৳ per 1 USD etc.)
+    → BDT equivalent auto-shown
+    Advance paid, due
+
+  "প্রজেক্ট তৈরি করুন" →
+    Project number: PRJ-YYYY-NNN
+
+Project Detail page (/projects/[id]):
+  Header: title + status dropdown + deadline badge
+  
+  Overview tab:
+    Project info card
+    Financial summary: Total, Paid, Due, Profit
+    Time logged: X hours (if time tracked)
+  
+  Milestones tab:
+    Milestone list with status pipeline per item:
+      Pending → In Progress → Submitted → Revision → Approved → Paid
+    "+ Milestone যোগ করুন" → title, amount, due date, description
+    "Mark as Submitted" → SMS/notification to client (optional)
+    "Mark as Paid" → adds to received payments
+    
+    Milestone progress bar: X/Y milestones completed
+
+  Time Log tab:
+    Log list: task, hours, date, billable badge
+    Timer button: "⏱ Start" → starts timer, shows running time
+      "Stop" → enters hours automatically
+    Or manual entry: task*, hours*, date, billable toggle
+    Total hours: X hrs (Billable: Y hrs | Non-billable: Z hrs)
+    If hourly rate set: "Billable amount: ৳X"
+
+  Invoices tab:
+    Invoice list for this project
+    "Invoice তৈরি করুন" quick button
+
+  Notes tab:
+    Timeline of notes (meeting notes, client feedback, decisions)
+
+━━━ INVOICE SYSTEM (/invoices) ━━━
+
+Invoice list: number, client, project, amount, currency, due date, status badge
+
+"নতুন Invoice তৈরি করুন" → form:
+  Link to project (optional)
+  Client* (pre-filled if from project)
+  Currency (pre-filled from project)
+  
+  Line items (dynamic rows):
+    Description | Quantity | Rate | Total (auto)
+    Example: "Website Development" | 1 | ৳50,000 | ৳50,000
+    Example: "Domain & Hosting Setup" | 1 | $20 | $20
+    "+ আরো যোগ করুন"
+  
+  Subtotal (auto)
+  Discount (optional)
+  Tax/VAT (optional %)
+  Grand Total
+  Due date
+  Payment instructions (editable):
+    "bKash: 01XXXXXXXXX | Bank: [account info]"
+  
+  "Draft সেভ করুন" or "Invoice পাঠান"
+
+Invoice PDF (printable/shareable):
+  Professional layout:
+    Your business info (from shop profile): name, logo, phone, email, address
+    Client info: name, company, email
+    Invoice number, date, due date
+    Items table: description | qty | rate | total
+    Subtotal, discount, tax, TOTAL
+    Payment instructions
+    "Thank you for your business!"
+  
+  "Download PDF" button
+  "Link Copy করুন" → shareable URL: /invoice/[token] (client can view without login)
+  "পাঠান" → WhatsApp link with invoice PDF
+
+Invoice status flow:
+  Draft → Sent (manual) → Viewed (auto when client opens link) → Paid (manual) → Overdue (auto after due date)
+
+━━━ TIME TRACKER (/timelog) ━━━
+
+Active timer widget (shown on all pages if timer running):
+  "⏱ Project: [title] — 1:23:45" (live counter)
+  "Stop" button → saves time log
+
+Time log page:
+  Filter by project + date range
+  Summary: total hours per project (bar chart)
+  Billable vs non-billable breakdown
+
+━━━ REPORTS (/reports) ━━━
+
+Freelance-specific:
+  Monthly revenue (BDT + USD separate)
+  Revenue by project type (pie)
+  Hours worked per month (bar chart)
+  Top clients by revenue
+  Invoice collection rate (paid vs overdue)
+  Average project duration
+
+━━━ SETTINGS — FREELANCE CONFIG ━━━
+
+Default currency (BDT/USD)
+Default hourly rate (for time-based billing)
+Invoice number prefix (default: "INV")
+Project number prefix (default: "PRJ")
+Payment instructions (saved for invoices)
+Tax rate (default: 0%)
+Invoice reminder days (before due date)
+
+All Bangla UI. Same design system.
+Currency conversion happens at invoice/project creation — store exchange rate at that time.
+Invoice shareable link is public (no login needed for client to view).
+
+
+
+
+
