@@ -409,6 +409,18 @@ model Shop {
   cateringMinAdvancePct    Int      @default(40)
   cateringAutoShoppingList Boolean  @default(true)
   cateringStaffPer100      Int      @default(10)
+
+  // IT / Freelance module
+  freelanceProjects        FreelanceProject[]
+  freelanceInvoices        FreelanceInvoice[]
+  timeLogs                 TimeLog[]
+  freelanceProjectPrefix   String?  @default("PRJ")
+  freelanceInvoicePrefix   String?  @default("INV")
+  freelanceDefaultCurrency String?  @default("BDT")
+  freelanceDefaultHourlyRate Float  @default(0)
+  freelancePaymentInstructions String?
+  freelanceTaxRate         Float    @default(0)
+  freelanceInvoiceReminderDays Int  @default(3)
 }
 
 model Subscription {
@@ -570,6 +582,8 @@ model Customer {
   rentalBookings RentalBooking[]
   legalCases    LegalCase[]
   cateringEvents CateringEvent[]
+  freelanceProjects FreelanceProject[]
+  freelanceInvoices FreelanceInvoice[]
   isDemoData    Boolean        @default(false)
   createdAt     DateTime       @default(now())
 
@@ -3927,4 +3941,104 @@ model CateringPayment {
   paidAt  DateTime      @default(now())
 
   @@index([eventId])
+}
+
+// ─── IT / Freelance Service Module ──────────────────────────────────────────
+
+model FreelanceProject {
+  id             String             @id @default(cuid())
+  shopId         String
+  shop           Shop               @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  projectNumber  String             @unique
+  clientId       String
+  client         Customer           @relation(fields: [clientId], references: [id])
+  title          String
+  type           String
+  description    String?
+  platform       String?
+  startDate      DateTime?
+  deadline       DateTime?
+  totalAmount    Float
+  currency       String             @default("BDT")
+  exchangeRate   Float              @default(1)
+  totalAmountBDT Float              @default(0)
+  advancePaid    Float              @default(0)
+  dueAmount      Float              @default(0)
+  status         String             @default("in_progress")
+  milestones     ProjectMilestone[]
+  timeLogs       TimeLog[]
+  invoices       FreelanceInvoice[]
+  notes          String?
+  createdAt      DateTime           @default(now())
+
+  @@index([shopId])
+  @@index([shopId, status])
+  @@index([clientId])
+}
+
+model ProjectMilestone {
+  id          String           @id @default(cuid())
+  projectId   String
+  project     FreelanceProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  amount      Float
+  currency    String           @default("BDT")
+  dueDate     DateTime?
+  status      String           @default("pending")
+  completedAt DateTime?
+  note        String?
+  createdAt   DateTime         @default(now())
+
+  @@index([projectId])
+}
+
+model TimeLog {
+  id          String           @id @default(cuid())
+  shopId      String
+  shop        Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     FreelanceProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  task        String
+  hours       Float
+  hourlyRate  Float?
+  billable    Boolean          @default(true)
+  logDate     DateTime         @default(now())
+  note        String?
+  createdAt   DateTime         @default(now())
+
+  @@index([shopId])
+  @@index([projectId])
+  @@index([logDate])
+}
+
+model FreelanceInvoice {
+  id            String            @id @default(cuid())
+  shopId        String
+  shop          Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  invoiceNumber String            @unique
+  token         String            @unique @default(cuid())
+  projectId     String?
+  project       FreelanceProject? @relation(fields: [projectId], references: [id])
+  clientId      String
+  client        Customer          @relation(fields: [clientId], references: [id])
+  items         Json
+  subtotal      Float
+  discountAmt   Float             @default(0)
+  taxRate       Float             @default(0)
+  taxAmount     Float             @default(0)
+  totalAmount   Float
+  currency      String            @default("BDT")
+  exchangeRate  Float             @default(1)
+  dueDate       DateTime?
+  paymentNote   String?
+  status        String            @default("draft")
+  paidAt        DateTime?
+  viewedAt      DateTime?
+  createdAt     DateTime          @default(now())
+
+  @@index([shopId])
+  @@index([clientId])
+  @@index([token])
+  @@index([status])
 }

@@ -73,6 +73,9 @@ import {
   Fuel,
   Scale,
   Sparkle,
+  Code2,
+  Clock,
+  FolderKanban,
   type LucideIcon,
 } from "lucide-react";
 
@@ -104,7 +107,8 @@ export type BusinessType =
   | "carrental"
   | "legal"
   | "spa"
-  | "catering";
+  | "catering"
+  | "freelance";
 
 export const BUSINESS_TYPES: BusinessType[] = [
   "fcommerce",
@@ -133,6 +137,7 @@ export const BUSINESS_TYPES: BusinessType[] = [
   "legal",
   "spa",
   "catering",
+  "freelance",
 ];
 
 export interface BusinessTypeMeta {
@@ -353,6 +358,14 @@ export const BUSINESS_TYPE_META: Record<BusinessType, BusinessTypeMeta> = {
     bgColor: "#FFF7ED",
     icon: ChefHat,
   },
+  freelance: {
+    type: "freelance",
+    label: "IT / ফ্রিল্যান্স সার্ভিস",
+    description: "ওয়েবসাইট, ডিজাইন বা IT সেবা দিই",
+    color: "#6366F1",
+    bgColor: "#EEF2FF",
+    icon: Code2,
+  },
 };
 
 /* ─── Sales Channel ─────────────────────────────────────── */
@@ -509,6 +522,10 @@ const BUSINESS_MODULES: Record<BusinessType, string[]> = {
   catering: [
     "dashboard", "events", "menus", "ingredients",
     "staff", "customers", "hisab", "reports", "settings",
+  ],
+  freelance: [
+    "dashboard", "projects", "clients", "invoices",
+    "timelog", "hisab", "reports", "settings",
   ],
 };
 
@@ -1187,6 +1204,30 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
       items: [
         { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",                  module: "hisab"     },
         { href: "/catering/reports",       icon: BarChart2,       label: "রিপোর্ট",                module: "reports"   },
+      ],
+    },
+    {
+      label: "সিস্টেম",
+      items: [
+        { href: "/settings",               icon: Settings,        label: "সেটিংস",                 module: "settings"  },
+      ],
+    },
+  ],
+  freelance: [
+    {
+      items: [
+        { href: "/dashboard",              icon: LayoutDashboard, label: "ড্যাশবোর্ড",             module: "dashboard" },
+        { href: "/freelance/projects",     icon: FolderKanban,    label: "প্রজেক্ট",               module: "projects"  },
+        { href: "/freelance/invoices",     icon: FileText,        label: "Invoice",                module: "invoices"  },
+        { href: "/freelance/timelog",      icon: Clock,           label: "টাইম লগ",                module: "timelog"   },
+        { href: "/customers",              icon: Users,           label: "ক্লায়েন্ট",             module: "clients"   },
+      ],
+    },
+    {
+      label: "আর্থিক",
+      items: [
+        { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",                  module: "hisab"     },
+        { href: "/freelance/reports",      icon: BarChart2,       label: "রিপোর্ট",                module: "reports"   },
       ],
     },
     {

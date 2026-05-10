@@ -40,6 +40,7 @@ import DashboardCarRental       from "@/components/dashboards/DashboardCarRental
 import DashboardLegal           from "@/components/dashboards/DashboardLegal";
 import DashboardSpa             from "@/components/dashboards/DashboardSpa";
 import DashboardCatering        from "@/components/dashboards/DashboardCatering";
+import DashboardFreelance       from "@/components/dashboards/DashboardFreelance";
 
 export default async function DashboardPage() {
   const { user, shop } = await requireShop();
@@ -227,6 +228,10 @@ export default async function DashboardPage() {
         userName={user.name ?? ""}
         userGender={(user as { gender?: string }).gender ?? null}
       />;
+    }
+
+    if (businessType === "freelance") {
+      return <DashboardFreelance />;
     }
 
     if (businessType === "laundry") {

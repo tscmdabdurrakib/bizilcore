@@ -511,3 +511,19 @@ Built on top of the existing basic gamification skeleton (which had `streak`, `l
 
 **SMS Drip trigger:**
 - `AppTopbar.tsx` fires `POST /api/cron/sms-drip` inside the 6-hour session-gated block (alongside plan-expiry)
+
+## IT / Freelance Service Module (Complete)
+- **Business Type**: `"freelance"` — color #6366F1 (indigo), Code2 icon
+- **DB Models**: `FreelanceProject` (shopId/projectNumber@unique/clientId/title/type/description/platform/startDate/deadline/totalAmount/currency/exchangeRate/totalAmountBDT/advancePaid/dueAmount/status/notes); `ProjectMilestone` (projectId/title/description/amount/currency/dueDate/status/completedAt/note); `TimeLog` (shopId/projectId/task/hours/hourlyRate/billable/logDate/note); `FreelanceInvoice` (shopId/invoiceNumber@unique/token@unique/projectId?/clientId/items(Json)/subtotal/discountAmt/taxRate/taxAmount/totalAmount/currency/exchangeRate/dueDate/paymentNote/status/paidAt/viewedAt)
+- **Shop config fields**: `freelanceProjectPrefix` @default("PRJ"), `freelanceInvoicePrefix` @default("INV"), `freelanceDefaultCurrency` @default("BDT"), `freelanceDefaultHourlyRate`, `freelancePaymentInstructions`, `freelanceTaxRate` @default(0), `freelanceInvoiceReminderDays` @default(3)
+- **Customer relation**: `freelanceProjects FreelanceProject[]`, `freelanceInvoices FreelanceInvoice[]`
+- **API Routes**: `/api/freelance/dashboard` (4 stat cards + pipeline counts + recent projects + upcoming deadlines + USD income), `/api/freelance/projects` (GET filter by status/type/search + POST auto PRJ-YYYY-NNN with new client creation), `/api/freelance/projects/[id]` (GET full detail + PATCH: update_status/add_milestone/update_milestone/add_timelog/add_note), `/api/freelance/invoices` (GET + POST auto INV-YYYY-NNN, auto-mark overdue), `/api/freelance/invoices/[id]` (PATCH: mark_paid/mark_sent/cancel), `/api/freelance/timelog` (GET filter by project + POST), `/api/freelance/reports` (6-month monthly chart, type pie, top clients, invoice collection rate), `/api/invoice/[token]` (public GET, auto-mark viewed)
+- **Pages**: `/freelance/projects` (ProjectsBoard — status pipeline mini-view + card list with milestone progress bars, deadline alerts, type/platform/hours badges), `/freelance/projects/[id]` (ProjectDetail — 5 tabs: Overview/Milestones/Time Log/Invoices/Notes; status dropdown; milestone pipeline; time log with billable tracking; notes editor), `/freelance/invoices` (InvoicesBoard — status tabs, table view, mark paid/sent/cancel, copy shareable link), `/freelance/timelog` (TimeLogBoard — daily grouped view, project filter, billable summary), `/freelance/reports` (FreelanceReports — monthly bar charts for BDT revenue + hours, type pie chart, top clients bar, invoice collection rate)
+- **Public Invoice**: `/invoice/[token]` — public page (no login needed), auto-marks as "viewed" when opened, professional layout with items table, totals, payment instructions, print button
+- **Dashboard**: `DashboardFreelance` — indigo hero, 4 stat cards, overdue alert, USD income banner, project pipeline grid (5 status), recent projects with milestone progress, upcoming deadline cards (7-day), 4 quick action links
+- **Project types**: web_development/app_development/graphic_design/digital_marketing/content_writing/seo/data_entry/other
+- **Project statuses**: proposal → in_progress → review → revision → completed / on_hold / cancelled
+- **Milestone statuses**: pending → in_progress → submitted → revision → approved → paid
+- **Invoice statuses**: draft → sent → viewed (auto) → paid / overdue (auto) / cancelled
+- **Currencies**: BDT/USD/EUR/GBP with exchange rate stored at creation time
+- **Nav**: Dashboard → প্রজেক্ট (/freelance/projects) → Invoice (/freelance/invoices) → টাইম লগ (/freelance/timelog) → ক্লায়েন্ট (/customers) → হিসাব → রিপোর্ট (/freelance/reports) → সেটিংস
