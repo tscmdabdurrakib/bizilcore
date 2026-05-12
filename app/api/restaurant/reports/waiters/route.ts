@@ -1,45 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireShop } from "@/lib/getShop";
-import { prisma } from "@/lib/prisma";
+import { getWaiterStats, parseDateParam } from "@/lib/restaurant/waiterStats";
 
 export async function GET(req: NextRequest) {
   const { shop } = await requireShop();
 
   const { searchParams } = new URL(req.url);
-  const dateFrom = searchParams.get("from");
-  const dateTo   = searchParams.get("to");
+  let dateFrom: string | null, dateTo: string | null;
+  try {
+    dateFrom = parseDateParam(searchParams.get("from"), "from");
+    dateTo   = parseDateParam(searchParams.get("to"),   "to");
+  } catch (e: unknown) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 400 });
+  }
+  const role = searchParams.get("role") || null;
 
-  const waiters = await prisma.staffMember.findMany({
-    where: { shopId: shop.id, isActive: true },
-    select: {
-      id: true,
-      jobTitle: true,
-      user: { select: { name: true } },
-      assignedOrders: {
-        where: {
-          status: "paid",
-          ...(dateFrom || dateTo ? {
-            createdAt: {
-              ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
-              ...(dateTo   ? { lt: new Date(new Date(dateTo).setDate(new Date(dateTo).getDate() + 1)) } : {}),
-            },
-          } : {}),
-        },
-        select: { id: true, totalAmount: true, tipAmount: true, tableId: true, createdAt: true },
-      },
-    },
-    orderBy: { user: { name: "asc" } },
-  });
-
-  const result = waiters.map(w => {
-    const orders       = w.assignedOrders;
-    const totalOrders  = orders.length;
-    const totalRevenue = orders.reduce((s, o) => s + o.totalAmount, 0);
-    const totalTips    = orders.reduce((s, o) => s + (o.tipAmount ?? 0), 0);
-    const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-    const tablesServed  = new Set(orders.filter(o => o.tableId).map(o => o.tableId)).size;
-    return { id: w.id, name: w.user.name, jobTitle: w.jobTitle, totalOrders, totalRevenue, totalTips, avgOrderValue, tablesServed };
-  });
-
+  const result = await getWaiterStats(shop.id, dateFrom, dateTo, role);
   return NextResponse.json(result);
 }
