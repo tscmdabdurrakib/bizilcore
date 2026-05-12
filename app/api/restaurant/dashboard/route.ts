@@ -49,7 +49,10 @@ export async function GET() {
     }),
   ]);
 
-  const lowStockList = allMaterials.filter(m => m.currentStock <= m.reorderLevel);
+  const autoDeduct = shop.restAutoStockDeduct ?? true;
+  const lowStockList = autoDeduct
+    ? allMaterials.filter(m => m.currentStock <= m.reorderLevel)
+    : [];
   const lowStockCount = lowStockList.length;
 
   const hourlyMap = new Map<number, number>();
@@ -66,8 +69,9 @@ export async function GET() {
     activeTables,
     pendingOrders,
     lowStockCount,
+    autoDeduct,
     hourlyChart,
     recentOrders,
-    lowStockMaterials: lowStockList.filter(m => m.currentStock <= m.reorderLevel),
+    lowStockMaterials: lowStockList,
   });
 }

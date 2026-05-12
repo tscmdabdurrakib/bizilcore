@@ -21,6 +21,7 @@ interface DashStats {
   activeTables: number;
   pendingOrders: number;
   lowStockCount: number;
+  autoDeduct: boolean;
   hourlyChart: { hour: number; count: number }[];
   recentOrders: {
     id: string; type: string; status: string; totalAmount: number;
@@ -118,15 +119,17 @@ export default function DashboardRestaurant({ shopName, userName, userGender }: 
         </div>
       </div>
 
-      {/* Low Stock Alert */}
-      {s.lowStockCount > 0 && (
-        <div className="rounded-2xl border border-red-200 p-4 flex items-start gap-3" style={{ backgroundColor: "#FEF2F2" }}>
+      {/* Low Stock Alert Banner */}
+      {s.autoDeduct && s.lowStockCount > 0 && (
+        <Link href="/restaurant/recipes"
+          className="rounded-2xl border border-red-200 p-4 flex items-start gap-3 hover:border-red-400 transition-colors"
+          style={{ backgroundColor: "#FEF2F2" }}>
           <AlertTriangle size={18} style={{ color: "#EF4444", flexShrink: 0, marginTop: 1 }} />
           <p className="text-sm" style={{ color: "#991B1B" }}>
-            <strong>{s.lowStockCount}টি কাঁচামাল</strong> stock শেষ হওয়ার পথে।{" "}
-            <Link href="/restaurant/recipes" className="underline font-semibold">স্টক দেখুন →</Link>
+            <strong>{s.lowStockCount}টি কাঁচামাল</strong> reorder level-এর নিচে নেমে গেছে — এখনই রিঅর্ডার করুন।{" "}
+            <span className="underline font-semibold">স্টক দেখুন →</span>
           </p>
-        </div>
+        </Link>
       )}
 
       {/* Quick Actions */}
@@ -157,7 +160,9 @@ export default function DashboardRestaurant({ shopName, userName, userGender }: 
           { label: "আজকের বিক্রি",   value: formatBDT(s.todaySales),   sub: `${s.todayOrderCount}টি অর্ডার`, color: S.primary, bg: "#FFF7ED" },
           { label: "ব্যস্ত টেবিল",  value: `${s.activeTables}টি`,     sub: "এখন চলছে",                      color: "#D97706",  bg: "#FFFBEB" },
           { label: "Pending অর্ডার", value: `${s.pendingOrders}টি`,    sub: "কিচেনে বাকি",                  color: "#3B82F6",  bg: "#EFF6FF" },
-          { label: "কম স্টক",        value: `${s.lowStockCount}টি`,    sub: "উপাদান শেষ হচ্ছে",              color: "#EF4444",  bg: "#FEF2F2" },
+          s.autoDeduct
+            ? { label: "কম স্টক", value: `${s.lowStockCount}টি`, sub: "উপাদান শেষ হচ্ছে", color: "#EF4444", bg: "#FEF2F2" }
+            : { label: "কম স্টক", value: "—", sub: "ডিডাকশন বন্ধ", color: "#9CA3AF", bg: "#F3F4F6" },
         ].map(stat => (
           <div key={stat.label} className="rounded-2xl p-4 border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
             <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-2.5" style={{ backgroundColor: stat.bg }}>
@@ -230,23 +235,29 @@ export default function DashboardRestaurant({ shopName, userName, userGender }: 
             <h3 className="font-bold text-sm" style={{ color: S.text }}>কম স্টক সতর্কতা</h3>
             <Link href="/restaurant/recipes" className="text-xs font-medium" style={{ color: S.primary }}>স্টক ম্যানেজ →</Link>
           </div>
-          {s.lowStockMaterials.length === 0 ? (
+          {!s.autoDeduct ? (
+            <div className="text-center py-10">
+              <p className="text-sm" style={{ color: S.muted }}>অটো স্টক ডিডাকশন বন্ধ আছে।</p>
+              <Link href="/restaurant/settings" className="text-xs underline mt-1 inline-block" style={{ color: S.primary }}>সেটিংস থেকে চালু করুন →</Link>
+            </div>
+          ) : s.lowStockMaterials.length === 0 ? (
             <div className="text-center py-10">
               <p className="text-sm" style={{ color: S.muted }}>সব কাঁচামালের স্টক ঠিক আছে ✓</p>
             </div>
           ) : (
             <div className="space-y-2">
               {s.lowStockMaterials.map(m => (
-                <div key={m.id} className="flex items-center justify-between p-3 rounded-xl border"
+                <Link key={m.id} href="/restaurant/recipes"
+                  className="flex items-center justify-between p-3 rounded-xl border hover:border-red-400 transition-colors"
                   style={{ borderColor: "#FECACA", backgroundColor: "#FEF2F2" }}>
                   <div>
                     <p className="text-sm font-semibold" style={{ color: S.text }}>{m.name}</p>
                     <p className="text-xs" style={{ color: "#EF4444" }}>
-                      বাকি: {m.currentStock} {m.unit} (ন্যূনতম: {m.reorderLevel})
+                      বাকি: {m.currentStock} {m.unit} · ন্যূনতম: {m.reorderLevel} {m.unit}
                     </p>
                   </div>
                   <AlertTriangle size={16} style={{ color: "#EF4444" }} />
-                </div>
+                </Link>
               ))}
             </div>
           )}
