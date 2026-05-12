@@ -145,13 +145,15 @@ A SaaS web app for Bangladeshi Facebook sellers — stock management (with produ
 - **Job Card Features**: auto job number, priority (normal/urgent/express), mechanic assignment, estimated delivery, complaint shortcuts, service checklist, parts from stock or manual, live bill calculation, advance tracking, payment collection, delivery with mileage out
 - **lib/modules.ts**: garage added to all type maps, nav has dashboard/jobcards/vehicles/inventory/customers/hr/hisab/reports
 
-## Restaurant Module (Task #5 — Complete)
-- **DB Models**: `DiningTable`, `MenuItem`, `RestaurantOrder`, `RestaurantOrderItem` — all created and pushed
-- **API Routes**: `/api/restaurant/tables`, `/api/restaurant/tables/[id]`, `/api/restaurant/menu-items`, `/api/restaurant/menu-items/[id]`, `/api/restaurant/orders`, `/api/restaurant/orders/[id]`
-- **Pages**: `/tables` (floor map), `/menu` (menu management), `/kitchen` (KDS), `/orders` (restaurant-aware wrapper)
-- **lib/modules.ts**: Added `/menu` nav item + `ScrollText` icon for restaurant type
-- **Orders page**: Converted to server component that renders `RestaurantOrders` or `FCommerceOrders` based on `businessType`
-- **Components**: `components/orders/FCommerceOrders.tsx` + `components/orders/RestaurantOrders.tsx`
+## Restaurant Module (Task #1 — Extended & Complete)
+- **DB Models**: `DiningTable`, `MenuItem`, `RestaurantOrder`, `RestaurantOrderItem` (existing) + NEW: `RawMaterial` (shopId/name/unit/currentStock/reorderLevel/costPerUnit), `Recipe` (menuItemId/materialId/quantity, @@unique), `PurchaseEntry` (shopId/materialId/quantity/unitCost/totalCost/note/purchasedAt); `MenuItem` now has `recipes []`
+- **Shop Settings**: `restOrderPrefix`, `restVatPct`, `restServiceChargePct`, `restKotAutoSend`, `restCurrency`, `restDefaultFloors[]`, `restDeliveryEnabled`, `restAutoStockDeduct`
+- **API Routes (existing)**: `/api/restaurant/tables`, `/api/restaurant/tables/[id]`, `/api/restaurant/menu-items`, `/api/restaurant/menu-items/[id]`, `/api/restaurant/orders`, `/api/restaurant/orders/[id]`
+- **API Routes (new)**: `/api/restaurant/dashboard` (real stats: todaySales/activeTables/pendingOrders/lowStock/hourlyChart/recentOrders), `/api/restaurant/reports` (6-month monthly chart, bestSellers, categoryRevenue), `/api/restaurant/materials` (CRUD), `/api/restaurant/materials/[id]` (PATCH/DELETE), `/api/restaurant/recipes` (GET menuItems+recipes / POST save recipe ingredients), `/api/restaurant/purchases` (GET list + POST with stock increment tx), `/api/settings/shop` (GET+PATCH for module-specific shop settings)
+- **Pages**: `/tables` (floor map), `/menu` (menu management), `/kitchen` (KDS), `/orders` (restaurant wrapper) — existing; NEW: `/restaurant/pos` (full POS terminal — menu grid with category tabs, cart panel with dine-in/takeaway/delivery mode, table selector, order confirm), `/restaurant/recipes` (3-tab: কাঁচামাল CRUD table + রেসিপি accordion per menu item + ক্রয় লগ table with stock auto-increment), `/restaurant/reports` (recharts bar+pie: monthly revenue, category pie, top-10 sellers), `/restaurant/settings` (VAT, service charge, floors, toggles)
+- **Dashboard**: `DashboardRestaurant` now uses `/api/restaurant/dashboard` with 30s auto-refresh — hero banner, 3 KPI tiles, quick action links, active orders list with elapsed time, low stock alert panel
+- **Nav**: Dashboard → POS টার্মিনাল (/restaurant/pos) → টেবিল → অর্ডার → মেনু → কিচেন KDS → রেসিপি ও স্টক (/restaurant/recipes) → কাস্টমার → স্টাফ → হিসাব → রিপোর্ট (/restaurant/reports) → সেটিংস (/restaurant/settings)
+- **lib/modules.ts**: Updated restaurant nav group; `Settings` icon added for settings link
 
 ## Sales Channel Feature (Complete)
 - `salesChannel` field on Shop (`online` | `offline` | `both`)

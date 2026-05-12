@@ -15,13 +15,16 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const category = searchParams.get("category");
   const availableOnly = searchParams.get("available") === "true";
+  const categoryId = searchParams.get("categoryId");
 
   const items = await prisma.menuItem.findMany({
     where: {
       shopId: shop.id,
       ...(category && { category }),
+      ...(categoryId && { menuCategoryId: categoryId }),
       ...(availableOnly && { isAvailable: true }),
     },
+    include: { menuCategory: { select: { id: true, name: true } } },
     orderBy: [{ category: "asc" }, { name: "asc" }],
   });
 
@@ -37,12 +40,18 @@ export async function POST(req: NextRequest) {
   let body: {
     name?: string; nameEn?: string; category?: string; price?: number;
     costPrice?: number; imageUrl?: string; isAvailable?: boolean;
-    isVeg?: boolean; prepMinutes?: number;
+    isVeg?: boolean; prepMinutes?: number; menuCategoryId?: string;
+    variants?: unknown; addons?: unknown;
   };
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
   if (!body.name || body.price === undefined) {
     return NextResponse.json({ error: "Name and price required" }, { status: 400 });
+  }
+
+  if (body.menuCategoryId) {
+    const cat = await prisma.menuCategory.findFirst({ where: { id: body.menuCategoryId, shopId: shop.id } });
+    if (!cat) return NextResponse.json({ error: "Category not found" }, { status: 400 });
   }
 
   const item = await prisma.menuItem.create({
@@ -57,7 +66,11 @@ export async function POST(req: NextRequest) {
       isAvailable: body.isAvailable ?? true,
       isVeg: body.isVeg ?? false,
       prepMinutes: body.prepMinutes ?? 15,
+      menuCategoryId: body.menuCategoryId ?? null,
+      variants: body.variants ?? null,
+      addons: body.addons ?? null,
     },
+    include: { menuCategory: { select: { id: true, name: true } } },
   });
 
   return NextResponse.json(item, { status: 201 });

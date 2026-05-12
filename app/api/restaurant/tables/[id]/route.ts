@@ -42,6 +42,19 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const table = await prisma.diningTable.findFirst({ where: { id, shopId: shop.id } });
   if (!table) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  const activeOrders = await prisma.restaurantOrder.count({
+    where: {
+      tableId: id,
+      status: { in: ["pending", "preparing", "ready", "served", "billing"] },
+    },
+  });
+  if (activeOrders > 0) {
+    return NextResponse.json(
+      { error: "সক্রিয় অর্ডার থাকা অবস্থায় টেবিল মুছে ফেলা যাবে না" },
+      { status: 409 }
+    );
+  }
+
   await prisma.diningTable.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }

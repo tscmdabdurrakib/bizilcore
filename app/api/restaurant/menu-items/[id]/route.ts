@@ -19,7 +19,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   let body: {
     name?: string; nameEn?: string; category?: string; price?: number;
     costPrice?: number; imageUrl?: string; isAvailable?: boolean;
-    isVeg?: boolean; prepMinutes?: number;
+    isVeg?: boolean; prepMinutes?: number; menuCategoryId?: string | null;
+    variants?: unknown; addons?: unknown;
   };
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
@@ -35,7 +36,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(body.isAvailable !== undefined && { isAvailable: body.isAvailable }),
       ...(body.isVeg !== undefined && { isVeg: body.isVeg }),
       ...(body.prepMinutes !== undefined && { prepMinutes: body.prepMinutes }),
+      ...("menuCategoryId" in body && { menuCategoryId: body.menuCategoryId ?? null }),
+      ...("variants" in body && { variants: body.variants ?? null }),
+      ...("addons" in body && { addons: body.addons ?? null }),
     },
+    include: { menuCategory: { select: { id: true, name: true } } },
   });
 
   return NextResponse.json(updated);
@@ -51,6 +56,11 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const item = await prisma.menuItem.findFirst({ where: { id, shopId: shop.id } });
   if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  const hasOrders = await prisma.restaurantOrderItem.count({ where: { menuItemId: id } });
+  if (hasOrders > 0) {
+    await prisma.menuItem.update({ where: { id }, data: { isAvailable: false } });
+    return NextResponse.json({ ok: true, deactivated: true });
+  }
   await prisma.menuItem.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }

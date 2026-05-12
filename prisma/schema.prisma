@@ -173,7 +173,9 @@ model Shop {
   branches               ShopBranch[]
   diningTables           DiningTable[]
   menuItems              MenuItem[]
+  menuCategories         MenuCategory[]
   restaurantOrders       RestaurantOrder[]
+  kotTickets             KotTicket[]
   medicines              Medicine[]
   prescriptions          Prescription[]
   cashRegisters          CashRegister[]
@@ -421,6 +423,18 @@ model Shop {
   freelancePaymentInstructions String?
   freelanceTaxRate         Float    @default(0)
   freelanceInvoiceReminderDays Int  @default(3)
+
+  // Restaurant module (extended)
+  rawMaterials             RawMaterial[]
+  purchaseEntries          PurchaseEntry[]
+  restOrderPrefix          String?  @default("RES")
+  restVatPct               Float    @default(0)
+  restServiceChargePct     Float    @default(0)
+  restKotAutoSend          Boolean  @default(false)
+  restCurrency             String?  @default("BDT")
+  restDefaultFloors        String[] @default(["Ground"])
+  restDeliveryEnabled      Boolean  @default(true)
+  restAutoStockDeduct      Boolean  @default(true)
 }
 
 model Subscription {
@@ -1428,7 +1442,7 @@ model DiningTable {
   shop             Shop              @relation(fields: [shopId], references: [id])
   number           Int
   capacity         Int               @default(4)
-  status           String            @default("empty")
+  status           String            @default("available")
   floor            String?           @default("Ground")
   restaurantOrders RestaurantOrder[]
 
@@ -1436,23 +1450,29 @@ model DiningTable {
 }
 
 model MenuItem {
-  id          String                @id @default(cuid())
-  shopId      String
-  shop        Shop                  @relation(fields: [shopId], references: [id])
-  name        String
-  nameEn      String?
-  category    String                @default("main")
-  price       Float
-  costPrice   Float?
-  imageUrl    String?
-  isAvailable Boolean               @default(true)
-  isVeg       Boolean               @default(false)
-  prepMinutes Int                   @default(15)
-  orderItems  RestaurantOrderItem[]
-  createdAt   DateTime              @default(now())
+  id             String                @id @default(cuid())
+  shopId         String
+  shop           Shop                  @relation(fields: [shopId], references: [id])
+  menuCategoryId String?
+  menuCategory   MenuCategory?         @relation(fields: [menuCategoryId], references: [id])
+  name           String
+  nameEn         String?
+  category       String                @default("main")
+  price          Float
+  costPrice      Float?
+  imageUrl       String?
+  isAvailable    Boolean               @default(true)
+  isVeg          Boolean               @default(false)
+  prepMinutes    Int                   @default(15)
+  variants       Json?
+  addons         Json?
+  orderItems     RestaurantOrderItem[]
+  recipes        Recipe[]
+  createdAt      DateTime              @default(now())
 
   @@index([shopId])
   @@index([shopId, category])
+  @@index([menuCategoryId])
 }
 
 model RestaurantOrder {
@@ -1461,11 +1481,21 @@ model RestaurantOrder {
   shop          Shop                  @relation(fields: [shopId], references: [id])
   tableId       String?
   table         DiningTable?          @relation(fields: [tableId], references: [id])
+  orderNumber   String?               @unique
   type          String                @default("dine_in")
   status        String                @default("pending")
+  billRequested Boolean               @default(false)
   items         RestaurantOrderItem[]
+  kotTickets    KotTicket[]
+  subtotal      Float                 @default(0)
+  discount      Float                 @default(0)
+  vatAmount     Float                 @default(0)
+  serviceAmount Float                 @default(0)
   totalAmount   Float
   paidAmount    Float                 @default(0)
+  paymentMethod String?               @default("cash")
+  kotSent       Boolean               @default(false)
+  kotSentAt     DateTime?
   customerName  String?
   customerPhone String?
   note          String?
@@ -1477,15 +1507,93 @@ model RestaurantOrder {
   @@index([shopId, createdAt])
 }
 
+model KotTicket {
+  id            String          @id @default(cuid())
+  shopId        String
+  shop          Shop            @relation(fields: [shopId], references: [id])
+  orderId       String
+  order         RestaurantOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  kotNumber     String
+  items         Json
+  kitchenStatus String          @default("pending")
+  sentAt        DateTime        @default(now())
+  note          String?
+
+  @@index([shopId])
+  @@index([orderId])
+}
+
 model RestaurantOrderItem {
-  id         String          @id @default(cuid())
-  orderId    String
-  order      RestaurantOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  menuItemId String
-  menuItem   MenuItem        @relation(fields: [menuItemId], references: [id])
-  quantity   Int
-  unitPrice  Float
-  note       String?
+  id              String          @id @default(cuid())
+  orderId         String
+  order           RestaurantOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId      String
+  menuItem        MenuItem        @relation(fields: [menuItemId], references: [id])
+  quantity        Int
+  unitPrice       Float
+  selectedVariant String?
+  selectedAddons  Json?
+  addonTotal      Float           @default(0)
+  note            String?
+}
+
+model MenuCategory {
+  id        String     @id @default(cuid())
+  shopId    String
+  shop      Shop       @relation(fields: [shopId], references: [id])
+  name      String
+  nameEn    String?
+  icon      String?
+  sortOrder Int        @default(0)
+  isActive  Boolean    @default(true)
+  items     MenuItem[]
+  createdAt DateTime   @default(now())
+
+  @@index([shopId])
+}
+
+model RawMaterial {
+  id            String          @id @default(cuid())
+  shopId        String
+  shop          Shop            @relation(fields: [shopId], references: [id])
+  name          String
+  unit          String          @default("kg")
+  currentStock  Float           @default(0)
+  reorderLevel  Float           @default(1)
+  costPerUnit   Float           @default(0)
+  recipes       Recipe[]
+  purchaseEntries PurchaseEntry[]
+  createdAt     DateTime        @default(now())
+
+  @@index([shopId])
+}
+
+model Recipe {
+  id           String      @id @default(cuid())
+  menuItemId   String
+  menuItem     MenuItem    @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  materialId   String
+  material     RawMaterial @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  quantity     Float
+
+  @@unique([menuItemId, materialId])
+  @@index([menuItemId])
+}
+
+model PurchaseEntry {
+  id          String      @id @default(cuid())
+  shopId      String
+  shop        Shop        @relation(fields: [shopId], references: [id])
+  materialId  String
+  material    RawMaterial @relation(fields: [materialId], references: [id])
+  quantity    Float
+  unitCost    Float
+  totalCost   Float
+  note        String?
+  purchasedAt DateTime    @default(now())
+
+  @@index([shopId])
+  @@index([materialId])
 }
 
 model Medicine {

@@ -16,7 +16,7 @@ export async function GET() {
     where: { shopId: shop.id },
     include: {
       restaurantOrders: {
-        where: { status: { in: ["pending", "preparing", "ready", "served"] } },
+        where: { status: { in: ["pending", "preparing", "ready", "served", "billing"] } },
         select: { id: true, status: true, totalAmount: true, createdAt: true, type: true },
         orderBy: { createdAt: "desc" },
         take: 1,

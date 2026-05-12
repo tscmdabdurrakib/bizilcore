@@ -162,8 +162,8 @@ export const BUSINESS_TYPE_META: Record<BusinessType, BusinessTypeMeta> = {
     type: "restaurant",
     label: "রেস্তোরাঁ",
     description: "খাবারের ব্যবসা করি",
-    color: "#EF4444",
-    bgColor: "#FEF2F2",
+    color: "#EA580C",
+    bgColor: "#FFF7ED",
     icon: UtensilsCrossed,
   },
   pharmacy: {
@@ -424,8 +424,8 @@ const BUSINESS_MODULES: Record<BusinessType, string[]> = {
     "hisab", "reports", "courier", "settings", "store",
   ],
   restaurant: [
-    "dashboard", "inventory", "orders", "customers",
-    "hisab", "reports", "tables", "kitchen", "menu", "staff", "courier", "settings", "store",
+    "dashboard", "pos", "tables", "orders", "menu", "kitchen",
+    "inventory", "customers", "staff", "hisab", "reports", "settings",
   ],
   pharmacy: [
     "dashboard", "inventory", "orders", "customers",
@@ -584,12 +584,13 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
   restaurant: [
     {
       items: [
-        { href: "/dashboard",  icon: LayoutDashboard,  label: "ড্যাশবোর্ড",  module: "dashboard"  },
-        { href: "/tables",     icon: UtensilsCrossed,  label: "টেবিল",        module: "tables"     },
-        { href: "/orders",     icon: ShoppingBag,      label: "অর্ডার",       module: "orders"     },
-        { href: "/menu",       icon: ScrollText,       label: "মেনু",         module: "menu"       },
-        { href: "/inventory",  icon: Package,          label: "স্টক",         module: "inventory"  },
-        { href: "/kitchen",    icon: ChefHat,          label: "কিচেন",        module: "kitchen"    },
+        { href: "/dashboard",            icon: LayoutDashboard,  label: "ড্যাশবোর্ড",       module: "dashboard"  },
+        { href: "/restaurant/pos",       icon: Zap,              label: "POS টার্মিনাল",    module: "pos"        },
+        { href: "/restaurant/tables",    icon: UtensilsCrossed,  label: "টেবিল",             module: "tables"     },
+        { href: "/restaurant/orders",    icon: ShoppingBag,      label: "অর্ডার",            module: "orders"     },
+        { href: "/restaurant/menu",      icon: ScrollText,       label: "মেনু",              module: "menu"       },
+        { href: "/restaurant/kitchen",   icon: ChefHat,          label: "কিচেন KDS",        module: "kitchen"    },
+        { href: "/restaurant/recipes",   icon: Package,          label: "রেসিপি ও স্টক",    module: "inventory"  },
       ],
     },
     {
@@ -601,8 +602,9 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",   icon: BookOpen,  label: "হিসাব",   module: "hisab"   },
-        { href: "/reports", icon: BarChart2, label: "রিপোর্ট", module: "reports" },
+        { href: "/hisab",                icon: BookOpen,  label: "হিসাব",     module: "hisab"    },
+        { href: "/restaurant/reports",   icon: BarChart2, label: "রিপোর্ট",   module: "reports"  },
+        { href: "/restaurant/settings",  icon: Settings,  label: "সেটিংস",    module: "settings" },
       ],
     },
   ],
