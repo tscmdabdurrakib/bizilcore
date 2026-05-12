@@ -34,6 +34,29 @@ function calcTotals(
   return { subtotal, vatAmount, serviceAmount, totalAmount };
 }
 
+const STOCK_DEDUCTED_STATUSES = ["served", "paid"];
+
+async function deductStockIfNeeded(
+  shopId: string,
+  autoDeduct: boolean,
+  fromStatus: string,
+  toStatus: string,
+  items: { quantity: number; menuItem: { recipes: { materialId: string; quantity: number }[] } }[]
+) {
+  if (!autoDeduct) return;
+  if (!STOCK_DEDUCTED_STATUSES.includes(toStatus)) return;
+  if (STOCK_DEDUCTED_STATUSES.includes(fromStatus)) return;
+
+  for (const item of items) {
+    for (const recipe of item.menuItem.recipes) {
+      await prisma.rawMaterial.updateMany({
+        where: { id: recipe.materialId, shopId },
+        data: { currentStock: { decrement: recipe.quantity * item.quantity } },
+      });
+    }
+  }
+}
+
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -239,6 +262,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   if (action === "mark_served") {
+    await deductStockIfNeeded(shop.id, shop.restAutoStockDeduct, existing.status, "served", existing.items);
     const updated = await prisma.restaurantOrder.update({
       where: { id }, data: { status: "served" }, include: ORDER_INCLUDE,
     });
@@ -252,16 +276,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       existing.items, discount, vatPct, svcPct
     );
 
-    if (shop.restAutoStockDeduct && existing.status !== "paid") {
-      for (const item of existing.items) {
-        for (const recipe of item.menuItem.recipes) {
-          await prisma.rawMaterial.updateMany({
-            where: { id: recipe.materialId, shopId: shop.id },
-            data: { currentStock: { decrement: recipe.quantity * item.quantity } },
-          });
-        }
-      }
-    }
+    await deductStockIfNeeded(shop.id, shop.restAutoStockDeduct, existing.status, "paid", existing.items);
 
     const updated = await prisma.restaurantOrder.update({
       where: { id },
@@ -308,6 +323,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json(updated);
   }
 
+  const newStatus = body.status;
+
+  if (newStatus !== undefined) {
+    await deductStockIfNeeded(shop.id, shop.restAutoStockDeduct, existing.status, newStatus, existing.items);
+  }
+
   const updated = await prisma.restaurantOrder.update({
     where: { id },
     data: {
@@ -320,17 +341,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     include: ORDER_INCLUDE,
   });
 
-  if (body.status === "paid" && existing.status !== "paid") {
-    if (shop.restAutoStockDeduct) {
-      for (const item of existing.items) {
-        for (const recipe of item.menuItem.recipes) {
-          await prisma.rawMaterial.updateMany({
-            where: { id: recipe.materialId, shopId: shop.id },
-            data: { currentStock: { decrement: recipe.quantity * item.quantity } },
-          });
-        }
-      }
-    }
+  if (newStatus === "paid" && existing.status !== "paid") {
     const UNPAID_STATUSES = ["pending", "preparing", "ready", "served", "billing"];
     if (existing.tableId) {
       const remaining = await prisma.restaurantOrder.count({
