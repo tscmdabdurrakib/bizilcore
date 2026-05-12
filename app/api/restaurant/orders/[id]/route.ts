@@ -36,6 +36,25 @@ function calcTotals(
 
 const STOCK_DEDUCTED_STATUSES = ["served", "paid"];
 
+async function restoreStockIfNeeded(
+  shopId: string,
+  autoDeduct: boolean,
+  fromStatus: string,
+  items: { quantity: number; menuItem: { recipes: { materialId: string; quantity: number }[] } }[]
+) {
+  if (!autoDeduct) return;
+  if (!STOCK_DEDUCTED_STATUSES.includes(fromStatus)) return;
+
+  for (const item of items) {
+    for (const recipe of item.menuItem.recipes ?? []) {
+      await prisma.rawMaterial.updateMany({
+        where: { id: recipe.materialId, shopId },
+        data: { currentStock: { increment: recipe.quantity * item.quantity } },
+      });
+    }
+  }
+}
+
 async function deductStockIfNeeded(
   shopId: string,
   autoDeduct: boolean,
@@ -308,6 +327,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   if (action === "cancel") {
+    await restoreStockIfNeeded(shop.id, shop.restAutoStockDeduct, existing.status, existing.items);
     const updated = await prisma.restaurantOrder.update({
       where: { id }, data: { status: "cancelled" }, include: ORDER_INCLUDE,
     });
