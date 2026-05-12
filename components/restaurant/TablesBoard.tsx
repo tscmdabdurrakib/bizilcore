@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, UtensilsCrossed, X, Loader2, Settings, Trash2, Minus, Clock, ArrowRightLeft, Merge } from "lucide-react";
+import { Plus, UtensilsCrossed, X, Loader2, Settings, Trash2, Minus, Clock, ArrowRightLeft, Merge, QrCode, Download } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import QRCode from "qrcode";
 
 interface DiningTable {
   id: string; number: number; capacity: number; floor?: string; status: string;
@@ -71,6 +72,11 @@ export default function TablesBoard() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
+  const [shopSlug, setShopSlug] = useState<string | null>(null);
+  const [qrTable, setQrTable] = useState<DiningTable | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
+
   const [showAdd, setShowAdd] = useState(false);
   const [newNumber, setNewNumber] = useState("");
   const [newCapacity, setNewCapacity] = useState("4");
@@ -124,6 +130,34 @@ export default function TablesBoard() {
   }, []);
 
   useEffect(() => { loadTables(); }, [loadTables]);
+
+  useEffect(() => {
+    fetch("/api/restaurant/info")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.slug) setShopSlug(d.slug); })
+      .catch(() => {});
+  }, []);
+
+  async function openQr(table: DiningTable) {
+    setQrTable(table);
+    setQrDataUrl(null);
+    setQrLoading(true);
+    try {
+      const origin = window.location.origin;
+      const url = `${origin}/qr/${shopSlug}/${table.number}`;
+      const dataUrl = await QRCode.toDataURL(url, { width: 300, margin: 2, color: { dark: "#1C1C1C", light: "#FFFFFF" } });
+      setQrDataUrl(dataUrl);
+    } catch { /* ignore */ }
+    setQrLoading(false);
+  }
+
+  function downloadQr(table: DiningTable) {
+    if (!qrDataUrl) return;
+    const a = document.createElement("a");
+    a.href = qrDataUrl;
+    a.download = `table-${table.number}-qr.png`;
+    a.click();
+  }
 
   useEffect(() => {
     if (orderTable) {
@@ -396,6 +430,14 @@ export default function TablesBoard() {
                   title="সম্পাদনা">
                   <Settings size={11} style={{ color: st.color }} />
                 </button>
+                {shopSlug && (
+                  <button onClick={e => { e.stopPropagation(); openQr(table); }}
+                    className="absolute bottom-2 right-2 p-1 rounded-lg"
+                    style={{ backgroundColor: "rgba(0,0,0,0.08)" }}
+                    title="QR কোড">
+                    <QrCode size={11} style={{ color: st.color }} />
+                  </button>
+                )}
               </div>
             );
           })}
@@ -771,6 +813,61 @@ export default function TablesBoard() {
                 style={{ backgroundColor: ORANGE }}>
                 {saving ? <Loader2 size={16} className="animate-spin mx-auto" /> : "যোগ করুন"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* QR Code Modal */}
+      {qrTable && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}>
+          <div className="w-full max-w-xs rounded-2xl p-6" style={{ backgroundColor: S.surface }}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="font-bold" style={{ color: S.text }}>টেবিল {qrTable.number} QR কোড</h3>
+                <p className="text-xs mt-0.5" style={{ color: S.muted }}>স্ক্যান করে অর্ডার দিন</p>
+              </div>
+              <button onClick={() => { setQrTable(null); setQrDataUrl(null); }} className="p-1.5 rounded-lg hover:bg-gray-100">
+                <X size={16} style={{ color: S.muted }} />
+              </button>
+            </div>
+            <div className="flex flex-col items-center gap-4">
+              {qrLoading ? (
+                <div className="w-48 h-48 flex items-center justify-center rounded-xl border" style={{ borderColor: S.border }}>
+                  <Loader2 size={28} className="animate-spin" style={{ color: ORANGE }} />
+                </div>
+              ) : qrDataUrl ? (
+                <img src={qrDataUrl} alt={`Table ${qrTable.number} QR`}
+                  className="w-48 h-48 rounded-xl border"
+                  style={{ borderColor: S.border }} />
+              ) : (
+                <div className="w-48 h-48 flex items-center justify-center rounded-xl border text-xs text-center px-4"
+                  style={{ borderColor: S.border, color: S.muted }}>
+                  QR তৈরি হয়নি। শপের slug সেট আছে কি?
+                </div>
+              )}
+              {qrDataUrl && (
+                <div className="w-full space-y-2">
+                  <p className="text-[10px] text-center font-mono break-all" style={{ color: S.muted }}>
+                    {`${typeof window !== "undefined" ? window.location.origin : ""}/qr/${shopSlug}/${qrTable.number}`}
+                  </p>
+                  <button onClick={() => downloadQr(qrTable)}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-white text-sm font-semibold"
+                    style={{ backgroundColor: ORANGE }}>
+                    <Download size={15} /> PNG ডাউনলোড করুন
+                  </button>
+                  <button
+                    onClick={() => {
+                      const url = `${window.location.origin}/qr/${shopSlug}/${qrTable.number}`;
+                      navigator.clipboard?.writeText(url).then(() => showToast("success", "লিংক কপি হয়েছে ✓")).catch(() => {});
+                    }}
+                    className="w-full py-2.5 rounded-xl text-sm font-semibold border"
+                    style={{ borderColor: S.border, color: S.secondary }}>
+                    লিংক কপি করুন
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

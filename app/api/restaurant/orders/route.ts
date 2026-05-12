@@ -2,9 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-async function getShop(userId: string) {
+async function getShopByUser(userId: string) {
   return prisma.shop.findUnique({
     where: { userId },
+    select: { id: true, restVatPct: true, restServiceChargePct: true, restOrderPrefix: true },
+  });
+}
+
+async function getShopBySlug(slug: string) {
+  return prisma.shop.findUnique({
+    where: { slug },
     select: { id: true, restVatPct: true, restServiceChargePct: true, restOrderPrefix: true },
   });
 }
@@ -35,7 +42,7 @@ async function generateOrderNumber(shopId: string, restOrderPrefix: string | nul
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const shop = await getShop(session.user.id);
+  const shop = await getShopByUser(session.user.id);
   if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
 
   const { searchParams } = new URL(req.url);
@@ -74,12 +81,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const shop = await getShop(session.user.id);
-  if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
-
   let body: {
+    shopSlug?: string;
+    tableNumber?: number;
     type?: string;
     tableId?: string;
     customerName?: string;
@@ -97,12 +101,26 @@ export async function POST(req: NextRequest) {
   };
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
+  const isQrOrder = !!body.shopSlug;
+
+  let shop: { id: string; restVatPct: number | null; restServiceChargePct: number | null; restOrderPrefix: string | null } | null = null;
+
+  if (isQrOrder) {
+    if (!body.shopSlug) return NextResponse.json({ error: "shopSlug required" }, { status: 400 });
+    shop = await getShopBySlug(body.shopSlug);
+    if (!shop) return NextResponse.json({ error: "রেস্তোরাঁ পাওয়া যায়নি" }, { status: 404 });
+  } else {
+    const session = await auth();
+    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    shop = await getShopByUser(session.user.id);
+    if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+  }
+
   if (!body.items?.length) return NextResponse.json({ error: "Items required" }, { status: 400 });
 
-  const orderType = body.type ?? "dine_in";
-  if (orderType === "dine_in" && !body.tableId) {
-    return NextResponse.json({ error: "Dine-in orders require a table" }, { status: 400 });
-  }
+  const orderType = isQrOrder ? "dine_in" : (body.type ?? "dine_in");
+  const orderDiscount = isQrOrder ? 0 : (body.discount ?? 0);
+  const orderPaymentMethod = isQrOrder ? "cash" : (body.paymentMethod ?? "cash");
 
   for (const it of body.items) {
     if (!it.menuItemId || !it.quantity || it.quantity < 1) {
@@ -110,17 +128,34 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  if (body.tableId) {
-    const table = await prisma.diningTable.findFirst({ where: { id: body.tableId, shopId: shop.id } });
+  let resolvedTableId: string | null = body.tableId ?? null;
+
+  if (isQrOrder) {
+    if (!body.tableNumber) return NextResponse.json({ error: "টেবিল নম্বর দরকার" }, { status: 400 });
+    const table = await prisma.diningTable.findFirst({
+      where: { shopId: shop.id, number: body.tableNumber },
+    });
+    if (!table) return NextResponse.json({ error: "টেবিল পাওয়া যায়নি" }, { status: 404 });
+    resolvedTableId = table.id;
+  }
+
+  if (orderType === "dine_in" && !resolvedTableId) {
+    return NextResponse.json({ error: "Dine-in orders require a table" }, { status: 400 });
+  }
+
+  if (resolvedTableId) {
+    const table = await prisma.diningTable.findFirst({ where: { id: resolvedTableId, shopId: shop.id } });
     if (!table) return NextResponse.json({ error: "Invalid table" }, { status: 400 });
 
     const ACTIVE_STATUSES = ["pending", "preparing", "ready", "served", "billing"];
     const activeOrderCount = await prisma.restaurantOrder.count({
-      where: { tableId: body.tableId, status: { in: ACTIVE_STATUSES } },
+      where: { tableId: resolvedTableId, status: { in: ACTIVE_STATUSES } },
     });
     if (activeOrderCount > 0) {
       return NextResponse.json(
-        { error: "টেবিলে ইতিমধ্যে সক্রিয় অর্ডার আছে। নতুন অর্ডার দেওয়া যাবে না।" },
+        { error: isQrOrder
+          ? "এই টেবিলে ইতিমধ্যে একটি সক্রিয় অর্ডার চলছে। অনুগ্রহ করে ওয়েটারকে ডাকুন।"
+          : "টেবিলে ইতিমধ্যে সক্রিয় অর্ডার আছে। নতুন অর্ডার দেওয়া যাবে না।" },
         { status: 409 }
       );
     }
@@ -128,7 +163,11 @@ export async function POST(req: NextRequest) {
 
   const menuItemIds = body.items.map(it => it.menuItemId);
   const menuItems = await prisma.menuItem.findMany({
-    where: { id: { in: menuItemIds }, shopId: shop.id },
+    where: {
+      id: { in: menuItemIds },
+      shopId: shop.id,
+      ...(isQrOrder && { isAvailable: true }),
+    },
     select: { id: true, price: true, variants: true, addons: true },
   });
 
@@ -173,8 +212,7 @@ export async function POST(req: NextRequest) {
   });
 
   const subtotal = itemsWithPrices.reduce((sum, it) => sum + it.unitPrice * it.quantity, 0);
-  const discount = body.discount ?? 0;
-  const discountedBase = Math.max(0, subtotal - discount);
+  const discountedBase = Math.max(0, subtotal - orderDiscount);
   const vatPct = shop.restVatPct ?? 0;
   const svcPct = shop.restServiceChargePct ?? 0;
   const vatAmount = Math.round(discountedBase * (vatPct / 100) * 100) / 100;
@@ -188,13 +226,15 @@ export async function POST(req: NextRequest) {
       shopId: shop.id,
       orderNumber,
       type: orderType,
-      tableId: body.tableId ?? null,
+      tableId: resolvedTableId,
       customerName: body.customerName ?? null,
       customerPhone: body.customerPhone ?? null,
-      note: body.note ?? null,
-      paymentMethod: body.paymentMethod ?? "cash",
+      note: isQrOrder
+        ? (body.note ? `[QR অর্ডার] ${body.note}` : "[QR অর্ডার]")
+        : (body.note ?? null),
+      paymentMethod: orderPaymentMethod,
       subtotal,
-      discount,
+      discount: orderDiscount,
       vatAmount,
       serviceAmount,
       totalAmount,
@@ -204,9 +244,9 @@ export async function POST(req: NextRequest) {
     include: ORDER_INCLUDE,
   });
 
-  if (body.tableId) {
+  if (resolvedTableId) {
     await prisma.diningTable.update({
-      where: { id: body.tableId },
+      where: { id: resolvedTableId },
       data: { status: "occupied" },
     });
   }
