@@ -17,7 +17,10 @@ export async function GET(req: NextRequest) {
 
     const orders = await prisma.restaurantOrder.findMany({
       where: { shopId: shop.id, status: "paid", createdAt: { gte: date, lt: nextDay } },
-      include: { items: { include: { menuItem: { select: { name: true, price: true } } } } },
+      include: {
+        items: { include: { menuItem: { select: { name: true, price: true } } } },
+        waiter: { select: { id: true, user: { select: { name: true } } } },
+      },
     });
 
     const gross       = orders.reduce((s, o) => s + o.totalAmount, 0);
@@ -39,9 +42,35 @@ export async function GET(req: NextRequest) {
     }
     const paymentMethodBreakdown = Object.entries(payMethodMap).map(([method, amount]) => ({ method, amount }));
 
+    const waiterTipMap = new Map<string, { name: string; tips: number; orders: number }>();
+    for (const o of orders) {
+      if (o.waiter) {
+        const existing = waiterTipMap.get(o.waiter.id);
+        if (existing) {
+          existing.tips   += o.tipAmount ?? 0;
+          existing.orders += 1;
+        } else {
+          waiterTipMap.set(o.waiter.id, {
+            name:   o.waiter.user.name,
+            tips:   o.tipAmount ?? 0,
+            orders: 1,
+          });
+        }
+      }
+    }
+    const waiterTips = Array.from(waiterTipMap.entries()).map(([id, v]) => ({ id, ...v }));
+
     return NextResponse.json({
       gross, vat: vatSum, serviceCharge: svcSum, discount: discountSum, net: netSum,
-      totalTips, orderCount, orders,
+      totalTips, waiterTips, orderCount,
+      orders: orders.map(o => ({
+        id: o.id, orderNumber: o.orderNumber, type: o.type, status: o.status,
+        totalAmount: o.totalAmount, paymentMethod: o.paymentMethod,
+        customerName: o.customerName, tipAmount: o.tipAmount ?? 0,
+        waiterName: o.waiter?.user?.name ?? null,
+        items: o.items,
+        createdAt: o.createdAt,
+      })),
       orderTypeBreakdown: { dineIn, takeaway, delivery },
       paymentMethodBreakdown,
     });

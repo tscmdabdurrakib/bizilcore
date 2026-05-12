@@ -230,7 +230,10 @@ export async function POST(req: NextRequest) {
       where: { id: body.waiterId, shopId: shop.id, isActive: true },
       select: { id: true },
     });
-    if (waiter) resolvedWaiterId = waiter.id;
+    if (!waiter) {
+      return NextResponse.json({ error: "Waiter not found or inactive" }, { status: 400 });
+    }
+    resolvedWaiterId = waiter.id;
   }
 
   const order = await prisma.restaurantOrder.create({

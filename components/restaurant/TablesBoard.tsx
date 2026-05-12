@@ -112,6 +112,9 @@ export default function TablesBoard() {
   const [tipInput, setTipInput] = useState("0");
   const [paying, setPaying] = useState(false);
 
+  const [waiterList, setWaiterList] = useState<{ id: string; name: string }[]>([]);
+  const [assigningWaiter, setAssigningWaiter] = useState(false);
+
   const [showMerge, setShowMerge] = useState(false);
   const [mergeSource, setMergeSource] = useState<DiningTable | null>(null);
   const [mergeTarget, setMergeTarget] = useState("");
@@ -183,11 +186,35 @@ export default function TablesBoard() {
         setActiveOrder(null);
         setPayMethod("cash");
         setDiscount("0");
-        fetch(`/api/restaurant/orders/${orderId}`)
-          .then(r => r.json())
-          .then(o => { setActiveOrder(o); setLoadingOrder(false); })
-          .catch(() => setLoadingOrder(false));
+        setTipInput("0");
+        Promise.all([
+          fetch(`/api/restaurant/orders/${orderId}`).then(r => r.json()),
+          waiterList.length === 0
+            ? fetch("/api/restaurant/waiters").then(r => r.ok ? r.json() : [])
+            : Promise.resolve(null),
+        ]).then(([order, waiters]) => {
+          setActiveOrder(order);
+          if (waiters) setWaiterList(waiters.map((w: { id: string; name: string }) => ({ id: w.id, name: w.name })));
+          setLoadingOrder(false);
+        }).catch(() => setLoadingOrder(false));
       }
+    }
+  }
+
+  async function assignWaiter(waiterId: string | null) {
+    if (!activeOrder) return;
+    setAssigningWaiter(true);
+    const r = await fetch(`/api/restaurant/orders/${activeOrder.id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "assign_waiter", waiterId }),
+    });
+    setAssigningWaiter(false);
+    if (r.ok) {
+      const d = await r.json();
+      setActiveOrder(d);
+      showToast("success", waiterId ? "ওয়েটার নির্ধারিত ✓" : "ওয়েটার সরানো হয়েছে");
+    } else {
+      showToast("error", "ওয়েটার পরিবর্তন করা যায়নি");
     }
   }
 
@@ -661,6 +688,29 @@ export default function TablesBoard() {
                     </div>
                   ))}
                 </div>
+
+                {/* Waiter Assignment */}
+                {waiterList.length > 0 && (
+                  <div className="rounded-xl border p-4" style={{ borderColor: S.border }}>
+                    <label className="text-xs font-semibold mb-2 block" style={{ color: S.muted }}>
+                      ওয়েটার নির্বাচন করুন
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={activeOrder.waiter?.id ?? ""}
+                        onChange={e => assignWaiter(e.target.value || null)}
+                        disabled={assigningWaiter}
+                        className="flex-1 px-3 py-2 rounded-xl border text-sm outline-none disabled:opacity-50"
+                        style={{ borderColor: S.border, color: S.text, backgroundColor: S.bg }}>
+                        <option value="">— কোনো ওয়েটার নেই —</option>
+                        {waiterList.map(w => (
+                          <option key={w.id} value={w.id}>{w.name}</option>
+                        ))}
+                      </select>
+                      {assigningWaiter && <Loader2 size={15} className="animate-spin flex-shrink-0" style={{ color: ORANGE }} />}
+                    </div>
+                  </div>
+                )}
 
                 {/* Bill summary */}
                 <div className="rounded-xl border p-4 space-y-2" style={{ borderColor: S.border }}>

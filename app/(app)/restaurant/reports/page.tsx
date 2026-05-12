@@ -86,6 +86,7 @@ interface DailyClosingOrder {
 interface DailyClosingData {
   gross: number; vat: number; serviceCharge: number; discount: number;
   net: number; orderCount: number; totalTips?: number;
+  waiterTips?: { id: string; name: string; tips: number; orders: number }[];
   paymentMethodBreakdown: { method: string; amount: number }[];
   orderTypeBreakdown: { dineIn: number; takeaway: number; delivery: number };
   orders: DailyClosingOrder[];
@@ -142,7 +143,7 @@ function RestaurantReportsPageInner() {
   const loadWaiters = useCallback(async (from: string, to: string) => {
     setWaiterLoading(true);
     try {
-      const res = await fetch(`/api/restaurant/waiters?from=${from}&to=${to}`);
+      const res = await fetch(`/api/restaurant/reports/waiters?from=${from}&to=${to}`);
       if (res.ok) setWaiterStats(await res.json());
     } catch {}
     setWaiterLoading(false);
@@ -313,6 +314,34 @@ function RestaurantReportsPageInner() {
                   })()}
                 </div>
               </div>
+
+              {/* Per-Waiter Tip Summary */}
+              {closingData.waiterTips && closingData.waiterTips.length > 0 && (
+                <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+                  <div className="px-5 py-4 border-b" style={{ borderColor: S.border }}>
+                    <h3 className="font-bold text-sm" style={{ color: S.text }}>ওয়েটার ভিত্তিক টিপ</h3>
+                  </div>
+                  <div className="divide-y" style={{ borderColor: S.border }}>
+                    {closingData.waiterTips.sort((a, b) => b.tips - a.tips).map(w => (
+                      <div key={w.id} className="flex items-center justify-between px-5 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
+                            style={{ backgroundColor: S.primary }}>
+                            {w.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold" style={{ color: S.text }}>{w.name}</p>
+                            <p className="text-xs" style={{ color: S.muted }}>{w.orders}টি অর্ডার</p>
+                          </div>
+                        </div>
+                        <p className="text-sm font-bold" style={{ color: "#D97706" }}>
+                          {w.tips > 0 ? formatBDT(w.tips) : "—"}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Orders Table */}
               <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: S.surface, borderColor: S.border }}>
