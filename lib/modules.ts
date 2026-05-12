@@ -592,7 +592,6 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
         { href: "/kitchen",    icon: ChefHat,          label: "কিচেন",        module: "kitchen"    },
       ],
     },
-    STORE_NAV_GROUP,
     {
       items: [
         { href: "/customers",  icon: Users,            label: "কাস্টমার",     module: "customers"  },
