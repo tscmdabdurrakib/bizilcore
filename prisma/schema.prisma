@@ -435,6 +435,8 @@ model Shop {
   restDefaultFloors        String[] @default(["Ground"])
   restDeliveryEnabled      Boolean  @default(true)
   restAutoStockDeduct      Boolean  @default(true)
+  managerPin               String?
+  restVoidThresholdHours   Int      @default(24)
 }
 
 model Subscription {
@@ -1503,6 +1505,14 @@ model RestaurantOrder {
   customerName  String?
   customerPhone String?
   note          String?
+  isVoided      Boolean               @default(false)
+  voidedAt      DateTime?
+  voidReason    String?
+  voidedBy      String?
+  refundedAt    DateTime?
+  refundAmount  Float?
+  refundReason  String?
+  refundedBy    String?
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @updatedAt
 
@@ -1510,6 +1520,7 @@ model RestaurantOrder {
   @@index([shopId, status])
   @@index([shopId, createdAt])
   @@index([shopId, waiterId])
+  @@index([shopId, isVoided])
 }
 
 model KotTicket {
@@ -1540,6 +1551,7 @@ model RestaurantOrderItem {
   selectedAddons  Json?
   addonTotal      Float           @default(0)
   note            String?
+  isVoided        Boolean         @default(false)
 }
 
 model MenuCategory {

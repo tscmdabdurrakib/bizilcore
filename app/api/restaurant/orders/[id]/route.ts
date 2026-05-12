@@ -1,12 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
 async function getShop(userId: string) {
   return prisma.shop.findUnique({
     where: { userId },
-    select: { id: true, restAutoStockDeduct: true, restVatPct: true, restServiceChargePct: true },
+    select: {
+      id: true,
+      restAutoStockDeduct: true,
+      restVatPct: true,
+      restServiceChargePct: true,
+      managerPin: true,
+      restVoidThresholdHours: true,
+    },
   });
+}
+
+async function verifyManagerPin(
+  managerPin: string | null | undefined,
+  pin: string
+): Promise<{ ok: boolean; error?: string }> {
+  if (!pin) return { ok: false, error: "PIN প্রয়োজন" };
+  if (!managerPin) return { ok: false, error: "Manager PIN সেট করা নেই। আগে সেটিংস থেকে PIN সেট করুন।" };
+  const ok = await bcrypt.compare(pin, managerPin);
+  return ok ? { ok: true } : { ok: false, error: "ভুল PIN" };
 }
 
 const ORDER_INCLUDE = {
@@ -120,7 +138,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     note?: string;
     menuItemId?: string;
     itemId?: string;
+    itemIds?: string[];
     quantity?: number;
+    pin?: string;
+    voidReason?: string;
+    refundAmount?: number;
+    refundReason?: string;
   };
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
@@ -364,6 +387,124 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         await prisma.diningTable.update({ where: { id: existing.tableId }, data: { status: "available" } });
       }
     }
+    return NextResponse.json(updated);
+  }
+
+  /* ── VOID ENTIRE ORDER ─────────────────────────────────────── */
+  if (action === "void_order") {
+    if (existing.isVoided) return NextResponse.json({ error: "অর্ডার ইতিমধ্যে ভয়েড করা হয়েছে" }, { status: 400 });
+
+    const pinResult = await verifyManagerPin(shop.managerPin, body.pin ?? "");
+    if (!pinResult.ok) return NextResponse.json({ error: pinResult.error }, { status: 401 });
+
+    const threshold = shop.restVoidThresholdHours ?? 24;
+    const hoursSince = (Date.now() - existing.createdAt.getTime()) / 3600000;
+    if (hoursSince > threshold) {
+      return NextResponse.json(
+        { error: `${threshold} ঘণ্টার বেশি পুরনো অর্ডার ভয়েড করা যাবে না` },
+        { status: 400 }
+      );
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { name: true } });
+
+    await restoreStockIfNeeded(shop.id, shop.restAutoStockDeduct, existing.status, existing.items);
+
+    const updated = await prisma.restaurantOrder.update({
+      where: { id },
+      data: {
+        isVoided: true,
+        voidedAt: new Date(),
+        voidReason: body.voidReason ?? "other",
+        voidedBy: user?.name ?? "Manager",
+        status: "cancelled",
+      },
+      include: ORDER_INCLUDE,
+    });
+
+    const UNPAID_STATUSES = ["pending", "preparing", "ready", "served", "billing"];
+    if (existing.tableId) {
+      const remaining = await prisma.restaurantOrder.count({
+        where: { tableId: existing.tableId, status: { in: UNPAID_STATUSES }, id: { not: id } },
+      });
+      if (remaining === 0) {
+        await prisma.diningTable.update({ where: { id: existing.tableId }, data: { status: "available" } });
+      }
+    }
+    return NextResponse.json(updated);
+  }
+
+  /* ── VOID SPECIFIC ITEMS ───────────────────────────────────── */
+  if (action === "void_items") {
+    const itemIds: string[] = body.itemIds ?? [];
+    if (itemIds.length === 0) return NextResponse.json({ error: "কমপক্ষে একটি আইটেম নির্বাচন করুন" }, { status: 400 });
+
+    const pinResult = await verifyManagerPin(shop.managerPin, body.pin ?? "");
+    if (!pinResult.ok) return NextResponse.json({ error: pinResult.error }, { status: 401 });
+
+    const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { name: true } });
+
+    const itemsToVoid = existing.items.filter(i => itemIds.includes(i.id) && !i.isVoided);
+    if (itemsToVoid.length === 0) return NextResponse.json({ error: "নির্বাচিত আইটেমগুলি ইতিমধ্যে ভয়েড বা অবৈধ" }, { status: 400 });
+
+    if (STOCK_DEDUCTED_STATUSES.includes(existing.status)) {
+      await restoreStockIfNeeded(shop.id, shop.restAutoStockDeduct, existing.status, itemsToVoid);
+    }
+
+    await prisma.restaurantOrderItem.updateMany({
+      where: { id: { in: itemIds }, orderId: id },
+      data: { isVoided: true },
+    });
+
+    const activeItems = existing.items
+      .filter(i => !i.isVoided && !itemIds.includes(i.id));
+
+    const vatPct2 = shop.restVatPct ?? 0;
+    const svcPct2 = shop.restServiceChargePct ?? 0;
+    const { subtotal, vatAmount, serviceAmount, totalAmount } = calcTotals(activeItems, existing.discount, vatPct2, svcPct2);
+
+    const voidNote = `ভয়েড (${user?.name ?? "Manager"}): ${body.voidReason ?? "other"}`;
+    const updated = await prisma.restaurantOrder.update({
+      where: { id },
+      data: {
+        subtotal, vatAmount, serviceAmount, totalAmount,
+        note: existing.note ? `${existing.note} | ${voidNote}` : voidNote,
+      },
+      include: ORDER_INCLUDE,
+    });
+    return NextResponse.json(updated);
+  }
+
+  /* ── PROCESS REFUND ────────────────────────────────────────── */
+  if (action === "process_refund") {
+    if (existing.status !== "paid") {
+      return NextResponse.json({ error: "শুধুমাত্র পেইড অর্ডারে রিফান্ড প্রযোজ্য" }, { status: 400 });
+    }
+    if (existing.refundedAt) {
+      return NextResponse.json({ error: "এই অর্ডারে ইতিমধ্যে রিফান্ড প্রক্রিয়া করা হয়েছে" }, { status: 400 });
+    }
+
+    const pinResult = await verifyManagerPin(shop.managerPin, body.pin ?? "");
+    if (!pinResult.ok) return NextResponse.json({ error: pinResult.error }, { status: 401 });
+
+    const refundAmount = body.refundAmount ?? 0;
+    if (refundAmount <= 0) return NextResponse.json({ error: "রিফান্ডের পরিমাণ শূন্যের বেশি হতে হবে" }, { status: 400 });
+    if (refundAmount > existing.totalAmount) {
+      return NextResponse.json({ error: "রিফান্ডের পরিমাণ মোট অর্ডারের বেশি হতে পারবে না" }, { status: 400 });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { name: true } });
+
+    const updated = await prisma.restaurantOrder.update({
+      where: { id },
+      data: {
+        refundedAt: new Date(),
+        refundAmount,
+        refundReason: body.refundReason ?? "other",
+        refundedBy: user?.name ?? "Manager",
+      },
+      include: ORDER_INCLUDE,
+    });
     return NextResponse.json(updated);
   }
 

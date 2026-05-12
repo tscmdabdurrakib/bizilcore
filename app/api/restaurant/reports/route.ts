@@ -10,6 +10,37 @@ export async function GET(req: NextRequest) {
   const type = searchParams.get("type") ?? "summary";
   const dateParam = searchParams.get("date");
 
+  if (type === "void_log") {
+    const fromParam = searchParams.get("from");
+    const toParam   = searchParams.get("to");
+    const from = fromParam ? new Date(fromParam) : new Date(Date.now() - 7 * 86400000);
+    const to   = toParam   ? new Date(toParam)   : new Date();
+    to.setHours(23, 59, 59, 999);
+
+    const voids = await prisma.restaurantOrder.findMany({
+      where: {
+        shopId: shop.id,
+        OR: [{ isVoided: true }, { refundedAt: { not: null } }],
+        createdAt: { gte: from, lte: to },
+      },
+      select: {
+        id: true, orderNumber: true, type: true, status: true, totalAmount: true,
+        isVoided: true, voidedAt: true, voidReason: true, voidedBy: true,
+        refundedAt: true, refundAmount: true, refundReason: true, refundedBy: true,
+        customerName: true, createdAt: true,
+        table: { select: { number: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const totalVoided      = voids.filter(o => o.isVoided).length;
+    const totalVoidAmount  = voids.filter(o => o.isVoided).reduce((s, o) => s + o.totalAmount, 0);
+    const totalRefunded    = voids.filter(o => o.refundedAt).length;
+    const totalRefundAmount = voids.filter(o => o.refundedAt).reduce((s, o) => s + (o.refundAmount ?? 0), 0);
+
+    return NextResponse.json({ voids, totalVoided, totalVoidAmount, totalRefunded, totalRefundAmount });
+  }
+
   if (type === "closing" && dateParam) {
     const date = new Date(dateParam);
     const nextDay = new Date(date);
@@ -60,6 +91,17 @@ export async function GET(req: NextRequest) {
     }
     const waiterTips = Array.from(waiterTipMap.entries()).map(([id, v]) => ({ id, ...v }));
 
+    const [voidedOrders, refundedOrders] = await Promise.all([
+      prisma.restaurantOrder.findMany({
+        where: { shopId: shop.id, isVoided: true, voidedAt: { gte: date, lt: nextDay } },
+        select: { id: true, orderNumber: true, totalAmount: true, voidReason: true, voidedBy: true, voidedAt: true },
+      }),
+      prisma.restaurantOrder.findMany({
+        where: { shopId: shop.id, refundedAt: { gte: date, lt: nextDay } },
+        select: { id: true, orderNumber: true, refundAmount: true, refundReason: true, refundedBy: true, refundedAt: true },
+      }),
+    ]);
+
     return NextResponse.json({
       gross, vat: vatSum, serviceCharge: svcSum, discount: discountSum, net: netSum,
       totalTips, waiterTips, orderCount,
@@ -73,6 +115,12 @@ export async function GET(req: NextRequest) {
       })),
       orderTypeBreakdown: { dineIn, takeaway, delivery },
       paymentMethodBreakdown,
+      voidCount: voidedOrders.length,
+      voidAmount: voidedOrders.reduce((s, o) => s + o.totalAmount, 0),
+      voidedOrders,
+      refundCount: refundedOrders.length,
+      totalRefundAmount: refundedOrders.reduce((s, o) => s + (o.refundAmount ?? 0), 0),
+      refundedOrders,
     });
   }
 
