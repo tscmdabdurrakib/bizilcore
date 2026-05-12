@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -79,19 +80,28 @@ function HeatmapCell({ count, max }: { count: number; max: number }) {
 interface DailyClosingOrder {
   id: string; orderNumber?: string; type: string; status: string;
   totalAmount: number; paymentMethod?: string; customerName?: string;
-  tableNumber?: number; createdAt: string; itemCount: number;
+  tableNumber?: number; createdAt: string;
+  items: { quantity: number; menuItem: { name: string; price: number } }[];
 }
 interface DailyClosingData {
-  date: string; totalRevenue: number; totalVat: number; totalService: number;
-  totalDiscount: number; totalOrders: number;
-  paymentBreakdown: { method: string; count: number; amount: number }[];
-  orderTypeBreakdown: { type: string; count: number }[];
+  gross: number; vat: number; serviceCharge: number; discount: number;
+  net: number; orderCount: number;
+  paymentMethodBreakdown: { method: string; amount: number }[];
+  orderTypeBreakdown: { dineIn: number; takeaway: number; delivery: number };
   orders: DailyClosingOrder[];
 }
 
 
-export default function RestaurantReportsPage() {
-  const [activeTab, setActiveTab] = useState<"analytics" | "closing">("analytics");
+function RestaurantReportsPageInner() {
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<"analytics" | "closing">(
+    searchParams.get("tab") === "closing" ? "closing" : "analytics"
+  );
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "closing" || tab === "analytics") setActiveTab(tab);
+  }, [searchParams]);
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [closingDate, setClosingDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -110,7 +120,7 @@ export default function RestaurantReportsPage() {
   const loadClosing = useCallback(async (date: string) => {
     setClosingLoading(true);
     try {
-      const res = await fetch(`/api/restaurant/reports/daily-closing?date=${date}`);
+      const res = await fetch(`/api/restaurant/reports?type=closing&date=${date}`);
       if (res.ok) setClosingData(await res.json());
     } catch {}
     setClosingLoading(false);
@@ -190,16 +200,18 @@ export default function RestaurantReportsPage() {
           ) : (
             <>
               {/* Closing Summary Cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 {[
-                  { label: "মোট রাজস্ব",   value: formatBDT(closingData.totalRevenue),  color: S.primary,  bg: "#FFF7ED" },
-                  { label: "মোট অর্ডার",   value: `${closingData.totalOrders}টি`,         color: "#3B82F6",  bg: "#EFF6FF" },
-                  { label: "ডিসকাউন্ট",    value: formatBDT(closingData.totalDiscount),  color: "#EF4444",  bg: "#FEF2F2" },
-                  { label: "VAT + সার্ভিস", value: formatBDT(closingData.totalVat + closingData.totalService), color: "#7C3AED", bg: "#F5F3FF" },
+                  { label: "Gross রাজস্ব",   value: formatBDT(closingData.gross),          color: S.primary,  bg: "#FFF7ED" },
+                  { label: "Net রাজস্ব",     value: formatBDT(closingData.net),             color: "#059669",  bg: "#ECFDF5" },
+                  { label: "মোট অর্ডার",    value: `${closingData.orderCount}টি`,           color: "#3B82F6",  bg: "#EFF6FF" },
+                  { label: "VAT",            value: formatBDT(closingData.vat),             color: "#7C3AED",  bg: "#F5F3FF" },
+                  { label: "সার্ভিস চার্জ", value: formatBDT(closingData.serviceCharge),   color: "#8B5CF6",  bg: "#F5F3FF" },
+                  { label: "ডিসকাউন্ট",     value: formatBDT(closingData.discount),        color: "#EF4444",  bg: "#FEF2F2" },
                 ].map(card => (
                   <div key={card.label} className="rounded-2xl p-4 border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
                     <p className="text-xs mb-2" style={{ color: S.muted }}>{card.label}</p>
-                    <p className="text-xl font-bold" style={{ color: S.text }}>{card.value}</p>
+                    <p className="text-lg font-bold" style={{ color: card.color }}>{card.value}</p>
                   </div>
                 ))}
               </div>
@@ -208,12 +220,12 @@ export default function RestaurantReportsPage() {
                 {/* Payment Method Breakdown */}
                 <div className="rounded-2xl p-5 border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
                   <h3 className="font-bold text-sm mb-4" style={{ color: S.text }}>পেমেন্ট পদ্ধতি</h3>
-                  {closingData.paymentBreakdown.length === 0 ? (
+                  {closingData.paymentMethodBreakdown.length === 0 ? (
                     <p className="text-sm text-center py-8" style={{ color: S.muted }}>কোনো ডেটা নেই</p>
                   ) : (
                     <div className="space-y-3">
-                      {closingData.paymentBreakdown.sort((a, b) => b.amount - a.amount).map(pm => {
-                        const total = closingData.paymentBreakdown.reduce((s, p) => s + p.amount, 0);
+                      {closingData.paymentMethodBreakdown.sort((a, b) => b.amount - a.amount).map(pm => {
+                        const total = closingData.paymentMethodBreakdown.reduce((s, p) => s + p.amount, 0);
                         const pct = total > 0 ? (pm.amount / total) * 100 : 0;
                         const color = PAY_COLORS[pm.method] ?? S.primary;
                         return (
@@ -222,7 +234,6 @@ export default function RestaurantReportsPage() {
                               <div className="flex items-center gap-2">
                                 <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
                                 <span className="text-xs font-semibold" style={{ color: S.text }}>{PAYMENT_METHOD_LABELS[pm.method] ?? pm.method}</span>
-                                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold text-white" style={{ backgroundColor: color }}>{pm.count}টি</span>
                               </div>
                               <span className="text-xs font-bold" style={{ color: S.text }}>{formatBDT(pm.amount)}</span>
                             </div>
@@ -239,31 +250,39 @@ export default function RestaurantReportsPage() {
                 {/* Order Type Breakdown */}
                 <div className="rounded-2xl p-5 border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
                   <h3 className="font-bold text-sm mb-4" style={{ color: S.text }}>অর্ডার ধরন</h3>
-                  {closingData.orderTypeBreakdown.length === 0 ? (
-                    <p className="text-sm text-center py-8" style={{ color: S.muted }}>কোনো ডেটা নেই</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {closingData.orderTypeBreakdown.sort((a, b) => b.count - a.count).map((ot, i) => {
-                        const total = closingData.orderTypeBreakdown.reduce((s, t) => s + t.count, 0);
-                        const pct = total > 0 ? (ot.count / total) * 100 : 0;
-                        const color = [S.primary, "#3B82F6", "#10B981"][i % 3];
-                        return (
-                          <div key={ot.type}>
-                            <div className="flex items-center justify-between mb-1.5">
-                              <div className="flex items-center gap-2">
-                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                                <span className="text-xs font-semibold" style={{ color: S.text }}>{ORDER_TYPE_LABELS[ot.type] ?? ot.type}</span>
+                  {(() => {
+                    const otb = closingData.orderTypeBreakdown;
+                    const rows = [
+                      { type: "dine_in",   label: ORDER_TYPE_LABELS.dine_in,   count: otb.dineIn,   color: S.primary },
+                      { type: "takeaway",  label: ORDER_TYPE_LABELS.takeaway,  count: otb.takeaway, color: "#3B82F6" },
+                      { type: "delivery",  label: ORDER_TYPE_LABELS.delivery,  count: otb.delivery, color: "#10B981" },
+                    ].filter(r => r.count > 0);
+                    const total = rows.reduce((s, r) => s + r.count, 0);
+                    if (rows.length === 0) return (
+                      <p className="text-sm text-center py-8" style={{ color: S.muted }}>কোনো ডেটা নেই</p>
+                    );
+                    return (
+                      <div className="space-y-3">
+                        {rows.map(r => {
+                          const pct = total > 0 ? (r.count / total) * 100 : 0;
+                          return (
+                            <div key={r.type}>
+                              <div className="flex items-center justify-between mb-1.5">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: r.color }} />
+                                  <span className="text-xs font-semibold" style={{ color: S.text }}>{r.label}</span>
+                                </div>
+                                <span className="text-xs font-bold" style={{ color: S.text }}>{r.count}টি ({pct.toFixed(0)}%)</span>
                               </div>
-                              <span className="text-xs font-bold" style={{ color: S.text }}>{ot.count}টি ({pct.toFixed(0)}%)</span>
+                              <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: S.border }}>
+                                <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: r.color }} />
+                              </div>
                             </div>
-                            <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: S.border }}>
-                              <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: color }} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -292,7 +311,9 @@ export default function RestaurantReportsPage() {
                             <td className="px-4 py-3 text-xs" style={{ color: S.text }}>
                               {o.tableNumber ? `T${o.tableNumber}` : (o.customerName ?? "—")}
                             </td>
-                            <td className="px-4 py-3 text-xs" style={{ color: S.muted }}>{o.itemCount}টি</td>
+                            <td className="px-4 py-3 text-xs" style={{ color: S.muted }}>
+                              {o.items.reduce((s, i) => s + i.quantity, 0)}টি
+                            </td>
                             <td className="px-4 py-3 text-xs font-bold" style={{ color: S.primary }}>{formatBDT(o.totalAmount)}</td>
                             <td className="px-4 py-3 text-xs" style={{ color: S.muted }}>{PAYMENT_METHOD_LABELS[o.paymentMethod ?? ""] ?? (o.paymentMethod ?? "—")}</td>
                             <td className="px-4 py-3 text-xs" style={{ color: S.muted }}>
@@ -304,7 +325,7 @@ export default function RestaurantReportsPage() {
                       <tfoot>
                         <tr style={{ borderTop: `2px solid ${S.border}`, backgroundColor: S.bg }}>
                           <td colSpan={4} className="px-4 py-3 text-xs font-bold" style={{ color: S.text }}>সর্বমোট</td>
-                          <td className="px-4 py-3 text-sm font-bold" style={{ color: S.primary }}>{formatBDT(closingData.totalRevenue)}</td>
+                          <td className="px-4 py-3 text-sm font-bold" style={{ color: S.primary }}>{formatBDT(closingData.gross)}</td>
                           <td colSpan={2} />
                         </tr>
                       </tfoot>
@@ -582,5 +603,17 @@ export default function RestaurantReportsPage() {
       </div>
       </div>}
     </div>
+  );
+}
+
+export default function RestaurantReportsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center items-center h-64">
+        <Loader2 size={28} className="animate-spin" style={{ color: "#EA580C" }} />
+      </div>
+    }>
+      <RestaurantReportsPageInner />
+    </Suspense>
   );
 }

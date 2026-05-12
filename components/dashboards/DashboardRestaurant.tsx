@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { UtensilsCrossed, ShoppingBag, TrendingUp, Clock, ChefHat, AlertTriangle, Loader2, RefreshCw, Plus } from "lucide-react";
+import { UtensilsCrossed, ShoppingBag, TrendingUp, Clock, ChefHat, AlertTriangle, Loader2, RefreshCw, Plus, CalendarCheck } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
 
 interface Props {
@@ -132,12 +132,13 @@ export default function DashboardRestaurant({ shopName, userName, userGender }: 
       {/* Quick Actions */}
       <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
         {[
-          { href: "/restaurant/pos",      icon: Plus,            label: "নতুন অর্ডার",   color: S.primary,  bg: "#FFF7ED" },
-          { href: "/restaurant/tables",  icon: UtensilsCrossed, label: "টেবিল ম্যাপ",  color: "#D97706",  bg: "#FFFBEB" },
-          { href: "/restaurant/kitchen", icon: ChefHat,         label: "কিচেন ভিউ",    color: "#059669",  bg: "#ECFDF5" },
-          { href: "/restaurant/menu",    icon: ShoppingBag,     label: "মেনু",          color: "#3B82F6",  bg: "#EFF6FF" },
-          { href: "/restaurant/recipes", icon: TrendingUp,      label: "রেসিপি/স্টক",  color: "#7C3AED",  bg: "#F5F3FF" },
-          { href: "/restaurant/reports", icon: TrendingUp,      label: "রিপোর্ট",      color: "#10B981",  bg: "#ECFDF5" },
+          { href: "/restaurant/pos",                  icon: Plus,            label: "নতুন অর্ডার",   color: S.primary,  bg: "#FFF7ED" },
+          { href: "/restaurant/tables",              icon: UtensilsCrossed, label: "টেবিল ম্যাপ",  color: "#D97706",  bg: "#FFFBEB" },
+          { href: "/restaurant/kitchen",             icon: ChefHat,         label: "কিচেন ভিউ",    color: "#059669",  bg: "#ECFDF5" },
+          { href: "/restaurant/menu",                icon: ShoppingBag,     label: "মেনু",          color: "#3B82F6",  bg: "#EFF6FF" },
+          { href: "/restaurant/recipes",             icon: TrendingUp,      label: "রেসিপি/স্টক",  color: "#7C3AED",  bg: "#F5F3FF" },
+          { href: "/restaurant/reports?tab=closing", icon: CalendarCheck,   label: "দিন বন্ধ",     color: "#DC2626",  bg: "#FEF2F2" },
+          { href: "/restaurant/reports",             icon: TrendingUp,      label: "রিপোর্ট",      color: "#10B981",  bg: "#ECFDF5" },
         ].map(a => (
           <Link key={a.href} href={a.href}
             className="flex flex-col items-center gap-2 px-4 py-3 rounded-2xl border flex-shrink-0 transition-all hover:scale-[1.04] hover:shadow-md active:scale-95"
