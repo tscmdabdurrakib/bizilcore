@@ -6,22 +6,10 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
+import { Eye, EyeOff, ArrowRight, Check, X, Package, ShoppingCart, BarChart3 } from "lucide-react";
 
 const PRIMARY = "#0F6E56";
-const inputStyle = {
-  height: "42px",
-  border: "1px solid #E8E6DF",
-  borderRadius: "10px",
-  color: "#1A1A18",
-  width: "100%",
-  padding: "0 12px",
-  fontSize: "14px",
-  outline: "none",
-  backgroundColor: "#fff",
-  transition: "border-color 0.15s",
-};
 
-/* ── Password strength helpers ── */
 function getStrengthScore(password: string): number {
   if (!password) return 0;
   let score = 0;
@@ -34,32 +22,15 @@ function getStrengthScore(password: string): number {
 }
 
 const STRENGTH_LABELS = ["", "দুর্বল", "মোটামুটি", "ভালো", "শক্তিশালী"];
-const STRENGTH_COLORS = ["", "#E53E3E", "#DD6B20", "#D69E2E", "#1BAA78"];
-const STRENGTH_TIPS: Record<number, string> = {
-  1: "আরও লম্বা পাসওয়ার্ড দিন",
-  2: "বড় হাতের অক্ষর বা সংখ্যা যোগ করুন",
-  3: "বিশেষ চিহ্ন (@, #, !) যোগ করুন",
-  4: "চমৎকার! পাসওয়ার্ডটি শক্তিশালী",
-};
+const STRENGTH_COLORS = ["", "#EF4444", "#F97316", "#EAB308", "#10B981"];
 
-function PasswordField({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-}) {
+function PasswordField({ value, onChange }: { value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) {
   const [show, setShow] = useState(false);
   const score = getStrengthScore(value);
-  const showMeter = value.length > 0;
 
   return (
     <div>
-      <label className="block text-sm font-medium mb-1.5" style={{ color: "#1A1A18" }}>
-        পাসওয়ার্ড
-      </label>
-
-      {/* Input + eye toggle */}
+      <label className="block text-sm font-semibold mb-2" style={{ color: "#374151" }}>পাসওয়ার্ড</label>
       <div className="relative">
         <input
           type={show ? "text" : "password"}
@@ -69,56 +40,48 @@ function PasswordField({
           placeholder="কমপক্ষে ৮ অক্ষর"
           required
           minLength={8}
-          style={{ ...inputStyle, paddingRight: "40px" }}
-          onFocus={e => (e.target.style.borderColor = PRIMARY)}
-          onBlur={e => (e.target.style.borderColor = "#E8E6DF")}
+          className="w-full pl-4 pr-11 text-sm outline-none transition-all"
+          style={{ height: "48px", border: "1.5px solid #E5E7EB", borderRadius: "12px", color: "#111", backgroundColor: "#FAFAFA" }}
+          onFocus={(e) => { e.target.style.borderColor = PRIMARY; e.target.style.backgroundColor = "#fff"; }}
+          onBlur={(e) => { e.target.style.borderColor = "#E5E7EB"; e.target.style.backgroundColor = "#FAFAFA"; }}
         />
-        <button
-          type="button"
-          onClick={() => setShow(s => !s)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-          tabIndex={-1}
-        >
-          {show ? (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-              <line x1="1" y1="1" x2="23" y2="23"/>
-            </svg>
-          ) : (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-              <circle cx="12" cy="12" r="3"/>
-            </svg>
-          )}
+        <button type="button" onClick={() => setShow(s => !s)}
+          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors" tabIndex={-1}>
+          {show ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
       </div>
-
-      {/* Strength meter */}
-      {showMeter && (
+      {value.length > 0 && (
         <div className="mt-2 space-y-1.5">
-          {/* 4 bars */}
           <div className="flex gap-1">
             {[1, 2, 3, 4].map(i => (
-              <div
-                key={i}
-                className="flex-1 h-1 rounded-full transition-all duration-300"
-                style={{
-                  backgroundColor: score >= i ? STRENGTH_COLORS[score] : "#E8E6DF",
-                }}
-              />
+              <div key={i} className="flex-1 h-1 rounded-full transition-all duration-300"
+                style={{ backgroundColor: score >= i ? STRENGTH_COLORS[score] : "#E5E7EB" }} />
             ))}
           </div>
-          {/* Label + tip */}
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold" style={{ color: STRENGTH_COLORS[score] }}>
-              {STRENGTH_LABELS[score]}
-            </span>
-            <span className="text-xs" style={{ color: "#9CA3AF" }}>
-              {STRENGTH_TIPS[score]}
-            </span>
-          </div>
+          <p className="text-xs font-semibold" style={{ color: STRENGTH_COLORS[score] }}>
+            {STRENGTH_LABELS[score]}
+          </p>
         </div>
       )}
+    </div>
+  );
+}
+
+function InputField({ label, name, type = "text", placeholder, value, onChange, required = true }: {
+  label: string; name: string; type?: string; placeholder: string; value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; required?: boolean;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-semibold mb-2" style={{ color: "#374151" }}>{label}</label>
+      <input
+        type={type} name={name} value={value} onChange={onChange}
+        placeholder={placeholder} required={required}
+        className="w-full px-4 text-sm outline-none transition-all"
+        style={{ height: "48px", border: "1.5px solid #E5E7EB", borderRadius: "12px", color: "#111", backgroundColor: "#FAFAFA" }}
+        onFocus={(e) => { e.target.style.borderColor = PRIMARY; e.target.style.backgroundColor = "#fff"; }}
+        onBlur={(e) => { e.target.style.borderColor = "#E5E7EB"; e.target.style.backgroundColor = "#FAFAFA"; }}
+      />
     </div>
   );
 }
@@ -127,14 +90,11 @@ function SignupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState<1 | 2>(1);
-  // affiliateSlug is hidden — from ?aff= param (affiliate tracking, not referral reward)
-  // referralCode is visible — from ?ref= param (referral reward: 1 month Pro free)
   const [form, setForm] = useState({ name: "", email: "", password: "", shopName: "", referralCode: "", affiliateSlug: "", agreed: false });
   const [referralValid, setReferralValid] = useState<null | boolean>(null);
   const [referralMsg, setReferralMsg] = useState("");
   const [checkingRef, setCheckingRef] = useState(false);
 
-  // Declare validateReferral BEFORE the useEffect that depends on it
   const validateReferral = useCallback(async (code: string) => {
     if (!code) { setReferralValid(null); setReferralMsg(""); return; }
     setCheckingRef(true);
@@ -146,15 +106,16 @@ function SignupContent() {
   }, []);
 
   useEffect(() => {
-    const aff = searchParams.get("aff");   // affiliate slug — hidden tracking
-    const ref = searchParams.get("ref");   // referral code — show in field + validate
+    const aff = searchParams.get("aff");
+    const ref = searchParams.get("ref");
     if (aff) setForm(p => ({ ...p, affiliateSlug: aff }));
     if (ref) {
       const code = ref.toUpperCase();
       setForm(p => ({ ...p, referralCode: code }));
-      validateReferral(code);              // auto-validate so user sees green checkmark
+      validateReferral(code);
     }
   }, [searchParams, validateReferral]);
+
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
@@ -184,23 +145,16 @@ function SignupContent() {
     const newOtp = [...otp];
     newOtp[index] = digit;
     setOtp(newOtp);
-    if (digit && index < 5) {
-      otpRefs.current[index + 1]?.focus();
-    }
+    if (digit && index < 5) otpRefs.current[index + 1]?.focus();
   }
 
   function handleOtpKeyDown(index: number, e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Backspace" && !otp[index] && index > 0) {
-      otpRefs.current[index - 1]?.focus();
-    }
+    if (e.key === "Backspace" && !otp[index] && index > 0) otpRefs.current[index - 1]?.focus();
   }
 
   function handleOtpPaste(e: React.ClipboardEvent) {
     const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    if (pasted.length === 6) {
-      setOtp(pasted.split(""));
-      otpRefs.current[5]?.focus();
-    }
+    if (pasted.length === 6) { setOtp(pasted.split("")); otpRefs.current[5]?.focus(); }
   }
 
   async function handleRegister(e: React.FormEvent) {
@@ -215,15 +169,6 @@ function SignupContent() {
     const data = await res.json();
     setLoading(false);
     if (!res.ok) { showToast("error", data.error ?? "কিছু একটা সমস্যা হয়েছে।"); return; }
-
-    // Existing unverified account — resent OTP, move to step 2
-    if (data.needsVerification) {
-      showToast("success", "নতুন Verification code পাঠানো হয়েছে ✓");
-      setResendCooldown(60);
-      setStep(2);
-      return;
-    }
-
     showToast("success", "Verification code পাঠানো হয়েছে ✓");
     setResendCooldown(60);
     setStep(2);
@@ -241,7 +186,6 @@ function SignupContent() {
     });
     const data = await res.json();
     if (!res.ok) { setLoading(false); showToast("error", data.error ?? "কোড সঠিক নয়।"); return; }
-
     await signIn("credentials", { email: form.email, password: form.password, redirect: false });
     setLoading(false);
     showToast("success", "ইমেইল verified! স্বাগতম 🎉");
@@ -268,211 +212,249 @@ function SignupContent() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-8" style={{ backgroundColor: "#F7F6F2" }}>
+    <div className="min-h-screen flex" style={{ backgroundColor: "#F7F6F2" }}>
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg max-w-xs"
-          style={{ backgroundColor: toast.type === "success" ? "#1D9E75" : "#E24B4A" }}>
-          {toast.message}
+        <div className="fixed bottom-6 right-6 z-50 px-5 py-3.5 rounded-2xl text-white text-sm font-medium shadow-2xl flex items-center gap-2"
+          style={{ backgroundColor: toast.type === "success" ? PRIMARY : "#DC2626" }}>
+          {toast.type === "success" ? "✓" : "✗"} {toast.message}
         </div>
       )}
 
-      <div className="w-full max-w-md px-4">
-        <div className="bg-white rounded-2xl shadow-sm border p-8" style={{ borderColor: "#E8E6DF" }}>
+      {/* ── Left Panel ── */}
+      <div className="hidden lg:flex lg:w-[48%] flex-col relative overflow-hidden"
+        style={{ background: "linear-gradient(145deg, #062e20 0%, #0F6E56 55%, #1db88a 100%)" }}>
+        <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full opacity-10" style={{ backgroundColor: "#fff" }} />
+        <div className="absolute top-1/2 -left-20 w-80 h-80 rounded-full opacity-10" style={{ backgroundColor: "#fff" }} />
 
-          {/* Logo + Title */}
-          <div className="text-center mb-7">
-            <div className="flex items-center justify-center mb-4">
-              <BrandLogo size="xl" tone="dark" href="/" />
+        <div className="relative z-10 flex flex-col h-full p-12">
+          <BrandLogo size="lg" tone="light" href="/" />
+
+          <div className="flex-1 flex flex-col justify-center mt-10">
+            <h2 className="text-3xl font-bold leading-tight mb-3 text-white">
+              ব্যবসা পরিচালনা করুন<br />
+              <span style={{ color: "#7effd4" }}>আরও স্মার্টভাবে</span>
+            </h2>
+            <p className="mb-8" style={{ color: "rgba(255,255,255,0.7)" }}>
+              ২ মিনিটে account তৈরি করুন, বিনামূল্যে শুরু করুন
+            </p>
+
+            <div className="space-y-3 mb-8">
+              {[
+                { icon: Package, text: "স্টক ও পণ্য ব্যবস্থাপনা (Variant সহ)" },
+                { icon: ShoppingCart, text: "অর্ডার ট্র্যাকিং ও কুরিয়ার বুকিং" },
+                { icon: BarChart3, text: "Financial report ও Analytics" },
+              ].map(({ icon: Icon, text }) => (
+                <div key={text} className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: "rgba(255,255,255,0.15)" }}>
+                    <Icon size={15} className="text-white" />
+                  </div>
+                  <p className="text-sm" style={{ color: "rgba(255,255,255,0.85)" }}>{text}</p>
+                </div>
+              ))}
             </div>
-            {step === 1 ? (
-              <>
-                <h1 className="text-2xl font-semibold" style={{ color: "#1A1A18" }}>বিনামূল্যে শুরু করুন</h1>
-                <p className="mt-1 text-sm" style={{ color: "#5A5A56" }}>আজই আপনার ব্যবসা শুরু করুন</p>
-              </>
-            ) : (
-              <>
-                <h1 className="text-xl font-semibold" style={{ color: "#1A1A18" }}>ইমেইল Verify করুন</h1>
-                <p className="mt-1 text-sm" style={{ color: "#5A5A56" }}>
-                  <span style={{ color: PRIMARY, fontWeight: 600 }}>{form.email}</span>-এ ৬ ডিজিটের কোড পাঠানো হয়েছে
-                </p>
-              </>
-            )}
+
+            {/* Social proof */}
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { value: "১০,০০০+", label: "Active Seller" },
+                { value: "বিনামূল্যে", label: "শুরু করুন" },
+                { value: "৫টি", label: "Courier Integration" },
+                { value: "২৪/৭", label: "Data Access" },
+              ].map(s => (
+                <div key={s.label} className="rounded-xl p-3 text-center"
+                  style={{ backgroundColor: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                  <p className="text-lg font-bold text-white">{s.value}</p>
+                  <p className="text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>{s.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Right Panel ── */}
+      <div className="flex-1 flex flex-col items-center justify-center py-8 px-6 overflow-y-auto">
+        <div className="w-full max-w-md">
+          <div className="flex justify-center mb-7 lg:hidden">
+            <BrandLogo size="xl" tone="dark" href="/" />
           </div>
 
-          {/* Step indicator */}
+          {/* Step pills */}
           <div className="flex items-center gap-2 mb-6">
-            {[1, 2].map(s => (
-              <div key={s} className="flex-1 h-1.5 rounded-full transition-all" style={{ backgroundColor: step >= s ? PRIMARY : "#E8E6DF" }} />
+            {["নিবন্ধন", "ইমেইল Verify"].map((label, i) => (
+              <div key={label} className="flex items-center gap-2 flex-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all"
+                    style={{
+                      backgroundColor: step > i + 1 ? PRIMARY : step === i + 1 ? PRIMARY : "#E5E7EB",
+                      color: step >= i + 1 ? "#fff" : "#9CA3AF",
+                    }}>
+                    {step > i + 1 ? <Check size={13} /> : i + 1}
+                  </div>
+                  <span className="text-xs font-medium" style={{ color: step === i + 1 ? "#111" : "#9CA3AF" }}>{label}</span>
+                </div>
+                {i === 0 && <div className="flex-1 h-0.5 mx-2" style={{ backgroundColor: step > 1 ? PRIMARY : "#E5E7EB" }} />}
+              </div>
             ))}
           </div>
 
-          {/* ── STEP 1: Registration Form ── */}
-          {step === 1 && (
-            <form onSubmit={handleRegister} className="space-y-4">
-              {[{ label: "আপনার নাম", name: "name", type: "text", placeholder: "পূর্ণ নাম লিখুন" },{ label: "ইমেইল", name: "email", type: "email", placeholder: "আপনার ইমেইল লিখুন" }].map(f => (
-                <div key={f.name}>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: "#1A1A18" }}>{f.label}</label>
-                  <input
-                    type={f.type}
-                    name={f.name}
-                    value={form[f.name as keyof typeof form] as string | number}
-                    onChange={handleChange}
-                    placeholder={f.placeholder}
-                    required
-                    style={inputStyle}
-                    onFocus={e => (e.target.style.borderColor = PRIMARY)}
-                    onBlur={e => (e.target.style.borderColor = "#E8E6DF")}
-                  />
-                </div>
-              ))}
-
-              {/* Password field with strength meter */}
-              <PasswordField value={form.password} onChange={handleChange} />
-
-              {[{ label: "শপের নাম", name: "shopName", type: "text", placeholder: "আপনার শপের নাম লিখুন" }].map(f => (
-                <div key={f.name}>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: "#1A1A18" }}>{f.label}</label>
-                  <input
-                    type={f.type}
-                    name={f.name}
-                    value={form[f.name as keyof typeof form] as string | number}
-                    onChange={handleChange}
-                    placeholder={f.placeholder}
-                    required
-                    style={inputStyle}
-                    onFocus={e => (e.target.style.borderColor = PRIMARY)}
-                    onBlur={e => (e.target.style.borderColor = "#E8E6DF")}
-                  />
-                </div>
-              ))}
-
-              {/* Referral code field */}
-              <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: "#1A1A18" }}>
-                  Referral কোড <span style={{ color: "#9CA3AF", fontWeight: 400 }}>(ঐচ্ছিক)</span>
-                  {form.affiliateSlug && (
-                    <span className="ml-2 text-xs font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: "#E6F7F1", color: "#0F6E56" }}>
-                      🔗 Affiliate Link
-                    </span>
-                  )}
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    name="referralCode"
-                    value={form.referralCode}
-                    onChange={e => { handleChange(e); setReferralValid(null); setReferralMsg(""); }}
-                    placeholder="যেমন: RINA50"
-                    style={{ ...inputStyle, textTransform: "uppercase" }}
-                    onFocus={e => (e.target.style.borderColor = PRIMARY)}
-                    onBlur={e => { e.target.style.borderColor = "#E8E6DF"; if (form.referralCode) validateReferral(form.referralCode); }}
-                  />
-                  <button type="button" onClick={() => validateReferral(form.referralCode)}
-                    className="px-4 rounded-xl text-sm font-medium text-white flex-shrink-0"
-                    style={{ backgroundColor: PRIMARY, height: "42px", opacity: checkingRef ? 0.7 : 1 }}>
-                    {checkingRef ? "..." : "চেক"}
-                  </button>
-                </div>
-                {referralMsg && (
-                  <p className="text-xs mt-1.5 font-medium" style={{ color: referralValid ? "#1BAA78" : "#E24B4A" }}>
-                    {referralValid ? "✓ " : "✗ "}{referralMsg}
-                  </p>
-                )}
+          {step === 1 ? (
+            <>
+              <div className="mb-6">
+                <h1 className="text-2xl font-bold mb-1" style={{ color: "#111" }}>বিনামূল্যে শুরু করুন ✨</h1>
+                <p className="text-sm" style={{ color: "#6B7280" }}>আজই আপনার ব্যবসা শুরু করুন</p>
               </div>
 
-              <label className="flex items-start gap-2.5 cursor-pointer">
-                <input type="checkbox" name="agreed" checked={form.agreed} onChange={handleChange} className="mt-0.5 w-4 h-4 rounded accent-primary" />
-                <span className="text-sm" style={{ color: "#5A5A56" }}>
-                  আমি{" "}
-                  <a href="/terms" target="_blank" rel="noopener noreferrer" className="font-medium underline underline-offset-2 hover:opacity-80" style={{ color: PRIMARY }}>শর্তাবলী</a>
-                  {" "}এবং{" "}
-                  <a href="/privacy" target="_blank" rel="noopener noreferrer" className="font-medium underline underline-offset-2 hover:opacity-80" style={{ color: PRIMARY }}>গোপনীয়তা নীতি</a>
-                  {" "}মেনে নিচ্ছি
-                </span>
-              </label>
+              <form onSubmit={handleRegister} className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <InputField label="আপনার নাম" name="name" placeholder="পূর্ণ নাম" value={form.name} onChange={handleChange} />
+                  <InputField label="শপের নাম" name="shopName" placeholder="শপের নাম" value={form.shopName} onChange={handleChange} />
+                </div>
+                <InputField label="ইমেইল" name="email" type="email" placeholder="আপনার ইমেইল" value={form.email} onChange={handleChange} />
+                <PasswordField value={form.password} onChange={handleChange} />
 
-              <button type="submit" disabled={loading}
-                className="w-full text-white text-sm font-medium py-2.5 rounded-xl transition-opacity disabled:opacity-60"
-                style={{ backgroundColor: PRIMARY }}>
-                {loading ? "তৈরি হচ্ছে..." : "পরবর্তী →"}
-              </button>
-            </form>
-          )}
-
-          {/* ── STEP 2: OTP Verification ── */}
-          {step === 2 && (
-            <form onSubmit={handleVerifyOTP} className="space-y-5">
-              {/* OTP boxes */}
-              <div>
-                <label className="block text-sm font-medium mb-3 text-center" style={{ color: "#1A1A18" }}>Verification Code</label>
-                <div className="flex gap-2 justify-center" onPaste={handleOtpPaste}>
-                  {otp.map((digit, i) => (
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: "#374151" }}>
+                    Referral কোড{" "}
+                    <span style={{ color: "#9CA3AF", fontWeight: 400 }}>(ঐচ্ছিক)</span>
+                  </label>
+                  <div className="flex gap-2">
                     <input
-                      key={i}
-                      ref={el => { otpRefs.current[i] = el; }}
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={1}
-                      value={digit}
-                      onChange={e => handleOtpChange(i, e.target.value)}
-                      onKeyDown={e => handleOtpKeyDown(i, e)}
-                      className="w-12 h-14 text-center text-xl font-bold border-2 rounded-xl outline-none transition-all"
-                      style={{
-                        borderColor: digit ? PRIMARY : "#E8E6DF",
-                        color: PRIMARY,
-                        backgroundColor: digit ? "#F0FBF7" : "#fff",
-                      }}
-                      onFocus={e => (e.target.style.borderColor = PRIMARY)}
-                      onBlur={e => (e.target.style.borderColor = digit ? PRIMARY : "#E8E6DF")}
+                      type="text" name="referralCode" value={form.referralCode}
+                      onChange={e => { handleChange(e); setReferralValid(null); setReferralMsg(""); }}
+                      placeholder="যেমন: RINA50"
+                      className="flex-1 px-4 text-sm outline-none transition-all uppercase"
+                      style={{ height: "48px", border: "1.5px solid #E5E7EB", borderRadius: "12px", color: "#111", backgroundColor: "#FAFAFA" }}
+                      onFocus={(e) => { e.target.style.borderColor = PRIMARY; e.target.style.backgroundColor = "#fff"; }}
+                      onBlur={(e) => { e.target.style.borderColor = "#E5E7EB"; e.target.style.backgroundColor = "#FAFAFA"; if (form.referralCode) validateReferral(form.referralCode); }}
                     />
-                  ))}
-                </div>
-              </div>
-
-              <div className="p-3 rounded-xl text-xs text-center" style={{ backgroundColor: "#F0FBF7", color: "#0F6E56" }}>
-                📧 ইমেইল চেক করুন — spam/promotions folder-ও দেখুন
-              </div>
-
-              <button type="submit" disabled={loading || otp.join("").length < 6}
-                className="w-full text-white text-sm font-medium py-2.5 rounded-xl disabled:opacity-60"
-                style={{ backgroundColor: PRIMARY }}>
-                {loading ? "যাচাই হচ্ছে..." : "✅ Verify করুন"}
-              </button>
-
-              {/* Resend */}
-              <div className="text-center">
-                <p className="text-sm" style={{ color: "#5A5A56" }}>কোড পাননি?{" "}
-                  {resendCooldown > 0 ? (
-                    <span style={{ color: "#9CA3AF" }}>{resendCooldown}s পর আবার পাঠান</span>
-                  ) : (
-                    <button type="button" onClick={handleResend} disabled={resending}
-                      className="font-medium hover:underline disabled:opacity-60"
-                      style={{ color: PRIMARY }}>
-                      {resending ? "পাঠাচ্ছে..." : "আবার পাঠান"}
+                    <button type="button" onClick={() => validateReferral(form.referralCode)}
+                      className="px-4 rounded-xl text-sm font-semibold text-white flex-shrink-0 transition-opacity"
+                      style={{ backgroundColor: PRIMARY, height: "48px", opacity: checkingRef ? 0.7 : 1 }}>
+                      {checkingRef ? "..." : "চেক"}
                     </button>
+                  </div>
+                  {referralMsg && (
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      {referralValid ? <Check size={13} style={{ color: "#10B981" }} /> : <X size={13} style={{ color: "#EF4444" }} />}
+                      <p className="text-xs font-medium" style={{ color: referralValid ? "#10B981" : "#EF4444" }}>{referralMsg}</p>
+                    </div>
                   )}
+                </div>
+
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <div className="relative mt-0.5">
+                    <input type="checkbox" name="agreed" checked={form.agreed} onChange={handleChange} className="sr-only" />
+                    <div className="w-5 h-5 rounded flex items-center justify-center border-2 transition-all"
+                      style={{ borderColor: form.agreed ? PRIMARY : "#D1D5DB", backgroundColor: form.agreed ? PRIMARY : "#fff" }}>
+                      {form.agreed && <Check size={11} className="text-white" />}
+                    </div>
+                  </div>
+                  <span className="text-sm" style={{ color: "#6B7280" }}>
+                    আমি{" "}
+                    <a href="/terms" target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-2" style={{ color: PRIMARY }}>শর্তাবলী</a>
+                    {" "}এবং{" "}
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-2" style={{ color: PRIMARY }}>গোপনীয়তা নীতি</a>
+                    {" "}মেনে নিচ্ছি
+                  </span>
+                </label>
+
+                <button type="submit" disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 text-white font-semibold py-3.5 rounded-xl transition-all disabled:opacity-60"
+                  style={{ background: `linear-gradient(135deg, #0F6E56 0%, #0a5240 100%)`, boxShadow: "0 4px 20px rgba(15,110,86,0.35)", fontSize: "15px" }}>
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      তৈরি হচ্ছে...
+                    </span>
+                  ) : <>পরবর্তী ধাপ <ArrowRight size={16} /></>}
+                </button>
+              </form>
+
+              <p className="text-center text-sm mt-5" style={{ color: "#6B7280" }}>
+                ইতিমধ্যে account আছে?{" "}
+                <Link href="/login" className="font-semibold hover:underline" style={{ color: PRIMARY }}>লগইন করুন</Link>
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="mb-6 text-center">
+                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                  style={{ background: "linear-gradient(135deg, #E1F5EE, #A7F3D0)" }}>
+                  <span className="text-3xl">📧</span>
+                </div>
+                <h1 className="text-2xl font-bold mb-1" style={{ color: "#111" }}>ইমেইল Verify করুন</h1>
+                <p className="text-sm" style={{ color: "#6B7280" }}>
+                  <span className="font-semibold" style={{ color: PRIMARY }}>{form.email}</span>-এ ৬ ডিজিটের কোড পাঠানো হয়েছে
                 </p>
               </div>
 
-              <button type="button" onClick={() => { setStep(1); setOtp(["", "", "", "", "", ""]); }}
-                className="w-full text-sm py-2 rounded-xl border"
-                style={{ color: "#5A5A56", borderColor: "#E8E6DF" }}>
-                ← পেছনে যান
-              </button>
-            </form>
+              <form onSubmit={handleVerifyOTP} className="space-y-5">
+                <div>
+                  <label className="block text-sm font-semibold mb-3 text-center" style={{ color: "#374151" }}>Verification Code</label>
+                  <div className="flex gap-2.5 justify-center" onPaste={handleOtpPaste}>
+                    {otp.map((digit, i) => (
+                      <input key={i}
+                        ref={el => { otpRefs.current[i] = el; }}
+                        type="text" inputMode="numeric" maxLength={1} value={digit}
+                        onChange={e => handleOtpChange(i, e.target.value)}
+                        onKeyDown={e => handleOtpKeyDown(i, e)}
+                        className="w-12 h-14 text-center text-xl font-bold outline-none transition-all rounded-xl"
+                        style={{
+                          border: `2px solid ${digit ? PRIMARY : "#E5E7EB"}`,
+                          color: PRIMARY,
+                          backgroundColor: digit ? "#F0FBF7" : "#FAFAFA",
+                        }}
+                        onFocus={e => (e.target.style.borderColor = PRIMARY)}
+                        onBlur={e => (e.target.style.borderColor = digit ? PRIMARY : "#E5E7EB")}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-xl text-sm text-center" style={{ backgroundColor: "#F0FBF7", color: PRIMARY }}>
+                  📬 Spam / Promotions folder-ও দেখুন
+                </div>
+
+                <button type="submit" disabled={loading || otp.join("").length < 6}
+                  className="w-full flex items-center justify-center gap-2 text-white font-semibold py-3.5 rounded-xl disabled:opacity-60 transition-all"
+                  style={{ background: `linear-gradient(135deg, #0F6E56 0%, #0a5240 100%)`, boxShadow: "0 4px 20px rgba(15,110,86,0.35)", fontSize: "15px" }}>
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      যাচাই হচ্ছে...
+                    </span>
+                  ) : <><Check size={16} /> Verify করুন</>}
+                </button>
+
+                <div className="text-center">
+                  <p className="text-sm" style={{ color: "#6B7280" }}>
+                    কোড পাননি?{" "}
+                    {resendCooldown > 0 ? (
+                      <span style={{ color: "#9CA3AF" }}>{resendCooldown}s পর আবার পাঠান</span>
+                    ) : (
+                      <button type="button" onClick={handleResend} disabled={resending}
+                        className="font-semibold hover:underline disabled:opacity-60" style={{ color: PRIMARY }}>
+                        {resending ? "পাঠাচ্ছে..." : "আবার পাঠান"}
+                      </button>
+                    )}
+                  </p>
+                </div>
+
+                <button type="button" onClick={() => { setStep(1); setOtp(["", "", "", "", "", ""]); }}
+                  className="w-full text-sm py-2.5 rounded-xl border font-medium transition-colors hover:bg-gray-50"
+                  style={{ color: "#6B7280", borderColor: "#E5E7EB" }}>
+                  ← পেছনে যান
+                </button>
+              </form>
+            </>
           )}
 
-          {step === 1 && (
-            <p className="text-center text-sm mt-6" style={{ color: "#5A5A56" }}>
-              ইতিমধ্যে account আছে?{" "}
-              <Link href="/login" className="font-medium hover:underline" style={{ color: PRIMARY }}>লগইন করুন</Link>
-            </p>
-          )}
-
-          <p className="text-center text-xs mt-5 pt-5 border-t" style={{ color: "#B0AEA8", borderColor: "#F0EDE8" }}>
-            <Link href="/terms" className="hover:underline hover:opacity-80" style={{ color: "#B0AEA8" }}>শর্তাবলী</Link>
+          <p className="text-center text-xs mt-8 pt-6 border-t" style={{ color: "#9CA3AF", borderColor: "#E5E7EB" }}>
+            <Link href="/terms" className="hover:underline" style={{ color: "#9CA3AF" }}>শর্তাবলী</Link>
             {" · "}
-            <Link href="/privacy" className="hover:underline hover:opacity-80" style={{ color: "#B0AEA8" }}>গোপনীয়তা নীতি</Link>
+            <Link href="/privacy" className="hover:underline" style={{ color: "#9CA3AF" }}>গোপনীয়তা নীতি</Link>
           </p>
         </div>
       </div>
@@ -482,7 +464,11 @@ function SignupContent() {
 
 export default function SignupPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: "#0F6E56" }} /></div>}>
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#F7F6F2" }}>
+        <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "#0F6E56" }} />
+      </div>
+    }>
       <SignupContent />
     </Suspense>
   );
