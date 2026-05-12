@@ -312,7 +312,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   if (action === "complete_payment") {
     const discount = body.discount ?? existing.discount;
-    const tipAmount = body.tipAmount ?? 0;
+    const tipAmount = Math.max(0, body.tipAmount ?? 0);
     const paymentMethod = body.paymentMethod ?? existing.paymentMethod ?? "cash";
     const { subtotal, vatAmount, serviceAmount, totalAmount } = calcTotals(
       existing.items, discount, vatPct, svcPct

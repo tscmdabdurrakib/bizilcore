@@ -479,7 +479,7 @@ function RestaurantReportsPageInner() {
                     </thead>
                     <tbody>
                       {[...waiterStats]
-                        .sort((a, b) => b.totalRevenue - a.totalRevenue)
+                        .sort((a, b) => b.totalOrders - a.totalOrders || b.totalTips - a.totalTips)
                         .map((w, idx) => (
                           <tr key={w.id} style={{ borderBottom: idx < waiterStats.length - 1 ? `1px solid ${S.border}` : "none" }}>
                             <td className="px-4 py-3">

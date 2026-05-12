@@ -718,6 +718,19 @@ export default function POSTerminal() {
                 <span style={{ color: S.primary }}>{formatBDT(total)}</span>
               </div>
             </div>
+            {selectedWaiter && waiters.find(w => w.id === selectedWaiter) && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                style={{ backgroundColor: "#FFF7ED", border: `1px solid ${S.primary}20` }}>
+                <div className="w-6 h-6 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
+                  style={{ fontSize: 9, backgroundColor: S.primary }}>
+                  {waiters.find(w => w.id === selectedWaiter)!.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                </div>
+                <span className="text-xs font-semibold" style={{ color: S.primary }}>
+                  {waiters.find(w => w.id === selectedWaiter)!.name}
+                </span>
+                <span className="text-[10px] ml-auto" style={{ color: S.muted }}>নির্বাচিত ওয়েটার</span>
+              </div>
+            )}
             <div>
               <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>
                 টিপ পরিমাণ (৳) — ঐচ্ছিক
