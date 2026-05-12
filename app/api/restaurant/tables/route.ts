@@ -17,7 +17,10 @@ export async function GET() {
     include: {
       restaurantOrders: {
         where: { status: { in: ["pending", "preparing", "ready", "served", "billing"] } },
-        select: { id: true, status: true, totalAmount: true, createdAt: true, type: true },
+        select: {
+          id: true, status: true, totalAmount: true, createdAt: true, type: true,
+          waiter: { select: { user: { select: { name: true } } } },
+        },
         orderBy: { createdAt: "desc" },
         take: 1,
       },

@@ -492,6 +492,7 @@ model StaffMember {
   appointments     Appointment[]
   defaultServices  Service[]         @relation("ServiceDefaultStaff")
   teachingBatches  Batch[]           @relation("BatchTeacher")
+  assignedOrders   RestaurantOrder[]
 
   @@index([shopId])
 }
@@ -1481,6 +1482,8 @@ model RestaurantOrder {
   shop          Shop                  @relation(fields: [shopId], references: [id])
   tableId       String?
   table         DiningTable?          @relation(fields: [tableId], references: [id])
+  waiterId      String?
+  waiter        StaffMember?          @relation(fields: [waiterId], references: [id])
   orderNumber   String?               @unique
   type          String                @default("dine_in")
   status        String                @default("pending")
@@ -1493,6 +1496,7 @@ model RestaurantOrder {
   serviceAmount Float                 @default(0)
   totalAmount   Float
   paidAmount    Float                 @default(0)
+  tipAmount     Float                 @default(0)
   paymentMethod String?               @default("cash")
   kotSent       Boolean               @default(false)
   kotSentAt     DateTime?
@@ -1505,6 +1509,7 @@ model RestaurantOrder {
   @@index([shopId])
   @@index([shopId, status])
   @@index([shopId, createdAt])
+  @@index([shopId, waiterId])
 }
 
 model KotTicket {

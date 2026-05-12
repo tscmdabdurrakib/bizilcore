@@ -7,7 +7,10 @@ import QRCode from "qrcode";
 
 interface DiningTable {
   id: string; number: number; capacity: number; floor?: string; status: string;
-  restaurantOrders?: { id: string; status: string; totalAmount: number; createdAt: string; type: string }[];
+  restaurantOrders?: {
+    id: string; status: string; totalAmount: number; createdAt: string; type: string;
+    waiter?: { user: { name: string } } | null;
+  }[];
 }
 
 interface MenuItem {
@@ -23,6 +26,8 @@ interface RestaurantOrder {
   id: string; type: string; status: string; totalAmount: number; paidAmount: number;
   orderNumber?: string; customerName?: string; note?: string; createdAt: string;
   items: ROrderItem[]; table?: { id: string; number: number } | null;
+  waiter?: { id: string; user: { name: string } } | null;
+  tipAmount?: number;
 }
 
 interface CartItem { menuItem: MenuItem; quantity: number; }
@@ -104,6 +109,7 @@ export default function TablesBoard() {
   const [loadingOrder, setLoadingOrder] = useState(false);
   const [payMethod, setPayMethod] = useState("cash");
   const [discount, setDiscount] = useState("0");
+  const [tipInput, setTipInput] = useState("0");
   const [paying, setPaying] = useState(false);
 
   const [showMerge, setShowMerge] = useState(false);
@@ -281,10 +287,11 @@ export default function TablesBoard() {
   async function handlePayment() {
     if (!activeOrder) return;
     const disc = parseFloat(discount) || 0;
+    const tip = parseFloat(tipInput) || 0;
     setPaying(true);
     const r = await fetch(`/api/restaurant/orders/${activeOrder.id}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "complete_payment", paymentMethod: payMethod, discount: disc }),
+      body: JSON.stringify({ action: "complete_payment", paymentMethod: payMethod, discount: disc, tipAmount: tip }),
     });
     setPaying(false);
     if (r.ok) { showToast("success", "পেমেন্ট সম্পন্ন ✓"); setOccupiedTable(null); loadTables(); }
@@ -418,6 +425,17 @@ export default function TablesBoard() {
                       <Clock size={10} />
                       <span className="text-[10px]">{elapsedMin(activeOrd.createdAt)}মি</span>
                       <span className="text-[10px] ml-auto font-semibold">{formatBDT(activeOrd.totalAmount)}</span>
+                    </div>
+                  )}
+                  {activeOrd?.waiter?.user?.name && (
+                    <div className="mt-1 flex items-center gap-1">
+                      <div className="w-4 h-4 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
+                        style={{ fontSize: 8, backgroundColor: ORANGE }}>
+                        {activeOrd.waiter.user.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                      </div>
+                      <span className="text-[9px] truncate" style={{ color: st.color }}>
+                        {activeOrd.waiter.user.name}
+                      </span>
                     </div>
                   )}
                   {table.status === "empty" && (
@@ -653,6 +671,12 @@ export default function TablesBoard() {
                   <div>
                     <label className="text-xs font-semibold" style={{ color: S.muted }}>ডিসকাউন্ট (৳)</label>
                     <input type="number" value={discount} onChange={e => setDiscount(e.target.value)}
+                      className="w-full mt-1 px-3 py-2 rounded-xl border text-sm outline-none"
+                      style={{ borderColor: S.border, color: S.text, backgroundColor: S.bg }} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold" style={{ color: S.muted }}>টিপ (৳)</label>
+                    <input type="number" min="0" value={tipInput} onChange={e => setTipInput(e.target.value)}
                       className="w-full mt-1 px-3 py-2 rounded-xl border text-sm outline-none"
                       style={{ borderColor: S.border, color: S.text, backgroundColor: S.bg }} />
                   </div>

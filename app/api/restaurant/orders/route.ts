@@ -16,12 +16,14 @@ async function getShopBySlug(slug: string) {
   });
 }
 
+
 const ORDER_INCLUDE = {
   items: {
     include: { menuItem: { select: { id: true, name: true, category: true } } },
   },
   table: { select: { id: true, number: true, floor: true } },
   kotTickets: { select: { id: true, kotNumber: true, sentAt: true, kitchenStatus: true } },
+  waiter: { select: { id: true, user: { select: { name: true } } } },
 };
 
 async function generateOrderNumber(shopId: string, restOrderPrefix: string | null): Promise<string> {
@@ -86,6 +88,7 @@ export async function POST(req: NextRequest) {
     tableNumber?: number;
     type?: string;
     tableId?: string;
+    waiterId?: string | null;
     customerName?: string;
     customerPhone?: string;
     note?: string;
@@ -221,12 +224,22 @@ export async function POST(req: NextRequest) {
 
   const orderNumber = await generateOrderNumber(shop.id, shop.restOrderPrefix ?? null);
 
+  let resolvedWaiterId: string | null = null;
+  if (!isQrOrder && body.waiterId) {
+    const waiter = await prisma.staffMember.findFirst({
+      where: { id: body.waiterId, shopId: shop.id, isActive: true },
+      select: { id: true },
+    });
+    if (waiter) resolvedWaiterId = waiter.id;
+  }
+
   const order = await prisma.restaurantOrder.create({
     data: {
       shopId: shop.id,
       orderNumber,
       type: orderType,
       tableId: resolvedTableId,
+      waiterId: resolvedWaiterId,
       customerName: body.customerName ?? null,
       customerPhone: body.customerPhone ?? null,
       note: isQrOrder

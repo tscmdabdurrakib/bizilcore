@@ -6,7 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from "recharts";
-import { TrendingUp, ShoppingBag, Loader2, Clock, UtensilsCrossed, CreditCard, Printer, CalendarDays, BarChart2 } from "lucide-react";
+import { TrendingUp, ShoppingBag, Loader2, Clock, UtensilsCrossed, CreditCard, Printer, CalendarDays, BarChart2, UserCheck } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
 
 interface HeatmapRow {
@@ -85,28 +85,41 @@ interface DailyClosingOrder {
 }
 interface DailyClosingData {
   gross: number; vat: number; serviceCharge: number; discount: number;
-  net: number; orderCount: number;
+  net: number; orderCount: number; totalTips?: number;
   paymentMethodBreakdown: { method: string; amount: number }[];
   orderTypeBreakdown: { dineIn: number; takeaway: number; delivery: number };
   orders: DailyClosingOrder[];
 }
 
+interface WaiterStat {
+  id: string; name: string; jobTitle?: string | null;
+  totalOrders: number; totalRevenue: number; totalTips: number;
+  avgOrderValue: number; tablesServed: number;
+}
+
 
 function RestaurantReportsPageInner() {
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<"analytics" | "closing">(
-    searchParams.get("tab") === "closing" ? "closing" : "analytics"
+  const [activeTab, setActiveTab] = useState<"analytics" | "closing" | "waiters">(
+    searchParams.get("tab") === "closing" ? "closing" :
+    searchParams.get("tab") === "waiters" ? "waiters" : "analytics"
   );
 
   useEffect(() => {
     const tab = searchParams.get("tab");
-    if (tab === "closing" || tab === "analytics") setActiveTab(tab);
+    if (tab === "closing" || tab === "analytics" || tab === "waiters") setActiveTab(tab as "analytics" | "closing" | "waiters");
   }, [searchParams]);
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [closingDate, setClosingDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [closingData, setClosingData] = useState<DailyClosingData | null>(null);
   const [closingLoading, setClosingLoading] = useState(false);
+  const [waiterStats, setWaiterStats] = useState<WaiterStat[]>([]);
+  const [waiterLoading, setWaiterLoading] = useState(false);
+  const [waiterFrom, setWaiterFrom] = useState(() => {
+    const d = new Date(); d.setDate(1); return d.toISOString().slice(0, 10);
+  });
+  const [waiterTo, setWaiterTo] = useState(() => new Date().toISOString().slice(0, 10));
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -126,8 +139,18 @@ function RestaurantReportsPageInner() {
     setClosingLoading(false);
   }, []);
 
+  const loadWaiters = useCallback(async (from: string, to: string) => {
+    setWaiterLoading(true);
+    try {
+      const res = await fetch(`/api/restaurant/waiters?from=${from}&to=${to}`);
+      if (res.ok) setWaiterStats(await res.json());
+    } catch {}
+    setWaiterLoading(false);
+  }, []);
+
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (activeTab === "closing") loadClosing(closingDate); }, [activeTab, closingDate, loadClosing]);
+  useEffect(() => { if (activeTab === "waiters") loadWaiters(waiterFrom, waiterTo); }, [activeTab, waiterFrom, waiterTo, loadWaiters]);
 
   if (loading) return (
     <div className="flex justify-center items-center h-64">
@@ -162,8 +185,12 @@ function RestaurantReportsPageInner() {
           <p className="text-sm mt-0.5" style={{ color: S.muted }}>গত ৬ মাসের বিশ্লেষণ ও দৈনিক ক্লোজিং</p>
         </div>
         <div className="flex gap-1 p-1 rounded-xl" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
-          {([["analytics", "বিশ্লেষণ", BarChart2], ["closing", "দৈনিক ক্লোজিং", CalendarDays]] as const).map(([key, label, Icon]) => (
-            <button key={key} onClick={() => setActiveTab(key as "analytics" | "closing")}
+          {([
+            ["analytics", "বিশ্লেষণ", BarChart2],
+            ["closing", "দৈনিক ক্লোজিং", CalendarDays],
+            ["waiters", "ওয়েটার পারফরম্যান্স", UserCheck],
+          ] as const).map(([key, label, Icon]) => (
+            <button key={key} onClick={() => setActiveTab(key)}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
               style={{
                 backgroundColor: activeTab === key ? S.primary : "transparent",
@@ -200,14 +227,15 @@ function RestaurantReportsPageInner() {
           ) : (
             <>
               {/* Closing Summary Cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
                 {[
-                  { label: "Gross রাজস্ব",   value: formatBDT(closingData.gross),          color: S.primary,  bg: "#FFF7ED" },
-                  { label: "Net রাজস্ব",     value: formatBDT(closingData.net),             color: "#059669",  bg: "#ECFDF5" },
-                  { label: "মোট অর্ডার",    value: `${closingData.orderCount}টি`,           color: "#3B82F6",  bg: "#EFF6FF" },
-                  { label: "VAT",            value: formatBDT(closingData.vat),             color: "#7C3AED",  bg: "#F5F3FF" },
-                  { label: "সার্ভিস চার্জ", value: formatBDT(closingData.serviceCharge),   color: "#8B5CF6",  bg: "#F5F3FF" },
-                  { label: "ডিসকাউন্ট",     value: formatBDT(closingData.discount),        color: "#EF4444",  bg: "#FEF2F2" },
+                  { label: "Gross রাজস্ব",   value: formatBDT(closingData.gross),                 color: S.primary,  bg: "#FFF7ED" },
+                  { label: "Net রাজস্ব",     value: formatBDT(closingData.net),                   color: "#059669",  bg: "#ECFDF5" },
+                  { label: "মোট অর্ডার",    value: `${closingData.orderCount}টি`,                 color: "#3B82F6",  bg: "#EFF6FF" },
+                  { label: "VAT",            value: formatBDT(closingData.vat),                   color: "#7C3AED",  bg: "#F5F3FF" },
+                  { label: "সার্ভিস চার্জ", value: formatBDT(closingData.serviceCharge),         color: "#8B5CF6",  bg: "#F5F3FF" },
+                  { label: "ডিসকাউন্ট",     value: formatBDT(closingData.discount),              color: "#EF4444",  bg: "#FEF2F2" },
+                  { label: "মোট টিপ",        value: formatBDT(closingData.totalTips ?? 0),        color: "#D97706",  bg: "#FFFBEB" },
                 ].map(card => (
                   <div key={card.label} className="rounded-2xl p-4 border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
                     <p className="text-xs mb-2" style={{ color: S.muted }}>{card.label}</p>
@@ -332,6 +360,149 @@ function RestaurantReportsPageInner() {
                     </table>
                   </div>
                 )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Waiter Performance Tab */}
+      {activeTab === "waiters" && (
+        <div className="space-y-5">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold" style={{ color: S.muted }}>থেকে:</span>
+              <input type="date" value={waiterFrom} onChange={e => setWaiterFrom(e.target.value)}
+                className="px-3 py-2 rounded-xl border text-sm outline-none"
+                style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }} />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold" style={{ color: S.muted }}>পর্যন্ত:</span>
+              <input type="date" value={waiterTo} onChange={e => setWaiterTo(e.target.value)}
+                className="px-3 py-2 rounded-xl border text-sm outline-none"
+                style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }} />
+            </div>
+          </div>
+
+          {waiterLoading ? (
+            <div className="flex justify-center items-center h-40">
+              <Loader2 size={24} className="animate-spin" style={{ color: S.primary }} />
+            </div>
+          ) : waiterStats.length === 0 ? (
+            <div className="rounded-2xl border p-12 text-center" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+              <UserCheck size={36} className="mx-auto mb-3" style={{ color: S.muted }} />
+              <p className="text-sm" style={{ color: S.muted }}>এই সময়কালে কোনো ওয়েটার ডেটা নেই</p>
+              <p className="text-xs mt-1" style={{ color: S.muted }}>প্রথমে স্টাফ যোগ করুন এবং অর্ডারে ওয়েটার নির্বাচন করুন</p>
+            </div>
+          ) : (
+            <>
+              {/* Summary Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {[
+                  {
+                    label: "মোট ওয়েটার",
+                    value: `${waiterStats.length} জন`,
+                    color: S.primary, bg: "#FFF7ED",
+                    icon: UserCheck,
+                  },
+                  {
+                    label: "মোট অর্ডার পরিবেশিত",
+                    value: `${waiterStats.reduce((s, w) => s + w.totalOrders, 0)}টি`,
+                    color: "#3B82F6", bg: "#EFF6FF",
+                    icon: ShoppingBag,
+                  },
+                  {
+                    label: "মোট রাজস্ব",
+                    value: formatBDT(waiterStats.reduce((s, w) => s + w.totalRevenue, 0)),
+                    color: "#059669", bg: "#ECFDF5",
+                    icon: TrendingUp,
+                  },
+                  {
+                    label: "মোট টিপ",
+                    value: formatBDT(waiterStats.reduce((s, w) => s + w.totalTips, 0)),
+                    color: "#D97706", bg: "#FFFBEB",
+                    icon: CreditCard,
+                  },
+                ].map(card => (
+                  <div key={card.label} className="rounded-2xl p-4 border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ backgroundColor: card.bg }}>
+                      <card.icon size={18} style={{ color: card.color }} />
+                    </div>
+                    <p className="text-xs mb-1" style={{ color: S.muted }}>{card.label}</p>
+                    <p className="text-xl font-bold" style={{ color: S.text }}>{card.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Waiter Performance Table */}
+              <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+                <div className="px-5 py-4 border-b" style={{ borderColor: S.border }}>
+                  <h3 className="font-bold text-sm" style={{ color: S.text }}>ওয়েটার পারফরম্যান্স র‍্যাংকিং</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr style={{ borderBottom: `1px solid ${S.border}`, backgroundColor: S.bg }}>
+                        {["#", "ওয়েটার", "পদ", "অর্ডার", "মোট রাজস্ব", "গড় অর্ডার মূল্য", "টিপ", "টেবিল"].map(h => (
+                          <th key={h} className="text-left px-4 py-3 text-xs font-semibold" style={{ color: S.muted }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...waiterStats]
+                        .sort((a, b) => b.totalRevenue - a.totalRevenue)
+                        .map((w, idx) => (
+                          <tr key={w.id} style={{ borderBottom: idx < waiterStats.length - 1 ? `1px solid ${S.border}` : "none" }}>
+                            <td className="px-4 py-3">
+                              <div className="w-7 h-7 rounded-xl text-white flex items-center justify-center text-xs font-bold"
+                                style={{ backgroundColor: idx < 3 ? S.primary : S.muted }}>
+                                {idx + 1}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs"
+                                  style={{ backgroundColor: S.primary }}>
+                                  {w.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                                </div>
+                                <span className="text-sm font-semibold" style={{ color: S.text }}>{w.name}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-xs" style={{ color: S.muted }}>{w.jobTitle ?? "—"}</td>
+                            <td className="px-4 py-3 text-sm font-semibold" style={{ color: S.text }}>{w.totalOrders}টি</td>
+                            <td className="px-4 py-3 text-sm font-bold" style={{ color: S.primary }}>{formatBDT(w.totalRevenue)}</td>
+                            <td className="px-4 py-3 text-xs" style={{ color: S.muted }}>{formatBDT(w.avgOrderValue)}</td>
+                            <td className="px-4 py-3 text-sm font-semibold" style={{ color: "#D97706" }}>
+                              {w.totalTips > 0 ? formatBDT(w.totalTips) : "—"}
+                            </td>
+                            <td className="px-4 py-3 text-xs" style={{ color: S.muted }}>{w.tablesServed}টি</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Bar Chart - orders per waiter */}
+              <div className="rounded-2xl p-5 border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+                <h3 className="font-bold text-sm mb-4" style={{ color: S.text }}>ওয়েটার ভিত্তিক রাজস্ব তুলনা</h3>
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={waiterStats.map(w => ({ name: w.name.split(" ")[0], revenue: w.totalRevenue, tips: w.totalTips, orders: w.totalOrders }))}
+                    margin={{ top: 5, right: 10, left: 5, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={S.border} />
+                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: S.muted }} />
+                    <YAxis tick={{ fontSize: 11, fill: S.muted }} tickFormatter={v => `৳${(v / 1000).toFixed(0)}k`} />
+                    <Tooltip
+                      formatter={(v: number, n: string) => [
+                        n === "revenue" ? formatBDT(v) : n === "tips" ? formatBDT(v) : `${v}টি`,
+                        n === "revenue" ? "রাজস্ব" : n === "tips" ? "টিপ" : "অর্ডার",
+                      ]}
+                      contentStyle={{ borderRadius: 12, border: `1px solid ${S.border}`, backgroundColor: S.surface, fontSize: 12 }}
+                    />
+                    <Bar dataKey="revenue" name="revenue" fill={S.primary} radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="tips" name="tips" fill="#D97706" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </>
           )}

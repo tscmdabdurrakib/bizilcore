@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import {
   Search, ShoppingCart, Plus, Minus, X, ChefHat, Loader2, Printer,
   RotateCcw, SendHorizonal, CreditCard, Wallet, Smartphone, Banknote,
-  CheckCircle, ChevronRight, Tag,
+  CheckCircle, ChevronRight, Tag, UserCheck,
 } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
 
@@ -46,6 +46,12 @@ interface DiningTable {
   capacity: number;
   status: string;
   floor: string;
+}
+
+interface Waiter {
+  id: string;
+  name: string;
+  jobTitle?: string | null;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -98,6 +104,9 @@ export default function POSTerminal() {
   const [kotSentForOrder, setKotSentForOrder] = useState(false);
   const [sendingKot, setSendingKot]           = useState(false);
   const [paidOrderId, setPaidOrderId]         = useState<string | null>(null);
+  const [waiters, setWaiters]               = useState<Waiter[]>([]);
+  const [selectedWaiter, setSelectedWaiter] = useState("");
+  const [tipAmount, setTipAmount]           = useState("");
 
   const [pickerItem, setPickerItem]               = useState<MenuItem | null>(null);
   const [pickerVariant, setPickerVariant]         = useState<string | null>(null);
@@ -111,10 +120,11 @@ export default function POSTerminal() {
 
   const load = useCallback(async () => {
     try {
-      const [miRes, tRes, sRes] = await Promise.all([
+      const [miRes, tRes, sRes, wRes] = await Promise.all([
         fetch("/api/restaurant/menu-items"),
         fetch("/api/restaurant/tables"),
         fetch("/api/settings/shop"),
+        fetch("/api/restaurant/waiters"),
       ]);
       if (miRes.ok) setMenuItems(await miRes.json());
       if (tRes.ok)  setTables(await tRes.json());
@@ -122,6 +132,10 @@ export default function POSTerminal() {
         const s = await sRes.json();
         setVatPct(s.restVatPct ?? 0);
         setSvcPct(s.restServiceChargePct ?? 0);
+      }
+      if (wRes.ok) {
+        const ws = await wRes.json();
+        setWaiters(ws.map((w: { id: string; name: string; jobTitle?: string | null }) => ({ id: w.id, name: w.name, jobTitle: w.jobTitle })));
       }
     } catch {}
     setLoading(false);
@@ -213,6 +227,8 @@ export default function POSTerminal() {
     setLastOrderId(null);
     setKotSentForOrder(false);
     setPaidOrderId(null);
+    setSelectedWaiter("");
+    setTipAmount("");
   };
 
   const placeOrder = async () => {
@@ -226,6 +242,7 @@ export default function POSTerminal() {
         body: JSON.stringify({
           type: orderType,
           tableId: selectedTable || null,
+          waiterId: selectedWaiter || null,
           customerName: customerName || null,
           customerPhone: customerPhone || null,
           note: note || null,
@@ -265,10 +282,11 @@ export default function POSTerminal() {
     if (!lastOrderId) return;
     setSubmitting(true);
     try {
+      const tip = parseFloat(tipAmount) || 0;
       const payRes = await fetch(`/api/restaurant/orders/${lastOrderId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "complete_payment", paymentMethod: payMethod }),
+        body: JSON.stringify({ action: "complete_payment", paymentMethod: payMethod, tipAmount: tip }),
       });
       if (!payRes.ok) {
         const d = await payRes.json();
@@ -423,6 +441,19 @@ export default function POSTerminal() {
                 <option key={t.id} value={t.id}>টেবিল {t.number} ({t.floor})</option>
               ))}
             </select>
+          )}
+          {waiters.length > 0 && (
+            <div className="mt-2 relative">
+              <UserCheck size={13} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: S.muted }} />
+              <select value={selectedWaiter} onChange={e => setSelectedWaiter(e.target.value)}
+                className="w-full pl-8 pr-3 py-2 rounded-xl text-xs border outline-none"
+                style={{ borderColor: S.border, backgroundColor: "var(--c-bg)", color: S.text }}>
+                <option value="">— ওয়েটার বেছে নিন (ঐচ্ছিক) —</option>
+                {waiters.map(w => (
+                  <option key={w.id} value={w.id}>{w.name}{w.jobTitle ? ` (${w.jobTitle})` : ""}</option>
+                ))}
+              </select>
+            </div>
           )}
 
           {orderType !== "dine_in" && (
@@ -686,6 +717,20 @@ export default function POSTerminal() {
                 <span>সর্বমোট</span>
                 <span style={{ color: S.primary }}>{formatBDT(total)}</span>
               </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>
+                টিপ পরিমাণ (৳) — ঐচ্ছিক
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={tipAmount}
+                onChange={e => setTipAmount(e.target.value)}
+                placeholder="০"
+                className="w-full px-3 py-2 rounded-xl text-sm border outline-none"
+                style={{ borderColor: S.border, backgroundColor: "var(--c-bg)", color: S.text }}
+              />
             </div>
             <button onClick={completePayment} disabled={submitting}
               className="w-full py-3.5 rounded-2xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60"

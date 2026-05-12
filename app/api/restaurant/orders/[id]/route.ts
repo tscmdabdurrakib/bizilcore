@@ -18,6 +18,7 @@ const ORDER_INCLUDE = {
     select: { id: true, kotNumber: true, sentAt: true, kitchenStatus: true },
     orderBy: { sentAt: "desc" as const },
   },
+  waiter: { select: { id: true, user: { select: { name: true } } } },
 };
 
 function calcTotals(
@@ -114,6 +115,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     paidAmount?: number;
     paymentMethod?: string;
     discount?: number;
+    tipAmount?: number;
+    waiterId?: string | null;
     note?: string;
     menuItemId?: string;
     itemId?: string;
@@ -288,8 +291,28 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json(updated);
   }
 
+  if (action === "assign_waiter") {
+    if (body.waiterId === undefined) {
+      return NextResponse.json({ error: "waiterId required" }, { status: 400 });
+    }
+    if (body.waiterId !== null) {
+      const waiter = await prisma.staffMember.findFirst({
+        where: { id: body.waiterId, shopId: shop.id, isActive: true },
+        select: { id: true },
+      });
+      if (!waiter) return NextResponse.json({ error: "Waiter not found" }, { status: 404 });
+    }
+    const updated = await prisma.restaurantOrder.update({
+      where: { id },
+      data: { waiterId: body.waiterId },
+      include: ORDER_INCLUDE,
+    });
+    return NextResponse.json(updated);
+  }
+
   if (action === "complete_payment") {
     const discount = body.discount ?? existing.discount;
+    const tipAmount = body.tipAmount ?? 0;
     const paymentMethod = body.paymentMethod ?? existing.paymentMethod ?? "cash";
     const { subtotal, vatAmount, serviceAmount, totalAmount } = calcTotals(
       existing.items, discount, vatPct, svcPct
@@ -302,6 +325,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       data: {
         status: "paid",
         paidAmount: totalAmount,
+        tipAmount,
         paymentMethod,
         discount,
         vatAmount,

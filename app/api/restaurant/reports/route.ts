@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
     const svcSum      = orders.reduce((s, o) => s + (o.serviceAmount ?? 0), 0);
     const discountSum = orders.reduce((s, o) => s + (o.discount       ?? 0), 0);
     const netSum      = orders.reduce((s, o) => s + (o.subtotal       ?? o.totalAmount), 0);
+    const totalTips   = orders.reduce((s, o) => s + (o.tipAmount      ?? 0), 0);
     const orderCount  = orders.length;
 
     const dineIn   = orders.filter(o => o.type === "dine_in").length;
@@ -40,7 +41,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       gross, vat: vatSum, serviceCharge: svcSum, discount: discountSum, net: netSum,
-      orderCount, orders,
+      totalTips, orderCount, orders,
       orderTypeBreakdown: { dineIn, takeaway, delivery },
       paymentMethodBreakdown,
     });
