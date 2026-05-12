@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Sora } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import Providers from "@/components/Providers";
 
@@ -26,14 +27,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="bn" className={`${inter.variable} ${sora.variable} h-full`} suppressHydrationWarning>
-      <head>
-        <script
+      <body className="min-h-full antialiased" suppressHydrationWarning>
+        <Script
+          id="dark-mode-init"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `try{if(localStorage.getItem('bizilcore-dark')==='1')document.documentElement.classList.add('dark')}catch(e){}`,
           }}
         />
-      </head>
-      <body className="min-h-full antialiased" suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
     </html>
