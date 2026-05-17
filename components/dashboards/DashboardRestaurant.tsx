@@ -80,7 +80,14 @@ export default function DashboardRestaurant({ shopName, userName, userGender }: 
     </div>
   );
 
-  const s = stats!;
+  if (!stats) return (
+    <div className="flex flex-col justify-center items-center py-20 gap-3">
+      <AlertTriangle size={28} style={{ color: S.primary }} />
+      <p style={{ color: S.muted }} className="text-sm">ড্যাশবোর্ড লোড হয়নি। রিফ্রেশ করুন।</p>
+    </div>
+  );
+
+  const s = stats;
 
   return (
     <div className="space-y-5 max-w-7xl mx-auto pb-6">
