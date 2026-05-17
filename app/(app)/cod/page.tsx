@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { formatBDT, formatBanglaDate } from "@/lib/utils";
 import Link from "next/link";
+import DatePicker from "@/components/ui/DatePicker";
 
 const COURIER_LABELS: Record<string, string> = {
   pathao: "Pathao",
@@ -78,8 +79,11 @@ function RemittanceModal({
           অর্ডার <span className="font-bold text-gray-800">#{order.id.slice(-6).toUpperCase()}</span> — {formatBDT(order.totalAmount)}
         </p>
         <label className="block text-sm font-semibold text-gray-700 mb-1.5">প্রাপ্তির তারিখ</label>
-        <input type="date" value={date} onChange={e => setDate(e.target.value)}
-          className="w-full h-11 px-4 rounded-xl border border-gray-200 text-sm outline-none focus:border-gray-400 mb-6 bg-gray-50" />
+        <DatePicker
+  value={date}
+  onChange={v => setDate(v)}
+  className="w-full h-11 px-4 rounded-xl border border-gray-200 text-sm outline-none focus:border-gray-400 mb-6 bg-gray-50"
+/>
         <div className="flex gap-3">
           <button onClick={onClose} className="flex-1 py-3 rounded-2xl border border-gray-200 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors">বাতিল</button>
           <button onClick={() => onConfirm(order.id, date)}
@@ -347,11 +351,17 @@ export default function CodPage() {
 
           {preset === "custom" && (
             <div className="flex items-center gap-2">
-              <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
-                className="h-9 px-3 rounded-xl border border-gray-200 text-xs outline-none focus:border-gray-400 bg-gray-50" />
+              <DatePicker
+  value={customFrom}
+  onChange={v => setCustomFrom(v)}
+  className="h-9 px-3 rounded-xl border border-gray-200 text-xs outline-none focus:border-gray-400 bg-gray-50"
+/>
               <span className="text-gray-400">→</span>
-              <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)}
-                className="h-9 px-3 rounded-xl border border-gray-200 text-xs outline-none focus:border-gray-400 bg-gray-50" />
+              <DatePicker
+  value={customTo}
+  onChange={v => setCustomTo(v)}
+  className="h-9 px-3 rounded-xl border border-gray-200 text-xs outline-none focus:border-gray-400 bg-gray-50"
+/>
             </div>
           )}
 

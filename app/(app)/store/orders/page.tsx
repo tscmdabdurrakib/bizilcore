@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { ShoppingBag, Loader2, X, ChevronRight, Filter } from "lucide-react";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface StoreOrderItem {
   id: string;
@@ -276,23 +277,21 @@ export default function StoreOrdersPage() {
             </div>
             <div>
               <label className="text-xs font-medium block mb-1" style={{ color: S.muted }}>তারিখ থেকে</label>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={e => setDateFrom(e.target.value)}
-                className="w-full text-xs rounded-lg border px-2 h-8"
-                style={{ borderColor: S.border, backgroundColor: "var(--c-bg)", color: S.text }}
-              />
+              <DatePicker
+  value={dateFrom}
+  onChange={v => setDateFrom(v)}
+  className="w-full text-xs rounded-lg border px-2 h-8"
+  style={{ borderColor: S.border, backgroundColor: "var(--c-bg)", color: S.text }}
+/>
             </div>
             <div>
               <label className="text-xs font-medium block mb-1" style={{ color: S.muted }}>তারিখ পর্যন্ত</label>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={e => setDateTo(e.target.value)}
-                className="w-full text-xs rounded-lg border px-2 h-8"
-                style={{ borderColor: S.border, backgroundColor: "var(--c-bg)", color: S.text }}
-              />
+              <DatePicker
+  value={dateTo}
+  onChange={v => setDateTo(v)}
+  className="w-full text-xs rounded-lg border px-2 h-8"
+  style={{ borderColor: S.border, backgroundColor: "var(--c-bg)", color: S.text }}
+/>
             </div>
             <div className="flex items-end">
               <button

@@ -10,6 +10,7 @@ import {
 import Link from "next/link";
 import { formatBDT, formatBanglaDate } from "@/lib/utils";
 import PageHint from "@/components/PageHint";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface Transaction {
   id: string; type: string; amount: number; category: string | null;
@@ -174,7 +175,7 @@ function TransactionPanel({
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">তারিখ</label>
-              <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className={fieldCls} />
+              <DatePicker value={form.date} onChange={v => setForm(f => ({ ...f, date: v }))} className={fieldCls} />
             </div>
           </div>
 
@@ -396,8 +397,11 @@ export default function HisabPage() {
             <input type="month" value={date.slice(0, 7)} onChange={e => setDate(e.target.value + "-01")}
               className="h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white outline-none focus:border-gray-400 transition-colors" />
           ) : (
-            <input type="date" value={date} onChange={e => setDate(e.target.value)}
-              className="h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white outline-none focus:border-gray-400 transition-colors" />
+            <DatePicker
+  value={date}
+  onChange={v => setDate(v)}
+  className="h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white outline-none focus:border-gray-400 transition-colors"
+/>
           )}
         </div>
       </div>

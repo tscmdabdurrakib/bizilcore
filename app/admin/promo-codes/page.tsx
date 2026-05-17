@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
+import DatePicker from "@/components/ui/DatePicker";
   Tag, Plus, Trash2, Edit2, ToggleLeft, ToggleRight,
   ChevronDown, ChevronUp, RefreshCw, X, Check, Users,
   Percent, DollarSign, Calendar, AlertCircle, Eye,
@@ -313,11 +314,11 @@ export default function PromoCodesPage() {
 
               <div>
                 <label style={{ fontSize: 12, color: S.textMuted, fontWeight: 600, display: "block", marginBottom: 6 }}>শুরুর তারিখ (ঐচ্ছিক)</label>
-                <input style={inp} type="date" value={form.validFrom} onChange={(e) => setForm((f) => ({ ...f, validFrom: e.target.value }))} />
+                <DatePicker value={form.validFrom} onChange={v => setForm((f) => ({ ...f, validFrom: v }))} style={inp} />
               </div>
               <div>
                 <label style={{ fontSize: 12, color: S.textMuted, fontWeight: 600, display: "block", marginBottom: 6 }}>শেষ তারিখ (ঐচ্ছিক)</label>
-                <input style={inp} type="date" value={form.validTo} onChange={(e) => setForm((f) => ({ ...f, validTo: e.target.value }))} />
+                <DatePicker value={form.validTo} onChange={v => setForm((f) => ({ ...f, validTo: v }))} style={inp} />
               </div>
 
               <div>

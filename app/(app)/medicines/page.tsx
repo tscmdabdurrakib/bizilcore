@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Plus, Search, X, Pencil, Trash2, Package2, ChevronDown, ChevronUp, AlertTriangle, Check, Pill, FlaskConical, Loader2 } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface MedicineBatch {
   id: string;
@@ -317,9 +318,11 @@ export default function MedicinesPage() {
               </div>
               <div>
                 <label className="text-xs font-medium mb-1 block" style={{ color: S.secondary }}>মেয়াদ শেষের তারিখ *</label>
-                <input type="date" value={batchForm.expiryDate}
-                  onChange={e => setBatchForm(f => ({ ...f, expiryDate: e.target.value }))}
-                  style={{ width: "100%", height: 40, border: `1px solid ${S.border}`, borderRadius: 8, backgroundColor: S.surface, color: S.text, padding: "0 12px", fontSize: 14, outline: "none" }} />
+                <DatePicker
+  value={batchForm.expiryDate}
+  onChange={v => setBatchForm(f => ({ ...f, expiryDate: v }))}
+  style={{ width: "100%", height: 40, border: `1px solid ${S.border}`, borderRadius: 8, backgroundColor: S.surface, color: S.text, padding: "0 12px", fontSize: 14, outline: "none" }}
+/>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

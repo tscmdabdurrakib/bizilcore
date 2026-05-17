@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Stamp, Plus, X, Loader2, AlertTriangle, CheckCircle, Clock, XCircle, Search } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface VisaRequest {
   id: string;
@@ -315,7 +316,7 @@ export default function VisaBoard() {
               </div>
               <div>
                 <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>মেয়াদ *</label>
-                <input className={inputCls} style={inputStyle} type="date" value={form.passportExpiry} onChange={e => setForm(f => ({ ...f, passportExpiry: e.target.value }))} />
+                <DatePicker value={form.passportExpiry} onChange={v => setForm(f => ({ ...f, passportExpiry: v }))} className={inputCls} style={inputStyle} />
               </div>
               <div>
                 <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>দেশ *</label>

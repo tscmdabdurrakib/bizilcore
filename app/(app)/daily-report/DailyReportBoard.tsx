@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { ClipboardPen, Loader2, CheckCircle, Send } from "lucide-react";
+import DatePicker from "@/components/ui/DatePicker";
 
 const S = {
   surface: "var(--c-surface)",
@@ -149,13 +150,12 @@ export default function DailyReportBoard() {
     <div className="space-y-4">
       {/* Date picker + summary */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <input
-          type="date"
-          className="border rounded-lg px-3 py-2 text-sm"
-          value={date}
-          onChange={e => setDate(e.target.value)}
-          style={{ borderColor: S.border, background: S.surface }}
-        />
+        <DatePicker
+  value={date}
+  onChange={v => setDate(v)}
+  className="border rounded-lg px-3 py-2 text-sm"
+  style={{ borderColor: S.border, background: S.surface }}
+/>
         <div className="flex items-center gap-3 text-sm" style={{ color: S.muted }}>
           <span>উপস্থিত: <strong style={{ color: S.text }}>{totalPresent}</strong></span>
           <span>রিপোর্ট: <strong style={{ color: S.text }}>{reportedCount}/{students.length}</strong></span>

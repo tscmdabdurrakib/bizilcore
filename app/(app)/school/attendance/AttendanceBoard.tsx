@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { CalendarCheck2, Loader2, Save, CheckCircle, XCircle, Clock } from "lucide-react";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface BatchOption { id: string; name: string }
 interface Student { id: string; name: string; regNumber: string }
@@ -89,7 +90,7 @@ export default function AttendanceBoard() {
         <select value={batchId} onChange={(e) => setBatchId(e.target.value)} className="px-3 py-2 rounded-xl border text-sm" style={{ backgroundColor: S.surface, borderColor: S.border, color: S.text }}>
           {batches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
         </select>
-        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="px-3 py-2 rounded-xl border text-sm" style={{ backgroundColor: S.surface, borderColor: S.border, color: S.text }} />
+        <DatePicker value={date} onChange={v => setDate(v)} className="px-3 py-2 rounded-xl border text-sm" style={{ backgroundColor: S.surface, borderColor: S.border, color: S.text }} />
       </div>
 
       {/* Quick mark all */}

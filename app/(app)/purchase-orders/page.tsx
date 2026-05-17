@@ -8,6 +8,7 @@ import {
   Package, Clock, CheckCircle2,
 } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface Supplier { id: string; name: string }
 
@@ -205,7 +206,7 @@ function CreatePanel({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">প্রত্যাশিত তারিখ</label>
-                <input type="date" value={expectedDate} onChange={e => setExpectedDate(e.target.value)} className={fieldCls} />
+                <DatePicker value={expectedDate} onChange={v => setExpectedDate(v)} className={fieldCls} />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">নোট</label>

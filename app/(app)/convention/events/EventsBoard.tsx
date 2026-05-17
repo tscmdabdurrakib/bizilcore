@@ -8,6 +8,7 @@ import {
   Users, Clock, ChevronLeft, ChevronRight, Trash2,
 } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface Hall {
   id: string;
@@ -488,13 +489,12 @@ export default function EventsBoard() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-semibold mb-1 block" style={{ color: S.text }}>তারিখ *</label>
-                    <input
-                      type="date"
-                      value={form.eventDate}
-                      onChange={(e) => setForm((f) => ({ ...f, eventDate: e.target.value }))}
-                      className="w-full px-3 py-2 rounded-xl border text-sm"
-                      style={{ backgroundColor: S.bg, borderColor: S.border, color: S.text }}
-                    />
+                    <DatePicker
+  value={form.eventDate}
+  onChange={v => setForm((f) => ({ ...f, eventDate: v }))}
+  className="w-full px-3 py-2 rounded-xl border text-sm"
+  style={{ backgroundColor: S.bg, borderColor: S.border, color: S.text }}
+/>
                   </div>
                   <div>
                     <label className="text-xs font-semibold mb-1 block" style={{ color: S.text }}>মোট অতিথি *</label>

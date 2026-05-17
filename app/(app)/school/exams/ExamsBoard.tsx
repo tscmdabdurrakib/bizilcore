@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { BookOpenCheck, Plus, X, Loader2, Trophy } from "lucide-react";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface BatchOption { id: string; name: string }
 interface Student { id: string; name: string; regNumber: string }
@@ -188,7 +189,7 @@ export default function ExamsBoard() {
                 </div>
                 <div>
                   <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>পরীক্ষার তারিখ</label>
-                  <input type="date" value={examDate} onChange={(e) => setExamDate(e.target.value)} className={inputCls} style={inputStyle} />
+                  <DatePicker value={examDate} onChange={v => setExamDate(v)} className={inputCls} style={inputStyle} />
                 </div>
                 <div>
                   <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>মোট নম্বর *</label>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Clock, Plus, ChevronDown } from "lucide-react";
+import DatePicker from "@/components/ui/DatePicker";
 
 const S = {
   surface: "var(--c-surface)",
@@ -201,8 +202,12 @@ export default function TimeLogBoard() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium block mb-1" style={{ color: S.muted }}>তারিখ</label>
-                  <input type="date" value={form.logDate} onChange={e => setForm(f => ({ ...f, logDate: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-xl border text-sm" style={{ background: "var(--c-bg)", borderColor: S.border, color: S.text }} />
+                  <DatePicker
+  value={form.logDate}
+  onChange={v => setForm(f => ({ ...f, logDate: v }))}
+  className="w-full px-3 py-2 rounded-xl border text-sm"
+  style={{ background: "var(--c-bg)", borderColor: S.border, color: S.text }}
+/>
                 </div>
                 <div className="flex items-end pb-2">
                   <label className="flex items-center gap-2 cursor-pointer">

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Plus, Search, X, ChevronRight, ChevronLeft, Printer, User, TestTube2, Banknote, Clock } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface Patient { id: string; name: string; phone: string | null; address: string | null; }
 interface LabTest { id: string; name: string; banglaName: string | null; shortCode: string; category: string; price: number; homeCollectionPrice: number | null; sampleType: string | null; }
@@ -332,7 +333,7 @@ function RegistrationModal({
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                       <div>
                         <label style={{ fontSize: "12px", color: S.muted, display: "block", marginBottom: "4px" }}>তারিখ</label>
-                        <input type="date" value={homeInfo.date} onChange={e => setHomeInfo(p => ({ ...p, date: e.target.value }))} onFocus={() => setFocused("h_date")} onBlur={() => setFocused(null)} style={{ ...inp(f("h_date")), height: "36px" }} />
+                        <DatePicker value={homeInfo.date} onChange={v => setHomeInfo(p => ({ ...p, date: v }))} style={{ ...inp(f("h_date")), height: "36px" }} />
                       </div>
                       <div>
                         <label style={{ fontSize: "12px", color: S.muted, display: "block", marginBottom: "4px" }}>সময়</label>
@@ -588,7 +589,7 @@ export default function LabTestOrdersPage() {
 
       {/* Filters */}
       <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap", alignItems: "center" }}>
-        <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} style={{ ...inp(false), width: "160px" }} />
+        <DatePicker value={dateFilter} onChange={v => setDateFilter(v)} style={{ ...inp(false), width: "160px" }} />
         <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
           {[["all", "সব"], ["registered", "নিবন্ধিত"], ["sample_collected", "Sample নেওয়া"], ["processing", "Processing"], ["ready", "Ready"], ["delivered", "Delivered"]].map(([k, label]) => (
             <button key={k} onClick={() => setStatusFilter(k)} style={{ padding: "6px 14px", borderRadius: "20px", border: `1px solid ${statusFilter === k ? S.primary : S.border}`, background: statusFilter === k ? "#ECFEFF" : S.surface, color: statusFilter === k ? "#0891B2" : S.muted, cursor: "pointer", fontSize: "13px" }}>

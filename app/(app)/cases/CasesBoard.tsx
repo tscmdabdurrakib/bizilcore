@@ -7,6 +7,7 @@ import {
   Users, Calendar, DollarSign, FileText,
 } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 const CASE_TYPES = [
   { value: "civil",          label: "দেওয়ানী মামলা" },
@@ -333,13 +334,12 @@ export default function CasesBoard() {
                     </div>
                     <div>
                       <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>দায়ের তারিখ</label>
-                      <input
-                        type="date"
-                        value={form.filingDate}
-                        onChange={e => setForm(f => ({ ...f, filingDate: e.target.value }))}
-                        className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
-                        style={{ background: S.bg, border: `1px solid ${S.border}`, color: S.text }}
-                      />
+                      <DatePicker
+  value={form.filingDate}
+  onChange={v => setForm(f => ({ ...f, filingDate: v }))}
+  className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+  style={{ background: S.bg, border: `1px solid ${S.border}`, color: S.text }}
+/>
                     </div>
                   </div>
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { SproutIcon, Plus, X, Loader2, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
+import DatePicker from "@/components/ui/DatePicker";
 
 const S = { surface: "var(--c-surface)", border: "var(--c-border)", text: "var(--c-text)", muted: "var(--c-text-muted)" };
 const G = "#16A34A";
@@ -170,11 +171,11 @@ export default function CropsBoard() {
                 </div>
                 <div>
                   <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>বপন / শুরুর তারিখ *</label>
-                  <input required type="date" value={form.sowingDate} onChange={(e) => setForm({ ...form, sowingDate: e.target.value })} className={inputCls} style={inputStyle} />
+                  <DatePicker value={form.sowingDate} onChange={v => setForm({ ...form, sowingDate: v })} className={inputCls} style={inputStyle} />
                 </div>
                 <div>
                   <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>প্রত্যাশিত ফসল তোলার তারিখ</label>
-                  <input type="date" value={form.expectedHarvestDate} onChange={(e) => setForm({ ...form, expectedHarvestDate: e.target.value })} className={inputCls} style={inputStyle} />
+                  <DatePicker value={form.expectedHarvestDate} onChange={v => setForm({ ...form, expectedHarvestDate: v })} className={inputCls} style={inputStyle} />
                 </div>
                 <div>
                   <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>বীজ উৎস</label>

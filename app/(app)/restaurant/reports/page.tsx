@@ -8,6 +8,7 @@ import {
 } from "recharts";
 import { TrendingUp, ShoppingBag, Loader2, Clock, UtensilsCrossed, CreditCard, Printer, CalendarDays, BarChart2, UserCheck } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface HeatmapRow {
   dow: number;
@@ -209,8 +210,12 @@ function RestaurantReportsPageInner() {
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-2 px-4 py-2 rounded-xl border" style={{ borderColor: S.border, backgroundColor: S.surface }}>
               <CalendarDays size={15} style={{ color: S.muted }} />
-              <input type="date" value={closingDate} onChange={e => setClosingDate(e.target.value)}
-                className="outline-none text-sm bg-transparent" style={{ color: S.text }} />
+              <DatePicker
+  value={closingDate}
+  onChange={v => setClosingDate(v)}
+  className="outline-none text-sm bg-transparent"
+  style={{ color: S.text }}
+/>
             </div>
             <button onClick={() => window.print()}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border"
@@ -401,15 +406,21 @@ function RestaurantReportsPageInner() {
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold" style={{ color: S.muted }}>থেকে:</span>
-              <input type="date" value={waiterFrom} onChange={e => setWaiterFrom(e.target.value)}
-                className="px-3 py-2 rounded-xl border text-sm outline-none"
-                style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }} />
+              <DatePicker
+  value={waiterFrom}
+  onChange={v => setWaiterFrom(v)}
+  className="px-3 py-2 rounded-xl border text-sm outline-none"
+  style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }}
+/>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold" style={{ color: S.muted }}>পর্যন্ত:</span>
-              <input type="date" value={waiterTo} onChange={e => setWaiterTo(e.target.value)}
-                className="px-3 py-2 rounded-xl border text-sm outline-none"
-                style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }} />
+              <DatePicker
+  value={waiterTo}
+  onChange={v => setWaiterTo(v)}
+  className="px-3 py-2 rounded-xl border text-sm outline-none"
+  style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }}
+/>
             </div>
           </div>
 

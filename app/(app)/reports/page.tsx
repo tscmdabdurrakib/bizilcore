@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { downloadExcel, downloadExcelMultiSheet } from "@/lib/excel";
 import PageHint from "@/components/PageHint";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface OrderItem { quantity: number; unitPrice: number; subtotal: number; comboId?: string | null; comboSnapshot?: unknown; product: { id: string; name: string; buyPrice: number } | null }
 interface Order {
@@ -588,11 +589,17 @@ export default function ReportsPage() {
           <span className="text-xs font-semibold text-gray-500">তারিখ ফিল্টার</span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-            className="h-9 px-3 rounded-xl border border-gray-200 text-sm outline-none text-gray-700 focus:border-emerald-400 transition-colors" />
+          <DatePicker
+  value={dateFrom}
+  onChange={v => setDateFrom(v)}
+  className="h-9 px-3 rounded-xl border border-gray-200 text-sm outline-none text-gray-700 focus:border-emerald-400 transition-colors"
+/>
           <span className="text-sm text-gray-300 font-bold">—</span>
-          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-            className="h-9 px-3 rounded-xl border border-gray-200 text-sm outline-none text-gray-700 focus:border-emerald-400 transition-colors" />
+          <DatePicker
+  value={dateTo}
+  onChange={v => setDateTo(v)}
+  className="h-9 px-3 rounded-xl border border-gray-200 text-sm outline-none text-gray-700 focus:border-emerald-400 transition-colors"
+/>
         </div>
         <div className="flex gap-1.5 flex-wrap">
           {PRESET_RANGES.map(p => (

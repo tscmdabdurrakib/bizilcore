@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Calendar, Plus, X, ChevronLeft, ChevronRight, Clock, User, Scissors, Check, Play, XCircle, Loader2, List, ChevronDown } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface Service { id: string; name: string; price: number; durationMins: number; category: string; isActive: boolean; }
 interface StaffOption { id: string; user: { name: string }; }
@@ -156,13 +157,12 @@ function NewAppointmentModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs mb-1 font-medium" style={{ color: S.muted }}>তারিখ *</label>
-              <input
-                type="date" value={form.date}
-                onChange={e => setForm(p => ({ ...p, date: e.target.value }))}
-                style={inp(focused === "date")}
-                onFocus={() => setFocused("date")} onBlur={() => setFocused(null)}
-                required
-              />
+              <DatePicker
+  value={form.date}
+  onChange={v => setForm(p => ({ ...p, date: v }))}
+  style={inp(focused === "date")}
+  required
+/>
             </div>
             <div>
               <label className="block text-xs mb-1 font-medium" style={{ color: S.muted }}>সময় *</label>
@@ -459,11 +459,11 @@ export default function AppointmentsPage() {
         <button onClick={() => changeDate(-1)} className="p-2 rounded-lg border" style={{ borderColor: S.border }}>
           <ChevronLeft size={16} style={{ color: S.muted }} />
         </button>
-        <input
-          type="date" value={selectedDate}
-          onChange={e => setSelectedDate(e.target.value)}
-          style={{ ...inp(false), width: "auto", flexShrink: 0 }}
-        />
+        <DatePicker
+  value={selectedDate}
+  onChange={v => setSelectedDate(v)}
+  style={{ ...inp(false), width: "auto", flexShrink: 0 }}
+/>
         <button onClick={() => changeDate(1)} className="p-2 rounded-lg border" style={{ borderColor: S.border }}>
           <ChevronRight size={16} style={{ color: S.muted }} />
         </button>

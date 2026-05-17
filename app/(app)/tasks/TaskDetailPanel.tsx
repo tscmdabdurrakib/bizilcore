@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { X, Clock, Tag, Paperclip, MessageSquare, Activity, RefreshCw, Link as LinkIcon, Trash2, File, Copy, CheckSquare, Plus, Timer, Play, Square } from "lucide-react";
 import { getPriorityStyle, getStatusLabel, getCategoryLabel } from "./taskUtils";
 import { useTaskTimer } from "./TaskTimerContext";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface SubTask {
   id: string;
@@ -559,13 +560,12 @@ export default function TaskDetailPanel({ taskId, onClose, onUpdated }: Props) {
                 <label className="text-xs font-semibold flex items-center gap-1 mb-1" style={{ color: S.muted }}>
                   <Clock size={11} /> ডেডলাইন
                 </label>
-                <input
-                  type="date"
-                  value={editDueDate}
-                  onChange={e => setEditDueDate(e.target.value)}
-                  className="w-full text-sm border rounded-lg px-3 py-2"
-                  style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }}
-                />
+                <DatePicker
+  value={editDueDate}
+  onChange={v => setEditDueDate(v)}
+  className="w-full text-sm border rounded-lg px-3 py-2"
+  style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }}
+/>
               </div>
               <div>
                 <label className="text-xs font-semibold flex items-center gap-1 mb-1" style={{ color: S.muted }}>

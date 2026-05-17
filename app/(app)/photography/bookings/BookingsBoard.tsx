@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { formatBDT } from "@/lib/utils";
 import {
+import DatePicker from "@/components/ui/DatePicker";
   Camera, Plus, Loader2, Search, X, ChevronRight,
   Calendar, MapPin, Users, AlertCircle, CheckCircle,
   Clock, Truck, Star, XCircle, ArrowRight,
@@ -373,7 +374,7 @@ export default function BookingsBoard() {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <label className="text-xs font-semibold" style={{ color: S.muted }}>তারিখ *</label>
-                      <input type="date" value={form.eventDate} onChange={e => setForm(f => ({ ...f, eventDate: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
+                      <DatePicker value={form.eventDate} onChange={v => setForm(f => ({ ...f, eventDate: v }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
                     </div>
                     <div className="space-y-2">
                       <label className="text-xs font-semibold" style={{ color: S.muted }}>সময়</label>
@@ -478,7 +479,7 @@ export default function BookingsBoard() {
 
                   <div className="space-y-2">
                     <label className="text-xs font-semibold" style={{ color: S.muted }}>প্রত্যাশিত ডেলিভারি তারিখ</label>
-                    <input type="date" value={form.deliveryDate} onChange={e => setForm(f => ({ ...f, deliveryDate: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
+                    <DatePicker value={form.deliveryDate} onChange={v => setForm(f => ({ ...f, deliveryDate: v }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
                   </div>
                 </>
               )}

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import PlanGate from "@/components/PlanGate";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 /* ─── Types ─────────────────────────────────────────────── */
 interface StaffMember {
@@ -271,13 +272,12 @@ function AttendanceModal({ staff, onClose, onSave }: {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1.5">তারিখ *</label>
-              <input
-                type="date"
-                value={form.date}
-                onChange={e => setForm(p => ({ ...p, date: e.target.value }))}
-                required
-                className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-blue-500 text-gray-900"
-              />
+              <DatePicker
+  value={form.date}
+  onChange={v => setForm(p => ({ ...p, date: v }))}
+  className="w-full h-10 px-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-blue-500 text-gray-900"
+  required
+/>
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1.5">অবস্থা *</label>

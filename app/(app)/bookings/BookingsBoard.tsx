@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Plus, CalendarRange, Loader2, X, Save, Search, RefreshCw, Phone, ChevronRight, ChevronLeft } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface Room {
   id: string;
@@ -335,13 +336,21 @@ export default function BookingsBoard() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-xs font-semibold block mb-1" style={{ color: S.text }}>চেক-ইন *</label>
-                      <input type="date" value={form.checkIn} onChange={e => setForm({ ...form, checkIn: e.target.value })}
-                        className="w-full px-3 py-2 rounded-lg border text-sm" style={{ borderColor: S.border }} />
+                      <DatePicker
+  value={form.checkIn}
+  onChange={v => setForm({ ...form, checkIn: v })}
+  className="w-full px-3 py-2 rounded-lg border text-sm"
+  style={{ borderColor: S.border }}
+/>
                     </div>
                     <div>
                       <label className="text-xs font-semibold block mb-1" style={{ color: S.text }}>চেক-আউট *</label>
-                      <input type="date" value={form.checkOut} onChange={e => setForm({ ...form, checkOut: e.target.value })}
-                        className="w-full px-3 py-2 rounded-lg border text-sm" style={{ borderColor: S.border }} />
+                      <DatePicker
+  value={form.checkOut}
+  onChange={v => setForm({ ...form, checkOut: v })}
+  className="w-full px-3 py-2 rounded-lg border text-sm"
+  style={{ borderColor: S.border }}
+/>
                     </div>
                   </div>
                   <div className="text-[11px]" style={{ color: S.muted }}>{nights} রাত</div>

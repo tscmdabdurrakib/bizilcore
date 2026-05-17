@@ -7,6 +7,7 @@ import {
   Search, Download, Loader2, Save, Users, BadgeDollarSign,
 } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface Customer { id: string; name: string; phone: string | null }
 
@@ -294,7 +295,7 @@ function CreatePanel({ onClose, onSave, isDesktop }: { onClose: () => void; onSa
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">পেমেন্ট ডেডলাইন</label>
-                <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} className={fieldCls} />
+                <DatePicker value={dueDate} onChange={v => setDueDate(v)} className={fieldCls} />
               </div>
             </div>
 

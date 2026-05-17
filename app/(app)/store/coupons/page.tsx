@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Tag, Plus, Loader2, Pencil, Trash2, X, Check } from "lucide-react";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface Coupon {
   id: string;
@@ -220,10 +221,12 @@ export default function StoreCouponsPage() {
                 </div>
                 <div>
                   <label className="text-xs font-medium mb-1.5 block" style={{ color: S.secondary }}>মেয়াদ শেষ</label>
-                  <input value={form.expiresAt} onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))}
-                    type="date"
-                    className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
-                    style={{ backgroundColor: S.surface, borderColor: S.border, color: S.text }} />
+                  <DatePicker
+  value={form.expiresAt}
+  onChange={v => setForm(f => ({ ...f, expiresAt: v }))}
+  className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
+  style={{ backgroundColor: S.surface, borderColor: S.border, color: S.text }}
+/>
                 </div>
               </div>
               <div className="flex gap-3 pt-1">

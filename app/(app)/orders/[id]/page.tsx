@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronDown, ChevronRight, RefreshCw, Truck, Download, MessageCircle, Trash2, X, Copy, RotateCcw, Tag, Wallet, Check, Printer } from "lucide-react";
 import RiskBadge from "@/components/orders/RiskBadge";
 import { formatBDT, formatBanglaDate, getStatusStyle, STATUS_MAP } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface Order {
   id: string; status: string; source: string;
@@ -719,10 +720,12 @@ export default function OrderDetailPage() {
                       <div className="space-y-2">
                         <div>
                           <label className="block text-xs mb-1" style={{ color: S.muted }}>প্রাপ্তির তারিখ</label>
-                          <input type="date" value={remittanceDate}
-                            onChange={e => setRemittanceDate(e.target.value)}
-                            className="w-full h-9 px-3 rounded-xl border text-sm outline-none"
-                            style={{ borderColor: S.border, color: S.text }} />
+                          <DatePicker
+  value={remittanceDate}
+  onChange={v => setRemittanceDate(v)}
+  className="w-full h-9 px-3 rounded-xl border text-sm outline-none"
+  style={{ borderColor: S.border, color: S.text }}
+/>
                         </div>
                         <div className="flex gap-2">
                           <button onClick={() => setRemittanceDateModal(false)}
@@ -778,9 +781,12 @@ export default function OrderDetailPage() {
                     {remittanceDateModal ? (
                       <div className="space-y-2">
                         <label className="block text-xs mb-1" style={{ color: S.muted }}>প্রাপ্তির তারিখ</label>
-                        <input type="date" value={remittanceDate} onChange={e => setRemittanceDate(e.target.value)}
-                          className="w-full h-9 px-3 rounded-xl border text-sm outline-none"
-                          style={{ borderColor: S.border, color: S.text }} />
+                        <DatePicker
+  value={remittanceDate}
+  onChange={v => setRemittanceDate(v)}
+  className="w-full h-9 px-3 rounded-xl border text-sm outline-none"
+  style={{ borderColor: S.border, color: S.text }}
+/>
                         <div className="flex gap-2 pt-1">
                           <button onClick={() => setRemittanceDateModal(false)} className="flex-1 py-2 rounded-xl border text-xs font-medium" style={{ borderColor: S.border, color: S.text }}>বাতিল</button>
                           <button onClick={() => confirmCodRemitted(true, remittanceDate)} disabled={togglingRemitted}

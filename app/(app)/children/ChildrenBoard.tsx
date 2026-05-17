@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Users, Plus, Search, X, AlertTriangle, Phone, ChevronDown } from "lucide-react";
+import DatePicker from "@/components/ui/DatePicker";
 
 const S = {
   surface: "var(--c-surface)",
@@ -233,7 +234,7 @@ export default function ChildrenBoard() {
                   <input className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="শিশুর নাম *" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} style={{ borderColor: S.border }} />
                   <input className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="বাংলা নাম" value={form.nameBangla} onChange={e => setForm(p => ({ ...p, nameBangla: e.target.value }))} style={{ borderColor: S.border }} />
                   <div className="grid grid-cols-2 gap-2">
-                    <input type="date" className="w-full border rounded-lg px-3 py-2 text-sm" value={form.dateOfBirth} onChange={e => setForm(p => ({ ...p, dateOfBirth: e.target.value }))} style={{ borderColor: S.border }} />
+                    <DatePicker value={form.dateOfBirth} onChange={v => setForm(p => ({ ...p, dateOfBirth: v }))} className="w-full border rounded-lg px-3 py-2 text-sm" style={{ borderColor: S.border }} />
                     <select className="w-full border rounded-lg px-3 py-2 text-sm" value={form.gender} onChange={e => setForm(p => ({ ...p, gender: e.target.value }))} style={{ borderColor: S.border }}>
                       <option value="">লিঙ্গ</option>
                       {GENDERS.map(g => <option key={g} value={g}>{g}</option>)}

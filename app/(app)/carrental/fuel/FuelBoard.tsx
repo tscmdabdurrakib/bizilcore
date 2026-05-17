@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Fuel, Plus, X, Car, Loader2 } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 const S = {
   surface: "var(--c-surface)",
@@ -174,7 +175,7 @@ export default function FuelBoard() {
                 <input type="number" className="border rounded-lg px-3 py-2 text-sm col-span-2" placeholder="মোট খরচ ৳ *" value={form.totalCost} onChange={e => setForm(p => ({ ...p, totalCost: e.target.value }))} style={{ borderColor: S.border }} />
                 <input type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="KM রিডিং" value={form.kmAtFill} onChange={e => setForm(p => ({ ...p, kmAtFill: e.target.value }))} style={{ borderColor: S.border }} />
                 <input className="border rounded-lg px-3 py-2 text-sm" placeholder="পেট্রোল স্টেশন" value={form.station} onChange={e => setForm(p => ({ ...p, station: e.target.value }))} style={{ borderColor: S.border }} />
-                <input type="date" className="border rounded-lg px-3 py-2 text-sm col-span-2" value={form.fuelDate} onChange={e => setForm(p => ({ ...p, fuelDate: e.target.value }))} style={{ borderColor: S.border }} />
+                <DatePicker value={form.fuelDate} onChange={v => setForm(p => ({ ...p, fuelDate: v }))} className="border rounded-lg px-3 py-2 text-sm col-span-2" style={{ borderColor: S.border }} />
                 <textarea className="border rounded-lg px-3 py-2 text-sm col-span-2 resize-none" placeholder="নোট" value={form.note} onChange={e => setForm(p => ({ ...p, note: e.target.value }))} rows={2} style={{ borderColor: S.border }} />
               </div>
             </div>

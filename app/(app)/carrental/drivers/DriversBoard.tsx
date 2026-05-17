@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Users, Plus, Search, X, Phone, CreditCard } from "lucide-react";
+import DatePicker from "@/components/ui/DatePicker";
 
 const S = {
   surface: "var(--c-surface)",
@@ -187,7 +188,7 @@ export default function DriversBoard() {
                 <select className="border rounded-lg px-3 py-2 text-sm" value={form.licenseType} onChange={e => setForm(p => ({ ...p, licenseType: e.target.value }))} style={{ borderColor: S.border }}>
                   {LICENSE_TYPES.map(l => <option key={l} value={l}>{l}</option>)}
                 </select>
-                <input type="date" className="border rounded-lg px-3 py-2 text-sm col-span-2" placeholder="License মেয়াদ শেষ" value={form.licenseExp} onChange={e => setForm(p => ({ ...p, licenseExp: e.target.value }))} style={{ borderColor: S.border }} />
+                <DatePicker value={form.licenseExp} onChange={v => setForm(p => ({ ...p, licenseExp: v }))} className="border rounded-lg px-3 py-2 text-sm col-span-2" style={{ borderColor: S.border }} placeholder="License মেয়াদ শেষ" />
                 <input className="border rounded-lg px-3 py-2 text-sm col-span-2" placeholder="ঠিকানা" value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} style={{ borderColor: S.border }} />
                 <select className="border rounded-lg px-3 py-2 text-sm" value={form.salaryType} onChange={e => setForm(p => ({ ...p, salaryType: e.target.value }))} style={{ borderColor: S.border }}>
                   <option value="monthly">মাসিক বেতন</option>

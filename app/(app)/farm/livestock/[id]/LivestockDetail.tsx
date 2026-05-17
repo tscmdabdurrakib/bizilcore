@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, Plus, X, Save } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 const S = { surface: "var(--c-surface)", border: "var(--c-border)", text: "var(--c-text)", muted: "var(--c-text-muted)" };
 const G = "#16A34A";
@@ -171,12 +172,12 @@ export default function LivestockDetail({ id }: { id: string }) {
                 )}
                 <div>
                   <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>তারিখ</label>
-                  <input type="date" value={logForm.logDate} onChange={(e) => setLogForm({ ...logForm, logDate: e.target.value })} className={inputCls} style={iS} />
+                  <DatePicker value={logForm.logDate} onChange={v => setLogForm({ ...logForm, logDate: v })} className={inputCls} style={iS} />
                 </div>
                 {logForm.logType === "vaccination" && (
                   <div>
                     <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>পরবর্তী টিকার তারিখ</label>
-                    <input type="date" value={logForm.nextDueDate} onChange={(e) => setLogForm({ ...logForm, nextDueDate: e.target.value })} className={inputCls} style={iS} />
+                    <DatePicker value={logForm.nextDueDate} onChange={v => setLogForm({ ...logForm, nextDueDate: v })} className={inputCls} style={iS} />
                   </div>
                 )}
               </div>

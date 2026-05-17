@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Shirt, Plus, Search, RefreshCw, ChevronDown, ChevronUp, X, Calendar, Ruler } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
 import { S } from "@/lib/theme";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface TOrder {
   id: string;
@@ -342,13 +343,12 @@ export default function TailorOrders() {
               </div>
               <div>
                 <label className="text-xs font-semibold mb-1 block" style={{ color: S.secondary }}>ডেলিভারি তারিখ</label>
-                <input
-                  type="date"
-                  value={form.deliveryDate}
-                  onChange={e => setForm(f => ({ ...f, deliveryDate: e.target.value }))}
-                  className="w-full h-10 px-3 rounded-xl border text-sm outline-none"
-                  style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }}
-                />
+                <DatePicker
+  value={form.deliveryDate}
+  onChange={v => setForm(f => ({ ...f, deliveryDate: v }))}
+  className="w-full h-10 px-3 rounded-xl border text-sm outline-none"
+  style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }}
+/>
               </div>
               <div>
                 <label className="text-xs font-semibold mb-1 block" style={{ color: S.secondary }}>স্টাইল রেফারেন্স (URL)</label>

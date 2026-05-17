@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { formatBDT } from "@/lib/utils";
 import {
+import DatePicker from "@/components/ui/DatePicker";
   Camera, Plus, Loader2, X, Check, Edit2, Trash2, AlertTriangle,
 } from "lucide-react";
 
@@ -238,11 +239,11 @@ export default function EquipmentBoard() {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold" style={{ color: S.muted }}>ক্রয় তারিখ</label>
-                  <input type="date" value={form.purchaseDate} onChange={e => setForm(f => ({ ...f, purchaseDate: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
+                  <DatePicker value={form.purchaseDate} onChange={v => setForm(f => ({ ...f, purchaseDate: v }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold" style={{ color: S.muted }}>বীমার মেয়াদ</label>
-                  <input type="date" value={form.insuranceExp} onChange={e => setForm(f => ({ ...f, insuranceExp: e.target.value }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
+                  <DatePicker value={form.insuranceExp} onChange={v => setForm(f => ({ ...f, insuranceExp: v }))} className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none" style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
                 </div>
               </div>
               <div className="space-y-1.5">

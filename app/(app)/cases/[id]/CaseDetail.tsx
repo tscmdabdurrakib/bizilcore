@@ -7,6 +7,7 @@ import {
   Plus, X, CheckCircle, Clock, AlertCircle, Edit2, Save,
 } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 const CASE_TYPES = [
   { value: "civil", label: "দেওয়ানী" },
@@ -619,8 +620,12 @@ export default function CaseDetail({ id }: { id: string }) {
             <div className="p-5 space-y-3">
               <div>
                 <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>শুনানির তারিখ *</label>
-                <input type="date" value={hearingForm.hearingDate} onChange={e => setHearingForm(f => ({ ...f, hearingDate: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-xl text-sm outline-none" style={{ background: S.bg, border: `1px solid ${S.border}`, color: S.text }} />
+                <DatePicker
+  value={hearingForm.hearingDate}
+  onChange={v => setHearingForm(f => ({ ...f, hearingDate: v }))}
+  className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+  style={{ background: S.bg, border: `1px solid ${S.border}`, color: S.text }}
+/>
               </div>
               <div>
                 <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>উদ্দেশ্য</label>
@@ -638,8 +643,12 @@ export default function CaseDetail({ id }: { id: string }) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>পরবর্তী তারিখ</label>
-                  <input type="date" value={hearingForm.nextDate} onChange={e => setHearingForm(f => ({ ...f, nextDate: e.target.value }))}
-                    className="w-full px-3 py-2.5 rounded-xl text-sm outline-none" style={{ background: S.bg, border: `1px solid ${S.border}`, color: S.text }} />
+                  <DatePicker
+  value={hearingForm.nextDate}
+  onChange={v => setHearingForm(f => ({ ...f, nextDate: v }))}
+  className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+  style={{ background: S.bg, border: `1px solid ${S.border}`, color: S.text }}
+/>
                 </div>
                 <div>
                   <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>হাজিরা ফি</label>
@@ -690,8 +699,12 @@ export default function CaseDetail({ id }: { id: string }) {
                 </div>
                 <div>
                   <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>জমার তারিখ</label>
-                  <input type="date" value={docForm.submittedAt} onChange={e => setDocForm(f => ({ ...f, submittedAt: e.target.value }))}
-                    className="w-full px-3 py-2.5 rounded-xl text-sm outline-none" style={{ background: S.bg, border: `1px solid ${S.border}`, color: S.text }} />
+                  <DatePicker
+  value={docForm.submittedAt}
+  onChange={v => setDocForm(f => ({ ...f, submittedAt: v }))}
+  className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+  style={{ background: S.bg, border: `1px solid ${S.border}`, color: S.text }}
+/>
                 </div>
               </div>
               <div>

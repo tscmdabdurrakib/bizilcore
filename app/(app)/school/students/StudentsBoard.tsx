@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { GraduationCap, Plus, Search, X, Loader2, ChevronRight } from "lucide-react";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface BatchOption { id: string; name: string; monthlyFee: number; admissionFee: number }
 interface Student {
@@ -175,7 +176,7 @@ export default function StudentsBoard() {
                   </div>
                   <div>
                     <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>জন্ম তারিখ</label>
-                    <input type="date" value={form.dateOfBirth} onChange={(e) => setForm({ ...form, dateOfBirth: e.target.value })} className={inputCls} style={inputStyle} />
+                    <DatePicker value={form.dateOfBirth} onChange={v => setForm({ ...form, dateOfBirth: v })} className={inputCls} style={inputStyle} />
                   </div>
                   <div>
                     <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>লিঙ্গ</label>

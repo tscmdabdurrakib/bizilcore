@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { FileText, Plus, Copy, CheckCircle, XCircle, Send, Eye, ExternalLink } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 const S = {
   surface: "var(--c-surface)",
@@ -335,8 +336,12 @@ export default function InvoicesBoard() {
                 </div>
                 <div>
                   <label className="text-xs font-medium block mb-1" style={{ color: S.muted }}>Due Date</label>
-                  <input type="date" value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-xl border text-sm" style={{ background: "var(--c-bg)", borderColor: S.border, color: S.text }} />
+                  <DatePicker
+  value={form.dueDate}
+  onChange={v => setForm(f => ({ ...f, dueDate: v }))}
+  className="w-full px-3 py-2 rounded-xl border text-sm"
+  style={{ background: "var(--c-bg)", borderColor: S.border, color: S.text }}
+/>
                 </div>
                 <div>
                   <label className="text-xs font-medium block mb-1" style={{ color: S.muted }}>স্ট্যাটাস</label>

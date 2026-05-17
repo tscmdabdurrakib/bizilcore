@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { BarChart2, Eye, ShoppingBag, TrendingUp, ArrowUpRight, Package } from "lucide-react";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface DailyPoint { date: string; visits: number; orders: number; revenue: number; }
 interface TopProduct { productId: string | null; name: string; qty: number; revenue: number; }
@@ -213,24 +214,22 @@ export default function StoreAnalyticsPage() {
 
           {range === "custom" && (
             <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={customFrom}
-                max={customTo}
-                onChange={e => setCustomFrom(e.target.value)}
-                className="text-xs rounded-lg border px-2 py-1.5 outline-none"
-                style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }}
-              />
+              <DatePicker
+  value={customFrom}
+  onChange={v => setCustomFrom(v)}
+  className="text-xs rounded-lg border px-2 py-1.5 outline-none"
+  style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }}
+  max={customTo}
+/>
               <span className="text-xs" style={{ color: S.muted }}>—</span>
-              <input
-                type="date"
-                value={customTo}
-                min={customFrom}
-                max={toInputDate(today)}
-                onChange={e => setCustomTo(e.target.value)}
-                className="text-xs rounded-lg border px-2 py-1.5 outline-none"
-                style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }}
-              />
+              <DatePicker
+  value={customTo}
+  onChange={v => setCustomTo(v)}
+  className="text-xs rounded-lg border px-2 py-1.5 outline-none"
+  style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }}
+  min={customFrom}
+  max={toInputDate(today)}
+/>
               <button
                 onClick={fetchAnalytics}
                 disabled={!customFrom || !customTo}

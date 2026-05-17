@@ -8,6 +8,7 @@ import {
   CalendarRange, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface Expense {
   id: string; title: string; amount: number;
@@ -126,8 +127,12 @@ function ExpensePanel({
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">তারিখ *</label>
-                <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                  required className={fieldCls} />
+                <DatePicker
+  value={form.date}
+  onChange={v => setForm(f => ({ ...f, date: v }))}
+  className={fieldCls}
+  required
+/>
               </div>
             </div>
 
@@ -372,13 +377,19 @@ export default function ExpensesPage() {
           <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 bg-gray-50">
             <div className="flex items-center gap-2 flex-1">
               <span className="text-xs font-semibold text-gray-500 flex-shrink-0">থেকে:</span>
-              <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}
-                className="flex-1 h-9 border border-gray-200 rounded-xl px-3 text-sm bg-white outline-none focus:border-gray-400 transition-colors" />
+              <DatePicker
+  value={fromDate}
+  onChange={v => setFromDate(v)}
+  className="flex-1 h-9 border border-gray-200 rounded-xl px-3 text-sm bg-white outline-none focus:border-gray-400 transition-colors"
+/>
             </div>
             <div className="flex items-center gap-2 flex-1">
               <span className="text-xs font-semibold text-gray-500 flex-shrink-0">পর্যন্ত:</span>
-              <input type="date" value={toDate} onChange={e => setToDate(e.target.value)}
-                className="flex-1 h-9 border border-gray-200 rounded-xl px-3 text-sm bg-white outline-none focus:border-gray-400 transition-colors" />
+              <DatePicker
+  value={toDate}
+  onChange={v => setToDate(v)}
+  className="flex-1 h-9 border border-gray-200 rounded-xl px-3 text-sm bg-white outline-none focus:border-gray-400 transition-colors"
+/>
             </div>
           </div>
         )}

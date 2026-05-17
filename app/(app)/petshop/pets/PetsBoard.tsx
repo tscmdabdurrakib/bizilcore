@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { PawPrint, Plus, X, Search, Loader2, Phone } from "lucide-react";
 import Link from "next/link";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface Pet {
   id: string; name: string; type: string; breed?: string | null; gender?: string | null;
@@ -215,8 +216,12 @@ export default function PetsBoard() {
                       placeholder="জাত (ঐচ্ছিক)" className="h-11 px-3 rounded-xl border text-sm" style={{ borderColor: S.border, color: S.text }} />
                     <input value={form.color} onChange={e => setForm(f => ({ ...f, color: e.target.value }))}
                       placeholder="রঙ" className="h-11 px-3 rounded-xl border text-sm" style={{ borderColor: S.border, color: S.text }} />
-                    <input value={form.dateOfBirth} onChange={e => setForm(f => ({ ...f, dateOfBirth: e.target.value }))}
-                      type="date" className="h-11 px-3 rounded-xl border text-sm" style={{ borderColor: S.border, color: S.text }} />
+                    <DatePicker
+  value={form.dateOfBirth}
+  onChange={v => setForm(f => ({ ...f, dateOfBirth: v }))}
+  className="h-11 px-3 rounded-xl border text-sm"
+  style={{ borderColor: S.border, color: S.text }}
+/>
                     <input value={form.microchipId} onChange={e => setForm(f => ({ ...f, microchipId: e.target.value }))}
                       placeholder="Microchip ID" className="h-11 px-3 rounded-xl border text-sm" style={{ borderColor: S.border, color: S.text }} />
                   </div>

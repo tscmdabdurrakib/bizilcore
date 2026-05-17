@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Activity, Plus, X, Loader2, Search, ChevronRight, Phone, UserPlus, Printer } from "lucide-react";
 import HospitalDisclaimer from "@/components/hospital/HospitalDisclaimer";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface Doctor { id: string; name: string; title: string; specialization: string; visitFee: number; followUpFee?: number | null; chamberDays?: string | null; todayCount: number; maxPatients?: number | null }
 interface Patient { id: string; name: string; age?: number | null; ageUnit?: string | null; gender?: string | null; phone?: string | null; regNumber: string }
@@ -406,7 +407,7 @@ export default function OPDBoard() {
               </div>
               <div>
                 <label className="text-xs font-medium block mb-1" style={{ color: S.muted }}>পরবর্তী ভিজিটের তারিখ</label>
-                <input className={inp} type="date" value={completeForm.nextVisitDate} onChange={(e) => setCompleteForm((f) => ({ ...f, nextVisitDate: e.target.value }))} style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
+                <DatePicker value={completeForm.nextVisitDate} onChange={v => setCompleteForm((f) => ({ ...f, nextVisitDate: v }))} className={inp} style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
               </div>
               <div>
                 <label className="text-xs font-medium block mb-1.5" style={{ color: S.muted }}>পরীক্ষার অনুরোধ</label>

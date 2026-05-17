@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Plus, X, Loader2, AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 const S = { surface: "var(--c-surface)", border: "var(--c-border)", text: "var(--c-text)", muted: "var(--c-text-muted)", bg: "var(--c-bg)" };
 const G = "#16A34A";
@@ -156,7 +157,7 @@ export default function LivestockBoard() {
                 </div>
                 <div>
                   <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>ক্রয়ের তারিখ</label>
-                  <input type="date" value={form.purchaseDate} onChange={(e) => setForm({ ...form, purchaseDate: e.target.value })} className={inputCls} style={iS} />
+                  <DatePicker value={form.purchaseDate} onChange={v => setForm({ ...form, purchaseDate: v })} className={inputCls} style={iS} />
                 </div>
               </div>
               <div className="flex gap-3 pt-1">
@@ -216,12 +217,12 @@ export default function LivestockBoard() {
                 )}
                 <div>
                   <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>তারিখ</label>
-                  <input type="date" value={logForm.logDate} onChange={(e) => setLogForm({ ...logForm, logDate: e.target.value })} className={inputCls} style={iS} />
+                  <DatePicker value={logForm.logDate} onChange={v => setLogForm({ ...logForm, logDate: v })} className={inputCls} style={iS} />
                 </div>
                 {logForm.logType === "vaccination" && (
                   <div>
                     <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>পরবর্তী টিকার তারিখ</label>
-                    <input type="date" value={logForm.nextDueDate} onChange={(e) => setLogForm({ ...logForm, nextDueDate: e.target.value })} className={inputCls} style={iS} />
+                    <DatePicker value={logForm.nextDueDate} onChange={v => setLogForm({ ...logForm, nextDueDate: v })} className={inputCls} style={iS} />
                   </div>
                 )}
               </div>

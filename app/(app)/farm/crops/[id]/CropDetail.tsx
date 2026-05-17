@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { SproutIcon, Loader2, ArrowLeft, Plus, X, Save, CloudSun, Droplets, Leaf, Scissors, Eye, Wrench } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 const S = { surface: "var(--c-surface)", border: "var(--c-border)", text: "var(--c-text)", muted: "var(--c-text-muted)" };
 const G = "#16A34A";
@@ -273,7 +274,7 @@ export default function CropDetail({ id }: { id: string }) {
                 </div>
                 <div>
                   <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>তারিখ</label>
-                  <input type="date" value={logForm.activityDate} onChange={(e) => setLogForm({ ...logForm, activityDate: e.target.value })} className={inputCls} style={iS} />
+                  <DatePicker value={logForm.activityDate} onChange={v => setLogForm({ ...logForm, activityDate: v })} className={inputCls} style={iS} />
                 </div>
               </div>
               <div>
@@ -307,7 +308,7 @@ export default function CropDetail({ id }: { id: string }) {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>ফসল তোলার তারিখ</label>
-                  <input type="date" value={harvestForm.harvestDate} onChange={(e) => setHarvestForm({ ...harvestForm, harvestDate: e.target.value })} className={inputCls} style={iS} />
+                  <DatePicker value={harvestForm.harvestDate} onChange={v => setHarvestForm({ ...harvestForm, harvestDate: v })} className={inputCls} style={iS} />
                 </div>
                 <div>
                   <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>পরিমাণ (কেজি) *</label>
@@ -364,7 +365,7 @@ export default function CropDetail({ id }: { id: string }) {
                 </div>
                 <div>
                   <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>তারিখ</label>
-                  <input type="date" value={saleForm.saleDate} onChange={(e) => setSaleForm({ ...saleForm, saleDate: e.target.value })} className={inputCls} style={iS} />
+                  <DatePicker value={saleForm.saleDate} onChange={v => setSaleForm({ ...saleForm, saleDate: v })} className={inputCls} style={iS} />
                 </div>
                 <div>
                   <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>পেমেন্ট</label>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Users, Plus, Search, X, Loader2, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface Plan { name: string; duration: number }
 interface Trainer { id: string; name: string }
@@ -216,7 +217,7 @@ export default function MembersBoard() {
                   </div>
                   <div>
                     <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>জন্ম তারিখ</label>
-                    <input className={inputCls} style={inputStyle} type="date" value={form.dateOfBirth} onChange={e => setForm(f => ({ ...f, dateOfBirth: e.target.value }))} />
+                    <DatePicker value={form.dateOfBirth} onChange={v => setForm(f => ({ ...f, dateOfBirth: v }))} className={inputCls} style={inputStyle} />
                   </div>
                   <div>
                     <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>রক্তের গ্রুপ</label>
@@ -295,7 +296,7 @@ export default function MembersBoard() {
                   </div>
                   <div>
                     <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>শুরুর তারিখ</label>
-                    <input className={inputCls} style={inputStyle} type="date" value={form.membershipStart} onChange={e => setForm(f => ({ ...f, membershipStart: e.target.value }))} />
+                    <DatePicker value={form.membershipStart} onChange={v => setForm(f => ({ ...f, membershipStart: v }))} className={inputCls} style={inputStyle} />
                   </div>
                 </div>
                 {membershipEnd && <p className="text-xs" style={{ color: S.muted }}>মেয়াদ শেষ: <b>{new Date(membershipEnd).toLocaleDateString("bn-BD")}</b></p>}

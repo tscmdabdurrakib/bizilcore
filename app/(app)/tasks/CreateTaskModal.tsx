@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, BookmarkPlus } from "lucide-react";
 import type { TaskTemplate } from "./TaskTemplates";
 import { saveCustomTemplate } from "./TaskTemplates";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface InitialData {
   title?: string;
@@ -311,13 +312,12 @@ export default function CreateTaskModal({ onClose, onCreated, initialData, defau
               </div>
               <div>
                 <label className="text-xs font-semibold block mb-1.5" style={{ color: S.muted }}>ডেডলাইন</label>
-                <input
-                  type="date"
-                  value={dueDate}
-                  onChange={e => setDueDate(e.target.value)}
-                  className="w-full text-sm border rounded-xl px-3 py-2"
-                  style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }}
-                />
+                <DatePicker
+  value={dueDate}
+  onChange={v => setDueDate(v)}
+  className="w-full text-sm border rounded-xl px-3 py-2"
+  style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }}
+/>
               </div>
             </div>
 

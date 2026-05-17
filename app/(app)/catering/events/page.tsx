@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus, CalendarRange, Search, X, Check, ChevronRight } from "lucide-react";
+import DatePicker from "@/components/ui/DatePicker";
 
 const S = {
   surface: "var(--c-surface)",
@@ -317,8 +318,12 @@ export default function CateringEventsPage() {
                   </div>
                   <div>
                     <label className="text-xs font-medium block mb-1" style={{ color: S.muted }}>অনুষ্ঠানের তারিখ *</label>
-                    <input type="date" value={eventDate} onChange={e => setEventDate(e.target.value)}
-                      className="w-full border rounded-xl px-3 py-2 text-sm" style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
+                    <DatePicker
+  value={eventDate}
+  onChange={v => setEventDate(v)}
+  className="w-full border rounded-xl px-3 py-2 text-sm"
+  style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }}
+/>
                   </div>
                   <div>
                     <label className="text-xs font-medium block mb-1" style={{ color: S.muted }}>সময়</label>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Users, Plus, X, Search, Loader2, Phone, ChevronRight } from "lucide-react";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface Lead {
   id: string; clientName: string; clientPhone: string; requirement?: string | null;
@@ -214,8 +215,12 @@ export default function LeadsBoard() {
               <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)}
                 placeholder="কল লগ, নোট..." rows={3}
                 className="w-full px-3 py-2.5 rounded-xl border text-sm resize-none" style={{ borderColor: S.border, color: S.text }} />
-              <input type="date" value={editFollowUp} onChange={e => setEditFollowUp(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border text-sm" style={{ borderColor: S.border, color: S.text }} />
+              <DatePicker
+  value={editFollowUp}
+  onChange={v => setEditFollowUp(v)}
+  className="w-full h-10 px-3 rounded-xl border text-sm"
+  style={{ borderColor: S.border, color: S.text }}
+/>
               <button onClick={() => saveNotes(selected.id)}
                 className="w-full py-2.5 rounded-xl font-bold text-sm text-white" style={{ backgroundColor: RE_COLOR }}>
                 ✓ নোট সেভ করুন
@@ -265,8 +270,12 @@ export default function LeadsBoard() {
               </div>
               <div>
                 <label className="text-xs font-semibold mb-1 block" style={{ color: S.muted }}>Follow-up তারিখ</label>
-                <input type="date" value={form.followUpDate} onChange={e => setForm(f => ({ ...f, followUpDate: e.target.value }))}
-                  className="w-full h-10 px-3 rounded-xl border text-sm" style={{ borderColor: S.border, color: S.text }} />
+                <DatePicker
+  value={form.followUpDate}
+  onChange={v => setForm(f => ({ ...f, followUpDate: v }))}
+  className="w-full h-10 px-3 rounded-xl border text-sm"
+  style={{ borderColor: S.border, color: S.text }}
+/>
               </div>
               <div className="flex gap-2 pt-1">
                 <button onClick={() => setShowNew(false)} className="flex-1 py-3 rounded-xl border font-semibold text-sm" style={{ borderColor: S.border, color: S.text }}>বাতিল</button>

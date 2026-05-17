@@ -7,6 +7,7 @@ import {
   CheckCircle, Clock, XCircle, AlertCircle,
 } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface Booking {
   id: string;
@@ -457,11 +458,11 @@ export default function BookingsBoard() {
                   </div>
                   <div>
                     <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>ভ্রমণের তারিখ *</label>
-                    <input className={inputCls} style={inputStyle} type="date" value={form.travelDate} onChange={e => setForm(f => ({ ...f, travelDate: e.target.value }))} />
+                    <DatePicker value={form.travelDate} onChange={v => setForm(f => ({ ...f, travelDate: v }))} className={inputCls} style={inputStyle} />
                   </div>
                   <div>
                     <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>ফেরার তারিখ</label>
-                    <input className={inputCls} style={inputStyle} type="date" value={form.returnDate} onChange={e => setForm(f => ({ ...f, returnDate: e.target.value }))} />
+                    <DatePicker value={form.returnDate} onChange={v => setForm(f => ({ ...f, returnDate: v }))} className={inputCls} style={inputStyle} />
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2">

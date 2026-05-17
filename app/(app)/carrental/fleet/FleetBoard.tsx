@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Car, Plus, Search, X, Wrench, CheckCircle, AlertTriangle } from "lucide-react";
+import DatePicker from "@/components/ui/DatePicker";
 
 const S = {
   surface: "var(--c-surface)",
@@ -279,7 +280,7 @@ export default function FleetBoard() {
                   <option value="">ডিফল্ট ড্রাইভার (ঐচ্ছিক)</option>
                   {drivers.map(d => <option key={d.id} value={d.id}>{d.name} · {d.phone}</option>)}
                 </select>
-                <input type="date" className="border rounded-lg px-3 py-2 text-sm" placeholder="পরবর্তী সার্ভিসের তারিখ" value={form.nextService} onChange={e => setForm(p => ({ ...p, nextService: e.target.value }))} style={{ borderColor: S.border }} />
+                <DatePicker value={form.nextService} onChange={v => setForm(p => ({ ...p, nextService: v }))} className="border rounded-lg px-3 py-2 text-sm" style={{ borderColor: S.border }} placeholder="পরবর্তী সার্ভিসের তারিখ" />
                 <textarea className="border rounded-lg px-3 py-2 text-sm resize-none" placeholder="নোট" value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} style={{ borderColor: S.border }} />
               </div>
             </div>

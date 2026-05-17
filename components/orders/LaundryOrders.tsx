@@ -5,6 +5,7 @@ import { Droplets, Plus, Search, RefreshCw, X, ChevronRight,
          CheckCircle, Clock, Truck, Package, Phone, Hash,
          AlertCircle, Loader2, CreditCard } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface LItem { id: string; itemName: string; quantity: number; unitPrice: number; subtotal: number; condition?: string; tag?: string; serviceId?: string; }
 interface LPayment { id: string; amount: number; method: string; paidAt: string; }
@@ -557,10 +558,13 @@ export default function LaundryOrders() {
                   {form.orderType === "pickup_delivery" && (
                     <div>
                       <label className="block text-xs font-semibold mb-1" style={{ color: S.muted }}>Pickup তারিখ</label>
-                      <input type="date" value={form.pickupDate} min={new Date().toISOString().split("T")[0]}
-                        onChange={e => setForm(p => ({ ...p, pickupDate: e.target.value }))}
-                        className="w-full h-11 px-4 rounded-xl border text-sm outline-none"
-                        style={{ borderColor: S.border, backgroundColor: S.bg, color: S.text }} />
+                      <DatePicker
+  value={form.pickupDate}
+  onChange={v => setForm(p => ({ ...p, pickupDate: v }))}
+  className="w-full h-11 px-4 rounded-xl border text-sm outline-none"
+  style={{ borderColor: S.border, backgroundColor: S.bg, color: S.text }}
+  min={new Date().toISOString().split("T")[0]}
+/>
                     </div>
                   )}
 
@@ -583,10 +587,13 @@ export default function LaundryOrders() {
 
                   <div>
                     <label className="block text-xs font-semibold mb-1" style={{ color: S.muted }}>ডেলিভারির তারিখ</label>
-                    <input type="date" value={form.deliveryDate} min={new Date().toISOString().split("T")[0]}
-                      onChange={e => setForm(p => ({ ...p, deliveryDate: e.target.value }))}
-                      className="w-full h-11 px-4 rounded-xl border text-sm outline-none"
-                      style={{ borderColor: S.border, backgroundColor: S.bg, color: S.text }} />
+                    <DatePicker
+  value={form.deliveryDate}
+  onChange={v => setForm(p => ({ ...p, deliveryDate: v }))}
+  className="w-full h-11 px-4 rounded-xl border text-sm outline-none"
+  style={{ borderColor: S.border, backgroundColor: S.bg, color: S.text }}
+  min={new Date().toISOString().split("T")[0]}
+/>
                   </div>
 
                   <button onClick={() => setStep(2)}

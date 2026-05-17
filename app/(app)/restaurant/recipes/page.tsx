@@ -6,6 +6,7 @@ import {
   X, Loader2, AlertTriangle, TrendingUp, ShoppingCart
 } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface RawMaterial {
   id: string;
@@ -555,9 +556,12 @@ export default function RecipesPage() {
               )}
               <div>
                 <label className="block text-xs font-semibold mb-1" style={{ color: S.muted }}>তারিখ</label>
-                <input type="date" value={newPurchase.purchasedAt} onChange={e => setNewPurchase(p => ({ ...p, purchasedAt: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
-                  style={{ borderColor: S.border, backgroundColor: S.bg, color: S.text }} />
+                <DatePicker
+  value={newPurchase.purchasedAt}
+  onChange={v => setNewPurchase(p => ({ ...p, purchasedAt: v }))}
+  className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
+  style={{ borderColor: S.border, backgroundColor: S.bg, color: S.text }}
+/>
               </div>
               <div>
                 <label className="block text-xs font-semibold mb-1" style={{ color: S.muted }}>নোট</label>

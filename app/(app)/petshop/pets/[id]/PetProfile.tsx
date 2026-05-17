@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { PawPrint, Plus, X, Loader2, Phone, Calendar } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface HealthLog { id: string; logType: string; description: string; medicineName?: string | null; dosage?: string | null; vetName?: string | null; cost: number; nextDueDate?: string | null; logDate: string; notes?: string | null; }
 interface Appointment { id: string; type: string; date: string; status: string; fee: number; paidAmount: number; note?: string | null; }
@@ -271,8 +272,12 @@ export default function PetProfile({ id }: { id: string }) {
               </div>
               <div>
                 <label className="text-xs font-semibold mb-1 block" style={{ color: S.muted }}>পরবর্তী তারিখ (Next Due Date)</label>
-                <input type="date" value={logForm.nextDueDate} onChange={e => setLogForm(f => ({ ...f, nextDueDate: e.target.value }))}
-                  className="w-full h-10 px-3 rounded-xl border text-sm" style={{ borderColor: S.border, color: S.text }} />
+                <DatePicker
+  value={logForm.nextDueDate}
+  onChange={v => setLogForm(f => ({ ...f, nextDueDate: v }))}
+  className="w-full h-10 px-3 rounded-xl border text-sm"
+  style={{ borderColor: S.border, color: S.text }}
+/>
               </div>
               <textarea value={logForm.notes} onChange={e => setLogForm(f => ({ ...f, notes: e.target.value }))}
                 placeholder="নোট..." rows={2} className="w-full px-3 py-2.5 rounded-xl border text-sm resize-none" style={{ borderColor: S.border, color: S.text }} />

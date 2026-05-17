@@ -7,6 +7,7 @@ import {
   CheckCircle, Circle, Plus, ChevronDown, AlertTriangle, Timer,
 } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 const S = {
   surface: "var(--c-surface)",
@@ -510,8 +511,12 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
                 </div>
                 <div>
                   <label className="text-xs font-medium block mb-1" style={{ color: S.muted }}>Due Date</label>
-                  <input type="date" value={mForm.dueDate} onChange={e => setMForm(f => ({ ...f, dueDate: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-xl border text-sm" style={{ background: "var(--c-bg)", borderColor: S.border, color: S.text }} />
+                  <DatePicker
+  value={mForm.dueDate}
+  onChange={v => setMForm(f => ({ ...f, dueDate: v }))}
+  className="w-full px-3 py-2 rounded-xl border text-sm"
+  style={{ background: "var(--c-bg)", borderColor: S.border, color: S.text }}
+/>
                 </div>
               </div>
               <div className="flex gap-2 pt-1">
@@ -558,8 +563,12 @@ export default function ProjectDetail({ projectId }: { projectId: string }) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium block mb-1" style={{ color: S.muted }}>তারিখ</label>
-                  <input type="date" value={tForm.logDate} onChange={e => setTForm(f => ({ ...f, logDate: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-xl border text-sm" style={{ background: "var(--c-bg)", borderColor: S.border, color: S.text }} />
+                  <DatePicker
+  value={tForm.logDate}
+  onChange={v => setTForm(f => ({ ...f, logDate: v }))}
+  className="w-full px-3 py-2 rounded-xl border text-sm"
+  style={{ background: "var(--c-bg)", borderColor: S.border, color: S.text }}
+/>
                 </div>
                 <div className="flex items-end pb-1">
                   <label className="flex items-center gap-2 cursor-pointer">

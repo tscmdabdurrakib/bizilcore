@@ -7,6 +7,7 @@ import {
   Clock, AlertTriangle, CheckCircle, XCircle, Pause, RefreshCw, Eye,
 } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 const S = {
   surface: "var(--c-surface)",
@@ -362,13 +363,21 @@ export default function ProjectsBoard() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-sm font-medium block mb-1" style={{ color: S.muted }}>শুরুর তারিখ</label>
-                  <input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-xl border text-sm" style={{ background: "var(--c-bg)", borderColor: S.border, color: S.text }} />
+                  <DatePicker
+  value={form.startDate}
+  onChange={v => setForm(f => ({ ...f, startDate: v }))}
+  className="w-full px-3 py-2 rounded-xl border text-sm"
+  style={{ background: "var(--c-bg)", borderColor: S.border, color: S.text }}
+/>
                 </div>
                 <div>
                   <label className="text-sm font-medium block mb-1" style={{ color: S.muted }}>Deadline</label>
-                  <input type="date" value={form.deadline} onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-xl border text-sm" style={{ background: "var(--c-bg)", borderColor: S.border, color: S.text }} />
+                  <DatePicker
+  value={form.deadline}
+  onChange={v => setForm(f => ({ ...f, deadline: v }))}
+  className="w-full px-3 py-2 rounded-xl border text-sm"
+  style={{ background: "var(--c-bg)", borderColor: S.border, color: S.text }}
+/>
                 </div>
               </div>
 

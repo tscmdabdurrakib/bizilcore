@@ -6,6 +6,7 @@ import {
   ChevronRight, Clock, Package, Phone, Calendar, Zap, ArrowRight,
 } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface PrintItem {
   serviceId?: string;
@@ -516,9 +517,12 @@ export default function PrintOrdersBoard() {
                     </div>
                     <div>
                       <label className="text-xs font-semibold mb-1 block" style={{ color: S.muted }}>ডেলিভারি তারিখ *</label>
-                      <input value={form.deliveryDate} onChange={e => setForm(p => ({ ...p, deliveryDate: e.target.value }))}
-                        className="w-full h-11 px-4 rounded-xl border text-sm" style={{ borderColor: S.border, color: S.text }}
-                        type="date" />
+                      <DatePicker
+  value={form.deliveryDate}
+  onChange={v => setForm(p => ({ ...p, deliveryDate: v }))}
+  className="w-full h-11 px-4 rounded-xl border text-sm"
+  style={{ borderColor: S.border, color: S.text }}
+/>
                     </div>
                   </div>
                   <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border"

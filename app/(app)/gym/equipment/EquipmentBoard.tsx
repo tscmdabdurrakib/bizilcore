@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Wrench, Plus, X, Loader2, Edit2, Trash2, AlertTriangle } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface Equipment {
   id: string; name: string; category: string; quantity: number;
@@ -173,7 +174,7 @@ export default function EquipmentBoard() {
               </div>
               <div>
                 <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>ক্রয়ের তারিখ</label>
-                <input className={inputCls} style={inputStyle} type="date" value={form.purchaseDate} onChange={e => setForm(f => ({ ...f, purchaseDate: e.target.value }))} />
+                <DatePicker value={form.purchaseDate} onChange={v => setForm(f => ({ ...f, purchaseDate: v }))} className={inputCls} style={inputStyle} />
               </div>
               <div>
                 <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>ক্রয়মূল্য (৳)</label>
@@ -193,11 +194,11 @@ export default function EquipmentBoard() {
               </div>
               <div>
                 <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>শেষ সার্ভিস</label>
-                <input className={inputCls} style={inputStyle} type="date" value={form.lastService} onChange={e => setForm(f => ({ ...f, lastService: e.target.value }))} />
+                <DatePicker value={form.lastService} onChange={v => setForm(f => ({ ...f, lastService: v }))} className={inputCls} style={inputStyle} />
               </div>
               <div>
                 <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>পরবর্তী সার্ভিস</label>
-                <input className={inputCls} style={inputStyle} type="date" value={form.nextService} onChange={e => setForm(f => ({ ...f, nextService: e.target.value }))} />
+                <DatePicker value={form.nextService} onChange={v => setForm(f => ({ ...f, nextService: v }))} className={inputCls} style={inputStyle} />
               </div>
               <div className="col-span-2">
                 <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>নোট</label>
