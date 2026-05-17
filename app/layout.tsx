@@ -27,11 +27,7 @@ export default function RootLayout({
   return (
     <html lang="bn" className={`${inter.variable} ${sora.variable} h-full`} suppressHydrationWarning>
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `try{if(localStorage.getItem('bizilcore-dark')==='1')document.documentElement.classList.add('dark')}catch(e){}`,
-          }}
-        />
+        <script src="/dark-init.js" />
       </head>
       <body className="min-h-full antialiased" suppressHydrationWarning>
         <Providers>{children}</Providers>
