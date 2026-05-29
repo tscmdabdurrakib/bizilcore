@@ -44,21 +44,34 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const notes       = body.notes ? String(body.notes) : null;
   const denominationBreakdown = body.denominationBreakdown ?? null;
 
-  // Compute expected cash
+  // Compute expected cash — includes:
+  // 1. Direct cash orders (paymentMethod = "cash", no splits)
+  // 2. Cash portion of split payments (OrderSplit with paymentMethod = "cash")
   const cashIn  = shift.logs.filter(l => l.type === "in").reduce((s, l) => s + l.amount, 0);
   const cashOut = shift.logs.filter(l => l.type === "out").reduce((s, l) => s + l.amount, 0);
 
-  const cashOrders = await prisma.restaurantOrder.aggregate({
+  // Direct cash orders (single payment method = cash)
+  const directCashOrders = await prisma.restaurantOrder.findMany({
     where: {
       shopId: shop.id,
       status: { in: ["paid", "completed"] },
-      paymentMethod: "cash",
       createdAt: { gte: shift.openedAt },
       isVoided: false,
     },
-    _sum: { totalAmount: true },
+    include: { splits: true },
   });
-  const cashOrderRevenue = cashOrders._sum.totalAmount ?? 0;
+
+  let cashOrderRevenue = 0;
+  for (const o of directCashOrders) {
+    if (o.splits.length > 0) {
+      // Split payment — sum only the cash portions
+      cashOrderRevenue += o.splits
+        .filter(sp => sp.paymentMethod === "cash")
+        .reduce((s, sp) => s + sp.amount, 0);
+    } else if (o.paymentMethod === "cash") {
+      cashOrderRevenue += o.totalAmount;
+    }
+  }
 
   const expectedCash = shift.openingCash + cashOrderRevenue + cashIn - cashOut;
   const diff         = countedCash - expectedCash;

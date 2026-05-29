@@ -66,12 +66,47 @@ export async function GET(req: NextRequest) {
     take: 50,
   });
 
+  // Voided/refunded orders today
+  const voidedOrders = await prisma.restaurantOrder.findMany({
+    where: {
+      shopId: shop.id,
+      isVoided: true,
+      voidedAt: { gte: start, lte: end },
+    },
+    select: {
+      id: true,
+      orderNumber: true,
+      totalAmount: true,
+      refundAmount: true,
+      refundReason: true,
+      voidReason: true,
+      voidedAt: true,
+    },
+    orderBy: { voidedAt: "desc" },
+  });
+
+  // Shift for the day (shift that was open during this date range)
+  const todayShift = await prisma.posShift.findFirst({
+    where: {
+      shopId: shop.id,
+      openedAt: { gte: start, lte: end },
+    },
+    include: {
+      logs: { orderBy: { loggedAt: "asc" } },
+    },
+    orderBy: { openedAt: "desc" },
+  });
+
   // Aggregates for paid orders
   const totalRevenue  = paidOrders.reduce((s, o) => s + o.totalAmount, 0);
   const totalVat      = paidOrders.reduce((s, o) => s + o.vatAmount, 0);
   const totalService  = paidOrders.reduce((s, o) => s + o.serviceAmount, 0);
   const totalDiscount = paidOrders.reduce((s, o) => s + o.discount, 0);
   const totalOrders   = paidOrders.length;
+
+  // Refund / void aggregates
+  const totalRefundAmount = voidedOrders.reduce((s, o) => s + (o.refundAmount ?? 0), 0);
+  const totalVoidedOrders = voidedOrders.length;
 
   // Partial payment metrics
   const totalPartialOrders = partialOrders.length;
@@ -117,6 +152,31 @@ export async function GET(req: NextRequest) {
     orderTypeBreakdown[o.type] = (orderTypeBreakdown[o.type] ?? 0) + 1;
   }
 
+  // ── Shift reconciliation summary ────────────────────────────────
+  let shiftReconciliation = null;
+  if (todayShift) {
+    const cashIn  = todayShift.logs.filter(l => l.type === "in").reduce((s, l) => s + l.amount, 0);
+    const cashOut = todayShift.logs.filter(l => l.type === "out").reduce((s, l) => s + l.amount, 0);
+    shiftReconciliation = {
+      shiftNumber:  todayShift.shiftNumber,
+      status:       todayShift.status,
+      openedBy:     todayShift.openedBy,
+      openedAt:     todayShift.openedAt,
+      closedAt:     todayShift.closedAt,
+      closedBy:     todayShift.closedBy,
+      openingCash:  todayShift.openingCash,
+      countedCash:  todayShift.countedCash,
+      expectedCash: todayShift.expectedCash,
+      cashOver:     todayShift.cashOver,
+      cashShort:    todayShift.cashShort,
+      cashIn,
+      cashOut,
+      logs: todayShift.logs.map(l => ({
+        type: l.type, amount: l.amount, note: l.note, performedBy: l.performedBy, loggedAt: l.loggedAt,
+      })),
+    };
+  }
+
   return NextResponse.json({
     date: dateParam ?? new Date().toISOString().slice(0, 10),
 
@@ -127,11 +187,18 @@ export async function GET(req: NextRequest) {
     totalDiscount,
     totalOrders,
 
+    // Refund / void metrics
+    totalRefundAmount,
+    totalVoidedOrders,
+
     // Partial / due metrics
     totalPartialOrders,
     totalPartialCollected,
     totalDueToday,
     totalAllOpenDue,
+
+    // Shift reconciliation
+    shiftReconciliation,
 
     // Breakdowns
     paymentBreakdown: Object.entries(paymentBreakdown).map(([method, v]) => ({ method, ...v })),
@@ -147,6 +214,9 @@ export async function GET(req: NextRequest) {
       dueAmount: o.dueAmount,
       createdAt: o.createdAt,
     })),
+
+    // Voided orders today
+    voidedOrderList: voidedOrders,
 
     // Order list
     orders: paidOrders.map(o => ({

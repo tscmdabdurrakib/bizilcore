@@ -57,6 +57,7 @@ export default function ShiftManager({ onShiftChange }: ShiftManagerProps) {
   // Open shift form
   const [openingCash, setOpeningCash] = useState("0");
   const [openerName, setOpenerName] = useState("");
+  const [openPin, setOpenPin] = useState("");
 
   // Cash log form
   const [logType, setLogType] = useState<"in" | "out">("in");
@@ -107,12 +108,12 @@ export default function ShiftManager({ onShiftChange }: ShiftManagerProps) {
       const r = await fetch("/api/restaurant/shift", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ openingCash: parseFloat(openingCash) || 0, openedBy: openerName }),
+        body: JSON.stringify({ openingCash: parseFloat(openingCash) || 0, openedBy: openerName, pin: openPin || undefined }),
       });
       const data = await r.json();
       if (!r.ok) { showToast("error", data.error ?? "শিফট শুরু হয়নি"); setSaving(false); return; }
       showToast("success", `✓ শিফট শুরু — ${data.shiftNumber}`);
-      setModal(null); setOpeningCash("0"); setOpenerName("");
+      setModal(null); setOpeningCash("0"); setOpenerName(""); setOpenPin("");
       await load(); onShiftChange?.();
     } catch { showToast("error", "Error"); }
     setSaving(false);
@@ -290,6 +291,15 @@ export default function ShiftManager({ onShiftChange }: ShiftManagerProps) {
               <div className="p-3 rounded-xl text-sm" style={{ backgroundColor: "#ECFDF5" }}>
                 <p className="font-semibold" style={{ color: "#059669" }}>Opening: {formatBDT(parseFloat(openingCash) || 0)}</p>
                 <p className="text-xs mt-0.5" style={{ color: "#059669" }}>এই পরিমাণ দিয়ে ড্রয়ার শুরু হবে</p>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>
+                  Manager PIN <span style={{ color: "#6B7280", fontWeight: 400 }}>(PIN সেট না থাকলে খালি রাখুন)</span>
+                </label>
+                <input type="password" value={openPin} onChange={e => setOpenPin(e.target.value)}
+                  placeholder="••••"
+                  className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none font-mono"
+                  style={{ borderColor: S.border, backgroundColor: S.bg, color: S.text }} />
               </div>
             </div>
             <div className="p-5 border-t" style={{ borderColor: S.border }}>

@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
 async function getShop(userId: string) {
   return prisma.shop.findUnique({
     where: { userId },
-    select: { id: true, restRequireShift: true },
+    select: { id: true, restRequireShift: true, managerPin: true },
   });
 }
 
@@ -47,12 +48,24 @@ export async function GET(_req: NextRequest) {
   });
 }
 
-/** POST — open a new POS shift */
+/** POST — open a new POS shift (manager/owner only — PIN required when set) */
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Only the shop owner can open/close shifts (shop.userId === session.user.id enforced by DB lookup)
   const shop = await getShop(session.user.id);
   if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+
+  const body = await req.json();
+
+  // ── Manager PIN verification for shift open ──────────────────
+  if (shop.managerPin) {
+    const pin = String(body.pin ?? "");
+    if (!pin) return NextResponse.json({ error: "শিফট শুরু করতে Manager PIN প্রয়োজন" }, { status: 403 });
+    const pinOk = await bcrypt.compare(pin, shop.managerPin);
+    if (!pinOk) return NextResponse.json({ error: "ভুল Manager PIN" }, { status: 403 });
+  }
 
   // Only one open shift at a time
   const existing = await prisma.posShift.findFirst({
@@ -62,7 +75,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "একটি শিফট ইতিমধ্যে চলছে" }, { status: 400 });
   }
 
-  const body = await req.json();
   const openingCash = Math.max(0, Number(body.openingCash) || 0);
   const openedBy    = String(body.openedBy || session.user.name || "Unknown");
   const openedById  = session.user.id;
