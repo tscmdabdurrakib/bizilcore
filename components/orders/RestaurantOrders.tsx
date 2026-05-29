@@ -1,8 +1,24 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, ShoppingBag, UtensilsCrossed, Package, Bike, Clock, CheckCircle, X, Minus, Loader2, ReceiptText, ArrowRight } from "lucide-react";
+import { Plus, ShoppingBag, UtensilsCrossed, Package, Bike, Clock, CheckCircle, X, Minus, Loader2, ReceiptText, ArrowRight, Printer } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import { buildReceiptHtml } from "@/lib/receiptHtml";
+
+async function printReceiptPopup(orderId: string) {
+  try {
+    const r = await fetch(`/api/restaurant/orders/${orderId}/receipt`);
+    if (!r.ok) return;
+    const { order, shop, qrDataUrl } = await r.json();
+    const html = buildReceiptHtml(order, shop, qrDataUrl);
+    const win = window.open("", "_blank", "width=420,height=700");
+    if (!win) { alert("Popup ব্লক করা আছে — অনুমতি দিন"); return; }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 600);
+  } catch {}
+}
 
 interface MenuItem {
   id: string; name: string; category: string;
@@ -690,9 +706,16 @@ export default function RestaurantOrders() {
                 </div>
               )}
               {detailOrder.status === "paid" && (
-                <div className="flex items-center gap-2 py-3 px-4 rounded-xl" style={{ backgroundColor: "#ECFDF5" }}>
-                  <CheckCircle size={18} style={{ color: "#059669" }} />
-                  <span className="text-sm font-semibold" style={{ color: "#059669" }}>পেমেন্ট সম্পন্ন</span>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 py-3 px-4 rounded-xl" style={{ backgroundColor: "#ECFDF5" }}>
+                    <CheckCircle size={18} style={{ color: "#059669" }} />
+                    <span className="text-sm font-semibold" style={{ color: "#059669" }}>পেমেন্ট সম্পন্ন</span>
+                  </div>
+                  <button onClick={() => printReceiptPopup(detailOrder.id)}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-semibold transition-all"
+                    style={{ borderColor: "#EA580C", color: "#EA580C", backgroundColor: "#FFF7ED" }}>
+                    <Printer size={14} /> পুনরায় রসিদ প্রিন্ট
+                  </button>
                 </div>
               )}
             </div>

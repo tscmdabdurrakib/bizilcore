@@ -34,6 +34,14 @@ export async function PATCH(req: NextRequest) {
     laundryExpressMultiplier,
     laundryDefaultTurnaround,
     laundryAutoStockDeduct,
+    receiptLogo,
+    receiptHeaderLine1,
+    receiptHeaderLine2,
+    receiptFooter,
+    receiptPaperSize,
+    receiptShowVat,
+    receiptShowQr,
+    receiptShowLogo,
   } = body;
 
   const updated = await prisma.shop.update({
@@ -61,6 +69,14 @@ export async function PATCH(req: NextRequest) {
       ...(laundryExpressMultiplier !== undefined && { laundryExpressMultiplier }),
       ...(laundryDefaultTurnaround !== undefined && { laundryDefaultTurnaround }),
       ...(laundryAutoStockDeduct !== undefined && { laundryAutoStockDeduct }),
+      ...(receiptLogo !== undefined && { receiptLogo }),
+      ...(receiptHeaderLine1 !== undefined && { receiptHeaderLine1 }),
+      ...(receiptHeaderLine2 !== undefined && { receiptHeaderLine2 }),
+      ...(receiptFooter !== undefined && { receiptFooter }),
+      ...(receiptPaperSize !== undefined && { receiptPaperSize }),
+      ...(receiptShowVat !== undefined && { receiptShowVat }),
+      ...(receiptShowQr !== undefined && { receiptShowQr }),
+      ...(receiptShowLogo !== undefined && { receiptShowLogo }),
     },
   });
 

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import ShiftManager from "@/components/restaurant/ShiftManager";
 import { formatBDT } from "@/lib/utils";
+import { buildReceiptHtml, buildKotHtml } from "@/lib/receiptHtml";
 
 // ── Types ────────────────────────────────────────────────────────
 interface MenuVariant { name: string; price: number }
@@ -442,6 +443,42 @@ export default function POSTerminal() {
     setSubmitting(false);
   };
 
+  // ── Receipt print ─────────────────────────────────────────────────
+  const [printingReceipt, setPrintingReceipt] = useState(false);
+
+  const printReceiptForOrder = async (orderId: string) => {
+    setPrintingReceipt(true);
+    try {
+      const r = await fetch(`/api/restaurant/orders/${orderId}/receipt`);
+      if (!r.ok) { showToast("error", "রসিদ লোড করা যায়নি"); return; }
+      const { order, shop, qrDataUrl } = await r.json();
+      const html = buildReceiptHtml(order, shop, qrDataUrl);
+      const win = window.open("", "_blank", "width=420,height=700");
+      if (!win) { showToast("error", "Popup ব্লক করা আছে — অনুমতি দিন"); return; }
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+      setTimeout(() => win.print(), 600);
+    } catch { showToast("error", "Error"); }
+    setPrintingReceipt(false);
+  };
+
+  const printKotForOrder = async (orderId: string) => {
+    try {
+      const r = await fetch(`/api/restaurant/orders/${orderId}`);
+      if (!r.ok) return;
+      const order = await r.json();
+      const latestKot = order.kotTickets?.[0];
+      const html = buildKotHtml(order, latestKot?.kotNumber);
+      const win = window.open("", "_blank", "width=380,height=600");
+      if (!win) return;
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+      setTimeout(() => win.print(), 400);
+    } catch {}
+  };
+
   // ── Send KOT ─────────────────────────────────────────────────────
   const sendKot = async (orderId: string) => {
     setSendingKot(true);
@@ -451,8 +488,14 @@ export default function POSTerminal() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "send_kot" }),
       });
-      if (r.ok) { setKotSentForOrder(true); showToast("success", "✓ KOT রান্নাঘরে পাঠানো হয়েছে!"); }
-      else { const d = await r.json(); showToast("error", d.error ?? "KOT পাঠানো যায়নি"); }
+      if (r.ok) {
+        setKotSentForOrder(true);
+        showToast("success", "✓ KOT রান্নাঘরে পাঠানো হয়েছে!");
+        setTimeout(() => printKotForOrder(orderId), 500);
+      } else {
+        const d = await r.json();
+        showToast("error", d.error ?? "KOT পাঠানো যায়নি");
+      }
     } catch { showToast("error", "Error"); }
     setSendingKot(false);
   };
@@ -1058,9 +1101,17 @@ export default function POSTerminal() {
           )}
 
           {paidOrderId && (
-            <div className="w-full py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
-              style={{ backgroundColor: "#DCFCE7", color: "#16A34A" }}>
-              <CheckCircle size={13} /> পেমেন্ট সম্পন্ন ✓
+            <div className="space-y-2">
+              <div className="w-full py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
+                style={{ backgroundColor: "#DCFCE7", color: "#16A34A" }}>
+                <CheckCircle size={13} /> পেমেন্ট সম্পন্ন ✓
+              </div>
+              <button onClick={() => printReceiptForOrder(paidOrderId)} disabled={printingReceipt}
+                className="w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border transition-all"
+                style={{ borderColor: S.primary, color: S.primary, backgroundColor: "#FFF7ED" }}>
+                {printingReceipt ? <Loader2 size={12} className="animate-spin" /> : <Printer size={12} />}
+                {printingReceipt ? "লোড হচ্ছে…" : "রসিদ প্রিন্ট করুন"}
+              </button>
             </div>
           )}
 

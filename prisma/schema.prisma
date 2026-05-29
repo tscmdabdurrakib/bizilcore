@@ -439,6 +439,15 @@ model Shop {
   restRequireShift         Boolean  @default(false)
   managerPin               String?
   restVoidThresholdHours   Int      @default(24)
+  // Receipt / thermal print settings
+  receiptLogo              String?
+  receiptHeaderLine1       String?
+  receiptHeaderLine2       String?
+  receiptFooter            String?  @default("ধন্যবাদ! আবার আসবেন।")
+  receiptPaperSize         String?  @default("80mm")
+  receiptShowVat           Boolean  @default(true)
+  receiptShowQr            Boolean  @default(true)
+  receiptShowLogo          Boolean  @default(true)
 }
 
 model Subscription {
