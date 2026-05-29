@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS "PosShift" (
   "shopId"                TEXT         NOT NULL,
   "shiftNumber"           TEXT         NOT NULL,
   "openedBy"              TEXT         NOT NULL,
-  "openedById"            TEXT         NOT NULL,
+  "openedById"            TEXT,
   "closedBy"              TEXT,
   "closedById"            TEXT,
   "openedAt"              TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -16,11 +16,15 @@ CREATE TABLE IF NOT EXISTS "PosShift" (
   "cashShort"             DOUBLE PRECISION,
   "status"                TEXT         NOT NULL DEFAULT 'open',
   "notes"                 TEXT,
+  "createdAt"             TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "PosShift_pkey" PRIMARY KEY ("id")
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS "PosShift_shopId_shiftNumber_key"
   ON "PosShift"("shopId", "shiftNumber");
+
+CREATE INDEX IF NOT EXISTS "PosShift_shopId_idx"
+  ON "PosShift"("shopId");
 
 CREATE INDEX IF NOT EXISTS "PosShift_shopId_status_idx"
   ON "PosShift"("shopId", "status");
@@ -39,6 +43,9 @@ CREATE TABLE IF NOT EXISTS "CashDrawerLog" (
   CONSTRAINT "CashDrawerLog_shiftId_fkey"
     FOREIGN KEY ("shiftId") REFERENCES "PosShift"("id") ON DELETE CASCADE
 );
+
+CREATE INDEX IF NOT EXISTS "CashDrawerLog_shopId_idx"
+  ON "CashDrawerLog"("shopId");
 
 CREATE INDEX IF NOT EXISTS "CashDrawerLog_shiftId_idx"
   ON "CashDrawerLog"("shiftId");

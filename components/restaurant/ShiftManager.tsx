@@ -150,7 +150,6 @@ export default function ShiftManager({ onShiftChange }: ShiftManagerProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           countedCash: denomTotal,
-          closedBy: activeShift.openedBy,
           notes: closingNotes,
           denominationBreakdown: denomCounts,
           pin: closePin || undefined,
@@ -463,54 +462,84 @@ export default function ShiftManager({ onShiftChange }: ShiftManagerProps) {
                 </div>
               )}
 
-              {/* Step 2: Summary */}
-              {wizardStep === 2 && (
-                <div className="space-y-4">
-                  <p className="text-sm font-semibold" style={{ color: S.text }}>শিফট সারসংক্ষেপ নিশ্চিত করুন</p>
-                  <div className="space-y-3">
-                    {[
-                      { label: "প্রারম্ভিক ক্যাশ", value: activeShift.openingCash, color: S.text },
-                      { label: "গণনাকৃত ক্যাশ", value: denomTotal, color: "#3B82F6", bold: true },
-                    ].map(row => (
-                      <div key={row.label} className="flex justify-between items-center p-3 rounded-xl border" style={{ borderColor: S.border, backgroundColor: S.bg }}>
-                        <span className="text-sm" style={{ color: S.muted }}>{row.label}</span>
-                        <span className={`font-bold ${row.bold ? "text-base" : "text-sm"} font-mono`} style={{ color: row.color }}>
-                          {formatBDT(row.value)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  {activeShift.logs.filter(l => l.type === "in" || l.type === "out").length > 0 && (
-                    <div className="space-y-1">
-                      <p className="text-xs font-semibold" style={{ color: S.muted }}>ক্যাশ লগ সারসংক্ষেপ</p>
-                      {activeShift.logs.filter(l => l.type === "in" || l.type === "out").map(l => (
-                        <div key={l.id} className="flex items-center justify-between text-xs px-3 py-1.5 rounded-lg" style={{ backgroundColor: S.bg }}>
-                          <span style={{ color: l.type === "in" ? "#059669" : "#EF4444" }}>
-                            {l.type === "in" ? "+" : "-"}{formatBDT(l.amount)} {l.note ? `(${l.note})` : ""}
+              {/* Step 2: Pre-close summary — show expected vs counted before irreversible action */}
+              {wizardStep === 2 && (() => {
+                const manualCashIn  = activeShift.logs.filter(l => l.type === "in").reduce((s, l) => s + l.amount, 0);
+                const manualCashOut = activeShift.logs.filter(l => l.type === "out").reduce((s, l) => s + l.amount, 0);
+                const knownExpected = activeShift.openingCash + manualCashIn - manualCashOut;
+                const previewDiff   = denomTotal - knownExpected;
+                return (
+                  <div className="space-y-4">
+                    <p className="text-sm font-semibold" style={{ color: S.text }}>চূড়ান্ত নিশ্চিতকরণ — প্রত্যাশিত বনাম গণনাকৃত</p>
+                    {/* Expected vs Counted preview */}
+                    <div className="space-y-2">
+                      {[
+                        { label: "প্রারম্ভিক ক্যাশ",   value: activeShift.openingCash, color: S.text },
+                        { label: "ম্যানুয়াল ক্যাশ-ইন",  value: manualCashIn,  color: "#059669" },
+                        { label: "ম্যানুয়াল ক্যাশ-আউট", value: -manualCashOut, color: "#EF4444" },
+                        { label: "পরিচিত প্রত্যাশিত (অর্ডার বাদে)", value: knownExpected, color: "#6366F1", bold: true },
+                        { label: "আপনার গণনা",          value: denomTotal,    color: "#3B82F6", bold: true },
+                      ].map(row => (
+                        <div key={row.label} className="flex justify-between items-center px-3 py-2 rounded-xl" style={{ backgroundColor: S.bg }}>
+                          <span className="text-xs" style={{ color: S.muted }}>{row.label}</span>
+                          <span className={`${row.bold ? "text-sm font-bold" : "text-xs font-semibold"} font-mono`} style={{ color: row.color }}>
+                            {row.value < 0 ? `-${formatBDT(Math.abs(row.value))}` : formatBDT(Math.abs(row.value))}
                           </span>
                         </div>
                       ))}
                     </div>
-                  )}
-                  <div className="p-4 rounded-xl border-2" style={{ borderColor: "#F59E0B", backgroundColor: "#FFFBEB" }}>
-                    <p className="text-xs font-semibold mb-2" style={{ color: "#92400E" }}>⚠️ শিফট বন্ধ হলে আর পরিবর্তন করা যাবে না</p>
-                    <p className="text-xs" style={{ color: "#92400E" }}>প্রত্যাশিত ক্যাশ সিস্টেম থেকে গণনা করা হবে</p>
+                    {/* Preliminary over/short indicator */}
+                    <div className="flex items-center justify-between p-3 rounded-xl border-2"
+                      style={{
+                        borderColor: previewDiff >= 0 ? "#059669" : "#EF4444",
+                        backgroundColor: previewDiff >= 0 ? "#ECFDF5" : "#FEF2F2",
+                      }}>
+                      <div className="flex items-center gap-2">
+                        {previewDiff >= 0
+                          ? <TrendingUp size={16} style={{ color: "#059669" }} />
+                          : <TrendingDown size={16} style={{ color: "#EF4444" }} />}
+                        <span className="text-xs font-semibold" style={{ color: previewDiff >= 0 ? "#059669" : "#EF4444" }}>
+                          {previewDiff >= 0 ? "সম্ভাব্য বেশি (Over)" : "সম্ভাব্য কম (Short)"}
+                          <span className="font-normal ml-1">(অর্ডার আয় যুক্ত হলে চূড়ান্ত হবে)</span>
+                        </span>
+                      </div>
+                      <span className="font-bold font-mono text-sm" style={{ color: previewDiff >= 0 ? "#059669" : "#EF4444" }}>
+                        {previewDiff >= 0 ? "+" : ""}{formatBDT(previewDiff)}
+                      </span>
+                    </div>
+                    {/* Cash log summary */}
+                    {activeShift.logs.filter(l => l.type === "in" || l.type === "out").length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold" style={{ color: S.muted }}>ম্যানুয়াল ক্যাশ লগ</p>
+                        {activeShift.logs.filter(l => l.type === "in" || l.type === "out").map(l => (
+                          <div key={l.id} className="flex items-center justify-between text-xs px-3 py-1.5 rounded-lg" style={{ backgroundColor: S.bg }}>
+                            <span style={{ color: l.type === "in" ? "#059669" : "#EF4444" }}>
+                              {l.type === "in" ? "+" : "-"}{formatBDT(l.amount)} {l.note ? `(${l.note})` : ""}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="p-3 rounded-xl border-2" style={{ borderColor: "#F59E0B", backgroundColor: "#FFFBEB" }}>
+                      <p className="text-xs font-semibold" style={{ color: "#92400E" }}>⚠️ শিফট বন্ধ হলে আর পরিবর্তন করা যাবে না</p>
+                      <p className="text-xs mt-0.5" style={{ color: "#92400E" }}>ক্যাশ অর্ডার আয় সার্ভার থেকে স্বয়ংক্রিয়ভাবে যোগ হবে</p>
+                    </div>
+                    {/* Manager PIN for shift close */}
+                    <div>
+                      <label className="block text-xs font-semibold mb-1.5" style={{ color: "#EF4444" }}>
+                        Manager PIN (শিফট বন্ধ করতে আবশ্যক)
+                      </label>
+                      <input type="password" value={closePin} onChange={e => setClosePin(e.target.value)}
+                        placeholder="••••"
+                        className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none font-mono"
+                        style={{ borderColor: "#EF4444", backgroundColor: S.bg, color: S.text }} />
+                      <p className="text-[10px] mt-1" style={{ color: S.muted }}>
+                        PIN সেট না থাকলে খালি রাখুন
+                      </p>
+                    </div>
                   </div>
-                  {/* Manager PIN for shift close */}
-                  <div>
-                    <label className="block text-xs font-semibold mb-1.5" style={{ color: "#EF4444" }}>
-                      Manager PIN (শিফট বন্ধ করতে আবশ্যক)
-                    </label>
-                    <input type="password" value={closePin} onChange={e => setClosePin(e.target.value)}
-                      placeholder="••••"
-                      className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none font-mono"
-                      style={{ borderColor: "#EF4444", backgroundColor: S.bg, color: S.text }} />
-                    <p className="text-[10px] mt-1" style={{ color: S.muted }}>
-                      PIN সেট না থাকলে খালি রাখুন
-                    </p>
-                  </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Step 3: Result */}
               {wizardStep === 3 && closeResult && (
