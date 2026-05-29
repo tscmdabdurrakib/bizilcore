@@ -288,15 +288,17 @@ export default function POSTerminal() {
 
   // Effective totals: use server-side values when order exists
   const cartSubtotal  = cart.reduce((s, c) => s + c.unitPrice * c.quantity, 0);
-  const cartVat       = Math.round(cartSubtotal * (vatPct / 100) * 100) / 100;
-  const cartSvc       = Math.round(cartSubtotal * (svcPct / 100) * 100) / 100;
 
   // Discount totals (state is declared above as useState)
   const _totalAutoDiscount = appliedDiscounts.reduce((s, d) => s + d.amount, 0);
   // BOGO discount is 0 here — the free item is added to cart at ৳0/discounted price directly
   const totalDiscount      = _totalAutoDiscount + manualDiscount;
 
-  const cartTotal = Math.max(0, cartSubtotal + cartVat + cartSvc - totalDiscount);
+  // VAT/service charge computed on discounted base — matching server-side calculation exactly
+  const _discountedBase = Math.max(0, cartSubtotal - totalDiscount);
+  const cartVat = Math.round(_discountedBase * (vatPct / 100) * 100) / 100;
+  const cartSvc = Math.round(_discountedBase * (svcPct / 100) * 100) / 100;
+  const cartTotal = _discountedBase + cartVat + cartSvc;
 
   const effectiveTotal   = activeOrder ? activeOrder.totalAmount : cartTotal;
   const effectivePaid    = activeOrder ? activeOrder.paidAmount  : 0;
@@ -1279,7 +1281,7 @@ export default function POSTerminal() {
               <input type="number" value={manualDiscountInput}
                 onChange={e => setManualDiscountInput(e.target.value)}
                 onBlur={() => {
-                  const amt = Math.max(0, Math.min(Number(manualDiscountInput) || 0, cartSubtotal + cartVat + cartSvc));
+                  const amt = Math.max(0, Math.min(Number(manualDiscountInput) || 0, cartSubtotal));
                   setManualDiscountInput(amt ? String(amt) : "");
                   applyManualDiscountFn(amt);
                 }}

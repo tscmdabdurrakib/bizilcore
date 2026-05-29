@@ -242,18 +242,28 @@ export async function POST(req: NextRequest) {
 
   const subtotal = itemsWithPrices.reduce((sum, it) => sum + it.unitPrice * it.quantity, 0);
 
-  // Server-side enforcement: if a manual discount entry exists and exceeds the manager threshold,
-  // require a valid manager approval token issued by /api/restaurant/verify-pin
-  if (!isQrOrder && orderDiscount > 0 && Array.isArray(orderDiscountBreakdown)) {
-    const hasManualDiscount = (orderDiscountBreakdown as { type: string }[]).some(d => d.type === "manual");
-    if (hasManualDiscount) {
-      const shopCfg = await prisma.shop.findUnique({
-        where: { id: shop.id },
-        select: { managerDiscountThreshold: true },
-      });
-      const threshold = shopCfg?.managerDiscountThreshold ?? 20;
-      const discountPct = subtotal > 0 ? (orderDiscount / subtotal) * 100 : 100;
-      if (discountPct > threshold) {
+  // Server-side manager threshold enforcement.
+  // Auto-discounts (happyhour/member/combo/coupon) are allowed without manager approval.
+  // Manual discounts — or any discount when breakdown is absent/null — require manager token
+  // when the discount percentage exceeds the configured threshold.
+  // A crafted request sending discountBreakdown:null with a large manual discount is blocked
+  // because we treat missing/null breakdown as potentially manual when discount > threshold.
+  if (!isQrOrder && orderDiscount > 0 && subtotal > 0) {
+    const discountPct = (orderDiscount / subtotal) * 100;
+    const shopCfg = await prisma.shop.findUnique({
+      where: { id: shop.id },
+      select: { managerDiscountThreshold: true },
+    });
+    const threshold = shopCfg?.managerDiscountThreshold ?? 20;
+    if (discountPct > threshold) {
+      // Allow without token ONLY if breakdown is present and contains exclusively auto-discount types
+      const AUTO_TYPES = new Set(["coupon", "happyhour", "member", "bogo", "combo"]);
+      const isAutoOnlyBreakdown =
+        Array.isArray(orderDiscountBreakdown) &&
+        (orderDiscountBreakdown as { type: string }[]).length > 0 &&
+        (orderDiscountBreakdown as { type: string }[]).every(d => AUTO_TYPES.has(d.type));
+
+      if (!isAutoOnlyBreakdown) {
         const token = (body.managerToken as string | undefined) ?? null;
         if (!token) {
           return NextResponse.json(

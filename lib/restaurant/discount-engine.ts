@@ -188,14 +188,14 @@ export function runDiscountEngine(
           discountAmount,
         });
       }
-    } else if (coupon.type === "combo" && requestedCouponCode === coupon.code) {
-      // Combo: ALL items in applicableItemIds must be present in cart
+    } else if (coupon.type === "combo") {
+      // Combo: auto-applies when ALL required items are present in cart (no coupon code needed)
       const requiredIds = (coupon.applicableItemIds as string[] | null) ?? [];
-      if (requiredIds.length === 0) continue;
+      if (requiredIds.length === 0) continue; // combo with no items defined is invalid
       const allPresent = requiredIds.every(id => items.some(i => i.menuItemId === id && i.quantity >= 1));
       if (!allPresent) continue;
       if (coupon.minOrder && subtotal < coupon.minOrder) continue;
-      const amount = coupon.value >= 1 && Number.isInteger(coupon.value) && coupon.value <= 100
+      const amount = coupon.value <= 100
         ? calcPercentDiscount(items, scopedItems, coupon.value, coupon.maxDiscount)
         : calcFixedDiscount(items, coupon.value, coupon.maxDiscount);
       if (amount <= 0) continue;
@@ -203,7 +203,7 @@ export function runDiscountEngine(
       appliedCouponIds.add(coupon.id);
       discounts.push({
         type: "combo",
-        label: `কম্বো অফার ${coupon.code} — ৳${coupon.value <= 100 ? coupon.value + "%" : coupon.value} ছাড়`,
+        label: `কম্বো অফার — ${coupon.value <= 100 ? coupon.value + "%" : "৳" + coupon.value} ছাড়`,
         amount,
         couponId: coupon.id,
         couponCode: coupon.code,
