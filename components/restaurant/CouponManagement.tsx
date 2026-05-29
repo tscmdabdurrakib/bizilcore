@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Pencil, Trash2, X, Loader2, Tag, Check, ChevronDown, ChevronUp, Clock, Users, Gift } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Loader2, Tag, Check, ChevronDown, ChevronUp, Clock, Users, Gift, Package } from "lucide-react";
 
 interface Coupon {
   id: string;
@@ -21,7 +21,15 @@ interface Coupon {
   memberTier?: string | null;
   bogoGetQty?: number;
   bogoGetDiscount?: number;
+  applicableItemIds?: string[] | null;
+  applicableCategories?: string[] | null;
   createdAt: string;
+}
+
+interface SimpleMenuItem {
+  id: string;
+  name: string;
+  category: string;
 }
 
 const S = {
@@ -39,11 +47,12 @@ const COUPON_TYPES = [
   { value: "happyhour", label: "হ্যাপি আওয়ার",     icon: Clock },
   { value: "member",    label: "মেম্বার ডিসকাউন্ট", icon: Users },
   { value: "bogo",      label: "Buy 1 Get 1",        icon: Gift },
+  { value: "combo",     label: "কম্বো অফার",         icon: Package },
 ];
 
 const TYPE_LABELS: Record<string, string> = {
   fixed: "ফিক্সড", percent: "%", happyhour: "হ্যাপি আওয়ার",
-  member: "মেম্বার", bogo: "BOGO",
+  member: "মেম্বার", bogo: "BOGO", combo: "কম্বো",
 };
 
 const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
@@ -52,6 +61,7 @@ const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
   happyhour: { bg: "#FEF3C7", text: "#D97706" },
   member:    { bg: "#F3E8FF", text: "#7C3AED" },
   bogo:      { bg: "#FCE7F3", text: "#BE185D" },
+  combo:     { bg: "#FFF7ED", text: "#EA580C" },
 };
 
 function formatExpiry(d: string | null | undefined) {
@@ -71,6 +81,8 @@ const EMPTY_FORM = {
   happyHourDays: [0, 1, 2, 3, 4, 5, 6] as number[],
   memberTier: "silver",
   bogoGetQty: "1", bogoGetDiscount: "100",
+  applicableItemIds: [] as string[],
+  applicableCategories: [] as string[],
 };
 
 export default function CouponManagement() {
@@ -83,6 +95,7 @@ export default function CouponManagement() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [menuItems, setMenuItems] = useState<SimpleMenuItem[]>([]);
 
   const showToast = (type: "success" | "error", msg: string) => {
     setToast({ type, msg }); setTimeout(() => setToast(null), 3000);
@@ -90,8 +103,20 @@ export default function CouponManagement() {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch("/api/restaurant/coupons");
-      if (r.ok) setCoupons(await r.json());
+      const [rC, rM] = await Promise.all([
+        fetch("/api/restaurant/coupons"),
+        fetch("/api/restaurant/menu-items?limit=200"),
+      ]);
+      if (rC.ok) setCoupons(await rC.json());
+      if (rM.ok) {
+        const data = await rM.json();
+        const items: SimpleMenuItem[] = (Array.isArray(data) ? data : data.items ?? []).map(
+          (m: { id: string; name: string; category?: string }) => ({
+            id: m.id, name: m.name, category: m.category ?? "",
+          })
+        );
+        setMenuItems(items);
+      }
     } catch {}
     setLoading(false);
   }, []);
@@ -121,8 +146,19 @@ export default function CouponManagement() {
       memberTier: c.memberTier ?? "silver",
       bogoGetQty: String(c.bogoGetQty ?? 1),
       bogoGetDiscount: String(c.bogoGetDiscount ?? 100),
+      applicableItemIds: c.applicableItemIds ?? [],
+      applicableCategories: c.applicableCategories ?? [],
     });
     setShowModal(true);
+  };
+
+  const toggleApplicableItem = (id: string) => {
+    setForm(f => ({
+      ...f,
+      applicableItemIds: f.applicableItemIds.includes(id)
+        ? f.applicableItemIds.filter(x => x !== id)
+        : [...f.applicableItemIds, id],
+    }));
   };
 
   const toggleDay = (d: number) => {
@@ -153,6 +189,8 @@ export default function CouponManagement() {
       memberTier: form.type === "member" ? form.memberTier : null,
       bogoGetQty: form.type === "bogo" ? Number(form.bogoGetQty) : 1,
       bogoGetDiscount: form.type === "bogo" ? Number(form.bogoGetDiscount) : 100,
+      applicableItemIds: (form.type === "bogo" || form.type === "combo") && form.applicableItemIds.length > 0 ? form.applicableItemIds : null,
+      applicableCategories: form.applicableCategories.length > 0 ? form.applicableCategories : null,
     };
     try {
       const url = editCoupon ? `/api/restaurant/coupons/${editCoupon.id}` : "/api/restaurant/coupons";
@@ -427,6 +465,39 @@ export default function CouponManagement() {
                         style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }} />
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Combo fields */}
+              {form.type === "combo" && (
+                <div className="p-3 rounded-xl border" style={{ borderColor: "#EA580C", backgroundColor: "#FFF7ED" }}>
+                  <p className="text-xs font-bold mb-1" style={{ color: "#EA580C" }}>📦 কম্বো অফার সেটিংস</p>
+                  <p className="text-xs mb-3" style={{ color: S.muted }}>নিচের সব আইটেম কার্টে থাকলে ছাড় প্রযোজ্য হবে</p>
+                  <label className="block text-xs font-semibold mb-1" style={{ color: S.muted }}>ছাড়ের পরিমাণ</label>
+                  <p className="text-xs mb-2" style={{ color: S.muted }}>≤100 = শতাংশ (%), &gt;100 = টাকার পরিমাণ (৳)</p>
+                </div>
+              )}
+
+              {/* Applicable items selector (BOGO + Combo) */}
+              {(form.type === "bogo" || form.type === "combo") && menuItems.length > 0 && (
+                <div>
+                  <label className="block text-xs font-semibold mb-2" style={{ color: S.muted }}>
+                    {form.type === "bogo" ? "BOGO ট্রিগার আইটেম" : "কম্বো আইটেমসমূহ (সব থাকলে ছাড় পাবে)"}
+                  </label>
+                  <div className="max-h-40 overflow-y-auto border rounded-xl p-2 space-y-1" style={{ borderColor: S.border, backgroundColor: S.bg }}>
+                    {menuItems.map(m => (
+                      <label key={m.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-orange-50 transition-colors">
+                        <input type="checkbox" checked={form.applicableItemIds.includes(m.id)}
+                          onChange={() => toggleApplicableItem(m.id)}
+                          className="rounded" />
+                        <span className="text-xs flex-1" style={{ color: S.text }}>{m.name}</span>
+                        {m.category && <span className="text-[10px] px-1.5 py-0.5 rounded-md" style={{ backgroundColor: "#FFF7ED", color: "#EA580C" }}>{m.category}</span>}
+                      </label>
+                    ))}
+                  </div>
+                  {form.applicableItemIds.length > 0 && (
+                    <p className="text-xs mt-1" style={{ color: "#EA580C" }}>✓ {form.applicableItemIds.length}টি আইটেম নির্বাচিত</p>
+                  )}
                 </div>
               )}
 

@@ -275,8 +275,10 @@ export default function POSTerminal() {
   const [managerPinError, setManagerPinError]   = useState("");
   const [managerPinLoading, setManagerPinLoading] = useState(false);
   const [pendingManualDiscount, setPendingManualDiscount] = useState(0);
+  const [managerToken, setManagerToken]         = useState<string | null>(null);
   const [showBogoModal, setShowBogoModal]       = useState(false);
   const [acceptedBogo, setAcceptedBogo]         = useState<BogoSuggestion | null>(null);
+  const [customerTier, setCustomerTier]         = useState<string | null>(null);
 
   // ── Helpers ──────────────────────────────────────────────────────
   const showToast = (type: "success" | "error", msg: string) => {
@@ -291,8 +293,8 @@ export default function POSTerminal() {
 
   // Discount totals (state is declared above as useState)
   const _totalAutoDiscount = appliedDiscounts.reduce((s, d) => s + d.amount, 0);
-  const _bogoDiscount      = acceptedBogo ? acceptedBogo.discountAmount : 0;
-  const totalDiscount      = _totalAutoDiscount + manualDiscount + _bogoDiscount;
+  // BOGO discount is 0 here — the free item is added to cart at ৳0/discounted price directly
+  const totalDiscount      = _totalAutoDiscount + manualDiscount;
 
   const cartTotal = Math.max(0, cartSubtotal + cartVat + cartSvc - totalDiscount);
 
@@ -373,11 +375,27 @@ export default function POSTerminal() {
       unitPrice: c.unitPrice,
       quantity: c.quantity,
     }));
-    const result = runDiscountEngine(engineItems, allCoupons, new Date(), null, appliedCouponCode);
+    const result = runDiscountEngine(engineItems, allCoupons, new Date(), customerTier, appliedCouponCode);
     const autoDiscounts = result.discounts.filter(d => d.type !== "coupon" || d.couponCode === appliedCouponCode);
     setAppliedDiscounts(autoDiscounts);
     setBogoSuggestions(result.bogoSuggestions);
-  }, [cart, allCoupons, appliedCouponCode, activeOrder]);
+  }, [cart, allCoupons, appliedCouponCode, activeOrder, customerTier]);
+
+  // ── Customer tier lookup ─────────────────────────────────────────
+  useEffect(() => {
+    const phone = customerPhone.trim();
+    if (phone.length < 11) { setCustomerTier(null); return; }
+    const ctrl = new AbortController();
+    fetch(`/api/customers?phone=${encodeURIComponent(phone)}&perPage=1`, { signal: ctrl.signal })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const list = Array.isArray(data) ? data : (data?.customers ?? []);
+        const tier = list[0]?.memberTier ?? null;
+        setCustomerTier(tier);
+      })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, [customerPhone]);
 
   // ── Discount functions ───────────────────────────────────────────
 
@@ -402,14 +420,16 @@ export default function POSTerminal() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pin: managerPinInput }),
       });
-      if (r.ok) {
+      const data = await r.json();
+      if (r.ok && data.ok) {
         setManualDiscount(pendingManualDiscount);
+        setManagerToken(data.token ?? null); // store server-issued token for order creation
         setShowManagerPinModal(false);
         setManagerPinInput("");
         setManagerPinError("");
         showToast("success", "ম্যানেজার অনুমোদিত");
       } else {
-        setManagerPinError("ভুল PIN");
+        setManagerPinError(data.error ?? "ভুল PIN");
       }
     } catch { setManagerPinError("Error"); }
     setManagerPinLoading(false);
@@ -522,6 +542,14 @@ export default function POSTerminal() {
     setPaidOrderId(null);
     setSelectedWaiter("");
     setTipAmount("");
+    setAcceptedBogo(null);
+    setAppliedDiscounts([]);
+    setAppliedCouponCode(null);
+    setCouponInput("");
+    setManualDiscount(0);
+    setManualDiscountInput("");
+    setManagerToken(null);
+    setCustomerTier(null);
   };
 
   // ── Place order ──────────────────────────────────────────────────
@@ -530,16 +558,11 @@ export default function POSTerminal() {
     if (orderType === "dine_in" && !selectedTable) { showToast("error", "টেবিল সিলেক্ট করুন"); return; }
     setSubmitting(true);
     try {
-      // Build full discount breakdown for receipt
+      // Build discount breakdown for receipt
+      // BOGO free items are already in cart at ৳0, so they appear on KOT/receipt naturally
+      // The breakdown here is for informational display of auto/manual discounts only
       const discountBreakdown: { type: string; label: string; amount: number; couponId?: string; couponCode?: string }[] = [
         ...appliedDiscounts,
-        ...(acceptedBogo ? [{
-          type: "bogo" as const,
-          label: `BOGO ছাড় — ${acceptedBogo.couponCode}`,
-          amount: acceptedBogo.discountAmount,
-          couponId: acceptedBogo.couponId,
-          couponCode: acceptedBogo.couponCode,
-        }] : []),
         ...(manualDiscount > 0 ? [{ type: "manual" as const, label: "ম্যানুয়াল ছাড়", amount: manualDiscount }] : []),
       ];
       const res = await fetch("/api/restaurant/orders", {
@@ -555,6 +578,7 @@ export default function POSTerminal() {
           discount: totalDiscount,
           discountBreakdown: discountBreakdown.length > 0 ? discountBreakdown : null,
           couponCode: appliedCouponCode,
+          managerToken: managerToken || null,
           items: cart.map(c => ({
             menuItemId: c.menuItemId,
             quantity: c.quantity,
@@ -1209,7 +1233,11 @@ export default function POSTerminal() {
               <div className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold"
                 style={{ backgroundColor: "#FDF2F8", color: "#BE185D" }}>
                 <span><Gift size={11} className="inline mr-1" />BOGO: {acceptedBogo.couponCode} −{formatBDT(acceptedBogo.discountAmount)}</span>
-                <button onClick={() => setAcceptedBogo(null)}><X size={11} /></button>
+                <button onClick={() => {
+                  // Remove the BOGO cart item added at ৳0
+                  setCart(prev => prev.filter(c => !c.note?.startsWith("🎁 BOGO")));
+                  setAcceptedBogo(null);
+                }}><X size={11} /></button>
               </div>
             )}
 
@@ -1928,7 +1956,34 @@ export default function POSTerminal() {
                   <span className="text-sm font-bold" style={{ color: "#BE185D" }}>সাশ্রয়: {formatBDT(s.discountAmount)}</span>
                 </div>
                 <button
-                  onClick={() => { setAcceptedBogo(s); setShowBogoModal(false); showToast("success", `BOGO ${s.couponCode} প্রয়োগ হয়েছে`); }}
+                  onClick={() => {
+                    // Add free/discounted item to cart so KOT and receipt show it
+                    const triggerInCart = cart.find(c => c.menuItemId === s.triggerItemId);
+                    const freeItemId   = s.getItemId ?? s.triggerItemId;
+                    const freeItemName = s.getItemName ?? s.triggerItemName;
+                    const originalPrice = triggerInCart?.unitPrice ?? 0;
+                    const freeUnitPrice = Math.round(originalPrice * (1 - s.getDiscountPct / 100) * 100) / 100;
+                    const bogoNote = `🎁 BOGO: ${s.couponCode}`;
+                    // Only add if not already present as a BOGO item
+                    const alreadyAdded = cart.some(c => c.menuItemId === freeItemId && c.note?.startsWith("🎁 BOGO"));
+                    if (!alreadyAdded) {
+                      setCart(prev => [...prev, {
+                        cartKey: `bogo_${s.couponId}_${Date.now()}`,
+                        menuItemId: freeItemId,
+                        name: `${freeItemName} ${s.getDiscountPct === 100 ? "(বিনামূল্যে)" : `(${s.getDiscountPct}% ছাড়)`}`,
+                        category: triggerInCart?.category ?? "",
+                        unitPrice: freeUnitPrice,
+                        quantity: s.getQty,
+                        selectedVariant: null,
+                        selectedAddons: [],
+                        addonTotal: 0,
+                        note: bogoNote,
+                      }]);
+                    }
+                    setAcceptedBogo(s);
+                    setShowBogoModal(false);
+                    showToast("success", `BOGO ${s.couponCode} — বিনামূল্যে আইটেম কার্টে যোগ হয়েছে!`);
+                  }}
                   className="w-full py-2.5 rounded-xl text-sm font-bold text-white"
                   style={{ backgroundColor: "#BE185D" }}>
                   অফার গ্রহণ করুন

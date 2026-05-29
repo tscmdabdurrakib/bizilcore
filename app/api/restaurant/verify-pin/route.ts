@@ -22,5 +22,8 @@ export async function POST(req: NextRequest) {
   const ok = await bcrypt.compare(pin, shopRecord.managerPin);
   if (!ok) return NextResponse.json({ error: "ভুল PIN" }, { status: 401 });
 
-  return NextResponse.json({ ok: true });
+  // Issue a one-time manager approval token (30 min TTL)
+  const { createManagerToken } = await import("@/lib/restaurant/manager-tokens");
+  const token = createManagerToken(shop.id);
+  return NextResponse.json({ ok: true, token });
 }

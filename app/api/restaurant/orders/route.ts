@@ -241,6 +241,37 @@ export async function POST(req: NextRequest) {
   });
 
   const subtotal = itemsWithPrices.reduce((sum, it) => sum + it.unitPrice * it.quantity, 0);
+
+  // Server-side enforcement: if a manual discount entry exists and exceeds the manager threshold,
+  // require a valid manager approval token issued by /api/restaurant/verify-pin
+  if (!isQrOrder && orderDiscount > 0 && Array.isArray(orderDiscountBreakdown)) {
+    const hasManualDiscount = (orderDiscountBreakdown as { type: string }[]).some(d => d.type === "manual");
+    if (hasManualDiscount) {
+      const shopCfg = await prisma.shop.findUnique({
+        where: { id: shop.id },
+        select: { managerDiscountThreshold: true },
+      });
+      const threshold = shopCfg?.managerDiscountThreshold ?? 20;
+      const discountPct = subtotal > 0 ? (orderDiscount / subtotal) * 100 : 100;
+      if (discountPct > threshold) {
+        const token = (body.managerToken as string | undefined) ?? null;
+        if (!token) {
+          return NextResponse.json(
+            { error: "উচ্চ ডিসকাউন্টের জন্য ম্যানেজার অনুমোদন প্রয়োজন" },
+            { status: 403 }
+          );
+        }
+        const { verifyAndConsumeManagerToken } = await import("@/lib/restaurant/manager-tokens");
+        if (!verifyAndConsumeManagerToken(token, shop.id)) {
+          return NextResponse.json(
+            { error: "ম্যানেজার টোকেন অবৈধ বা মেয়াদোত্তীর্ণ। পুনরায় ম্যানেজার পিন দিন।" },
+            { status: 403 }
+          );
+        }
+      }
+    }
+  }
+
   const discountedBase = Math.max(0, subtotal - orderDiscount);
   const vatPct = shop.restVatPct ?? 0;
   const svcPct = shop.restServiceChargePct ?? 0;

@@ -27,10 +27,11 @@ export interface EngineCoupon {
   bogoGetItemId?: string | null;
   bogoGetQty?: number;
   bogoGetDiscount?: number;
+  // combo: all items in applicableItemIds must be present → percent/fixed discount
 }
 
 export interface DiscountResult {
-  type: "coupon" | "happyhour" | "member" | "bogo" | "manual";
+  type: "coupon" | "happyhour" | "member" | "bogo" | "manual" | "combo";
   label: string;
   amount: number;
   couponId?: string;
@@ -187,6 +188,26 @@ export function runDiscountEngine(
           discountAmount,
         });
       }
+    } else if (coupon.type === "combo" && requestedCouponCode === coupon.code) {
+      // Combo: ALL items in applicableItemIds must be present in cart
+      const requiredIds = (coupon.applicableItemIds as string[] | null) ?? [];
+      if (requiredIds.length === 0) continue;
+      const allPresent = requiredIds.every(id => items.some(i => i.menuItemId === id && i.quantity >= 1));
+      if (!allPresent) continue;
+      if (coupon.minOrder && subtotal < coupon.minOrder) continue;
+      const amount = coupon.value >= 1 && Number.isInteger(coupon.value) && coupon.value <= 100
+        ? calcPercentDiscount(items, scopedItems, coupon.value, coupon.maxDiscount)
+        : calcFixedDiscount(items, coupon.value, coupon.maxDiscount);
+      if (amount <= 0) continue;
+      if (appliedCouponIds.has(coupon.id)) continue;
+      appliedCouponIds.add(coupon.id);
+      discounts.push({
+        type: "combo",
+        label: `কম্বো অফার ${coupon.code} — ৳${coupon.value <= 100 ? coupon.value + "%" : coupon.value} ছাড়`,
+        amount,
+        couponId: coupon.id,
+        couponCode: coupon.code,
+      });
     } else if (coupon.type === "percent" && requestedCouponCode === coupon.code) {
       if (coupon.minOrder && subtotal < coupon.minOrder) continue;
       const amount = calcPercentDiscount(items, scopedItems, coupon.value, coupon.maxDiscount);
