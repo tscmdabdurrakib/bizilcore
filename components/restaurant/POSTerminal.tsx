@@ -250,6 +250,11 @@ export default function POSTerminal() {
   // Item-wise split state
   const [payers, setPayers]             = useState<Payer[]>([]);
   const [itemPayerMap, setItemPayerMap] = useState<Record<string, number>>({}); // itemId -> payerIndex
+  // Split receipt state (for per-split printing after successful payment)
+  const [splitReceiptData, setSplitReceiptData] = useState<{
+    orderNumber: string; isFullyPaid: boolean; dueAmount: number;
+    splits: { payerName: string; amount: number; paymentMethod: string }[];
+  } | null>(null);
 
   // ── Helpers ──────────────────────────────────────────────────────
   const showToast = (type: "success" | "error", msg: string) => {
@@ -668,6 +673,18 @@ export default function POSTerminal() {
       const data = await r.json();
       if (!r.ok) { showToast("error", data.error ?? "স্প্লিট সেভ হয়নি"); setSavingSplit(false); return; }
 
+      // Store receipt data for per-split printing
+      setSplitReceiptData({
+        orderNumber: activeOrder.orderNumber,
+        isFullyPaid: data.isFullyPaid,
+        dueAmount:   data.dueAmount ?? 0,
+        splits:      splits.map((sp, i) => ({
+          payerName:     sp.payerName ?? `পেয়ার ${i + 1}`,
+          amount:        sp.amount,
+          paymentMethod: sp.paymentMethod,
+        })),
+      });
+
       setShowSplitModal(false);
       if (data.isFullyPaid) {
         setPaidOrderId(activeOrder.id);
@@ -679,6 +696,53 @@ export default function POSTerminal() {
       load();
     } catch { showToast("error", "Error"); }
     setSavingSplit(false);
+  };
+
+  // ── Per-split receipt print ───────────────────────────────────────
+  const printSplitReceipt = () => {
+    if (!splitReceiptData) return;
+    const METHOD_LABELS: Record<string, string> = {
+      cash: "নগদ", card: "কার্ড", bkash: "বিকাশ", nagad: "নগদ অ্যাপ", bank: "ব্যাংক", other: "অন্যান্য",
+    };
+    const total = splitReceiptData.splits.reduce((s, sp) => s + sp.amount, 0);
+    const win = window.open("", "_blank", "width=400,height=600");
+    if (!win) return;
+    win.document.write(`<!DOCTYPE html><html><head>
+      <meta charset="utf-8"><title>স্প্লিট রসিদ — ${splitReceiptData.orderNumber}</title>
+      <style>
+        body{font-family:monospace;font-size:12px;padding:16px;max-width:300px;margin:0 auto}
+        h2{text-align:center;font-size:14px;margin:0 0 8px}
+        .line{border-top:1px dashed #ccc;margin:6px 0}
+        .row{display:flex;justify-content:space-between;margin:3px 0}
+        .bold{font-weight:bold}
+        .due{color:#EF4444;font-weight:bold}
+        .paid{color:#10B981;font-weight:bold}
+        @media print{button{display:none}}
+      </style>
+    </head><body>
+      <h2>স্প্লিট বিল রসিদ</h2>
+      <div class="row"><span>অর্ডার নম্বর</span><span class="bold">${splitReceiptData.orderNumber}</span></div>
+      <div class="row"><span>তারিখ</span><span>${new Date().toLocaleString("bn-BD")}</span></div>
+      <div class="line"></div>
+      ${splitReceiptData.splits.map((sp, i) => `
+        <div class="row bold"><span>${sp.payerName || `পেয়ার ${i + 1}`}</span><span>৳${sp.amount.toFixed(2)}</span></div>
+        <div class="row" style="color:#666;font-size:11px"><span>পেমেন্ট</span><span>${METHOD_LABELS[sp.paymentMethod] ?? sp.paymentMethod}</span></div>
+      `).join("")}
+      <div class="line"></div>
+      <div class="row bold"><span>সর্বমোট সংগৃহীত</span><span>৳${total.toFixed(2)}</span></div>
+      ${splitReceiptData.dueAmount > 0
+        ? `<div class="row due"><span>বকেয়া</span><span>৳${splitReceiptData.dueAmount.toFixed(2)}</span></div>`
+        : `<div class="row paid"><span>সম্পূর্ণ পরিশোধিত</span><span>✓</span></div>`
+      }
+      <div class="line"></div>
+      <div style="text-align:center;margin-top:8px;color:#888;font-size:11px">ধন্যবাদ!</div>
+      <div style="text-align:center;margin-top:12px">
+        <button onclick="window.print()" style="padding:6px 16px;cursor:pointer">প্রিন্ট করুন</button>
+      </div>
+    </body></html>`);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 400);
   };
 
   // ── Render ───────────────────────────────────────────────────────
@@ -1513,6 +1577,23 @@ export default function POSTerminal() {
             </button>
           </div>
         </div>
+      </div>
+    )}
+
+    {/* ── SPLIT RECEIPT PRINT PROMPT ─────────────────────────────── */}
+    {splitReceiptData && (
+      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[90] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold text-white" style={{ backgroundColor: "#7C3AED" }}>
+        <Printer size={16} />
+        <span>স্প্লিট রসিদ প্রিন্ট করুন?</span>
+        <button onClick={printSplitReceipt}
+          className="px-3 py-1 rounded-lg text-xs font-bold"
+          style={{ backgroundColor: "rgba(255,255,255,0.25)" }}>
+          প্রিন্ট
+        </button>
+        <button onClick={() => setSplitReceiptData(null)}
+          className="text-white/70 hover:text-white">
+          <X size={14} />
+        </button>
       </div>
     )}
 

@@ -93,23 +93,31 @@ export async function GET(req: NextRequest) {
     const takeaway = orders.filter(o => o.type === "takeaway").length;
     const delivery = orders.filter(o => o.type === "delivery").length;
 
-    // Payment method breakdown — credit per split line for split orders
+    // Payment method breakdown
+    // Strategy: for each paid order, credit split rows for split amounts;
+    // any remaining paidAmount (from complete_payment after partial) goes to paymentMethod.
     const payMethodMap: Record<string, number> = {};
+    const addToMap = (method: string, amount: number) => {
+      if (amount <= 0) return;
+      payMethodMap[method] = (payMethodMap[method] ?? 0) + amount;
+    };
     for (const o of orders) {
-      if ((o as typeof o & { splits?: { paymentMethod: string; amount: number }[] }).splits?.length) {
-        for (const sp of (o as typeof o & { splits: { paymentMethod: string; amount: number }[] }).splits) {
-          payMethodMap[sp.paymentMethod] = (payMethodMap[sp.paymentMethod] ?? 0) + sp.amount;
-        }
+      const oTyped = o as typeof o & { splits?: { paymentMethod: string; amount: number }[] };
+      const splits = oTyped.splits ?? [];
+      if (splits.length > 0) {
+        const splitsTotal = splits.reduce((s, sp) => s + sp.amount, 0);
+        for (const sp of splits) addToMap(sp.paymentMethod, sp.amount);
+        // Any amount settled via direct complete_payment after partial splits
+        const finalDirectAmt = o.paidAmount - splitsTotal;
+        if (finalDirectAmt > 0.01) addToMap(o.paymentMethod ?? "cash", finalDirectAmt);
       } else {
-        const m = o.paymentMethod ?? "cash";
-        payMethodMap[m] = (payMethodMap[m] ?? 0) + o.totalAmount;
+        addToMap(o.paymentMethod ?? "cash", o.totalAmount);
       }
     }
-    // Also include partial collections from today's partial orders
+    // Partial collections from today's partial orders (already-collected portion)
     for (const o of partialOrders) {
       for (const sp of o.splits) {
-        const key = `partial_${sp.paymentMethod}`;
-        payMethodMap[key] = (payMethodMap[key] ?? 0) + sp.amount;
+        addToMap(`partial_${sp.paymentMethod}`, sp.amount);
       }
     }
     const paymentMethodBreakdown = Object.entries(payMethodMap).map(([method, amount]) => ({ method, amount }));
