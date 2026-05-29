@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 /* Store marquee animation */
 @keyframes marquee {
   0% { transform: translateX(0); }
