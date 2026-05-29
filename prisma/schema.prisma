@@ -436,9 +436,10 @@ model Shop {
   restDefaultFloors        String[] @default(["Ground"])
   restDeliveryEnabled      Boolean  @default(true)
   restAutoStockDeduct      Boolean  @default(true)
-  restRequireShift         Boolean  @default(false)
-  managerPin               String?
-  restVoidThresholdHours   Int      @default(24)
+  restRequireShift              Boolean  @default(false)
+  managerPin                    String?
+  managerDiscountThreshold      Float    @default(20)
+  restVoidThresholdHours        Int      @default(24)
   // Receipt / thermal print settings
   receiptLogo              String?
   receiptHeaderLine1       String?
@@ -1526,11 +1527,13 @@ model RestaurantOrder {
   refundAmount  Float?
   refundReason  String?
   refundedBy    String?
-  isHeld        Boolean               @default(false)
-  heldAt        DateTime?
-  heldBy        String?
-  createdAt     DateTime              @default(now())
-  updatedAt     DateTime              @updatedAt
+  isHeld            Boolean               @default(false)
+  heldAt            DateTime?
+  heldBy            String?
+  discountBreakdown Json?
+  couponCode        String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
 
   @@index([shopId])
   @@index([shopId, status])
@@ -1985,19 +1988,29 @@ model StoreReview {
 }
 
 model Coupon {
-  id          String    @id @default(cuid())
-  shopId      String
-  shop        Shop      @relation(fields: [shopId], references: [id])
-  code        String
-  type        String
-  value       Float
-  minOrder    Float?
-  maxDiscount Float?
-  usedCount   Int       @default(0)
-  maxUse      Int?
-  expiresAt   DateTime?
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
+  id                   String    @id @default(cuid())
+  shopId               String
+  shop                 Shop      @relation(fields: [shopId], references: [id])
+  name                 String?
+  code                 String
+  type                 String
+  value                Float
+  minOrder             Float?
+  maxDiscount          Float?
+  usedCount            Int       @default(0)
+  maxUse               Int?
+  expiresAt            DateTime?
+  isActive             Boolean   @default(true)
+  createdAt            DateTime  @default(now())
+  applicableItemIds    Json?     @default("[]")
+  applicableCategories Json?     @default("[]")
+  happyHourStart       String?
+  happyHourEnd         String?
+  happyHourDays        Json?     @default("[0,1,2,3,4,5,6]")
+  memberTier           String?
+  bogoGetItemId        String?
+  bogoGetQty           Int       @default(1)
+  bogoGetDiscount      Float     @default(100)
 
   @@unique([shopId, code])
   @@index([shopId])

@@ -5,14 +5,14 @@ import { prisma } from "@/lib/prisma";
 async function getShopByUser(userId: string) {
   return prisma.shop.findUnique({
     where: { userId },
-    select: { id: true, restVatPct: true, restServiceChargePct: true, restOrderPrefix: true, restRequireShift: true },
+    select: { id: true, restVatPct: true, restServiceChargePct: true, restOrderPrefix: true, restRequireShift: true, managerDiscountThreshold: true },
   });
 }
 
 async function getShopBySlug(slug: string) {
   return prisma.shop.findUnique({
     where: { slug },
-    select: { id: true, restVatPct: true, restServiceChargePct: true, restOrderPrefix: true, restRequireShift: true },
+    select: { id: true, restVatPct: true, restServiceChargePct: true, restOrderPrefix: true, restRequireShift: true, managerDiscountThreshold: true },
   });
 }
 
@@ -102,6 +102,8 @@ export async function POST(req: NextRequest) {
     note?: string;
     paymentMethod?: string;
     discount?: number;
+    discountBreakdown?: { type: string; label: string; amount: number; couponId?: string; couponCode?: string }[];
+    couponCode?: string;
     items?: {
       menuItemId: string;
       quantity: number;
@@ -146,6 +148,8 @@ export async function POST(req: NextRequest) {
   const orderType = isQrOrder ? "dine_in" : (body.type ?? "dine_in");
   const orderDiscount = isQrOrder ? 0 : (body.discount ?? 0);
   const orderPaymentMethod = isQrOrder ? "cash" : (body.paymentMethod ?? "cash");
+  const orderDiscountBreakdown = isQrOrder ? null : (body.discountBreakdown ?? null);
+  const orderCouponCode = isQrOrder ? null : (body.couponCode ?? null);
 
   for (const it of body.items) {
     if (!it.menuItemId || !it.quantity || it.quantity < 1) {
@@ -277,6 +281,8 @@ export async function POST(req: NextRequest) {
       serviceAmount,
       totalAmount,
       status: "pending",
+      discountBreakdown: orderDiscountBreakdown ?? undefined,
+      couponCode: orderCouponCode,
       items: { create: itemsWithPrices },
     },
     include: ORDER_INCLUDE,
@@ -287,6 +293,21 @@ export async function POST(req: NextRequest) {
       where: { id: resolvedTableId },
       data: { status: "occupied" },
     });
+  }
+
+  // Increment usedCount for any applied coupons
+  if (orderDiscountBreakdown && orderDiscountBreakdown.length > 0) {
+    const couponIds = orderDiscountBreakdown
+      .filter(d => d.couponId)
+      .map(d => d.couponId as string);
+    if (couponIds.length > 0) {
+      for (const cId of couponIds) {
+        await prisma.coupon.updateMany({
+          where: { id: cId, shopId: shop.id },
+          data: { usedCount: { increment: 1 } },
+        });
+      }
+    }
   }
 
   return NextResponse.json(order, { status: 201 });

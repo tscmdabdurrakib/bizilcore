@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Loader2, Save, Settings, Info } from "lucide-react";
+import { Loader2, Save, Settings, Info, Shield } from "lucide-react";
 
 interface ShopSettings {
   restOrderPrefix: string;
@@ -13,6 +13,7 @@ interface ShopSettings {
   restDeliveryEnabled: boolean;
   restAutoStockDeduct: boolean;
   restRequireShift: boolean;
+  managerDiscountThreshold: number;
 }
 
 const S = {
@@ -67,6 +68,7 @@ export default function RestaurantSettingsPage() {
     restDeliveryEnabled: true,
     restAutoStockDeduct: true,
     restRequireShift: false,
+    managerDiscountThreshold: 20,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -89,6 +91,7 @@ export default function RestaurantSettingsPage() {
           restDeliveryEnabled: shop.restDeliveryEnabled ?? true,
           restAutoStockDeduct: shop.restAutoStockDeduct ?? true,
           restRequireShift: shop.restRequireShift ?? false,
+          managerDiscountThreshold: shop.managerDiscountThreshold ?? 20,
         });
         setFloorsInput((shop.restDefaultFloors ?? ["Ground"]).join(", "));
       }
@@ -179,6 +182,28 @@ export default function RestaurantSettingsPage() {
           <input type="number" min="0" max="100" step="0.5" value={settings.restServiceChargePct}
             onChange={e => setSettings(s => ({ ...s, restServiceChargePct: Number(e.target.value) }))}
             className={inp("max-w-[100px]")} style={inpStyle} />
+        </FieldRow>
+      </SettingSection>
+
+      <SettingSection title="ডিসকাউন্ট নিয়ন্ত্রণ">
+        <div className="flex items-start gap-3 p-3 rounded-xl mb-3" style={{ backgroundColor: "#FEF3C7", borderLeft: "3px solid #D97706" }}>
+          <Shield size={14} style={{ color: "#D97706", marginTop: 2, flexShrink: 0 }} />
+          <p className="text-xs" style={{ color: "#92400E" }}>
+            নির্দিষ্ট সীমার বেশি ছাড় দিতে ম্যানেজার PIN লাগবে। এটি অতিরিক্ত ছাড় প্রতিরোধ করে।
+          </p>
+        </div>
+        <FieldRow label="ম্যানেজার PIN থ্রেশহোল্ড (%)" hint={`এই % এর বেশি ছাড় দিতে ম্যানেজারের PIN লাগবে`}>
+          <div className="flex items-center gap-3">
+            <input type="number" min="0" max="100" step="1" value={settings.managerDiscountThreshold}
+              onChange={e => setSettings(s => ({ ...s, managerDiscountThreshold: Number(e.target.value) }))}
+              className={inp("max-w-[100px]")} style={inpStyle} />
+            <span className="text-xs" style={{ color: S.muted }}>বর্তমান: {settings.managerDiscountThreshold}% এর বেশি হলে PIN দরকার</span>
+          </div>
+        </FieldRow>
+        <FieldRow label="ম্যানেজার PIN" hint="পরিবর্তনের জন্য অ্যাকাউন্ট সেটিংসে যান">
+          <p className="text-xs" style={{ color: S.muted }}>
+            PIN সেটিংস: অ্যাকাউন্ট → সেটিংস → ম্যানেজার PIN
+          </p>
         </FieldRow>
       </SettingSection>
 

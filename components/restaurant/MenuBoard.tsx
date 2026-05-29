@@ -3,9 +3,10 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import {
   Plus, ScrollText, X, Loader2, Pencil, Trash2, Leaf, ToggleLeft, ToggleRight,
-  Upload, FolderPlus, Layers, Tag,
+  Upload, FolderPlus, Layers, Tag, Ticket,
 } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import CouponManagement from "@/components/restaurant/CouponManagement";
 
 interface MenuCategory {
   id: string; name: string; nameEn?: string; icon?: string; sortOrder: number; isActive: boolean;
@@ -51,7 +52,7 @@ const EMPTY_FORM = {
 };
 
 export default function MenuBoard() {
-  const [tab, setTab]               = useState<"items" | "categories">("items");
+  const [tab, setTab]               = useState<"items" | "categories" | "coupons">("items");
   const [items, setItems]           = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [loading, setLoading]       = useState(true);
@@ -298,8 +299,8 @@ export default function MenuBoard() {
 
       {/* Tabs */}
       <div className="flex gap-1 p-1 rounded-xl w-fit" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
-        {([["items", "আইটেম", Layers], ["categories", "ক্যাটাগরি", Tag]] as const).map(([key, label, Icon]) => (
-          <button key={key} onClick={() => setTab(key as "items" | "categories")}
+        {([["items", "আইটেম", Layers], ["categories", "ক্যাটাগরি", Tag], ["coupons", "কুপন", Ticket]] as const).map(([key, label, Icon]) => (
+          <button key={key} onClick={() => setTab(key as "items" | "categories" | "coupons")}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
             style={{
               backgroundColor: tab === key ? ORANGE : "transparent",
@@ -310,7 +311,10 @@ export default function MenuBoard() {
         ))}
       </div>
 
-      {tab === "categories" ? (
+      {tab === "coupons" ? (
+        /* ── Coupon Management ── */
+        <CouponManagement />
+      ) : tab === "categories" ? (
         /* ── Category Management ── */
         loading ? (
           <div className="flex items-center justify-center py-16" style={{ color: S.muted }}>

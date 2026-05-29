@@ -36,6 +36,7 @@ export interface ReceiptOrder {
   vatAmount: number;
   serviceAmount: number;
   discount: number;
+  discountBreakdown?: { type: string; label: string; amount: number }[] | null;
   tipAmount?: number | null;
   paymentMethod?: string | null;
   customerName?: string | null;
@@ -165,7 +166,11 @@ export function buildReceiptHtml(
     <div class="line-dashed"></div>
 
     <div class="row"><span>সাব-টোটাল</span><span>${fmtBDT(order.subtotal)}</span></div>
-    ${order.discount > 0 ? `<div class="row"><span>ছাড়</span><span>- ${fmtBDT(order.discount)}</span></div>` : ""}
+    ${order.discount > 0
+      ? (order.discountBreakdown && order.discountBreakdown.length > 0
+        ? order.discountBreakdown.map((d: { label: string; amount: number }) => `<div class="row" style="color:#059669"><span>${d.label}</span><span>- ${fmtBDT(d.amount)}</span></div>`).join("")
+        : `<div class="row"><span>ছাড়</span><span>- ${fmtBDT(order.discount)}</span></div>`)
+      : ""}
     ${shop.receiptShowVat && order.vatAmount > 0 ? `<div class="row"><span>VAT</span><span>${fmtBDT(order.vatAmount)}</span></div>` : ""}
     ${shop.receiptShowVat && order.serviceAmount > 0 ? `<div class="row"><span>সার্ভিস চার্জ</span><span>${fmtBDT(order.serviceAmount)}</span></div>` : ""}
     ${order.tipAmount && order.tipAmount > 0 ? `<div class="row"><span>টিপ</span><span>${fmtBDT(order.tipAmount)}</span></div>` : ""}
@@ -325,7 +330,11 @@ export function buildA4InvoiceHtml(
       <div class="totals">
         <div class="totals-box">
           <div class="totals-row"><span style="color:#6B7280">সাব-টোটাল</span><span>${fmtBDT(order.subtotal)}</span></div>
-          ${order.discount > 0 ? `<div class="totals-row"><span style="color:#059669">ছাড়</span><span style="color:#059669">− ${fmtBDT(order.discount)}</span></div>` : ""}
+          ${order.discount > 0
+            ? (order.discountBreakdown && order.discountBreakdown.length > 0
+              ? order.discountBreakdown.map((d: { label: string; amount: number }) => `<div class="totals-row"><span style="color:#059669">${d.label}</span><span style="color:#059669">− ${fmtBDT(d.amount)}</span></div>`).join("")
+              : `<div class="totals-row"><span style="color:#059669">ছাড়</span><span style="color:#059669">− ${fmtBDT(order.discount)}</span></div>`)
+            : ""}
           ${shop.receiptShowVat && order.vatAmount > 0 ? `<div class="totals-row"><span style="color:#6B7280">VAT</span><span>${fmtBDT(order.vatAmount)}</span></div>` : ""}
           ${shop.receiptShowVat && order.serviceAmount > 0 ? `<div class="totals-row"><span style="color:#6B7280">সার্ভিস চার্জ</span><span>${fmtBDT(order.serviceAmount)}</span></div>` : ""}
           ${order.tipAmount && order.tipAmount > 0 ? `<div class="totals-row"><span style="color:#6B7280">টিপ</span><span>${fmtBDT(order.tipAmount)}</span></div>` : ""}

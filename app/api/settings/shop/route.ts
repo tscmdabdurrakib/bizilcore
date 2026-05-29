@@ -42,6 +42,7 @@ export async function PATCH(req: NextRequest) {
     receiptShowVat,
     receiptShowQr,
     receiptShowLogo,
+    managerDiscountThreshold,
   } = body;
 
   const updated = await prisma.shop.update({
@@ -77,6 +78,7 @@ export async function PATCH(req: NextRequest) {
       ...(receiptShowVat !== undefined && { receiptShowVat }),
       ...(receiptShowQr !== undefined && { receiptShowQr }),
       ...(receiptShowLogo !== undefined && { receiptShowLogo }),
+      ...(managerDiscountThreshold !== undefined && { managerDiscountThreshold: Number(managerDiscountThreshold) }),
     },
   });
 

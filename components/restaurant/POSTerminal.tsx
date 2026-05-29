@@ -5,11 +5,12 @@ import {
   Search, ShoppingCart, Plus, Minus, X, ChefHat, Loader2, Printer,
   RotateCcw, SendHorizonal, CreditCard, Wallet, Smartphone, Banknote,
   CheckCircle, ChevronRight, Tag, UserCheck, PauseCircle, ListOrdered,
-  Split, AlertCircle, Users, Hash,
+  Split, AlertCircle, Users, Hash, Ticket, Gift, Shield, Percent,
 } from "lucide-react";
 import ShiftManager from "@/components/restaurant/ShiftManager";
 import { formatBDT } from "@/lib/utils";
 import { buildReceiptHtml, buildKotHtml, buildA4InvoiceHtml } from "@/lib/receiptHtml";
+import { runDiscountEngine, DiscountResult, BogoSuggestion, EngineCoupon } from "@/lib/restaurant/discount-engine";
 
 // ── Types ────────────────────────────────────────────────────────
 interface MenuVariant { name: string; price: number }
@@ -258,6 +259,25 @@ export default function POSTerminal() {
     splits: { payerName: string; amount: number; paymentMethod: string }[];
   } | null>(null);
 
+  // ── Discount state ───────────────────────────────────────────────
+  const [allCoupons, setAllCoupons]             = useState<EngineCoupon[]>([]);
+  const [appliedDiscounts, setAppliedDiscounts] = useState<DiscountResult[]>([]);
+  const [bogoSuggestions, setBogoSuggestions]   = useState<BogoSuggestion[]>([]);
+  const [couponInput, setCouponInput]           = useState("");
+  const [couponError, setCouponError]           = useState("");
+  const [couponLoading, setCouponLoading]       = useState(false);
+  const [appliedCouponCode, setAppliedCouponCode] = useState<string | null>(null);
+  const [manualDiscount, setManualDiscount]     = useState(0);
+  const [manualDiscountInput, setManualDiscountInput] = useState("");
+  const [managerDiscountThreshold, setManagerDiscountThreshold] = useState(20);
+  const [showManagerPinModal, setShowManagerPinModal] = useState(false);
+  const [managerPinInput, setManagerPinInput]   = useState("");
+  const [managerPinError, setManagerPinError]   = useState("");
+  const [managerPinLoading, setManagerPinLoading] = useState(false);
+  const [pendingManualDiscount, setPendingManualDiscount] = useState(0);
+  const [showBogoModal, setShowBogoModal]       = useState(false);
+  const [acceptedBogo, setAcceptedBogo]         = useState<BogoSuggestion | null>(null);
+
   // ── Helpers ──────────────────────────────────────────────────────
   const showToast = (type: "success" | "error", msg: string) => {
     setToast({ type, msg });
@@ -268,7 +288,13 @@ export default function POSTerminal() {
   const cartSubtotal  = cart.reduce((s, c) => s + c.unitPrice * c.quantity, 0);
   const cartVat       = Math.round(cartSubtotal * (vatPct / 100) * 100) / 100;
   const cartSvc       = Math.round(cartSubtotal * (svcPct / 100) * 100) / 100;
-  const cartTotal     = cartSubtotal + cartVat + cartSvc;
+
+  // Discount totals (state is declared above as useState)
+  const _totalAutoDiscount = appliedDiscounts.reduce((s, d) => s + d.amount, 0);
+  const _bogoDiscount      = acceptedBogo ? acceptedBogo.discountAmount : 0;
+  const totalDiscount      = _totalAutoDiscount + manualDiscount + _bogoDiscount;
+
+  const cartTotal = Math.max(0, cartSubtotal + cartVat + cartSvc - totalDiscount);
 
   const effectiveTotal   = activeOrder ? activeOrder.totalAmount : cartTotal;
   const effectivePaid    = activeOrder ? activeOrder.paidAmount  : 0;
@@ -297,11 +323,12 @@ export default function POSTerminal() {
 
   const load = useCallback(async () => {
     try {
-      const [miRes, tRes, sRes, wRes] = await Promise.all([
+      const [miRes, tRes, sRes, wRes, cpRes] = await Promise.all([
         fetch("/api/restaurant/menu-items"),
         fetch("/api/restaurant/tables"),
         fetch("/api/settings/shop"),
         fetch("/api/restaurant/waiters"),
+        fetch("/api/restaurant/coupons"),
       ]);
       if (miRes.ok) setMenuItems(await miRes.json());
       if (tRes.ok)  setTables(await tRes.json());
@@ -309,10 +336,20 @@ export default function POSTerminal() {
         const s = await sRes.json();
         setVatPct(s.restVatPct ?? 0);
         setSvcPct(s.restServiceChargePct ?? 0);
+        setManagerDiscountThreshold(s.managerDiscountThreshold ?? 20);
       }
       if (wRes.ok) {
         const ws: { id: string; name: string; jobTitle?: string | null }[] = await wRes.json();
         setWaiters(ws.map(w => ({ id: w.id, name: w.name, jobTitle: w.jobTitle })));
+      }
+      if (cpRes.ok) {
+        const rawCoupons = await cpRes.json();
+        setAllCoupons(rawCoupons.map((c: { id: string; code: string; name?: string | null; type: string; value: number; minOrder?: number | null; maxDiscount?: number | null; maxUse?: number | null; usedCount: number; expiresAt?: string | null; isActive: boolean; applicableItemIds?: unknown; applicableCategories?: unknown; happyHourStart?: string | null; happyHourEnd?: string | null; happyHourDays?: unknown; memberTier?: string | null; bogoGetItemId?: string | null; bogoGetQty?: number; bogoGetDiscount?: number }) => ({
+          ...c,
+          applicableItemIds: (c.applicableItemIds as string[] | null) ?? [],
+          applicableCategories: (c.applicableCategories as string[] | null) ?? [],
+          happyHourDays: (c.happyHourDays as number[] | null) ?? [0, 1, 2, 3, 4, 5, 6],
+        })));
       }
     } catch {}
     setLoading(false);
@@ -320,6 +357,99 @@ export default function POSTerminal() {
   }, [loadHeldOrders]);
 
   useEffect(() => { load(); }, [load]);
+
+  // ── Auto-discount engine ─────────────────────────────────────────
+  useEffect(() => {
+    if (activeOrder) return; // don't auto-run when order already placed
+    if (cart.length === 0) {
+      setAppliedDiscounts([]);
+      setBogoSuggestions([]);
+      return;
+    }
+    const engineItems = cart.map(c => ({
+      menuItemId: c.menuItemId,
+      name: c.name,
+      category: c.category,
+      unitPrice: c.unitPrice,
+      quantity: c.quantity,
+    }));
+    const result = runDiscountEngine(engineItems, allCoupons, new Date(), null, appliedCouponCode);
+    const autoDiscounts = result.discounts.filter(d => d.type !== "coupon" || d.couponCode === appliedCouponCode);
+    setAppliedDiscounts(autoDiscounts);
+    setBogoSuggestions(result.bogoSuggestions);
+  }, [cart, allCoupons, appliedCouponCode, activeOrder]);
+
+  // ── Discount functions ───────────────────────────────────────────
+
+  const applyManualDiscountFn = (amt: number) => {
+    const discountPct = cartSubtotal > 0 ? (amt / cartSubtotal) * 100 : 0;
+    if (discountPct > managerDiscountThreshold) {
+      setPendingManualDiscount(amt);
+      setManagerPinInput("");
+      setManagerPinError("");
+      setShowManagerPinModal(true);
+    } else {
+      setManualDiscount(amt);
+    }
+  };
+
+  const verifyManagerPin = async () => {
+    if (!managerPinInput) { setManagerPinError("PIN দিন"); return; }
+    setManagerPinLoading(true);
+    try {
+      const r = await fetch("/api/restaurant/verify-pin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin: managerPinInput }),
+      });
+      if (r.ok) {
+        setManualDiscount(pendingManualDiscount);
+        setShowManagerPinModal(false);
+        setManagerPinInput("");
+        setManagerPinError("");
+        showToast("success", "ম্যানেজার অনুমোদিত");
+      } else {
+        setManagerPinError("ভুল PIN");
+      }
+    } catch { setManagerPinError("Error"); }
+    setManagerPinLoading(false);
+  };
+
+  const applyCoupon = async () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) { setCouponError("কুপন কোড দিন"); return; }
+    setCouponLoading(true);
+    setCouponError("");
+    try {
+      const engineItems = cart.map(c => ({
+        menuItemId: c.menuItemId,
+        name: c.name,
+        category: c.category,
+        unitPrice: c.unitPrice,
+        quantity: c.quantity,
+      }));
+      const r = await fetch("/api/restaurant/coupons/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, items: engineItems }),
+      });
+      const data = await r.json();
+      if (!r.ok || !data.valid) {
+        setCouponError(data.error ?? "কুপন প্রযোজ্য নয়");
+      } else {
+        setAppliedCouponCode(code);
+        setCouponInput("");
+        showToast("success", `কুপন ${code} প্রয়োগ হয়েছে`);
+      }
+    } catch { setCouponError("Error"); }
+    setCouponLoading(false);
+  };
+
+  const removeCoupon = () => {
+    setAppliedCouponCode(null);
+    setCouponInput("");
+    setCouponError("");
+  };
 
   // ── Menu filtering ───────────────────────────────────────────────
   const categories = ["all", ...Array.from(new Set(menuItems.map(m => m.category))).sort()];
@@ -400,6 +530,18 @@ export default function POSTerminal() {
     if (orderType === "dine_in" && !selectedTable) { showToast("error", "টেবিল সিলেক্ট করুন"); return; }
     setSubmitting(true);
     try {
+      // Build full discount breakdown for receipt
+      const discountBreakdown: { type: string; label: string; amount: number; couponId?: string; couponCode?: string }[] = [
+        ...appliedDiscounts,
+        ...(acceptedBogo ? [{
+          type: "bogo" as const,
+          label: `BOGO ছাড় — ${acceptedBogo.couponCode}`,
+          amount: acceptedBogo.discountAmount,
+          couponId: acceptedBogo.couponId,
+          couponCode: acceptedBogo.couponCode,
+        }] : []),
+        ...(manualDiscount > 0 ? [{ type: "manual" as const, label: "ম্যানুয়াল ছাড়", amount: manualDiscount }] : []),
+      ];
       const res = await fetch("/api/restaurant/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -410,6 +552,9 @@ export default function POSTerminal() {
           customerName: customerName || null,
           customerPhone: customerPhone || null,
           note: note || null,
+          discount: totalDiscount,
+          discountBreakdown: discountBreakdown.length > 0 ? discountBreakdown : null,
+          couponCode: appliedCouponCode,
           items: cart.map(c => ({
             menuItemId: c.menuItemId,
             quantity: c.quantity,
@@ -1049,6 +1194,89 @@ export default function POSTerminal() {
           </div>
         )}
 
+        {/* ── Discount section (pre-order only) ── */}
+        {!activeOrder && cart.length > 0 && (
+          <div className="px-3 pb-3 space-y-2.5 border-t pt-3" style={{ borderColor: S.border }}>
+            {/* BOGO banner */}
+            {bogoSuggestions.length > 0 && !acceptedBogo && (
+              <button onClick={() => setShowBogoModal(true)}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-white animate-pulse"
+                style={{ backgroundColor: "#BE185D" }}>
+                <Gift size={13} /> BOGO অফার পাওয়া গেছে! ক্লিক করুন
+              </button>
+            )}
+            {acceptedBogo && (
+              <div className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold"
+                style={{ backgroundColor: "#FDF2F8", color: "#BE185D" }}>
+                <span><Gift size={11} className="inline mr-1" />BOGO: {acceptedBogo.couponCode} −{formatBDT(acceptedBogo.discountAmount)}</span>
+                <button onClick={() => setAcceptedBogo(null)}><X size={11} /></button>
+              </div>
+            )}
+
+            {/* Auto discounts */}
+            {appliedDiscounts.filter(d => d.type !== "coupon").map((d, i) => (
+              <div key={i} className="flex items-center justify-between px-3 py-1.5 rounded-xl text-[11px] font-semibold"
+                style={{ backgroundColor: "#ECFDF5", color: "#059669" }}>
+                <span>✓ {d.label}</span>
+                <span>−{formatBDT(d.amount)}</span>
+              </div>
+            ))}
+
+            {/* Coupon input */}
+            {!appliedCouponCode ? (
+              <div className="flex gap-1.5">
+                <input value={couponInput} onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponError(""); }}
+                  onKeyDown={e => e.key === "Enter" && applyCoupon()}
+                  placeholder="কুপন কোড লিখুন…"
+                  className="flex-1 px-3 py-2 rounded-xl text-xs border outline-none font-mono tracking-wider"
+                  style={{ borderColor: couponError ? "#EF4444" : S.border, backgroundColor: S.bg, color: S.text }} />
+                <button onClick={applyCoupon} disabled={couponLoading || !couponInput.trim()}
+                  className="px-3 py-2 rounded-xl text-xs font-bold text-white disabled:opacity-40"
+                  style={{ backgroundColor: S.primary }}>
+                  {couponLoading ? <Loader2 size={12} className="animate-spin" /> : <Ticket size={12} />}
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold"
+                style={{ backgroundColor: "#EFF6FF", color: "#1D4ED8" }}>
+                <span><Ticket size={11} className="inline mr-1" />কুপন {appliedCouponCode}: −{formatBDT(appliedDiscounts.find(d => d.couponCode === appliedCouponCode)?.amount ?? 0)}</span>
+                <button onClick={removeCoupon}><X size={11} /></button>
+              </div>
+            )}
+            {couponError && <p className="text-[10px] text-red-500 px-1">{couponError}</p>}
+
+            {/* Manual discount */}
+            <div className="flex gap-1.5 items-center">
+              <Percent size={13} style={{ color: S.muted, flexShrink: 0 }} />
+              <input type="number" value={manualDiscountInput}
+                onChange={e => setManualDiscountInput(e.target.value)}
+                onBlur={() => {
+                  const amt = Math.max(0, Math.min(Number(manualDiscountInput) || 0, cartSubtotal + cartVat + cartSvc));
+                  setManualDiscountInput(amt ? String(amt) : "");
+                  applyManualDiscountFn(amt);
+                }}
+                placeholder="ম্যানুয়াল ছাড় (৳)"
+                className="flex-1 px-3 py-2 rounded-xl text-xs border outline-none"
+                style={{ borderColor: S.border, backgroundColor: S.bg, color: S.text }} />
+              {manualDiscount > 0 && (
+                <button onClick={() => { setManualDiscount(0); setManualDiscountInput(""); }}
+                  className="p-1.5 rounded-lg hover:bg-red-50" style={{ color: "#EF4444" }}>
+                  <X size={11} />
+                </button>
+              )}
+              {manualDiscount > 0 && (
+                <span className="text-[10px] font-semibold text-green-600 whitespace-nowrap">−{formatBDT(manualDiscount)}</span>
+              )}
+            </div>
+            {manualDiscount > 0 && cartSubtotal > 0 && (manualDiscount / cartSubtotal) * 100 > managerDiscountThreshold && (
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-semibold"
+                style={{ backgroundColor: "#FEF3C7", color: "#D97706" }}>
+                <Shield size={11} /> ম্যানেজার অনুমোদিত
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Bill summary */}
         <div className="p-4 border-t space-y-2.5" style={{ borderColor: S.border }}>
           <div className="space-y-1.5">
@@ -1063,6 +1291,11 @@ export default function POSTerminal() {
             {svcPct > 0 && (
               <div className="flex justify-between text-xs" style={{ color: S.muted }}>
                 <span>সার্ভিস চার্জ ({svcPct}%)</span><span>{formatBDT(effectiveSvc)}</span>
+              </div>
+            )}
+            {!activeOrder && totalDiscount > 0 && (
+              <div className="flex justify-between text-xs font-semibold" style={{ color: "#059669" }}>
+                <span>মোট ছাড়</span><span>−{formatBDT(totalDiscount)}</span>
               </div>
             )}
             <div className="flex justify-between text-sm font-bold pt-1.5 border-t" style={{ color: S.text, borderColor: S.border }}>
@@ -1670,6 +1903,90 @@ export default function POSTerminal() {
           className="text-white/70 hover:text-white">
           <X size={14} />
         </button>
+      </div>
+    )}
+
+    {/* ── BOGO MODAL ──────────────────────────────────────────────── */}
+    {showBogoModal && bogoSuggestions.length > 0 && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div className="w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden" style={{ backgroundColor: "var(--c-surface)" }}>
+          <div className="p-5 border-b flex items-center justify-between" style={{ borderColor: "var(--c-border)" }}>
+            <div className="flex items-center gap-2">
+              <Gift size={18} style={{ color: "#BE185D" }} />
+              <h3 className="font-bold text-base" style={{ color: "var(--c-text)" }}>BOGO অফার</h3>
+            </div>
+            <button onClick={() => setShowBogoModal(false)}><X size={18} style={{ color: "var(--c-text-muted)" }} /></button>
+          </div>
+          <div className="p-5 space-y-3">
+            {bogoSuggestions.map((s, i) => (
+              <div key={i} className="p-4 rounded-2xl border-2" style={{ borderColor: "#BE185D", backgroundColor: "#FDF2F8" }}>
+                <p className="text-sm font-bold mb-1" style={{ color: "#BE185D" }}>🎁 {s.couponCode}</p>
+                <p className="text-xs mb-3" style={{ color: "var(--c-text-muted)" }}>
+                  {s.triggerItemName} কিনলে {s.getQty}টি {s.getDiscountPct === 100 ? "বিনামূল্যে" : `${s.getDiscountPct}% ছাড়ে`} পাবেন
+                </p>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-bold" style={{ color: "#BE185D" }}>সাশ্রয়: {formatBDT(s.discountAmount)}</span>
+                </div>
+                <button
+                  onClick={() => { setAcceptedBogo(s); setShowBogoModal(false); showToast("success", `BOGO ${s.couponCode} প্রয়োগ হয়েছে`); }}
+                  className="w-full py-2.5 rounded-xl text-sm font-bold text-white"
+                  style={{ backgroundColor: "#BE185D" }}>
+                  অফার গ্রহণ করুন
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="px-5 pb-5">
+            <button onClick={() => setShowBogoModal(false)}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold border"
+              style={{ borderColor: "var(--c-border)", color: "var(--c-text-muted)" }}>
+              বাদ দিন
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ── MANAGER PIN MODAL ────────────────────────────────────────── */}
+    {showManagerPinModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div className="w-full max-w-xs rounded-3xl shadow-2xl overflow-hidden" style={{ backgroundColor: "var(--c-surface)" }}>
+          <div className="p-5 border-b flex items-center gap-2" style={{ borderColor: "var(--c-border)" }}>
+            <Shield size={18} style={{ color: "#D97706" }} />
+            <h3 className="font-bold text-base" style={{ color: "var(--c-text)" }}>ম্যানেজার অনুমোদন</h3>
+          </div>
+          <div className="p-5 space-y-4">
+            <p className="text-xs" style={{ color: "var(--c-text-muted)" }}>
+              ছাড়ের পরিমাণ {managerDiscountThreshold}%-এর বেশি। ম্যানেজারের PIN দিন।
+            </p>
+            <div className="p-3 rounded-xl text-center text-sm font-bold" style={{ backgroundColor: "#FEF3C7", color: "#D97706" }}>
+              ছাড়: {formatBDT(pendingManualDiscount)}
+            </div>
+            <input
+              type="password"
+              value={managerPinInput}
+              onChange={e => { setManagerPinInput(e.target.value); setManagerPinError(""); }}
+              onKeyDown={e => e.key === "Enter" && verifyManagerPin()}
+              placeholder="ম্যানেজার PIN"
+              className="w-full px-4 py-3 rounded-xl text-center text-lg font-mono border outline-none tracking-widest"
+              style={{ borderColor: managerPinError ? "#EF4444" : "var(--c-border)", backgroundColor: "var(--c-bg)", color: "var(--c-text)" }}
+              autoFocus />
+            {managerPinError && <p className="text-xs text-red-500 text-center">{managerPinError}</p>}
+            <div className="flex gap-3">
+              <button onClick={() => { setShowManagerPinModal(false); setManagerPinInput(""); setManagerPinError(""); setManualDiscountInput(""); }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold border"
+                style={{ borderColor: "var(--c-border)", color: "var(--c-text-muted)" }}>
+                বাতিল
+              </button>
+              <button onClick={verifyManagerPin} disabled={managerPinLoading}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2"
+                style={{ backgroundColor: "#D97706" }}>
+                {managerPinLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
+                নিশ্চিত
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     )}
 
