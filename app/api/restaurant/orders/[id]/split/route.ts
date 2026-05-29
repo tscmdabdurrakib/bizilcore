@@ -16,8 +16,12 @@ const ORDER_INCLUDE = {
   items: {
     include: {
       menuItem: {
-        // Only `include` (not select+include together) — Prisma disallows both
-        include: { recipes: { select: { materialId: true, quantity: true } } },
+        // Use `select` only (never mix select+include on the same node — Prisma disallows it)
+        // recipes relation is embedded in select to avoid a second level of include
+        select: {
+          id: true, name: true, category: true, price: true,
+          recipes: { select: { materialId: true, quantity: true } },
+        },
       },
     },
   },
