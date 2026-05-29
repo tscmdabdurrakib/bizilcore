@@ -5,14 +5,14 @@ import { prisma } from "@/lib/prisma";
 async function getShopByUser(userId: string) {
   return prisma.shop.findUnique({
     where: { userId },
-    select: { id: true, restVatPct: true, restServiceChargePct: true, restOrderPrefix: true },
+    select: { id: true, restVatPct: true, restServiceChargePct: true, restOrderPrefix: true, restRequireShift: true },
   });
 }
 
 async function getShopBySlug(slug: string) {
   return prisma.shop.findUnique({
     where: { slug },
-    select: { id: true, restVatPct: true, restServiceChargePct: true, restOrderPrefix: true },
+    select: { id: true, restVatPct: true, restServiceChargePct: true, restOrderPrefix: true, restRequireShift: true },
   });
 }
 
@@ -128,6 +128,20 @@ export async function POST(req: NextRequest) {
   }
 
   if (!body.items?.length) return NextResponse.json({ error: "Items required" }, { status: 400 });
+
+  // ── Shift enforcement (POS orders only, not QR self-orders) ──
+  if (!isQrOrder && shop.restRequireShift) {
+    const activeShift = await prisma.posShift.findFirst({
+      where: { shopId: shop.id, status: "open" },
+      select: { id: true },
+    });
+    if (!activeShift) {
+      return NextResponse.json(
+        { error: "শিফট শুরু করা নেই। POS টার্মিনালে শিফট শুরু করুন এবং তারপর অর্ডার দিন।", code: "NO_ACTIVE_SHIFT" },
+        { status: 403 }
+      );
+    }
+  }
 
   const orderType = isQrOrder ? "dine_in" : (body.type ?? "dine_in");
   const orderDiscount = isQrOrder ? 0 : (body.discount ?? 0);

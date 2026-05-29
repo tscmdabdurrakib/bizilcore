@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
 /**
  * POST /api/restaurant/shift/[id]/cash-log
- * Body: { type: "in" | "out", amount, note }
+ * Body: { type: "in" | "out", amount, note, pin? }
  *
- * Records a cash in/out transaction in the active shift's drawer log
- * and updates the shift's expectedCash accordingly.
+ * Cash-IN: any authenticated shop user can record (no PIN).
+ * Cash-OUT: requires manager PIN (privileged action).
  */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -15,7 +16,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const shop = await prisma.shop.findUnique({
     where: { userId: session.user.id },
-    select: { id: true },
+    select: { id: true, managerPin: true },
   });
   if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
 
@@ -33,6 +34,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   if (amount <= 0) return NextResponse.json({ error: "পরিমাণ শূন্যের বেশি হতে হবে" }, { status: 400 });
 
+  // ── Cash-OUT requires manager PIN ────────────────────────────
+  if (type === "out" && shop.managerPin) {
+    const pin = String(body.pin ?? "");
+    if (!pin) return NextResponse.json({ error: "ক্যাশ বের করতে Manager PIN প্রয়োজন" }, { status: 403 });
+    const pinOk = await bcrypt.compare(pin, shop.managerPin);
+    if (!pinOk) return NextResponse.json({ error: "ভুল Manager PIN" }, { status: 403 });
+  }
+
   const log = await prisma.$transaction(async tx => {
     const l = await tx.cashDrawerLog.create({
       data: {
@@ -44,7 +53,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         performedBy,
       },
     });
-    // Update expectedCash on the shift
     await tx.posShift.update({
       where: { id },
       data: {

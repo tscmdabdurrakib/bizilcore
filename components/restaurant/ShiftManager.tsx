@@ -62,11 +62,13 @@ export default function ShiftManager({ onShiftChange }: ShiftManagerProps) {
   const [logType, setLogType] = useState<"in" | "out">("in");
   const [logAmount, setLogAmount] = useState("");
   const [logNote, setLogNote] = useState("");
+  const [logPin, setLogPin] = useState("");
 
   // Closing wizard
   const [wizardStep, setWizardStep] = useState<WizardStep>(1);
   const [denomCounts, setDenomCounts] = useState<Record<number, number>>({});
   const [closingNotes, setClosingNotes] = useState("");
+  const [closePin, setClosePin] = useState("");
   const [closeResult, setCloseResult] = useState<{
     countedCash: number; expectedCash: number; diff: number;
     cashOver: number; cashShort: number; cashOrderRevenue: number;
@@ -126,12 +128,12 @@ export default function ShiftManager({ onShiftChange }: ShiftManagerProps) {
       const r = await fetch(`/api/restaurant/shift/${activeShift.id}/cash-log`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: logType, amount, note: logNote }),
+        body: JSON.stringify({ type: logType, amount, note: logNote, pin: logPin || undefined }),
       });
       const data = await r.json();
       if (!r.ok) { showToast("error", data.error ?? "লগ সেভ হয়নি"); setSaving(false); return; }
       showToast("success", `✓ ${logType === "in" ? "ক্যাশ জমা" : "ক্যাশ বের"} — ${formatBDT(amount)}`);
-      setModal(null); setLogAmount(""); setLogNote("");
+      setModal(null); setLogAmount(""); setLogNote(""); setLogPin("");
       await load();
     } catch { showToast("error", "Error"); }
     setSaving(false);
@@ -150,6 +152,7 @@ export default function ShiftManager({ onShiftChange }: ShiftManagerProps) {
           closedBy: activeShift.openedBy,
           notes: closingNotes,
           denominationBreakdown: denomCounts,
+          pin: closePin || undefined,
         }),
       });
       const data = await r.json();
@@ -351,6 +354,18 @@ export default function ShiftManager({ onShiftChange }: ShiftManagerProps) {
                   className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
                   style={{ borderColor: S.border, backgroundColor: S.bg, color: S.text }} />
               </div>
+              {/* Manager PIN required for cash-out */}
+              {logType === "out" && (
+                <div>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: "#EF4444" }}>
+                    Manager PIN (ক্যাশ বের করতে আবশ্যক)
+                  </label>
+                  <input type="password" value={logPin} onChange={e => setLogPin(e.target.value)}
+                    placeholder="••••"
+                    className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none font-mono"
+                    style={{ borderColor: "#EF4444", backgroundColor: S.bg, color: S.text }} />
+                </div>
+              )}
               {/* Recent logs */}
               {activeShift.logs.filter(l => l.type === "in" || l.type === "out").length > 0 && (
                 <div className="space-y-1.5 max-h-32 overflow-y-auto">
@@ -470,6 +485,19 @@ export default function ShiftManager({ onShiftChange }: ShiftManagerProps) {
                   <div className="p-4 rounded-xl border-2" style={{ borderColor: "#F59E0B", backgroundColor: "#FFFBEB" }}>
                     <p className="text-xs font-semibold mb-2" style={{ color: "#92400E" }}>⚠️ শিফট বন্ধ হলে আর পরিবর্তন করা যাবে না</p>
                     <p className="text-xs" style={{ color: "#92400E" }}>প্রত্যাশিত ক্যাশ সিস্টেম থেকে গণনা করা হবে</p>
+                  </div>
+                  {/* Manager PIN for shift close */}
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: "#EF4444" }}>
+                      Manager PIN (শিফট বন্ধ করতে আবশ্যক)
+                    </label>
+                    <input type="password" value={closePin} onChange={e => setClosePin(e.target.value)}
+                      placeholder="••••"
+                      className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none font-mono"
+                      style={{ borderColor: "#EF4444", backgroundColor: S.bg, color: S.text }} />
+                    <p className="text-[10px] mt-1" style={{ color: S.muted }}>
+                      PIN সেট না থাকলে খালি রাখুন
+                    </p>
                   </div>
                 </div>
               )}

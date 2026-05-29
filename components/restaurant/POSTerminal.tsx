@@ -422,7 +422,11 @@ export default function POSTerminal() {
       });
       if (!res.ok) {
         const d = await res.json();
-        showToast("error", d.error ?? "অর্ডার দেওয়া যায়নি");
+        if (d.code === "NO_ACTIVE_SHIFT") {
+          showToast("error", "⚠️ শিফট শুরু করা নেই — POS হেডারে শিফট শুরু করুন");
+        } else {
+          showToast("error", d.error ?? "অর্ডার দেওয়া যায়নি");
+        }
         setSubmitting(false);
         return;
       }

@@ -1549,7 +1549,7 @@ model PosShift {
   id             String           @id @default(cuid())
   shopId         String
   shop           Shop             @relation(fields: [shopId], references: [id])
-  shiftNumber    String           @unique
+  shiftNumber    String
   openedBy       String
   openedById     String?
   closedBy       String?
@@ -1566,6 +1566,7 @@ model PosShift {
   createdAt      DateTime         @default(now())
   logs           CashDrawerLog[]
 
+  @@unique([shopId, shiftNumber])
   @@index([shopId])
   @@index([shopId, status])
 }
