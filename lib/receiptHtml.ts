@@ -51,6 +51,16 @@ const PAY_LABELS: Record<string, string> = {
   nagad: "নগদ অ্যাপ", bank: "ব্যাংক", other: "অন্যান্য",
 };
 
+function esc(s: string | null | undefined): string {
+  if (!s) return "";
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 function fmtBDT(n: number) {
   return `৳${n.toFixed(2)}`;
 }
@@ -77,7 +87,7 @@ export function buildReceiptHtml(
 
   const itemRows = activeItems.map((item: ReceiptItem) => `
     <tr>
-      <td style="padding:2px 0">${item.menuItem.name}${item.note ? ` <em style="font-size:0.85em;color:#666">(${item.note})</em>` : ""}</td>
+      <td style="padding:2px 0">${esc(item.menuItem.name)}${item.note ? ` <em style="font-size:0.85em;color:#666">(${esc(item.note)})</em>` : ""}</td>
       <td style="text-align:center;padding:2px 4px">${item.quantity}</td>
       <td style="text-align:right;padding:2px 0">${fmtBDT(item.unitPrice)}</td>
       <td style="text-align:right;padding:2px 0;font-weight:600">${fmtBDT(item.quantity * item.unitPrice)}</td>
@@ -86,13 +96,13 @@ export function buildReceiptHtml(
 
   const payLines = order.splits && order.splits.length > 0
     ? order.splits.map((sp: ReceiptSplit) => `
-        <div class="row"><span>${PAY_LABELS[sp.paymentMethod] ?? sp.paymentMethod}${sp.payerName ? ` (${sp.payerName})` : ""}</span><span>${fmtBDT(sp.amount)}</span></div>
+        <div class="row"><span>${esc(PAY_LABELS[sp.paymentMethod] ?? sp.paymentMethod)}${sp.payerName ? ` (${esc(sp.payerName)})` : ""}</span><span>${fmtBDT(sp.amount)}</span></div>
       `).join("")
-    : `<div class="row"><span>${PAY_LABELS[order.paymentMethod ?? "cash"] ?? order.paymentMethod}</span><span>${fmtBDT(order.paidAmount)}</span></div>`;
+    : `<div class="row"><span>${esc(PAY_LABELS[order.paymentMethod ?? "cash"] ?? order.paymentMethod ?? "নগদ")}</span><span>${fmtBDT(order.paidAmount)}</span></div>`;
 
   return `<!DOCTYPE html><html><head>
     <meta charset="utf-8">
-    <title>রসিদ — ${order.orderNumber}</title>
+    <title>রসিদ — ${esc(order.orderNumber)}</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body {
@@ -125,20 +135,20 @@ export function buildReceiptHtml(
     </style>
   </head><body>
 
-    ${logoUrl ? `<img src="${logoUrl}" class="logo" alt="Logo" onerror="this.style.display='none'" />` : ""}
-    <div class="center bold" style="font-size:1.15em;margin-bottom:2px">${shop.name}</div>
-    ${shop.receiptHeaderLine1 ? `<div class="center" style="font-size:0.9em">${shop.receiptHeaderLine1}</div>` : ""}
-    ${shop.receiptHeaderLine2 ? `<div class="center" style="font-size:0.9em">${shop.receiptHeaderLine2}</div>` : ""}
-    ${shop.phone ? `<div class="center" style="font-size:0.85em">${shop.phone}</div>` : ""}
-    ${shop.address ? `<div class="center" style="font-size:0.85em">${shop.address}</div>` : ""}
+    ${logoUrl ? `<img src="${esc(logoUrl)}" class="logo" alt="Logo" onerror="this.style.display='none'" />` : ""}
+    <div class="center bold" style="font-size:1.15em;margin-bottom:2px">${esc(shop.name)}</div>
+    ${shop.receiptHeaderLine1 ? `<div class="center" style="font-size:0.9em">${esc(shop.receiptHeaderLine1)}</div>` : ""}
+    ${shop.receiptHeaderLine2 ? `<div class="center" style="font-size:0.9em">${esc(shop.receiptHeaderLine2)}</div>` : ""}
+    ${shop.phone ? `<div class="center" style="font-size:0.85em">${esc(shop.phone)}</div>` : ""}
+    ${shop.address ? `<div class="center" style="font-size:0.85em">${esc(shop.address)}</div>` : ""}
 
     <div class="line-dashed"></div>
 
-    <div class="row"><span>অর্ডার নম্বর</span><span class="bold">${order.orderNumber}</span></div>
+    <div class="row"><span>অর্ডার নম্বর</span><span class="bold">${esc(order.orderNumber)}</span></div>
     <div class="row"><span>তারিখ/সময়</span><span>${fmtDate(order.createdAt)}</span></div>
-    ${order.table ? `<div class="row"><span>টেবিল</span><span>${order.table.number} (${order.table.floor})</span></div>` : ""}
-    ${order.waiter ? `<div class="row"><span>ওয়েটার</span><span>${order.waiter.user.name}</span></div>` : ""}
-    ${order.customerName ? `<div class="row"><span>কাস্টমার</span><span>${order.customerName}</span></div>` : ""}
+    ${order.table ? `<div class="row"><span>টেবিল</span><span>${order.table.number} (${esc(order.table.floor)})</span></div>` : ""}
+    ${order.waiter ? `<div class="row"><span>ওয়েটার</span><span>${esc(order.waiter.user.name)}</span></div>` : ""}
+    ${order.customerName ? `<div class="row"><span>কাস্টমার</span><span>${esc(order.customerName)}</span></div>` : ""}
 
     <div class="line-dashed"></div>
 
@@ -174,11 +184,11 @@ export function buildReceiptHtml(
     ${shop.receiptShowQr && qrDataUrl ? `
     <div class="line-dashed"></div>
     <div class="center" style="font-size:0.8em;margin-bottom:3px">স্ক্যান করে অর্ডার যাচাই করুন</div>
-    <img src="${qrDataUrl}" class="qr" alt="QR" />
+    <img src="${esc(qrDataUrl)}" class="qr" alt="QR" />
     ` : ""}
 
     <div class="line-dashed"></div>
-    <div class="center" style="margin-top:4px;font-size:0.9em">${shop.receiptFooter ?? "ধন্যবাদ! আবার আসবেন।"}</div>
+    <div class="center" style="margin-top:4px;font-size:0.9em">${esc(shop.receiptFooter ?? "ধন্যবাদ! আবার আসবেন।")}</div>
 
     <div class="no-print" style="text-align:center;margin-top:16px">
       <button onclick="window.print()" style="padding:8px 24px;font-size:14px;cursor:pointer;border:1px solid #ccc;border-radius:6px">🖨️ প্রিন্ট করুন</button>
@@ -200,7 +210,7 @@ export function buildA4InvoiceHtml(
   const itemRows = activeItems.map((item, idx) => `
     <tr style="border-bottom:1px solid #F3F4F6">
       <td style="padding:10px 12px;color:#374151">${idx + 1}</td>
-      <td style="padding:10px 12px;color:#111827;font-weight:500">${item.menuItem.name}${item.note ? `<br><span style="font-size:11px;color:#9CA3AF">${item.note}</span>` : ""}</td>
+      <td style="padding:10px 12px;color:#111827;font-weight:500">${esc(item.menuItem.name)}${item.note ? `<br><span style="font-size:11px;color:#9CA3AF">${esc(item.note)}</span>` : ""}</td>
       <td style="padding:10px 12px;text-align:center;color:#374151">${item.quantity}</td>
       <td style="padding:10px 12px;text-align:right;color:#374151">${fmtBDT(item.unitPrice)}</td>
       <td style="padding:10px 12px;text-align:right;font-weight:600;color:#111827">${fmtBDT(item.quantity * item.unitPrice)}</td>
@@ -210,17 +220,17 @@ export function buildA4InvoiceHtml(
   const payLines = order.splits && order.splits.length > 0
     ? order.splits.map((sp: ReceiptSplit) =>
         `<div style="display:flex;justify-content:space-between;margin:3px 0;font-size:13px">
-           <span style="color:#6B7280">${PAY_LABELS[sp.paymentMethod] ?? sp.paymentMethod}${sp.payerName ? ` (${sp.payerName})` : ""}</span>
+           <span style="color:#6B7280">${esc(PAY_LABELS[sp.paymentMethod] ?? sp.paymentMethod)}${sp.payerName ? ` (${esc(sp.payerName)})` : ""}</span>
            <span style="font-weight:600;color:#111827">${fmtBDT(sp.amount)}</span>
          </div>`).join("")
     : `<div style="display:flex;justify-content:space-between;margin:3px 0;font-size:13px">
-         <span style="color:#6B7280">${PAY_LABELS[order.paymentMethod ?? "cash"] ?? order.paymentMethod ?? "নগদ"}</span>
+         <span style="color:#6B7280">${esc(PAY_LABELS[order.paymentMethod ?? "cash"] ?? order.paymentMethod ?? "নগদ")}</span>
          <span style="font-weight:600;color:#111827">${fmtBDT(order.paidAmount)}</span>
        </div>`;
 
   return `<!DOCTYPE html><html><head>
     <meta charset="utf-8">
-    <title>ইনভয়েস — ${order.orderNumber}</title>
+    <title>ইনভয়েস — ${esc(order.orderNumber)}</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { font-family: 'Segoe UI', Arial, sans-serif; background: #F9FAFB; padding: 24px; min-height: 100vh; }
@@ -272,20 +282,20 @@ export function buildA4InvoiceHtml(
     <div class="page">
       <div class="header">
         <div class="shop-info">
-          ${logoUrl ? `<img src="${logoUrl}" alt="Logo" style="height:56px;object-fit:contain;margin-bottom:10px;display:block" onerror="this.style.display='none'">` : ""}
-          <h1>${shop.name}</h1>
+          ${logoUrl ? `<img src="${esc(logoUrl)}" alt="Logo" style="height:56px;object-fit:contain;margin-bottom:10px;display:block" onerror="this.style.display='none'">` : ""}
+          <h1>${esc(shop.name)}</h1>
           <p>
-            ${shop.phone ? `📞 ${shop.phone}<br>` : ""}
-            ${shop.address ? `📍 ${shop.address}<br>` : ""}
-            ${shop.receiptHeaderLine1 ? `${shop.receiptHeaderLine1}<br>` : ""}
-            ${shop.receiptHeaderLine2 ? shop.receiptHeaderLine2 : ""}
+            ${shop.phone ? `📞 ${esc(shop.phone)}<br>` : ""}
+            ${shop.address ? `📍 ${esc(shop.address)}<br>` : ""}
+            ${shop.receiptHeaderLine1 ? `${esc(shop.receiptHeaderLine1)}<br>` : ""}
+            ${shop.receiptHeaderLine2 ? esc(shop.receiptHeaderLine2) : ""}
           </p>
         </div>
         <div class="invoice-badge">
           <h2>INVOICE</h2>
-          <p style="font-size:15px;font-weight:700;color:#111827">${order.orderNumber}</p>
+          <p style="font-size:15px;font-weight:700;color:#111827">${esc(order.orderNumber)}</p>
           <p>${fmtDate(order.createdAt)}</p>
-          ${order.table ? `<p style="margin-top:4px">টেবিল ${order.table.number} · ${order.table.floor}</p>` : ""}
+          ${order.table ? `<p style="margin-top:4px">টেবিল ${order.table.number} · ${esc(order.table.floor)}</p>` : ""}
         </div>
       </div>
 
@@ -294,9 +304,9 @@ export function buildA4InvoiceHtml(
       <div class="meta-grid">
         <div class="meta-box">
           <h3>বিল করা হয়েছে</h3>
-          <p>${order.customerName ?? "Walk-in Customer"}</p>
+          <p>${esc(order.customerName ?? "Walk-in Customer")}</p>
         </div>
-        ${order.waiter ? `<div class="meta-box"><h3>পরিষেবা কর্মী</h3><p>${order.waiter.user.name}</p></div>` : ""}
+        ${order.waiter ? `<div class="meta-box"><h3>পরিষেবা কর্মী</h3><p>${esc(order.waiter.user.name)}</p></div>` : ""}
       </div>
 
       <table>
@@ -334,12 +344,12 @@ export function buildA4InvoiceHtml(
 
       <div class="footer">
         <div class="footer-msg">
-          <p style="font-size:14px;font-weight:600;color:#111827;margin-bottom:4px">${shop.receiptFooter ?? "ধন্যবাদ! আবার আসবেন।"}</p>
-          ${shop.receiptHeaderLine1 ? `<p style="color:#9CA3AF">${shop.receiptHeaderLine1}</p>` : ""}
+          <p style="font-size:14px;font-weight:600;color:#111827;margin-bottom:4px">${esc(shop.receiptFooter ?? "ধন্যবাদ! আবার আসবেন।")}</p>
+          ${shop.receiptHeaderLine1 ? `<p style="color:#9CA3AF">${esc(shop.receiptHeaderLine1)}</p>` : ""}
         </div>
         ${shop.receiptShowQr && qrDataUrl
           ? `<div style="text-align:center">
-               <img src="${qrDataUrl}" style="width:80px;height:80px" alt="QR">
+               <img src="${esc(qrDataUrl)}" style="width:80px;height:80px" alt="QR">
                <p style="font-size:10px;color:#9CA3AF;margin-top:4px">স্ক্যান করে যাচাই</p>
              </div>`
           : ""
@@ -364,14 +374,14 @@ export function buildKotHtml(
   const itemRows = activeItems.map(item => `
     <div class="kot-item">
       <span class="qty">${item.quantity}×</span>
-      <span class="name">${item.menuItem.name}</span>
-      ${item.note ? `<div class="note">📝 ${item.note}</div>` : ""}
+      <span class="name">${esc(item.menuItem.name)}</span>
+      ${item.note ? `<div class="note">📝 ${esc(item.note)}</div>` : ""}
     </div>
   `).join('<div class="divider"></div>');
 
   return `<!DOCTYPE html><html><head>
     <meta charset="utf-8">
-    <title>KOT — ${order.orderNumber}</title>
+    <title>KOT — ${esc(order.orderNumber)}</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { font-family: 'Courier New', monospace; width: 80mm; padding: 8px; font-size: 12px; }
@@ -396,14 +406,14 @@ export function buildKotHtml(
       ${kotNumber ? `<div style="font-size:14px;font-weight:bold">${kotNumber}</div>` : ""}
     </div>
     <div class="info">
-      <div><span>অর্ডার</span><span><b>${order.orderNumber}</b></span></div>
+      <div><span>অর্ডার</span><span><b>${esc(order.orderNumber)}</b></span></div>
       <div><span>সময়</span><span>${new Date(order.createdAt).toLocaleTimeString("bn-BD")}</span></div>
-      ${order.table ? `<div><span>টেবিল</span><span><b>${order.table.number} (${order.table.floor})</b></span></div>` : ""}
-      ${order.waiter ? `<div><span>ওয়েটার</span><span>${order.waiter.user.name}</span></div>` : ""}
+      ${order.table ? `<div><span>টেবিল</span><span><b>${order.table.number} (${esc(order.table.floor)})</b></span></div>` : ""}
+      ${order.waiter ? `<div><span>ওয়েটার</span><span>${esc(order.waiter.user.name)}</span></div>` : ""}
     </div>
     <div style="border-top:2px solid #000;margin-bottom:6px"></div>
     ${itemRows}
-    ${order.note ? `<div class="order-note">📝 নোট: ${order.note}</div>` : ""}
+    ${order.note ? `<div class="order-note">📝 নোট: ${esc(order.note)}</div>` : ""}
     <div style="text-align:center;margin-top:12px;font-size:11px;color:#666">— KOT প্রিন্ট সম্পন্ন —</div>
     <div style="text-align:center;margin-top:8px" class="no-print">
       <button onclick="window.print()" style="padding:6px 16px;cursor:pointer">🖨️ প্রিন্ট</button>
