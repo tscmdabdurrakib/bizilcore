@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 import {
   Search, ShoppingCart, Plus, Minus, X, ChefHat, Loader2, Printer,
   RotateCcw, SendHorizonal, CreditCard, Wallet, Smartphone, Banknote,
-  CheckCircle, ChevronRight, Tag, UserCheck,
+  CheckCircle, ChevronRight, Tag, UserCheck, PauseCircle, ListOrdered,
+  Split, AlertCircle, ChevronDown,
 } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
 
@@ -54,6 +55,38 @@ interface Waiter {
   jobTitle?: string | null;
 }
 
+interface OrderSplit {
+  id: string;
+  splitIndex: number;
+  payerName: string | null;
+  amount: number;
+  paymentMethod: string;
+  transactionRef: string | null;
+}
+
+interface HeldOrder {
+  id: string;
+  orderNumber: string | null;
+  totalAmount: number;
+  customerName: string | null;
+  table: { number: number; floor: string } | null;
+  heldAt: string | null;
+  heldBy: string | null;
+  items: { menuItem: { name: string }; quantity: number }[];
+  splits: OrderSplit[];
+  paidAmount: number;
+  dueAmount: number;
+}
+
+// Split row for split bill UI
+interface SplitRow {
+  id: string;
+  payerName: string;
+  amount: string;
+  paymentMethod: string;
+  transactionRef: string;
+}
+
 const CATEGORY_LABELS: Record<string, string> = {
   all: "সব", starter: "স্টার্টার", main: "মেইন", drink: "পানীয়",
   dessert: "ডেজার্ট", snack: "স্ন্যাকস", soup: "স্যুপ",
@@ -80,6 +113,10 @@ const S = {
 
 function makeCartKey(menuItemId: string, variant: string | null, addons: MenuAddon[]) {
   return `${menuItemId}__${variant ?? ""}__${addons.map(a => a.name).sort().join(",")}`;
+}
+
+function makeSplitId() {
+  return Math.random().toString(36).slice(2);
 }
 
 export default function POSTerminal() {
@@ -113,10 +150,30 @@ export default function POSTerminal() {
   const [pickerAddons, setPickerAddons]           = useState<MenuAddon[]>([]);
   const [pickerVariantPrice, setPickerVariantPrice] = useState(0);
 
+  // Hold orders
+  const [heldOrders, setHeldOrders]   = useState<HeldOrder[]>([]);
+  const [showHeldPanel, setShowHeldPanel] = useState(false);
+  const [holdingOrder, setHoldingOrder] = useState(false);
+  const [recalling, setRecalling]     = useState(false);
+
+  // Split bill
+  const [showSplitModal, setShowSplitModal] = useState(false);
+  const [splitMode, setSplitMode]           = useState<"equal" | "custom" | "partial">("equal");
+  const [splitCount, setSplitCount]         = useState(2);
+  const [splitRows, setSplitRows]           = useState<SplitRow[]>([]);
+  const [savingSplit, setSavingSplit]       = useState(false);
+
   const showToast = (type: "success" | "error", msg: string) => {
     setToast({ type, msg });
     setTimeout(() => setToast(null), 3500);
   };
+
+  const loadHeldOrders = useCallback(async () => {
+    try {
+      const r = await fetch("/api/restaurant/orders?held=true");
+      if (r.ok) setHeldOrders(await r.json());
+    } catch {}
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -139,7 +196,8 @@ export default function POSTerminal() {
       }
     } catch {}
     setLoading(false);
-  }, []);
+    await loadHeldOrders();
+  }, [loadHeldOrders]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -166,12 +224,7 @@ export default function POSTerminal() {
     }
   };
 
-  const addCartItem = (
-    item: MenuItem,
-    variant: string | null,
-    unitPrice: number,
-    addons: MenuAddon[],
-  ) => {
+  const addCartItem = (item: MenuItem, variant: string | null, unitPrice: number, addons: MenuAddon[]) => {
     const addonTotal = addons.reduce((s, a) => s + a.price, 0);
     const finalPrice = unitPrice + addonTotal;
     const cartKey = makeCartKey(item.id, variant, addons);
@@ -316,6 +369,145 @@ export default function POSTerminal() {
     setSendingKot(false);
   };
 
+  // ── HOLD ORDER ──────────────────────────────────────────────────
+  const holdOrder = async () => {
+    if (!lastOrderId) return;
+    setHoldingOrder(true);
+    try {
+      const r = await fetch(`/api/restaurant/orders/${lastOrderId}/hold`, { method: "POST" });
+      if (r.ok) {
+        showToast("success", "✓ অর্ডার পার্ক করা হয়েছে");
+        clearCart();
+        await loadHeldOrders();
+      } else {
+        const d = await r.json();
+        showToast("error", d.error ?? "পার্ক করা যায়নি");
+      }
+    } catch { showToast("error", "Error"); }
+    setHoldingOrder(false);
+  };
+
+  // ── RECALL HELD ORDER ───────────────────────────────────────────
+  const recallHeldOrder = async (heldOrder: HeldOrder) => {
+    setRecalling(true);
+    try {
+      const r = await fetch(`/api/restaurant/orders/${heldOrder.id}/recall`, { method: "POST" });
+      if (!r.ok) {
+        const d = await r.json();
+        showToast("error", d.error ?? "Recall করা যায়নি");
+        setRecalling(false);
+        return;
+      }
+      // Restore order to active tracking (just set lastOrderId; items stay in DB)
+      setLastOrderId(heldOrder.id);
+      setKotSentForOrder(false);
+      setPaidOrderId(null);
+      setCart([]); // clear local cart since items are in DB
+      setShowHeldPanel(false);
+      showToast("success", `✓ অর্ডার ${heldOrder.orderNumber} ফিরিয়ে আনা হয়েছে`);
+      await loadHeldOrders();
+      await load();
+    } catch { showToast("error", "Error"); }
+    setRecalling(false);
+  };
+
+  // ── SPLIT BILL ──────────────────────────────────────────────────
+  const openSplitModal = () => {
+    if (!lastOrderId) { showToast("error", "আগে অর্ডার দিন"); return; }
+    setSplitMode("equal");
+    setSplitCount(2);
+    const equalAmt = (total / 2).toFixed(2);
+    setSplitRows([
+      { id: makeSplitId(), payerName: "", amount: equalAmt, paymentMethod: "cash", transactionRef: "" },
+      { id: makeSplitId(), payerName: "", amount: equalAmt, paymentMethod: "cash", transactionRef: "" },
+    ]);
+    setShowSplitModal(true);
+  };
+
+  const updateSplitMode = (mode: "equal" | "custom" | "partial") => {
+    setSplitMode(mode);
+    if (mode === "equal") {
+      const cnt = splitCount;
+      const each = (total / cnt).toFixed(2);
+      setSplitRows(Array.from({ length: cnt }, (_, i) => ({
+        id: makeSplitId(), payerName: "", amount: each, paymentMethod: "cash", transactionRef: "",
+      })));
+    } else if (mode === "custom") {
+      setSplitRows([
+        { id: makeSplitId(), payerName: "", amount: total.toFixed(2), paymentMethod: "cash", transactionRef: "" },
+      ]);
+    } else if (mode === "partial") {
+      setSplitRows([
+        { id: makeSplitId(), payerName: "আংশিক পেমেন্ট", amount: "0", paymentMethod: "cash", transactionRef: "" },
+      ]);
+    }
+  };
+
+  const updateEqualSplitCount = (cnt: number) => {
+    const c = Math.max(2, Math.min(10, cnt));
+    setSplitCount(c);
+    const each = (total / c).toFixed(2);
+    setSplitRows(Array.from({ length: c }, (_, i) => ({
+      id: makeSplitId(), payerName: "", amount: each, paymentMethod: "cash", transactionRef: "",
+    })));
+  };
+
+  const addSplitRow = () => {
+    setSplitRows(prev => [...prev, { id: makeSplitId(), payerName: "", amount: "0", paymentMethod: "cash", transactionRef: "" }]);
+  };
+
+  const removeSplitRow = (id: string) => {
+    setSplitRows(prev => prev.filter(r => r.id !== id));
+  };
+
+  const updateSplitRow = (id: string, field: keyof SplitRow, value: string) => {
+    setSplitRows(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
+  };
+
+  const splitTotalEntered = splitRows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
+  const splitDiff = total - splitTotalEntered;
+
+  const saveSplits = async () => {
+    if (!lastOrderId) return;
+    const validSplits = splitRows.filter(r => (parseFloat(r.amount) || 0) > 0);
+    if (validSplits.length === 0) { showToast("error", "কমপক্ষে একটি পেমেন্ট এন্ট্রি দিন"); return; }
+
+    const totalEntered = validSplits.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
+    if (splitMode !== "partial" && totalEntered < total - 0.5) {
+      showToast("error", `মোট পরিমাণ (৳${totalEntered.toFixed(2)}) বিলের চেয়ে কম। "আংশিক পেমেন্ট" মোড ব্যবহার করুন অথবা পরিমাণ মিলিয়ে নিন।`);
+      return;
+    }
+
+    setSavingSplit(true);
+    try {
+      const r = await fetch(`/api/restaurant/orders/${lastOrderId}/split`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          splits: validSplits.map(sp => ({
+            payerName: sp.payerName || null,
+            amount: parseFloat(sp.amount) || 0,
+            paymentMethod: sp.paymentMethod,
+            transactionRef: sp.transactionRef || null,
+          })),
+          isPartial: splitMode === "partial",
+        }),
+      });
+      const data = await r.json();
+      if (!r.ok) { showToast("error", data.error ?? "স্প্লিট সেভ হয়নি"); setSavingSplit(false); return; }
+
+      setShowSplitModal(false);
+      if (data.isFullyPaid) {
+        setPaidOrderId(lastOrderId);
+        showToast("success", `✓ পেমেন্ট সম্পন্ন! (${validSplits.length} জনের মধ্যে ভাগ করা)`);
+      } else {
+        showToast("success", `✓ আংশিক পেমেন্ট সেভ (৳${data.totalPaid?.toFixed(2)}) — বকেয়া: ৳${data.dueAmount?.toFixed(2)}`);
+      }
+      load();
+    } catch { showToast("error", "Error"); }
+    setSavingSplit(false);
+  };
+
   if (loading) return (
     <div className="flex justify-center items-center h-64">
       <Loader2 size={28} className="animate-spin" style={{ color: S.primary }} />
@@ -332,10 +524,23 @@ export default function POSTerminal() {
           <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#FFF7ED" }}>
             <ChefHat size={18} style={{ color: S.primary }} />
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="font-bold text-sm" style={{ color: S.text }}>POS টার্মিনাল</h1>
             <p className="text-xs" style={{ color: S.muted }}>{menuItems.filter(m => m.isAvailable).length}টি আইটেম</p>
           </div>
+          {/* Held orders button */}
+          <button onClick={() => { setShowHeldPanel(true); loadHeldOrders(); }}
+            className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all"
+            style={{ borderColor: heldOrders.length > 0 ? "#F59E0B" : S.border, color: heldOrders.length > 0 ? "#D97706" : S.muted, backgroundColor: heldOrders.length > 0 ? "#FFFBEB" : S.surface }}>
+            <PauseCircle size={14} />
+            পার্কড
+            {heldOrders.length > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full text-[9px] font-bold text-white flex items-center justify-center"
+                style={{ backgroundColor: "#F59E0B" }}>
+                {heldOrders.length}
+              </span>
+            )}
+          </button>
         </div>
 
         <div className="p-3 border-b" style={{ borderColor: S.border }}>
@@ -471,10 +676,15 @@ export default function POSTerminal() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {cart.length === 0 ? (
+          {cart.length === 0 && !lastOrderId ? (
             <div className="flex flex-col items-center justify-center h-full" style={{ color: S.muted }}>
               <ShoppingCart size={32} className="mb-3 opacity-30" />
               <p className="text-xs text-center">বাম দিক থেকে আইটেম বেছে নিন</p>
+            </div>
+          ) : lastOrderId && cart.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full" style={{ color: S.muted }}>
+              <CheckCircle size={28} className="mb-3 opacity-60" style={{ color: "#10B981" }} />
+              <p className="text-xs text-center font-medium">অর্ডার সক্রিয়<br />নিচে থেকে পেমেন্ট করুন</p>
             </div>
           ) : cart.map(item => (
             <div key={item.cartKey} className="p-3 rounded-2xl border" style={{ borderColor: S.border, backgroundColor: "var(--c-bg)" }}>
@@ -548,25 +758,42 @@ export default function POSTerminal() {
           </div>
 
           {lastOrderId && !paidOrderId && (
-            <div className="flex gap-2">
-              <button onClick={() => sendKot(lastOrderId!)} disabled={sendingKot || kotSentForOrder}
-                className="flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border transition-all"
-                style={{
-                  borderColor: kotSentForOrder ? "#16A34A" : S.primary,
-                  color: kotSentForOrder ? "#16A34A" : S.primary,
-                  backgroundColor: kotSentForOrder ? "#DCFCE7" : "#FFF7ED",
-                  opacity: kotSentForOrder ? 0.8 : 1,
-                }}>
-                {sendingKot ? <Loader2 size={12} className="animate-spin" /> : kotSentForOrder ? <CheckCircle size={12} /> : <SendHorizonal size={12} />}
-                {sendingKot ? "পাঠানো হচ্ছে…" : kotSentForOrder ? "KOT পাঠানো ✓" : "KOT পাঠান"}
-              </button>
-              <button onClick={openPayModal} disabled={submitting}
-                className="flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-white transition-all"
-                style={{ backgroundColor: S.primary }}>
-                {submitting ? <Loader2 size={12} className="animate-spin" /> : <CreditCard size={12} />}
-                {submitting ? "…" : "পেমেন্ট করুন"}
-              </button>
-            </div>
+            <>
+              <div className="flex gap-2">
+                <button onClick={() => sendKot(lastOrderId!)} disabled={sendingKot || kotSentForOrder}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border transition-all"
+                  style={{
+                    borderColor: kotSentForOrder ? "#16A34A" : S.primary,
+                    color: kotSentForOrder ? "#16A34A" : S.primary,
+                    backgroundColor: kotSentForOrder ? "#DCFCE7" : "#FFF7ED",
+                    opacity: kotSentForOrder ? 0.8 : 1,
+                  }}>
+                  {sendingKot ? <Loader2 size={12} className="animate-spin" /> : kotSentForOrder ? <CheckCircle size={12} /> : <SendHorizonal size={12} />}
+                  {sendingKot ? "পাঠানো হচ্ছে…" : kotSentForOrder ? "KOT ✓" : "KOT পাঠান"}
+                </button>
+                <button onClick={openPayModal} disabled={submitting}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 text-white transition-all"
+                  style={{ backgroundColor: S.primary }}>
+                  {submitting ? <Loader2 size={12} className="animate-spin" /> : <CreditCard size={12} />}
+                  {submitting ? "…" : "পেমেন্ট"}
+                </button>
+              </div>
+              {/* Hold & Split buttons */}
+              <div className="flex gap-2">
+                <button onClick={holdOrder} disabled={holdingOrder}
+                  className="flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 border transition-all"
+                  style={{ borderColor: "#F59E0B", color: "#D97706", backgroundColor: "#FFFBEB" }}>
+                  {holdingOrder ? <Loader2 size={11} className="animate-spin" /> : <PauseCircle size={11} />}
+                  পার্ক করুন
+                </button>
+                <button onClick={openSplitModal}
+                  className="flex-1 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 border transition-all"
+                  style={{ borderColor: "#8B5CF6", color: "#7C3AED", backgroundColor: "#F5F3FF" }}>
+                  <Split size={11} />
+                  বিল ভাগ করুন
+                </button>
+              </div>
+            </>
           )}
           {paidOrderId && (
             <div className="w-full py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2"
@@ -583,11 +810,78 @@ export default function POSTerminal() {
               {submitting ? "প্রসেস হচ্ছে…" : "অর্ডার দিন"}
             </button>
           )}
+
+          {paidOrderId && (
+            <button onClick={clearCart} className="w-full py-2.5 rounded-xl text-xs font-bold border flex items-center justify-center gap-2 transition-all"
+              style={{ borderColor: S.border, color: S.muted }}>
+              <RotateCcw size={12} /> নতুন অর্ডার
+            </button>
+          )}
         </div>
       </div>
     </div>
 
-    {/* Variant & Addon Picker Modal */}
+    {/* ── HELD ORDERS PANEL ───────────────────────────────────────── */}
+    {showHeldPanel && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div className="w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+          style={{ backgroundColor: S.surface }}>
+          <div className="p-5 border-b flex items-center justify-between" style={{ borderColor: S.border }}>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#FFFBEB" }}>
+                <PauseCircle size={18} style={{ color: "#D97706" }} />
+              </div>
+              <div>
+                <h3 className="font-bold text-base" style={{ color: S.text }}>পার্কড অর্ডার</h3>
+                <p className="text-xs" style={{ color: S.muted }}>{heldOrders.length}টি অর্ডার পার্ক করা আছে</p>
+              </div>
+            </div>
+            <button onClick={() => setShowHeldPanel(false)}><X size={18} style={{ color: S.muted }} /></button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {heldOrders.length === 0 ? (
+              <div className="text-center py-12" style={{ color: S.muted }}>
+                <PauseCircle size={32} className="mx-auto mb-3 opacity-30" />
+                <p className="text-sm">কোনো পার্কড অর্ডার নেই</p>
+              </div>
+            ) : heldOrders.map(ho => (
+              <div key={ho.id} className="p-4 rounded-2xl border" style={{ borderColor: "#F59E0B30", backgroundColor: "#FFFBEB" }}>
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div>
+                    <p className="font-bold text-sm" style={{ color: S.text }}>{ho.orderNumber ?? ho.id.slice(0, 8)}</p>
+                    {ho.table && <p className="text-xs" style={{ color: S.muted }}>টেবিল {ho.table.number} ({ho.table.floor})</p>}
+                    {ho.customerName && <p className="text-xs" style={{ color: S.muted }}>{ho.customerName}</p>}
+                    <p className="text-[10px] mt-1" style={{ color: "#D97706" }}>
+                      {ho.heldAt ? `পার্কড: ${new Date(ho.heldAt).toLocaleTimeString("bn-BD")}` : ""}{ho.heldBy ? ` — ${ho.heldBy}` : ""}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-sm" style={{ color: S.primary }}>{formatBDT(ho.totalAmount)}</p>
+                    {ho.dueAmount > 0 && (
+                      <p className="text-[10px] mt-0.5" style={{ color: "#EF4444" }}>বকেয়া: {formatBDT(ho.dueAmount)}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="mb-3">
+                  {ho.items.slice(0, 3).map((item, i) => (
+                    <p key={i} className="text-[10px]" style={{ color: S.muted }}>• {item.menuItem.name} ×{item.quantity}</p>
+                  ))}
+                  {ho.items.length > 3 && <p className="text-[10px]" style={{ color: S.muted }}>...আরও {ho.items.length - 3}টি আইটেম</p>}
+                </div>
+                <button onClick={() => recallHeldOrder(ho)} disabled={recalling}
+                  className="w-full py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 text-white transition-all"
+                  style={{ backgroundColor: "#D97706" }}>
+                  {recalling ? <Loader2 size={12} className="animate-spin" /> : <ListOrdered size={12} />}
+                  এই অর্ডারটি তুলুন
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ── VARIANT & ADDON PICKER MODAL ──────────────────────────── */}
     {pickerItem && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
         <div className="w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden" style={{ backgroundColor: S.surface }}>
@@ -674,7 +968,7 @@ export default function POSTerminal() {
       </div>
     )}
 
-    {/* Payment Method Modal */}
+    {/* ── PAYMENT METHOD MODAL ───────────────────────────────────── */}
     {showPayModal && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
         <div className="w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden" style={{ backgroundColor: S.surface }}>
@@ -718,47 +1012,186 @@ export default function POSTerminal() {
                 <span style={{ color: S.primary }}>{formatBDT(total)}</span>
               </div>
             </div>
+
             {selectedWaiter && waiters.find(w => w.id === selectedWaiter) && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
-                style={{ backgroundColor: "#FFF7ED", border: `1px solid ${S.primary}20` }}>
-                <div className="w-6 h-6 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
-                  style={{ fontSize: 9, backgroundColor: S.primary }}>
-                  {waiters.find(w => w.id === selectedWaiter)!.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
-                </div>
-                <span className="text-xs font-semibold" style={{ color: S.primary }}>
-                  {waiters.find(w => w.id === selectedWaiter)!.name}
-                </span>
-                <span className="text-[10px] ml-auto" style={{ color: S.muted }}>নির্বাচিত ওয়েটার</span>
+              <div>
+                <label className="text-xs font-medium block mb-1.5" style={{ color: S.muted }}>টিপস পরিমাণ (ঐচ্ছিক)</label>
+                <input value={tipAmount} onChange={e => setTipAmount(e.target.value)}
+                  type="number" min="0" step="10" placeholder="০"
+                  className="w-full px-3 py-2 rounded-xl text-sm border outline-none"
+                  style={{ borderColor: S.border, backgroundColor: "var(--c-bg)", color: S.text }} />
               </div>
             )}
-            <div>
-              <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>
-                টিপ পরিমাণ (৳) — ঐচ্ছিক
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={tipAmount}
-                onChange={e => setTipAmount(e.target.value)}
-                placeholder="০"
-                className="w-full px-3 py-2 rounded-xl text-sm border outline-none"
-                style={{ borderColor: S.border, backgroundColor: "var(--c-bg)", color: S.text }}
-              />
-            </div>
+
             <button onClick={completePayment} disabled={submitting}
-              className="w-full py-3.5 rounded-2xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60"
+              className="w-full py-3.5 rounded-2xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50"
               style={{ backgroundColor: S.primary }}>
               {submitting ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-              {submitting ? "প্রসেস হচ্ছে…" : `${formatBDT(total)} — পেমেন্ট নিশ্চিত করুন`}
+              {submitting ? "প্রসেস হচ্ছে…" : "পেমেন্ট নিশ্চিত করুন"}
             </button>
           </div>
         </div>
       </div>
     )}
 
+    {/* ── SPLIT BILL MODAL ───────────────────────────────────────── */}
+    {showSplitModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div className="w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+          style={{ backgroundColor: S.surface }}>
+          <div className="p-5 border-b flex items-center justify-between" style={{ borderColor: S.border }}>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#F5F3FF" }}>
+                <Split size={18} style={{ color: "#7C3AED" }} />
+              </div>
+              <div>
+                <h3 className="font-bold text-base" style={{ color: S.text }}>বিল ভাগ করুন</h3>
+                <p className="text-xs" style={{ color: S.muted }}>সর্বমোট: {formatBDT(total)}</p>
+              </div>
+            </div>
+            <button onClick={() => setShowSplitModal(false)}><X size={18} style={{ color: S.muted }} /></button>
+          </div>
+
+          <div className="p-5 space-y-4 flex-1 overflow-y-auto">
+            {/* Mode selector */}
+            <div className="flex gap-2 p-1 rounded-xl" style={{ backgroundColor: "var(--c-bg)" }}>
+              {([
+                { key: "equal", label: "সমানভাবে" },
+                { key: "custom", label: "কাস্টম পরিমাণ" },
+                { key: "partial", label: "আংশিক পেমেন্ট" },
+              ] as const).map(m => (
+                <button key={m.key} onClick={() => updateSplitMode(m.key)}
+                  className="flex-1 py-2 rounded-lg text-[11px] font-bold transition-all"
+                  style={{
+                    backgroundColor: splitMode === m.key ? "#7C3AED" : "transparent",
+                    color: splitMode === m.key ? "#fff" : S.muted,
+                  }}>
+                  {m.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Equal split count */}
+            {splitMode === "equal" && (
+              <div className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: "var(--c-bg)" }}>
+                <span className="text-xs font-medium flex-1" style={{ color: S.text }}>কতজনের মধ্যে ভাগ করবেন?</span>
+                <div className="flex items-center gap-2 border rounded-lg overflow-hidden" style={{ borderColor: S.border }}>
+                  <button onClick={() => updateEqualSplitCount(splitCount - 1)}
+                    className="w-8 h-8 flex items-center justify-center hover:bg-red-50">
+                    <Minus size={13} style={{ color: "#EF4444" }} />
+                  </button>
+                  <span className="text-sm font-bold px-2 min-w-[28px] text-center" style={{ color: S.text }}>{splitCount}</span>
+                  <button onClick={() => updateEqualSplitCount(splitCount + 1)}
+                    className="w-8 h-8 flex items-center justify-center hover:bg-green-50">
+                    <Plus size={13} style={{ color: "#10B981" }} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Info banner for partial */}
+            {splitMode === "partial" && (
+              <div className="flex items-start gap-2 p-3 rounded-xl" style={{ backgroundColor: "#EFF6FF", border: "1px solid #BFDBFE" }}>
+                <AlertCircle size={14} style={{ color: "#3B82F6", flexShrink: 0, marginTop: 1 }} />
+                <p className="text-[11px]" style={{ color: "#1D4ED8" }}>
+                  আংশিক পেমেন্ট নিলে অর্ডার পেইড হবে না। বকেয়া amount order-এ দেখা যাবে।
+                </p>
+              </div>
+            )}
+
+            {/* Split rows */}
+            <div className="space-y-3">
+              {splitRows.map((row, idx) => (
+                <div key={row.id} className="p-3 rounded-2xl border space-y-2" style={{ borderColor: "#8B5CF620", backgroundColor: "#F5F3FF80" }}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold" style={{ color: "#7C3AED" }}>
+                      {splitMode === "equal" ? `জন ${idx + 1}` : splitMode === "partial" ? "আংশিক পেমেন্ট" : `পেমেন্ট ${idx + 1}`}
+                    </span>
+                    {splitMode === "custom" && splitRows.length > 1 && (
+                      <button onClick={() => removeSplitRow(row.id)}><X size={13} style={{ color: "#EF4444" }} /></button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-medium mb-1 block" style={{ color: S.muted }}>নাম (ঐচ্ছিক)</label>
+                      <input value={row.payerName} onChange={e => updateSplitRow(row.id, "payerName", e.target.value)}
+                        placeholder="পেয়ারের নাম"
+                        className="w-full px-2.5 py-1.5 rounded-lg text-xs border outline-none"
+                        style={{ borderColor: S.border, backgroundColor: "var(--c-bg)", color: S.text }} />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-medium mb-1 block" style={{ color: S.muted }}>পরিমাণ (৳)</label>
+                      <input value={row.amount} onChange={e => updateSplitRow(row.id, "amount", e.target.value)}
+                        type="number" min="0" step="1" placeholder="০"
+                        className="w-full px-2.5 py-1.5 rounded-lg text-xs border outline-none font-bold"
+                        readOnly={splitMode === "equal"}
+                        style={{ borderColor: S.border, backgroundColor: splitMode === "equal" ? "#E9D5FF40" : "var(--c-bg)", color: S.text }} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-medium mb-1 block" style={{ color: S.muted }}>পেমেন্ট পদ্ধতি</label>
+                      <select value={row.paymentMethod} onChange={e => updateSplitRow(row.id, "paymentMethod", e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-lg text-xs border outline-none"
+                        style={{ borderColor: S.border, backgroundColor: "var(--c-bg)", color: S.text }}>
+                        {PAYMENT_METHODS.map(pm => <option key={pm.value} value={pm.value}>{pm.label}</option>)}
+                      </select>
+                    </div>
+                    {(row.paymentMethod === "bkash" || row.paymentMethod === "nagad" || row.paymentMethod === "card") && (
+                      <div>
+                        <label className="text-[10px] font-medium mb-1 block" style={{ color: S.muted }}>Txn রেফারেন্স</label>
+                        <input value={row.transactionRef} onChange={e => updateSplitRow(row.id, "transactionRef", e.target.value)}
+                          placeholder="TXN ID"
+                          className="w-full px-2.5 py-1.5 rounded-lg text-xs border outline-none"
+                          style={{ borderColor: S.border, backgroundColor: "var(--c-bg)", color: S.text }} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {splitMode === "custom" && (
+                <button onClick={addSplitRow}
+                  className="w-full py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition-all"
+                  style={{ borderColor: "#8B5CF6", color: "#7C3AED", borderStyle: "dashed" }}>
+                  <Plus size={13} /> আরেকজন যোগ করুন
+                </button>
+              )}
+            </div>
+
+            {/* Total summary */}
+            <div className="p-3 rounded-xl space-y-1" style={{ backgroundColor: "var(--c-bg)" }}>
+              <div className="flex justify-between text-xs" style={{ color: S.muted }}>
+                <span>মোট বিল</span><span>{formatBDT(total)}</span>
+              </div>
+              <div className="flex justify-between text-xs" style={{ color: S.muted }}>
+                <span>এন্টার করা মোট</span>
+                <span style={{ color: splitDiff < -0.5 ? "#EF4444" : "#10B981" }}>{formatBDT(splitTotalEntered)}</span>
+              </div>
+              {Math.abs(splitDiff) > 0.5 && (
+                <div className="flex justify-between text-xs font-semibold" style={{ color: splitDiff > 0 ? "#EF4444" : "#10B981" }}>
+                  <span>{splitDiff > 0 ? "বাকি" : "বেশি এন্টার"}</span>
+                  <span>{formatBDT(Math.abs(splitDiff))}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="p-5 border-t" style={{ borderColor: S.border }}>
+            <button onClick={saveSplits} disabled={savingSplit}
+              className="w-full py-3.5 rounded-2xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50"
+              style={{ backgroundColor: "#7C3AED" }}>
+              {savingSplit ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+              {savingSplit ? "সেভ হচ্ছে…" : splitMode === "partial" ? "আংশিক পেমেন্ট সেভ করুন" : "পেমেন্ট সম্পন্ন করুন"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Toast */}
     {toast && (
-      <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg"
-        style={{ backgroundColor: toast.type === "success" ? "#10B981" : "#EF4444" }}>
+      <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold text-white transition-all ${toast.type === "success" ? "bg-green-600" : "bg-red-500"}`}>
         {toast.msg}
       </div>
     )}

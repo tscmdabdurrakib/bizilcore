@@ -24,6 +24,7 @@ const ORDER_INCLUDE = {
   table: { select: { id: true, number: true, floor: true } },
   kotTickets: { select: { id: true, kotNumber: true, sentAt: true, kitchenStatus: true } },
   waiter: { select: { id: true, user: { select: { name: true } } } },
+  splits: { orderBy: { splitIndex: "asc" as const } },
 };
 
 async function generateOrderNumber(shopId: string, restOrderPrefix: string | null): Promise<string> {
@@ -51,6 +52,7 @@ export async function GET(req: NextRequest) {
   const statuses = searchParams.getAll("status");
   const tableId = searchParams.get("tableId");
   const date = searchParams.get("date");
+  const held = searchParams.get("held");
 
   let dateFilter: { gte?: Date; lt?: Date } | undefined;
   if (date) {
@@ -61,11 +63,17 @@ export async function GET(req: NextRequest) {
   }
 
   const ACTIVE_STATUSES = ["pending", "preparing", "ready", "served", "billing"];
-  const statusFilter =
-    statuses.length === 1 ? { status: statuses[0] } :
-    statuses.length > 1  ? { status: { in: statuses } } :
-    searchParams.get("all") === "true" ? {} :
-    { status: { in: ACTIVE_STATUSES } };
+
+  let statusFilter: object = {};
+  if (held === "true") {
+    statusFilter = { isHeld: true, status: { not: "paid" } };
+  } else {
+    statusFilter =
+      statuses.length === 1 ? { status: statuses[0] } :
+      statuses.length > 1  ? { status: { in: statuses } } :
+      searchParams.get("all") === "true" ? {} :
+      { status: { in: ACTIVE_STATUSES }, isHeld: false };
+  }
 
   const orders = await prisma.restaurantOrder.findMany({
     where: {

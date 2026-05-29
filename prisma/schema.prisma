@@ -1492,12 +1492,14 @@ model RestaurantOrder {
   billRequested Boolean               @default(false)
   items         RestaurantOrderItem[]
   kotTickets    KotTicket[]
+  splits        OrderSplit[]
   subtotal      Float                 @default(0)
   discount      Float                 @default(0)
   vatAmount     Float                 @default(0)
   serviceAmount Float                 @default(0)
   totalAmount   Float
   paidAmount    Float                 @default(0)
+  dueAmount     Float                 @default(0)
   tipAmount     Float                 @default(0)
   paymentMethod String?               @default("cash")
   kotSent       Boolean               @default(false)
@@ -1513,6 +1515,9 @@ model RestaurantOrder {
   refundAmount  Float?
   refundReason  String?
   refundedBy    String?
+  isHeld        Boolean               @default(false)
+  heldAt        DateTime?
+  heldBy        String?
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @updatedAt
 
@@ -1521,6 +1526,21 @@ model RestaurantOrder {
   @@index([shopId, createdAt])
   @@index([shopId, waiterId])
   @@index([shopId, isVoided])
+  @@index([shopId, isHeld])
+}
+
+model OrderSplit {
+  id            String          @id @default(cuid())
+  orderId       String
+  order         RestaurantOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  splitIndex    Int
+  payerName     String?
+  amount        Float
+  paymentMethod String          @default("cash")
+  transactionRef String?
+  paidAt        DateTime        @default(now())
+
+  @@index([orderId])
 }
 
 model KotTicket {
