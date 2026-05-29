@@ -70,13 +70,12 @@ export default function DatePicker({
       setViewYear(selected.getFullYear());
       setViewMonth(selected.getMonth());
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
   useEffect(() => {
     const handleDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", handleDown);
     return () => document.removeEventListener("mousedown", handleDown);
@@ -84,8 +83,7 @@ export default function DatePicker({
 
   useEffect(() => {
     if (showYearDropdown && yearRef.current) {
-      const active = yearRef.current.querySelector("[data-active]");
-      active?.scrollIntoView({ block: "center" });
+      yearRef.current.querySelector("[data-active]")?.scrollIntoView({ block: "center" });
     }
   }, [showYearDropdown]);
 
@@ -93,6 +91,7 @@ export default function DatePicker({
     setViewMonth(m => { if (m === 0) { setViewYear(y => y - 1); return 11; } return m - 1; });
     setShowYearDropdown(false); setShowMonthDropdown(false);
   }, []);
+
   const nextMonth = useCallback(() => {
     setViewMonth(m => { if (m === 11) { setViewYear(y => y + 1); return 0; } return m + 1; });
     setShowYearDropdown(false); setShowMonthDropdown(false);
@@ -137,44 +136,63 @@ export default function DatePicker({
   const yearMax = today.getFullYear() + 20;
   const years = Array.from({ length: yearMax - yearMin + 1 }, (_, i) => yearMin + i);
 
+  /* ── CSS-variable-based styles (auto light/dark via html.dark) ── */
+  const S = {
+    surface:   "var(--c-surface)",
+    border:    "var(--c-border)",
+    text:      "var(--c-text)",
+    sub:       "var(--c-text-sub)",
+    muted:     "var(--c-text-muted)",
+    bg:        "var(--c-bg)",
+    primary:   "var(--c-primary)",
+    primaryLt: "var(--c-primary-light)",
+    primaryTx: "var(--c-primary-text)",
+  };
+
+  const triggerStyle: React.CSSProperties = {
+    backgroundColor: S.surface,
+    borderColor: open ? S.primary : S.border,
+    boxShadow: open ? `0 0 0 3px ${S.primaryLt}` : "none",
+    opacity: disabled ? 0.6 : 1,
+    transition: "border-color 0.15s, box-shadow 0.15s",
+  };
+
+  const popupStyle: React.CSSProperties = {
+    backgroundColor: S.surface,
+    borderColor: S.border,
+    color: S.text,
+  };
+
+  const dropdownStyle: React.CSSProperties = {
+    backgroundColor: S.surface,
+    borderColor: S.border,
+  };
+
   return (
     <div ref={ref} className={`relative ${className}`} style={style}>
       {name && <input type="hidden" name={name} value={value} required={required} id={id} />}
 
-      {/* ——— Trigger wrapper ——— */}
+      {/* ——— Trigger ——— */}
       <div
-        className={[
-          "w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-all duration-150 outline-none group",
-          "bg-white dark:bg-gray-800 relative",
-          disabled
-            ? "border-gray-200 dark:border-gray-700 opacity-60"
-            : open
-              ? "border-emerald-500 ring-2 ring-emerald-100 dark:ring-emerald-900"
-              : "border-gray-200 dark:border-gray-600 hover:border-emerald-400",
-        ].join(" ")}
+        className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg border cursor-pointer group"
+        style={triggerStyle}
+        onClick={() => !disabled && setOpen(o => !o)}
+        role="button"
+        tabIndex={disabled ? -1 : 0}
+        onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); !disabled && setOpen(o => !o); }}}
       >
-        {/* Clickable area to open calendar */}
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => !disabled && setOpen(o => !o)}
-          className="flex items-center gap-2 flex-1 min-w-0 text-left outline-none bg-transparent"
-          tabIndex={0}
-        >
-          <Calendar
-            size={14}
-            className={`flex-shrink-0 transition-colors ${open ? "text-emerald-500" : "text-gray-400 group-hover:text-emerald-400"}`}
-          />
-          <span className={`flex-1 truncate text-sm ${displayValue ? "text-gray-800 dark:text-gray-100" : "text-gray-400"}`}>
-            {displayValue || placeholder}
-          </span>
-        </button>
-        {/* Clear / chevron — outside the trigger button */}
+        <Calendar size={14} style={{ color: open ? S.primary : S.muted, flexShrink: 0, transition: "color 0.15s" }} />
+        <span className="flex-1 truncate text-sm" style={{ color: displayValue ? S.text : S.muted }}>
+          {displayValue || placeholder}
+        </span>
         {value && !disabled ? (
           <button
             type="button"
             onClick={e => { e.stopPropagation(); onChange(""); setOpen(false); }}
-            className="flex-shrink-0 text-gray-300 hover:text-red-400 rounded transition-colors p-0.5 outline-none"
+            className="flex-shrink-0 p-0.5 rounded transition-colors outline-none"
+            style={{ color: S.muted }}
+            onMouseEnter={e => (e.currentTarget.style.color = "#E24B4A")}
+            onMouseLeave={e => (e.currentTarget.style.color = S.muted)}
             tabIndex={-1}
           >
             <X size={12} />
@@ -182,26 +200,27 @@ export default function DatePicker({
         ) : (
           <ChevronDown
             size={13}
-            className={`flex-shrink-0 pointer-events-none transition-transform text-gray-300 ${open ? "rotate-180" : ""}`}
+            className="flex-shrink-0 pointer-events-none transition-transform"
+            style={{ color: S.muted, transform: open ? "rotate(180deg)" : "rotate(0)" }}
           />
         )}
       </div>
 
       {/* ——— Calendar popup ——— */}
       {open && (
-        <div className={[
-          "absolute z-[9999] mt-1.5 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl",
-          "border border-gray-100 dark:border-gray-700 p-4 w-[17rem]",
-          "animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-150",
-          "left-0",
-        ].join(" ")}>
-
+        <div
+          className="absolute z-[9999] mt-1.5 rounded-2xl shadow-2xl border p-4 w-[17rem] animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-150 left-0"
+          style={popupStyle}
+        >
           {/* ── Header ── */}
           <div className="flex items-center gap-1 mb-3">
             <button
               type="button"
               onClick={prevMonth}
-              className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 transition-colors"
+              className="p-1.5 rounded-lg transition-colors outline-none"
+              style={{ color: S.muted }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = S.bg)}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
             >
               <ChevronLeft size={15} />
             </button>
@@ -212,18 +231,31 @@ export default function DatePicker({
                 <button
                   type="button"
                   onClick={() => { setShowMonthDropdown(v => !v); setShowYearDropdown(false); }}
-                  className="text-sm font-bold text-gray-800 dark:text-gray-100 hover:text-emerald-600 px-2 py-0.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+                  className="text-sm font-bold px-2 py-0.5 rounded-lg transition-colors outline-none"
+                  style={{ color: S.text }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = S.primary; (e.currentTarget as HTMLButtonElement).style.backgroundColor = S.primaryLt; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = S.text; (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
                 >
                   {MONTHS[viewMonth]}
                 </button>
                 {showMonthDropdown && (
-                  <div className="absolute z-10 top-full left-1/2 -translate-x-1/2 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-xl w-32 max-h-48 overflow-y-auto">
+                  <div
+                    className="absolute z-10 top-full left-1/2 -translate-x-1/2 mt-1 rounded-xl shadow-xl w-32 max-h-48 overflow-y-auto border"
+                    style={dropdownStyle}
+                  >
                     {MONTHS.map((m, i) => (
                       <button
                         key={m}
                         type="button"
                         onClick={() => { setViewMonth(i); setShowMonthDropdown(false); }}
-                        className={`w-full text-xs px-3 py-1.5 text-left hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors ${i === viewMonth ? "text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-900/20" : "text-gray-700 dark:text-gray-300"}`}
+                        className="w-full text-xs px-3 py-1.5 text-left transition-colors outline-none"
+                        style={{
+                          color: i === viewMonth ? S.primary : S.text,
+                          fontWeight: i === viewMonth ? 700 : 400,
+                          backgroundColor: i === viewMonth ? S.primaryLt : "transparent",
+                        }}
+                        onMouseEnter={e => { if (i !== viewMonth) (e.currentTarget as HTMLButtonElement).style.backgroundColor = S.bg; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = i === viewMonth ? S.primaryLt : "transparent"; }}
                       >
                         {m}
                       </button>
@@ -237,19 +269,32 @@ export default function DatePicker({
                 <button
                   type="button"
                   onClick={() => { setShowYearDropdown(v => !v); setShowMonthDropdown(false); }}
-                  className="text-sm font-bold text-gray-800 dark:text-gray-100 hover:text-emerald-600 px-2 py-0.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+                  className="text-sm font-bold px-2 py-0.5 rounded-lg transition-colors outline-none"
+                  style={{ color: S.text }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = S.primary; (e.currentTarget as HTMLButtonElement).style.backgroundColor = S.primaryLt; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = S.text; (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
                 >
                   {viewYear}
                 </button>
                 {showYearDropdown && (
-                  <div className="absolute z-10 top-full left-1/2 -translate-x-1/2 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-xl w-20 max-h-48 overflow-y-auto">
+                  <div
+                    className="absolute z-10 top-full left-1/2 -translate-x-1/2 mt-1 rounded-xl shadow-xl w-20 max-h-48 overflow-y-auto border"
+                    style={dropdownStyle}
+                  >
                     {years.map(y => (
                       <button
                         key={y}
                         type="button"
                         data-active={y === viewYear ? "" : undefined}
                         onClick={() => { setViewYear(y); setShowYearDropdown(false); }}
-                        className={`w-full text-xs px-3 py-1.5 text-left hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors ${y === viewYear ? "text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-900/20" : "text-gray-700 dark:text-gray-300"}`}
+                        className="w-full text-xs px-3 py-1.5 text-left transition-colors outline-none"
+                        style={{
+                          color: y === viewYear ? S.primary : S.text,
+                          fontWeight: y === viewYear ? 700 : 400,
+                          backgroundColor: y === viewYear ? S.primaryLt : "transparent",
+                        }}
+                        onMouseEnter={e => { if (y !== viewYear) (e.currentTarget as HTMLButtonElement).style.backgroundColor = S.bg; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = y === viewYear ? S.primaryLt : "transparent"; }}
                       >
                         {y}
                       </button>
@@ -262,7 +307,10 @@ export default function DatePicker({
             <button
               type="button"
               onClick={nextMonth}
-              className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 transition-colors"
+              className="p-1.5 rounded-lg transition-colors outline-none"
+              style={{ color: S.muted }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = S.bg)}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
             >
               <ChevronRight size={15} />
             </button>
@@ -273,7 +321,8 @@ export default function DatePicker({
             {DAYS_SHORT.map((d, i) => (
               <div
                 key={d}
-                className={`text-center text-[10px] font-semibold py-1 ${i === 0 || i === 6 ? "text-red-400" : "text-gray-400"}`}
+                className="text-center text-[10px] font-semibold py-1"
+                style={{ color: i === 0 || i === 6 ? "#E24B4A" : S.muted }}
               >
                 {d}
               </div>
@@ -288,29 +337,51 @@ export default function DatePicker({
               const tod = isToday(day);
               const dis = isDisabled(day);
               const isWeekend = (firstDayOfMonth + day - 1) % 7 === 0 || (firstDayOfMonth + day - 1) % 7 === 6;
+
+              let bgColor = "transparent";
+              let textColor = isWeekend ? "#E24B4A" : S.text;
+              let boxShadow = "none";
+
+              if (sel) {
+                bgColor = S.primary;
+                textColor = "#FFFFFF";
+                boxShadow = "0 2px 8px rgba(15,110,86,0.3)";
+              } else if (tod) {
+                bgColor = S.primaryLt;
+                textColor = S.primary;
+                boxShadow = `0 0 0 2px ${S.primary}`;
+              } else if (dis) {
+                textColor = S.muted;
+              }
+
               return (
                 <button
                   key={i}
                   type="button"
                   disabled={dis}
                   onClick={() => handleSelect(day)}
-                  className={[
-                    "relative flex items-center justify-center h-8 w-full text-xs font-medium rounded-lg transition-all duration-100",
-                    dis ? "text-gray-200 dark:text-gray-600 cursor-not-allowed" : "cursor-pointer",
-                    sel
-                      ? "bg-emerald-500 text-white shadow-md shadow-emerald-200 dark:shadow-emerald-900 scale-105"
-                      : tod
-                        ? "text-emerald-600 dark:text-emerald-400 font-extrabold ring-2 ring-emerald-400 ring-offset-1 bg-emerald-50 dark:bg-emerald-900/30"
-                        : dis
-                          ? ""
-                          : isWeekend
-                            ? "text-red-400 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-                            : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700",
-                  ].join(" ")}
+                  className="relative flex items-center justify-center h-8 w-full text-xs font-medium rounded-lg transition-all duration-100 outline-none"
+                  style={{
+                    backgroundColor: bgColor,
+                    color: textColor,
+                    boxShadow,
+                    cursor: dis ? "not-allowed" : "pointer",
+                    transform: sel ? "scale(1.05)" : "scale(1)",
+                  }}
+                  onMouseEnter={e => {
+                    if (!sel && !dis) (e.currentTarget as HTMLButtonElement).style.backgroundColor = S.bg;
+                  }}
+                  onMouseLeave={e => {
+                    if (!sel && !tod) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
+                    else if (tod) (e.currentTarget as HTMLButtonElement).style.backgroundColor = S.primaryLt;
+                  }}
                 >
                   {day}
                   {tod && !sel && (
-                    <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-emerald-500" />
+                    <span
+                      className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
+                      style={{ backgroundColor: S.primary }}
+                    />
                   )}
                 </button>
               );
@@ -318,11 +389,17 @@ export default function DatePicker({
           </div>
 
           {/* ── Footer ── */}
-          <div className="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+          <div
+            className="mt-3 pt-2.5 flex items-center justify-between border-t"
+            style={{ borderColor: S.border }}
+          >
             <button
               type="button"
               onClick={() => { onChange(toYMD(today)); setOpen(false); }}
-              className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 px-2 py-1 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+              className="text-xs font-semibold px-2 py-1 rounded-lg transition-colors outline-none"
+              style={{ color: S.primary }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = S.primaryLt)}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}
             >
               আজকের তারিখ
             </button>
@@ -330,7 +407,10 @@ export default function DatePicker({
               <button
                 type="button"
                 onClick={() => { onChange(""); setOpen(false); }}
-                className="text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                className="text-xs px-2 py-1 rounded-lg transition-colors outline-none"
+                style={{ color: S.muted }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#E24B4A"; (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#FFE8E8"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = S.muted; (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
               >
                 মুছে দিন
               </button>

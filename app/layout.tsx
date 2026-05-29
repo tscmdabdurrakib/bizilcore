@@ -19,6 +19,8 @@ export const metadata: Metadata = {
   description: "ফেসবুক সেলারদের জন্য সম্পূর্ণ ব্যবসা ম্যানেজমেন্ট প্ল্যাটফর্ম",
 };
 
+const darkInitScript = `try{if(localStorage.getItem('bizilcore-dark')==='1')document.documentElement.classList.add('dark')}catch(e){}`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="bn" className={`${inter.variable} ${sora.variable} h-full`} suppressHydrationWarning>
       <head>
-        <script src="/dark-init.js" />
+        <script dangerouslySetInnerHTML={{ __html: darkInitScript }} />
       </head>
       <body className="min-h-full antialiased" suppressHydrationWarning>
         <Providers>{children}</Providers>
