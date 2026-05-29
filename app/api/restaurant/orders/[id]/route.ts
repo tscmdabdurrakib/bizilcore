@@ -348,6 +348,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       data: {
         status: "paid",
         paidAmount: totalAmount,
+        dueAmount: 0,
         tipAmount,
         paymentMethod,
         discount,

@@ -46,13 +46,34 @@ export async function GET(req: NextRequest) {
     const nextDay = new Date(date);
     nextDay.setDate(date.getDate() + 1);
 
-    const orders = await prisma.restaurantOrder.findMany({
-      where: { shopId: shop.id, status: "paid", createdAt: { gte: date, lt: nextDay } },
-      include: {
-        items: { include: { menuItem: { select: { name: true, price: true } } } },
-        waiter: { select: { id: true, user: { select: { name: true } } } },
-      },
-    });
+    const [orders, partialOrders, allOpenDueOrders] = await Promise.all([
+      prisma.restaurantOrder.findMany({
+        where: { shopId: shop.id, status: "paid", createdAt: { gte: date, lt: nextDay }, isVoided: false },
+        include: {
+          items: { include: { menuItem: { select: { name: true, price: true } } } },
+          waiter: { select: { id: true, user: { select: { name: true } } } },
+          splits: { orderBy: { splitIndex: "asc" } },
+        },
+      }),
+      prisma.restaurantOrder.findMany({
+        where: { shopId: shop.id, dueAmount: { gt: 0 }, createdAt: { gte: date, lt: nextDay }, isVoided: false },
+        select: {
+          id: true, orderNumber: true, totalAmount: true, paidAmount: true,
+          dueAmount: true, customerName: true, createdAt: true,
+          splits: { orderBy: { splitIndex: "asc" } },
+          table: { select: { number: true } },
+        },
+      }),
+      prisma.restaurantOrder.findMany({
+        where: { shopId: shop.id, dueAmount: { gt: 0 }, isVoided: false, status: { notIn: ["cancelled"] } },
+        select: {
+          id: true, orderNumber: true, totalAmount: true, paidAmount: true,
+          dueAmount: true, customerName: true, createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+      }),
+    ]);
 
     const gross       = orders.reduce((s, o) => s + o.totalAmount, 0);
     const vatSum      = orders.reduce((s, o) => s + (o.vatAmount     ?? 0), 0);
@@ -62,14 +83,34 @@ export async function GET(req: NextRequest) {
     const totalTips   = orders.reduce((s, o) => s + (o.tipAmount      ?? 0), 0);
     const orderCount  = orders.length;
 
+    // Due / partial metrics
+    const totalPartialOrders     = partialOrders.length;
+    const totalPartialCollected  = partialOrders.reduce((s, o) => s + o.paidAmount, 0);
+    const totalDueToday          = partialOrders.reduce((s, o) => s + o.dueAmount, 0);
+    const totalAllOpenDue        = allOpenDueOrders.reduce((s, o) => s + o.dueAmount, 0);
+
     const dineIn   = orders.filter(o => o.type === "dine_in").length;
     const takeaway = orders.filter(o => o.type === "takeaway").length;
     const delivery = orders.filter(o => o.type === "delivery").length;
 
+    // Payment method breakdown — credit per split line for split orders
     const payMethodMap: Record<string, number> = {};
     for (const o of orders) {
-      const m = o.paymentMethod ?? "cash";
-      payMethodMap[m] = (payMethodMap[m] ?? 0) + o.totalAmount;
+      if ((o as typeof o & { splits?: { paymentMethod: string; amount: number }[] }).splits?.length) {
+        for (const sp of (o as typeof o & { splits: { paymentMethod: string; amount: number }[] }).splits) {
+          payMethodMap[sp.paymentMethod] = (payMethodMap[sp.paymentMethod] ?? 0) + sp.amount;
+        }
+      } else {
+        const m = o.paymentMethod ?? "cash";
+        payMethodMap[m] = (payMethodMap[m] ?? 0) + o.totalAmount;
+      }
+    }
+    // Also include partial collections from today's partial orders
+    for (const o of partialOrders) {
+      for (const sp of o.splits) {
+        const key = `partial_${sp.paymentMethod}`;
+        payMethodMap[key] = (payMethodMap[key] ?? 0) + sp.amount;
+      }
     }
     const paymentMethodBreakdown = Object.entries(payMethodMap).map(([method, amount]) => ({ method, amount }));
 
@@ -105,9 +146,35 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       gross, vat: vatSum, serviceCharge: svcSum, discount: discountSum, net: netSum,
       totalTips, waiterTips, orderCount,
+
+      // Partial / due metrics (visible in daily closing UI)
+      totalPartialOrders,
+      totalPartialCollected,
+      totalDueToday,
+      totalAllOpenDue,
+      partialOrderList: partialOrders.map(o => ({
+        id: o.id,
+        orderNumber: o.orderNumber,
+        customerName: o.customerName,
+        totalAmount: o.totalAmount,
+        paidAmount: o.paidAmount,
+        dueAmount: o.dueAmount,
+        tableNumber: (o as typeof o & { table?: { number: string } | null }).table?.number ?? null,
+        createdAt: o.createdAt,
+        splits: o.splits.map(sp => ({
+          amount: sp.amount,
+          paymentMethod: sp.paymentMethod,
+          paidAt: sp.paidAt,
+        })),
+      })),
+      openDueOrders: allOpenDueOrders,
+
       orders: orders.map(o => ({
         id: o.id, orderNumber: o.orderNumber, type: o.type, status: o.status,
-        totalAmount: o.totalAmount, paymentMethod: o.paymentMethod,
+        totalAmount: o.totalAmount,
+        paidAmount: o.paidAmount,
+        dueAmount: o.dueAmount,
+        paymentMethod: (o as typeof o & { splits?: unknown[] }).splits?.length ? "split" : (o.paymentMethod ?? "cash"),
         customerName: o.customerName, tipAmount: o.tipAmount ?? 0,
         waiterName: o.waiter?.user?.name ?? null,
         items: o.items,

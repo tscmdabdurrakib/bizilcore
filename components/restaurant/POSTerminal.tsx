@@ -601,17 +601,23 @@ export default function POSTerminal() {
     setItemPayerMap(prev => ({ ...prev, [itemId]: payerIndex }));
 
   // Compute item-wise payer amounts from activeOrder items
+  // Uses effectiveDue (remaining unpaid amount) so already-paid amounts are excluded
   const itemWisePayerAmounts = (): { payerIndex: number; amount: number }[] => {
     if (!activeOrder) return [];
     const totals: number[] = payers.map(() => 0);
-    activeOrder.items.filter(i => !i.isVoided).forEach(item => {
+    const activeItems = activeOrder.items.filter(i => !i.isVoided);
+    activeItems.forEach(item => {
       const pi = itemPayerMap[item.id] ?? 0;
       if (pi < totals.length) totals[pi] += item.unitPrice * item.quantity;
     });
-    // Pro-rate tax
-    const subTotal = activeOrder.subtotal || activeOrder.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
-    const taxRatio = subTotal > 0 ? effectiveTotal / subTotal : 1;
-    return totals.map((amt, pi) => ({ payerIndex: pi, amount: Math.round(amt * taxRatio * 100) / 100 }));
+    // Gross from items
+    const itemsGross = activeItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+    // Scale to effectiveDue (remaining due after any prior payments)
+    const scale = itemsGross > 0 ? effectiveDue / itemsGross : 1;
+    return totals.map((amt, pi) => ({
+      payerIndex: pi,
+      amount: Math.round(amt * scale * 100) / 100,
+    }));
   };
 
   // Build splits payload from mode

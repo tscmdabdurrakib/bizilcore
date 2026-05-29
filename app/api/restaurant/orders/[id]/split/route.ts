@@ -118,6 +118,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   const totalSplitAmount = body.splits.reduce((s, sp) => s + Number(sp.amount), 0);
+  // Overpayment check against full total (secondary guard, primary is remainingDue below)
   if (totalSplitAmount > order.totalAmount + 0.05) {
     return NextResponse.json(
       { error: `পেমেন্ট পরিমাণ (৳${totalSplitAmount.toFixed(2)}) মোট বিল (৳${order.totalAmount.toFixed(2)}) এর বেশি হতে পারবে না` },
@@ -126,7 +127,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   const existingSplitsTotal = order.splits.reduce((s, sp) => s + sp.amount, 0);
-  const newTotal = existingSplitsTotal + totalSplitAmount;
+  const remainingDue = Math.max(0, order.totalAmount - existingSplitsTotal);
+
+  // Guard: new payment cannot exceed remaining due
+  if (totalSplitAmount > remainingDue + 0.05) {
+    return NextResponse.json(
+      { error: `পেমেন্ট পরিমাণ (৳${totalSplitAmount.toFixed(2)}) বকেয়া (৳${remainingDue.toFixed(2)}) এর বেশি হতে পারবে না` },
+      { status: 400 }
+    );
+  }
+
+  const newTotal    = existingSplitsTotal + totalSplitAmount;
   const isFullyPaid = newTotal >= order.totalAmount - 0.05;
   const dueAmount   = Math.max(0, order.totalAmount - newTotal);
 
