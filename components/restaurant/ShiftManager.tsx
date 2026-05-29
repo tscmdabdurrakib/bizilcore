@@ -74,6 +74,8 @@ export default function ShiftManager({ onShiftChange }: ShiftManagerProps) {
     countedCash: number; expectedCash: number; diff: number;
     cashOver: number; cashShort: number; cashOrderRevenue: number;
   } | null>(null);
+  // Snapshot of shift data preserved for step-3 (shift becomes null after close+load)
+  const [closedShiftSnapshot, setClosedShiftSnapshot] = useState<PosShift | null>(null);
 
   const showToast = (type: "success" | "error", msg: string) => {
     setToast({ type, msg });
@@ -145,6 +147,8 @@ export default function ShiftManager({ onShiftChange }: ShiftManagerProps) {
     if (!activeShift) return;
     setSaving(true);
     try {
+      // Snapshot shift data BEFORE load() nullifies activeShift so step-3 can render
+      const shiftSnapshot = { ...activeShift };
       const r = await fetch(`/api/restaurant/shift/${activeShift.id}/close`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -157,6 +161,8 @@ export default function ShiftManager({ onShiftChange }: ShiftManagerProps) {
       });
       const data = await r.json();
       if (!r.ok) { showToast("error", data.error ?? "শিফট বন্ধ হয়নি"); setSaving(false); return; }
+      // Save snapshot BEFORE load() so step-3 can still access shift data
+      setClosedShiftSnapshot(shiftSnapshot);
       setCloseResult({
         countedCash: data.countedCash ?? denomTotal,
         expectedCash: data.expectedCash,
@@ -166,7 +172,8 @@ export default function ShiftManager({ onShiftChange }: ShiftManagerProps) {
         cashOrderRevenue: data.cashOrderRevenue,
       });
       setWizardStep(3);
-      await load(); onShiftChange?.();
+      // Refresh data in background — step-3 uses closedShiftSnapshot, not activeShift
+      load(); onShiftChange?.();
     } catch { showToast("error", "Error"); }
     setSaving(false);
   };
@@ -403,7 +410,7 @@ export default function ShiftManager({ onShiftChange }: ShiftManagerProps) {
       )}
 
       {/* ── Shift Closing Wizard ─────────────────────────────── */}
-      {modal === "close_wizard" && activeShift && (
+      {modal === "close_wizard" && (activeShift || closedShiftSnapshot) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" style={{ backgroundColor: S.surface }}>
             <div className="p-5 border-b flex items-center justify-between flex-shrink-0" style={{ borderColor: S.border }}>
@@ -541,7 +548,7 @@ export default function ShiftManager({ onShiftChange }: ShiftManagerProps) {
                 );
               })()}
 
-              {/* Step 3: Result */}
+              {/* Step 3: Result — uses closedShiftSnapshot since activeShift may be null after load() */}
               {wizardStep === 3 && closeResult && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-center py-4">
@@ -552,7 +559,7 @@ export default function ShiftManager({ onShiftChange }: ShiftManagerProps) {
                   <p className="text-center text-base font-bold" style={{ color: S.text }}>শিফট সফলভাবে বন্ধ হয়েছে</p>
                   <div className="space-y-2">
                     {[
-                      { label: "প্রারম্ভিক ক্যাশ", value: activeShift.openingCash },
+                      { label: "প্রারম্ভিক ক্যাশ", value: (closedShiftSnapshot ?? activeShift)?.openingCash ?? 0 },
                       { label: "ক্যাশ অর্ডার আয়", value: closeResult.cashOrderRevenue },
                       { label: "প্রত্যাশিত ক্যাশ", value: closeResult.expectedCash },
                       { label: "গণনাকৃত ক্যাশ", value: closeResult.countedCash },
@@ -620,7 +627,7 @@ export default function ShiftManager({ onShiftChange }: ShiftManagerProps) {
                     style={{ borderColor: S.border, color: S.text }}>
                     <Printer size={14} /> প্রিন্ট
                   </button>
-                  <button onClick={() => { setModal(null); setWizardStep(1); setDenomCounts({}); setCloseResult(null); }}
+                  <button onClick={() => { setModal(null); setWizardStep(1); setDenomCounts({}); setCloseResult(null); setClosedShiftSnapshot(null); setClosePin(""); setClosingNotes(""); }}
                     className="flex-1 py-3 rounded-2xl text-sm font-bold text-white"
                     style={{ backgroundColor: "#059669" }}>
                     সম্পন্ন

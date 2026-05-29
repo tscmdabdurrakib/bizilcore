@@ -85,11 +85,16 @@ export async function GET(req: NextRequest) {
     orderBy: { voidedAt: "desc" },
   });
 
-  // Shift for the day (shift that was open during this date range)
+  // Shift for the day — any shift that overlaps the date window:
+  // opened before day-end AND (not yet closed OR closed after day-start)
   const todayShift = await prisma.posShift.findFirst({
     where: {
       shopId: shop.id,
-      openedAt: { gte: start, lte: end },
+      openedAt: { lte: end },
+      OR: [
+        { closedAt: null },
+        { closedAt: { gte: start } },
+      ],
     },
     include: {
       logs: { orderBy: { loggedAt: "asc" } },
