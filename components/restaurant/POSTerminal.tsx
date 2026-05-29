@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import ShiftManager from "@/components/restaurant/ShiftManager";
 import { formatBDT } from "@/lib/utils";
-import { buildReceiptHtml, buildKotHtml } from "@/lib/receiptHtml";
+import { buildReceiptHtml, buildKotHtml, buildA4InvoiceHtml } from "@/lib/receiptHtml";
 
 // ── Types ────────────────────────────────────────────────────────
 interface MenuVariant { name: string; price: number }
@@ -460,7 +460,21 @@ export default function POSTerminal() {
       win.focus();
       setTimeout(() => win.print(), 600);
     } catch { showToast("error", "Error"); }
-    setPrintingReceipt(false);
+    finally { setPrintingReceipt(false); }
+  };
+
+  const printA4InvoiceForOrder = async (orderId: string) => {
+    try {
+      const r = await fetch(`/api/restaurant/orders/${orderId}/receipt`);
+      if (!r.ok) { showToast("error", "ইনভয়েস লোড করা যায়নি"); return; }
+      const { order, shop, qrDataUrl } = await r.json();
+      const html = buildA4InvoiceHtml(order, shop, qrDataUrl);
+      const win = window.open("", "_blank", "width=900,height=900");
+      if (!win) { showToast("error", "Popup ব্লক করা আছে — অনুমতি দিন"); return; }
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+    } catch { showToast("error", "Error"); }
   };
 
   const printKotForOrder = async (orderId: string) => {
@@ -1110,7 +1124,12 @@ export default function POSTerminal() {
                 className="w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border transition-all"
                 style={{ borderColor: S.primary, color: S.primary, backgroundColor: "#FFF7ED" }}>
                 {printingReceipt ? <Loader2 size={12} className="animate-spin" /> : <Printer size={12} />}
-                {printingReceipt ? "লোড হচ্ছে…" : "রসিদ প্রিন্ট করুন"}
+                {printingReceipt ? "লোড হচ্ছে…" : "থার্মাল রসিদ প্রিন্ট"}
+              </button>
+              <button onClick={() => printA4InvoiceForOrder(paidOrderId)}
+                className="w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border transition-all"
+                style={{ borderColor: "#1D4ED8", color: "#1D4ED8", backgroundColor: "#EFF6FF" }}>
+                <Printer size={12} /> A4 ইনভয়েস / PDF
               </button>
             </div>
           )}

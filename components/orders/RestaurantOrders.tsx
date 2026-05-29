@@ -3,7 +3,21 @@
 import { useEffect, useState, useCallback } from "react";
 import { Plus, ShoppingBag, UtensilsCrossed, Package, Bike, Clock, CheckCircle, X, Minus, Loader2, ReceiptText, ArrowRight, Printer } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
-import { buildReceiptHtml } from "@/lib/receiptHtml";
+import { buildReceiptHtml, buildA4InvoiceHtml } from "@/lib/receiptHtml";
+
+async function printInvoicePopup(orderId: string) {
+  try {
+    const r = await fetch(`/api/restaurant/orders/${orderId}/receipt`);
+    if (!r.ok) return;
+    const { order, shop, qrDataUrl } = await r.json();
+    const html = buildA4InvoiceHtml(order, shop, qrDataUrl);
+    const win = window.open("", "_blank", "width=900,height=900");
+    if (!win) { alert("Popup ব্লক করা আছে — অনুমতি দিন"); return; }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+  } catch {}
+}
 
 async function printReceiptPopup(orderId: string) {
   try {
@@ -714,7 +728,12 @@ export default function RestaurantOrders() {
                   <button onClick={() => printReceiptPopup(detailOrder.id)}
                     className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-semibold transition-all"
                     style={{ borderColor: "#EA580C", color: "#EA580C", backgroundColor: "#FFF7ED" }}>
-                    <Printer size={14} /> পুনরায় রসিদ প্রিন্ট
+                    <Printer size={14} /> থার্মাল রসিদ প্রিন্ট
+                  </button>
+                  <button onClick={() => printInvoicePopup(detailOrder.id)}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-semibold transition-all"
+                    style={{ borderColor: "#1D4ED8", color: "#1D4ED8", backgroundColor: "#EFF6FF" }}>
+                    <Printer size={14} /> A4 ইনভয়েস / PDF ডাউনলোড
                   </button>
                 </div>
               )}

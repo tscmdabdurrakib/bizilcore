@@ -11,7 +11,7 @@ const S = {
 };
 
 interface ShopSettings {
-  name: string; phone?: string; address?: string;
+  name: string; phone?: string; address?: string; logoUrl?: string;
   receiptLogo?: string; receiptHeaderLine1?: string; receiptHeaderLine2?: string;
   receiptFooter?: string; receiptPaperSize?: string;
   receiptShowVat?: boolean; receiptShowQr?: boolean; receiptShowLogo?: boolean;
