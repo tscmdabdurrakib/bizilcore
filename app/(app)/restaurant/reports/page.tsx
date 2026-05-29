@@ -6,7 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from "recharts";
-import { TrendingUp, ShoppingBag, Loader2, Clock, UtensilsCrossed, CreditCard, Printer, CalendarDays, BarChart2, UserCheck } from "lucide-react";
+import { TrendingUp, ShoppingBag, Loader2, Clock, UtensilsCrossed, CreditCard, Printer, CalendarDays, BarChart2, UserCheck, TrendingDown } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
 import DatePicker from "@/components/ui/DatePicker";
 
@@ -102,14 +102,16 @@ interface WaiterStat {
 
 function RestaurantReportsPageInner() {
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<"analytics" | "closing" | "waiters">(
+  const [activeTab, setActiveTab] = useState<"analytics" | "closing" | "waiters" | "shifts">(
     searchParams.get("tab") === "closing" ? "closing" :
-    searchParams.get("tab") === "waiters" ? "waiters" : "analytics"
+    searchParams.get("tab") === "waiters" ? "waiters" :
+    searchParams.get("tab") === "shifts" ? "shifts" : "analytics"
   );
 
   useEffect(() => {
     const tab = searchParams.get("tab");
-    if (tab === "closing" || tab === "analytics" || tab === "waiters") setActiveTab(tab as "analytics" | "closing" | "waiters");
+    if (tab === "closing" || tab === "analytics" || tab === "waiters" || tab === "shifts")
+      setActiveTab(tab as "analytics" | "closing" | "waiters" | "shifts");
   }, [searchParams]);
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -122,6 +124,32 @@ function RestaurantReportsPageInner() {
     const d = new Date(); d.setDate(1); return d.toISOString().slice(0, 10);
   });
   const [waiterTo, setWaiterTo] = useState(() => new Date().toISOString().slice(0, 10));
+
+  // Shift history state
+  interface ShiftLog { id: string; type: string; amount: number; note?: string | null; performedBy?: string | null; loggedAt: string; }
+  interface ShiftRecord {
+    id: string; shiftNumber: string; openedBy: string; closedBy?: string | null;
+    openedAt: string; closedAt?: string | null; openingCash: number;
+    countedCash?: number | null; expectedCash: number;
+    cashOver?: number | null; cashShort?: number | null; status: string;
+    logs: ShiftLog[];
+  }
+  const [shifts, setShifts] = useState<ShiftRecord[]>([]);
+  const [shiftsLoading, setShiftsLoading] = useState(false);
+  const [activeShiftInReport, setActiveShiftInReport] = useState<ShiftRecord | null>(null);
+
+  const loadShifts = useCallback(async () => {
+    setShiftsLoading(true);
+    try {
+      const r = await fetch("/api/restaurant/shift");
+      if (r.ok) {
+        const d = await r.json();
+        setShifts(d.recentShifts ?? []);
+        setActiveShiftInReport(d.activeShift ?? null);
+      }
+    } catch {}
+    setShiftsLoading(false);
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -153,6 +181,7 @@ function RestaurantReportsPageInner() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (activeTab === "closing") loadClosing(closingDate); }, [activeTab, closingDate, loadClosing]);
   useEffect(() => { if (activeTab === "waiters") loadWaiters(waiterFrom, waiterTo); }, [activeTab, waiterFrom, waiterTo, loadWaiters]);
+  useEffect(() => { if (activeTab === "shifts") loadShifts(); }, [activeTab, loadShifts]);
 
   if (loading) return (
     <div className="flex justify-center items-center h-64">
@@ -191,6 +220,7 @@ function RestaurantReportsPageInner() {
             ["analytics", "বিশ্লেষণ", BarChart2],
             ["closing", "দৈনিক ক্লোজিং", CalendarDays],
             ["waiters", "ওয়েটার পারফরম্যান্স", UserCheck],
+            ["shifts", "শিফট ইতিহাস", Clock],
           ] as const).map(([key, label, Icon]) => (
             <button key={key} onClick={() => setActiveTab(key)}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
@@ -545,6 +575,123 @@ function RestaurantReportsPageInner() {
                 </ResponsiveContainer>
               </div>
             </>
+          )}
+        </div>
+      )}
+
+      {/* Shift History Tab */}
+      {activeTab === "shifts" && (
+        <div className="space-y-5">
+          {/* Active shift banner */}
+          {activeShiftInReport && (
+            <div className="p-4 rounded-2xl border-2 flex items-center gap-4" style={{ borderColor: "#059669", backgroundColor: "#ECFDF5" }}>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#D1FAE5" }}>
+                <Clock size={20} style={{ color: "#059669" }} />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-sm" style={{ color: "#065F46" }}>
+                  চলমান শিফট: {activeShiftInReport.shiftNumber}
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: "#059669" }}>
+                  {activeShiftInReport.openedBy} — শুরু: {new Date(activeShiftInReport.openedAt).toLocaleString("bn-BD")} · প্রারম্ভিক: {formatBDT(activeShiftInReport.openingCash)}
+                </p>
+              </div>
+              <span className="px-3 py-1 rounded-full text-xs font-bold text-white" style={{ backgroundColor: "#059669" }}>চলছে</span>
+            </div>
+          )}
+
+          {shiftsLoading ? (
+            <div className="flex justify-center items-center h-32">
+              <Loader2 size={24} className="animate-spin" style={{ color: S.primary }} />
+            </div>
+          ) : shifts.length === 0 && !activeShiftInReport ? (
+            <div className="text-center py-16 rounded-2xl border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+              <Clock size={40} className="mx-auto mb-3" style={{ color: S.muted, opacity: 0.4 }} />
+              <p className="text-sm font-semibold" style={{ color: S.muted }}>এখনো কোনো শিফট বন্ধ হয়নি</p>
+              <p className="text-xs mt-1" style={{ color: S.muted }}>POS টার্মিনাল থেকে শিফট শুরু ও বন্ধ করুন</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {shifts.map(s => {
+                const cashInTotal  = s.logs.filter(l => l.type === "in").reduce((sum, l) => sum + l.amount, 0);
+                const cashOutTotal = s.logs.filter(l => l.type === "out").reduce((sum, l) => sum + l.amount, 0);
+                const duration     = s.closedAt
+                  ? (() => {
+                      const ms = new Date(s.closedAt).getTime() - new Date(s.openedAt).getTime();
+                      const h  = Math.floor(ms / 3600000);
+                      const m  = Math.floor((ms % 3600000) / 60000);
+                      return `${h} ঘণ্টা ${m} মিনিট`;
+                    })()
+                  : "—";
+
+                return (
+                  <div key={s.id} className="rounded-2xl border overflow-hidden" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+                    <div className="p-4 flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: S.bg }}>
+                          <Clock size={18} style={{ color: S.muted }} />
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm font-mono" style={{ color: S.text }}>{s.shiftNumber}</p>
+                          <p className="text-xs mt-0.5" style={{ color: S.muted }}>
+                            {s.openedBy} → {s.closedBy ?? "—"} · {duration}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        {(s.cashOver ?? 0) > 0 ? (
+                          <div className="flex items-center gap-1 justify-end">
+                            <TrendingUp size={14} style={{ color: "#059669" }} />
+                            <span className="text-sm font-bold" style={{ color: "#059669" }}>+{formatBDT(s.cashOver ?? 0)}</span>
+                          </div>
+                        ) : (s.cashShort ?? 0) > 0 ? (
+                          <div className="flex items-center gap-1 justify-end">
+                            <TrendingDown size={14} style={{ color: "#EF4444" }} />
+                            <span className="text-sm font-bold" style={{ color: "#EF4444" }}>-{formatBDT(s.cashShort ?? 0)}</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs font-bold px-2 py-1 rounded-full" style={{ backgroundColor: "#ECFDF5", color: "#059669" }}>✓ Balanced</span>
+                        )}
+                        <p className="text-xs mt-1" style={{ color: S.muted }}>
+                          {s.closedAt ? new Date(s.closedAt).toLocaleDateString("bn-BD") : "—"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="px-4 pb-4 grid grid-cols-2 sm:grid-cols-4 gap-3 border-t pt-3" style={{ borderColor: S.border }}>
+                      {[
+                        { label: "প্রারম্ভিক ক্যাশ", value: formatBDT(s.openingCash), color: S.text },
+                        { label: "প্রত্যাশিত ক্যাশ", value: formatBDT(s.expectedCash), color: S.text },
+                        { label: "গণনাকৃত ক্যাশ",   value: s.countedCash != null ? formatBDT(s.countedCash) : "—", color: "#3B82F6" },
+                        { label: "ক্যাশ ইন/আউট",     value: `+${formatBDT(cashInTotal)} / -${formatBDT(cashOutTotal)}`, color: S.muted },
+                      ].map(item => (
+                        <div key={item.label} className="p-2.5 rounded-xl" style={{ backgroundColor: S.bg }}>
+                          <p className="text-[10px] mb-1" style={{ color: S.muted }}>{item.label}</p>
+                          <p className="text-sm font-bold font-mono" style={{ color: item.color }}>{item.value}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {s.logs.filter(l => l.type === "in" || l.type === "out").length > 0 && (
+                      <div className="px-4 pb-4 space-y-1.5 border-t pt-3" style={{ borderColor: S.border }}>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: S.muted }}>ক্যাশ লগ</p>
+                        {s.logs.filter(l => l.type === "in" || l.type === "out").map(l => (
+                          <div key={l.id} className="flex items-center justify-between text-xs px-3 py-1.5 rounded-lg" style={{ backgroundColor: S.bg }}>
+                            <div className="flex items-center gap-2">
+                              <span style={{ color: l.type === "in" ? "#059669" : "#EF4444" }}>
+                                {l.type === "in" ? "+" : "-"}{formatBDT(l.amount)}
+                              </span>
+                              <span style={{ color: S.muted }}>{l.note ?? ""}</span>
+                            </div>
+                            <span style={{ color: S.muted }}>{new Date(l.loggedAt).toLocaleTimeString("bn-BD", { hour: "2-digit", minute: "2-digit" })}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       )}

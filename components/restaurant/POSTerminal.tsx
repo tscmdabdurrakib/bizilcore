@@ -7,6 +7,7 @@ import {
   CheckCircle, ChevronRight, Tag, UserCheck, PauseCircle, ListOrdered,
   Split, AlertCircle, Users, Hash,
 } from "lucide-react";
+import ShiftManager from "@/components/restaurant/ShiftManager";
 import { formatBDT } from "@/lib/utils";
 
 // ── Types ────────────────────────────────────────────────────────
@@ -768,6 +769,7 @@ export default function POSTerminal() {
             <h1 className="font-bold text-sm" style={{ color: S.text }}>POS টার্মিনাল</h1>
             <p className="text-xs" style={{ color: S.muted }}>{menuItems.filter(m => m.isAvailable).length}টি আইটেম</p>
           </div>
+          <ShiftManager />
           <button onClick={() => { setShowHeldPanel(true); loadHeldOrders(); }}
             className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all"
             style={{

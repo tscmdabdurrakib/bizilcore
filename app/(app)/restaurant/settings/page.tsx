@@ -12,6 +12,7 @@ interface ShopSettings {
   restDefaultFloors: string[];
   restDeliveryEnabled: boolean;
   restAutoStockDeduct: boolean;
+  restRequireShift: boolean;
 }
 
 const S = {
@@ -65,6 +66,7 @@ export default function RestaurantSettingsPage() {
     restDefaultFloors: ["Ground"],
     restDeliveryEnabled: true,
     restAutoStockDeduct: true,
+    restRequireShift: false,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -86,6 +88,7 @@ export default function RestaurantSettingsPage() {
           restDefaultFloors: shop.restDefaultFloors ?? ["Ground"],
           restDeliveryEnabled: shop.restDeliveryEnabled ?? true,
           restAutoStockDeduct: shop.restAutoStockDeduct ?? true,
+          restRequireShift: shop.restRequireShift ?? false,
         });
         setFloorsInput((shop.restDefaultFloors ?? ["Ground"]).join(", "));
       }
@@ -199,6 +202,9 @@ export default function RestaurantSettingsPage() {
         </FieldRow>
         <FieldRow label="অটো স্টক ডিডাক্ট" hint="অর্ডার সম্পূর্ণ হলে কাঁচামালের স্টক কমবে">
           <Toggle value={settings.restAutoStockDeduct} onChange={v => setSettings(s => ({ ...s, restAutoStockDeduct: v }))} />
+        </FieldRow>
+        <FieldRow label="শিফট বাধ্যতামূলক" hint="POS-এ অর্ডার নিতে হলে আগে শিফট খুলতে হবে">
+          <Toggle value={settings.restRequireShift} onChange={v => setSettings(s => ({ ...s, restRequireShift: v }))} />
         </FieldRow>
       </SettingSection>
 

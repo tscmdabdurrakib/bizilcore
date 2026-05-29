@@ -427,6 +427,7 @@ model Shop {
   // Restaurant module (extended)
   rawMaterials             RawMaterial[]
   purchaseEntries          PurchaseEntry[]
+  posShifts                PosShift[]
   restOrderPrefix          String?  @default("RES")
   restVatPct               Float    @default(0)
   restServiceChargePct     Float    @default(0)
@@ -435,6 +436,7 @@ model Shop {
   restDefaultFloors        String[] @default(["Ground"])
   restDeliveryEnabled      Boolean  @default(true)
   restAutoStockDeduct      Boolean  @default(true)
+  restRequireShift         Boolean  @default(false)
   managerPin               String?
   restVoidThresholdHours   Int      @default(24)
 }
@@ -1541,6 +1543,46 @@ model OrderSplit {
   paidAt        DateTime        @default(now())
 
   @@index([orderId])
+}
+
+model PosShift {
+  id             String           @id @default(cuid())
+  shopId         String
+  shop           Shop             @relation(fields: [shopId], references: [id])
+  shiftNumber    String           @unique
+  openedBy       String
+  openedById     String?
+  closedBy       String?
+  closedById     String?
+  openedAt       DateTime         @default(now())
+  closedAt       DateTime?
+  openingCash    Float            @default(0)
+  countedCash    Float?
+  expectedCash   Float            @default(0)
+  cashOver       Float?
+  cashShort      Float?
+  status         String           @default("open")
+  notes          String?
+  createdAt      DateTime         @default(now())
+  logs           CashDrawerLog[]
+
+  @@index([shopId])
+  @@index([shopId, status])
+}
+
+model CashDrawerLog {
+  id          String   @id @default(cuid())
+  shopId      String
+  shiftId     String
+  shift       PosShift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  type        String
+  amount      Float    @default(0)
+  note        String?
+  performedBy String?
+  loggedAt    DateTime @default(now())
+
+  @@index([shopId])
+  @@index([shiftId])
 }
 
 model KotTicket {
