@@ -425,7 +425,7 @@ export default function ShiftManager({ onShiftChange }: ShiftManagerProps) {
                       ধাপ {wizardStep}/৩
                     </span>
                   </h3>
-                  <p className="text-xs" style={{ color: S.muted }}>{activeShift.shiftNumber}</p>
+                  <p className="text-xs" style={{ color: S.muted }}>{(closedShiftSnapshot ?? activeShift)?.shiftNumber}</p>
                 </div>
               </div>
               {wizardStep < 3 && <button onClick={() => { setModal(null); setWizardStep(1); }}><X size={18} style={{ color: S.muted }} /></button>}

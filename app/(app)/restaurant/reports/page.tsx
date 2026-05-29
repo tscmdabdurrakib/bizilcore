@@ -91,6 +91,8 @@ interface DailyClosingData {
   paymentMethodBreakdown: { method: string; amount: number }[];
   orderTypeBreakdown: { dineIn: number; takeaway: number; delivery: number };
   orders: DailyClosingOrder[];
+  voidCount?: number; voidAmount?: number;
+  refundCount?: number; totalRefundAmount?: number;
 }
 
 interface WaiterStat {
@@ -263,19 +265,21 @@ function RestaurantReportsPageInner() {
           ) : (
             <>
               {/* Closing Summary Cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {[
                   { label: "Gross রাজস্ব",   value: formatBDT(closingData.gross),                 color: S.primary,  bg: "#FFF7ED" },
                   { label: "Net রাজস্ব",     value: formatBDT(closingData.net),                   color: "#059669",  bg: "#ECFDF5" },
                   { label: "মোট অর্ডার",    value: `${closingData.orderCount}টি`,                 color: "#3B82F6",  bg: "#EFF6FF" },
+                  { label: "ডিসকাউন্ট",     value: formatBDT(closingData.discount),              color: "#EF4444",  bg: "#FEF2F2" },
                   { label: "VAT",            value: formatBDT(closingData.vat),                   color: "#7C3AED",  bg: "#F5F3FF" },
                   { label: "সার্ভিস চার্জ", value: formatBDT(closingData.serviceCharge),         color: "#8B5CF6",  bg: "#F5F3FF" },
-                  { label: "ডিসকাউন্ট",     value: formatBDT(closingData.discount),              color: "#EF4444",  bg: "#FEF2F2" },
                   { label: "মোট টিপ",        value: formatBDT(closingData.totalTips ?? 0),        color: "#D97706",  bg: "#FFFBEB" },
+                  { label: "রিফান্ড",        value: `${closingData.refundCount ?? 0}টি / ${formatBDT(closingData.totalRefundAmount ?? 0)}`, color: "#DC2626", bg: "#FEF2F2" },
+                  { label: "Void অর্ডার",   value: `${closingData.voidCount ?? 0}টি / ${formatBDT(closingData.voidAmount ?? 0)}`,          color: "#9CA3AF", bg: "#F9FAFB" },
                 ].map(card => (
                   <div key={card.label} className="rounded-2xl p-4 border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
                     <p className="text-xs mb-2" style={{ color: S.muted }}>{card.label}</p>
-                    <p className="text-lg font-bold" style={{ color: card.color }}>{card.value}</p>
+                    <p className="text-base font-bold leading-snug" style={{ color: card.color }}>{card.value}</p>
                   </div>
                 ))}
               </div>
