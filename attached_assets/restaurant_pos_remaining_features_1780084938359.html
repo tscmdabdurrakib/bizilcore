@@ -1,0 +1,309 @@
+
+<style>
+  .wrap { padding: 1rem 0; font-family: var(--font-sans); }
+  .section { margin-bottom: 2rem; }
+  .sec-header { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; padding-bottom: 8px; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .sec-icon { font-size: 18px; }
+  .sec-title { font-size: 16px; font-weight: 500; color: var(--color-text-primary); }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: var(--border-radius-md); font-weight: 500; }
+  .badge-must { background: #FCEBEB; color: #A32D2D; }
+  .badge-imp { background: #FAEEDA; color: #854F0B; }
+  .badge-nice { background: #EAF3DE; color: #3B6D11; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; }
+  .card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 14px 16px; }
+  .card-title { font-size: 13px; font-weight: 500; color: var(--color-text-primary); margin: 0 0 6px 0; display: flex; align-items: center; gap: 8px; }
+  .card-desc { font-size: 12px; color: var(--color-text-secondary); line-height: 1.6; margin: 0; }
+  .priority-bar { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .legend { display: flex; gap: 16px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-text-secondary); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-must { background: #E24B4A; }
+  .dot-imp { background: #EF9F27; }
+  .dot-nice { background: #639922; }
+</style>
+
+<div class="wrap">
+  <h2 style="sr-only">Restaurant POS — Remaining features checklist</h2>
+
+  <div class="legend">
+    <div class="legend-item"><div class="dot dot-must"></div> অবশ্যই লাগবে (Production must)</div>
+    <div class="legend-item"><div class="dot dot-imp"></div> গুরুত্বপূর্ণ</div>
+    <div class="legend-item"><div class="dot dot-nice"></div> থাকলে ভালো</div>
+  </div>
+
+  <!-- BILLING & PAYMENT -->
+  <div class="section">
+    <div class="sec-header">
+      <i class="ti ti-receipt sec-icon" style="color:#533AB7" aria-hidden="true"></i>
+      <span class="sec-title">১. বিলিং ও পেমেন্ট</span>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <p class="card-title"><i class="ti ti-printer" aria-hidden="true"></i> Thermal Receipt Print</p>
+        <p class="card-desc">80mm/58mm প্রিন্টার সাপোর্ট, custom header/footer, QR bill</p>
+        <div class="priority-bar"><span class="badge badge-must">অবশ্যই</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-credit-card" aria-hidden="true"></i> Split Payment</p>
+        <p class="card-desc">Cash + Card একসাথে, একটা বিল একাধিক পেমেন্ট মেথডে ভাগ করা</p>
+        <div class="priority-bar"><span class="badge badge-must">অবশ্যই</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-device-mobile" aria-hidden="true"></i> Mobile Banking (bKash/Nagad)</p>
+        <p class="card-desc">QR scan বা manual entry, transaction reference সংরক্ষণ</p>
+        <div class="priority-bar"><span class="badge badge-must">অবশ্যই</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-cash" aria-hidden="true"></i> Cash Drawer Management</p>
+        <p class="card-desc">Opening/closing balance, cash in/out লগ, drawer reconciliation</p>
+        <div class="priority-bar"><span class="badge badge-imp">গুরুত্বপূর্ণ</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-arrows-exchange" aria-hidden="true"></i> Refund / Void Bill</p>
+        <p class="card-desc">পেইড বিল রিফান্ড, partial void, কারণ লগ করা</p>
+        <div class="priority-bar"><span class="badge badge-must">অবশ্যই</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-file-invoice" aria-hidden="true"></i> Bill Hold / Recall</p>
+        <p class="card-desc">অর্ডার পার্ক করে রাখা, পরে তুলে বিল করা</p>
+        <div class="priority-bar"><span class="badge badge-imp">গুরুত্বপূর্ণ</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DISCOUNT & LOYALTY -->
+  <div class="section">
+    <div class="sec-header">
+      <i class="ti ti-percentage sec-icon" style="color:#0F6E56" aria-hidden="true"></i>
+      <span class="sec-title">২. ডিসকাউন্ট ও কাস্টমার লয়্যালটি</span>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <p class="card-title"><i class="ti ti-discount" aria-hidden="true"></i> Coupon / Promo Code</p>
+        <p class="card-desc">Fixed/percentage discount, expiry date, ব্যবহারের সীমা</p>
+        <div class="priority-bar"><span class="badge badge-must">অবশ্যই</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-users" aria-hidden="true"></i> Customer CRM</p>
+        <p class="card-desc">কাস্টমার প্রোফাইল, অর্ডার হিস্ট্রি, loyalty points</p>
+        <div class="priority-bar"><span class="badge badge-imp">গুরুত্বপূর্ণ</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-star" aria-hidden="true"></i> Loyalty / Points System</p>
+        <p class="card-desc">প্রতি অর্ডারে পয়েন্ট অর্জন, রিডিম করে ডিসকাউন্ট</p>
+        <div class="priority-bar"><span class="badge badge-nice">থাকলে ভালো</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-tag" aria-hidden="true"></i> Happy Hour / Time-based Offer</p>
+        <p class="card-desc">নির্দিষ্ট সময়ে নির্দিষ্ট আইটেমে অটো ডিসকাউন্ট</p>
+        <div class="priority-bar"><span class="badge badge-nice">থাকলে ভালো</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DELIVERY & ONLINE -->
+  <div class="section">
+    <div class="sec-header">
+      <i class="ti ti-bike sec-icon" style="color:#993C1D" aria-hidden="true"></i>
+      <span class="sec-title">৩. ডেলিভারি ও অনলাইন অর্ডার</span>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <p class="card-title"><i class="ti ti-map-pin" aria-hidden="true"></i> Delivery Order Management</p>
+        <p class="card-desc">ডেলিভারি ঠিকানা, চার্জ, রাইডার অ্যাসাইন, স্ট্যাটাস ট্র্যাক</p>
+        <div class="priority-bar"><span class="badge badge-must">অবশ্যই</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-phone-call" aria-hidden="true"></i> Phone Order / Call Center</p>
+        <p class="card-desc">ফোনে অর্ডার নেওয়া, কাস্টমার নম্বর দিয়ে সার্চ</p>
+        <div class="priority-bar"><span class="badge badge-imp">গুরুত্বপূর্ণ</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-brand-facebook" aria-hidden="true"></i> Third-party Integration</p>
+        <p class="card-desc">Foodpanda / Shohoz / Pathao অর্ডার POS-এ ঢোকানো</p>
+        <div class="priority-bar"><span class="badge badge-nice">থাকলে ভালো</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INVENTORY -->
+  <div class="section">
+    <div class="sec-header">
+      <i class="ti ti-package sec-icon" style="color:#185FA5" aria-hidden="true"></i>
+      <span class="sec-title">৪. ইনভেন্টরি ম্যানেজমেন্ট (অ্যাডভান্সড)</span>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <p class="card-title"><i class="ti ti-alert-triangle" aria-hidden="true"></i> Low Stock Alert</p>
+        <p class="card-desc">কাঁচামাল নির্দিষ্ট পরিমাণের নিচে গেলে নোটিফিকেশন</p>
+        <div class="priority-bar"><span class="badge badge-must">অবশ্যই</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-clipboard-list" aria-hidden="true"></i> Waste / Spoilage Log</p>
+        <p class="card-desc">নষ্ট হওয়া কাঁচামালের রেকর্ড, কারণ ও পরিমাণ</p>
+        <div class="priority-bar"><span class="badge badge-imp">গুরুত্বপূর্ণ</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-truck" aria-hidden="true"></i> Supplier Management</p>
+        <p class="card-desc">সাপ্লায়ার প্রোফাইল, purchase history, payable ট্র্যাক</p>
+        <div class="priority-bar"><span class="badge badge-imp">গুরুত্বপূর্ণ</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-rotate" aria-hidden="true"></i> Stock Transfer (Multi-branch)</p>
+        <p class="card-desc">একটা ব্রাঞ্চ থেকে আরেকটায় স্টক ট্রান্সফার</p>
+        <div class="priority-bar"><span class="badge badge-nice">থাকলে ভালো</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAFF & PAYROLL -->
+  <div class="section">
+    <div class="sec-header">
+      <i class="ti ti-id-badge sec-icon" style="color:#72243E" aria-hidden="true"></i>
+      <span class="sec-title">৫. স্টাফ ম্যানেজমেন্ট</span>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <p class="card-title"><i class="ti ti-clock" aria-hidden="true"></i> Attendance / Shift Log</p>
+        <p class="card-desc">Clock in/out, শিফট রোস্টার, ওভারটাইম ট্র্যাক</p>
+        <div class="priority-bar"><span class="badge badge-must">অবশ্যই</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-wallet" aria-hidden="true"></i> Payroll / Salary</p>
+        <p class="card-desc">মাসিক বেতন, টিপস ভাগ, কমিশন হিসাব</p>
+        <div class="priority-bar"><span class="badge badge-imp">গুরুত্বপূর্ণ</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-lock" aria-hidden="true"></i> Role-based Permission</p>
+        <p class="card-desc">Manager / Cashier / Waiter — আলাদা আলাদা access</p>
+        <div class="priority-bar"><span class="badge badge-must">অবশ্যই</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REPORTING -->
+  <div class="section">
+    <div class="sec-header">
+      <i class="ti ti-chart-bar sec-icon" style="color:#3B6D11" aria-hidden="true"></i>
+      <span class="sec-title">৬. অ্যাডভান্সড রিপোর্ট</span>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <p class="card-title"><i class="ti ti-trending-up" aria-hidden="true"></i> Item-wise Sales Report</p>
+        <p class="card-desc">কোন আইটেম কতটুকু বিক্রি, সর্বোচ্চ/সর্বনিম্ন বিক্রি</p>
+        <div class="priority-bar"><span class="badge badge-must">অবশ্যই</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-calendar-stats" aria-hidden="true"></i> Weekly / Monthly P&L</p>
+        <p class="card-desc">Revenue, COGS, gross profit — সাপ্তাহিক/মাসিক</p>
+        <div class="priority-bar"><span class="badge badge-must">অবশ্যই</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-file-spreadsheet" aria-hidden="true"></i> Export (Excel / PDF)</p>
+        <p class="card-desc">যেকোনো রিপোর্ট Excel বা PDF-এ ডাউনলোড</p>
+        <div class="priority-bar"><span class="badge badge-must">অবশ্যই</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-chart-pie" aria-hidden="true"></i> Category-wise Sales</p>
+        <p class="card-desc">ক্যাটাগরি অনুযায়ী বিক্রির অনুপাত ও ট্রেন্ড</p>
+        <div class="priority-bar"><span class="badge badge-imp">গুরুত্বপূর্ণ</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-users" aria-hidden="true"></i> Waiter-wise Sales</p>
+        <p class="card-desc">কোন ওয়েটার কত অর্ডার/সেলস করল, টিপস কত</p>
+        <div class="priority-bar"><span class="badge badge-imp">গুরুত্বপূর্ণ</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-building-store" aria-hidden="true"></i> Multi-branch Comparison</p>
+        <p class="card-desc">একাধিক আউটলেটের পারফরম্যান্স পাশাপাশি দেখা</p>
+        <div class="priority-bar"><span class="badge badge-nice">থাকলে ভালো</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MULTI BRANCH -->
+  <div class="section">
+    <div class="sec-header">
+      <i class="ti ti-building sec-icon" style="color:#533AB7" aria-hidden="true"></i>
+      <span class="sec-title">৭. মাল্টি-ব্রাঞ্চ / SaaS</span>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <p class="card-title"><i class="ti ti-sitemap" aria-hidden="true"></i> Multi-outlet Support</p>
+        <p class="card-desc">একটা account-এ একাধিক ব্রাঞ্চ, আলাদা মেনু ও স্টাফ</p>
+        <div class="priority-bar"><span class="badge badge-imp">গুরুত্বপূর্ণ</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-users-group" aria-hidden="true"></i> Central Menu Management</p>
+        <p class="card-desc">একটা জায়গা থেকে সব ব্রাঞ্চের মেনু আপডেট</p>
+        <div class="priority-bar"><span class="badge badge-nice">থাকলে ভালো</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SYSTEM / INFRA -->
+  <div class="section">
+    <div class="sec-header">
+      <i class="ti ti-shield-check sec-icon" style="color:#444441" aria-hidden="true"></i>
+      <span class="sec-title">৮. সিস্টেম / ইনফ্রা (Production-ready)</span>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <p class="card-title"><i class="ti ti-wifi-off" aria-hidden="true"></i> Offline Mode</p>
+        <p class="card-desc">ইন্টারনেট না থাকলেও POS চলবে, সংযোগ ফিরলে sync</p>
+        <div class="priority-bar"><span class="badge badge-must">অবশ্যই</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-database-export" aria-hidden="true"></i> Daily Backup</p>
+        <p class="card-desc">অটো ব্যাকআপ, manual export, restore ফাংশন</p>
+        <div class="priority-bar"><span class="badge badge-must">অবশ্যই</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-activity" aria-hidden="true"></i> Audit Log</p>
+        <p class="card-desc">কে কখন কী করল — বিল ভয়েড, ডিসকাউন্ট, ডিলিট</p>
+        <div class="priority-bar"><span class="badge badge-must">অবশ্যই</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-bell" aria-hidden="true"></i> Notification System</p>
+        <p class="card-desc">Low stock, new order, KOT alert — in-app বা SMS</p>
+        <div class="priority-bar"><span class="badge badge-imp">গুরুত্বপূর্ণ</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-device-tablet" aria-hidden="true"></i> Tablet / Touch Optimized UI</p>
+        <p class="card-desc">POS স্ক্রিন tablet-friendly, বড় বাটন, swipe gesture</p>
+        <div class="priority-bar"><span class="badge badge-must">অবশ্যই</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-lock-access" aria-hidden="true"></i> Two-Factor Auth (Manager)</p>
+        <p class="card-desc">Manager-level action-এ extra confirmation</p>
+        <div class="priority-bar"><span class="badge badge-imp">গুরুত্বপূর্ণ</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR & CUSTOMER FACING -->
+  <div class="section">
+    <div class="sec-header">
+      <i class="ti ti-qrcode sec-icon" style="color:#993C1D" aria-hidden="true"></i>
+      <span class="sec-title">৯. কাস্টমার-ফেসিং ফিচার</span>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <p class="card-title"><i class="ti ti-eye" aria-hidden="true"></i> Live Order Status (QR)</p>
+        <p class="card-desc">কাস্টমার QR scan করে নিজের অর্ডার স্ট্যাটাস দেখতে পাবে</p>
+        <div class="priority-bar"><span class="badge badge-imp">গুরুত্বপূর্ণ</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-star" aria-hidden="true"></i> Customer Feedback / Rating</p>
+        <p class="card-desc">অর্ডার শেষে rating ও comment — dashboard-এ দেখা যাবে</p>
+        <div class="priority-bar"><span class="badge badge-nice">থাকলে ভালো</span></div>
+      </div>
+      <div class="card">
+        <p class="card-title"><i class="ti ti-language" aria-hidden="true"></i> Multilingual QR Menu</p>
+        <p class="card-desc">বাংলা / English — ভাষা সুইচ করার অপশন</p>
+        <div class="priority-bar"><span class="badge badge-nice">থাকলে ভালো</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
