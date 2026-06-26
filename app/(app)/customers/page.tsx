@@ -13,6 +13,8 @@ import { downloadExcel } from "@/lib/excel";
 import Papa from "papaparse";
 import PageHint from "@/components/PageHint";
 import DemoDataBanner from "@/components/DemoDataBanner";
+import { useSmsCredits } from "@/hooks/useSmsCredits";
+import { PageShell, StatCard, FilterBar, Card, Badge, EmptyState, Button, Tabs } from "@/components/ui";
 
 interface Customer {
   id: string; name: string; phone: string | null; address: string | null;
@@ -75,7 +77,9 @@ const WA_TEMPLATES: Record<string, (label: string) => string> = {
 };
 
 function CampaignModal({ segment, onClose, onSent }: { segment: Segment; onClose: () => void; onSent: () => void }) {
+  const { maskingEnabled } = useSmsCredits();
   const [channel, setChannel] = useState<"whatsapp" | "sms">("whatsapp");
+  const [smsType, setSmsType] = useState<"masking" | "non_masking">("non_masking");
   const [message, setMessage] = useState(WA_TEMPLATES[segment.key]?.(segment.label) ?? "");
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ type: "success" | "error"; msg: string } | null>(null);
@@ -86,7 +90,7 @@ function CampaignModal({ segment, onClose, onSent }: { segment: Segment; onClose
     try {
       const r = await fetch("/api/campaigns", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ segment: segment.key, channel, message }),
+        body: JSON.stringify({ segment: segment.key, channel, message, smsType: channel === "sms" ? smsType : undefined }),
       });
       const d = await r.json();
       if (r.ok) {
@@ -129,6 +133,33 @@ function CampaignModal({ segment, onClose, onSent }: { segment: Segment; onClose
               </button>
             </div>
           </div>
+
+          {channel === "sms" && maskingEnabled && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">SMS Type</label>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setSmsType("non_masking")}
+                  className="flex-1 py-2 rounded-xl text-xs font-bold border-2 transition-all"
+                  style={{
+                    backgroundColor: smsType === "non_masking" ? "#1D4ED8" : "#fff",
+                    color: smsType === "non_masking" ? "#fff" : "#6B7280",
+                    borderColor: smsType === "non_masking" ? "#1D4ED8" : "#E5E7EB",
+                  }}>
+                  Non-Masking
+                </button>
+                <button type="button" onClick={() => setSmsType("masking")}
+                  className="flex-1 py-2 rounded-xl text-xs font-bold border-2 transition-all"
+                  style={{
+                    backgroundColor: smsType === "masking" ? "#7C3AED" : "#fff",
+                    color: smsType === "masking" ? "#fff" : "#6B7280",
+                    borderColor: smsType === "masking" ? "#7C3AED" : "#E5E7EB",
+                  }}>
+                  Masking
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Masking SMS-এর জন্য Settings থেকে Sender ID approve থাকতে হবে।</p>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">বার্তা</label>
@@ -305,7 +336,24 @@ export default function CustomersPage() {
   const totalDue = customers.reduce((s, c) => s + c.dueAmount, 0);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-5 pb-8">
+    <PageShell
+      title="কাস্টমার"
+      subtitle="ক্রেতাদের তথ্য ও বাকি পরিচালনা"
+      actions={
+        <Link href="/customers/new">
+          <Button icon={Plus}>কাস্টমার যোগ করুন</Button>
+        </Link>
+      }
+      stats={mainTab === "list" ? (
+        <>
+          <StatCard label="মোট কাস্টমার" value={total} icon={Users} accent="blue" iconBg="#EFF6FF" iconColor="#1D4ED8" />
+          <StatCard label="VIP কাস্টমার" value={vipCount} icon={Star} accent="gold" iconBg="#FEF3C7" iconColor="#92400E" />
+          <StatCard label="বাকি আছে" value={dueCount} icon={AlertCircle} accent="red" iconBg="#FFF1F2" iconColor="#BE123C" />
+          <StatCard label="মোট বাকি" value={formatBDT(totalDue)} icon={BadgeDollarSign} accent="green" />
+        </>
+      ) : undefined}
+      className="pb-8"
+    >
 
       {/* Toast */}
       {toast && (
@@ -492,93 +540,39 @@ export default function CustomersPage() {
         </div>
       )}
 
-      {/* ── Page Header ── */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: "linear-gradient(135deg,#7C3AED,#5B21B6)" }}>
-            <Users size={20} color="#fff" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">কাস্টমার</h1>
-            <p className="text-xs text-gray-500">ক্রেতাদের তথ্য ও বাকি পরিচালনা</p>
-          </div>
-        </div>
-        <Link href="/customers/new"
-          className="flex items-center gap-2 px-4 h-10 rounded-xl text-white text-sm font-bold flex-shrink-0 shadow-sm hover:opacity-90 transition-opacity"
-          style={{ background: "linear-gradient(135deg,#0F6E56,#0A5442)" }}>
-          <Plus size={16} /> কাস্টমার যোগ করুন
-        </Link>
-      </div>
-
-      {/* ── Page Hint ── */}
       <PageHint page="customers" text="এখানে আপনার সব কাস্টমারের তথ্য দেখুন। VIP, বাকি থাকা কাস্টমার আলাদা করে ফিল্টার করুন এবং SMS campaign পাঠান।" />
 
       {/* ── Demo Data Banner ── */}
       <DemoDataBanner />
 
-      {/* ── Stats Cards ── */}
-      {mainTab === "list" && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {[
-            { label: "মোট কাস্টমার", value: total, sub: "রেজিস্টার্ড", icon: Users, bg: "#EFF6FF", fg: "#1D4ED8" },
-            { label: "VIP কাস্টমার", value: vipCount, sub: "এই পেজে", icon: Star, bg: "#FEF3C7", fg: "#92400E" },
-            { label: "বাকি আছে", value: dueCount, sub: "জন কাস্টমার", icon: AlertCircle, bg: "#FFF1F2", fg: "#BE123C" },
-            { label: "মোট বাকি", value: formatBDT(totalDue), sub: "আদায়যোগ্য", icon: BadgeDollarSign, bg: "#F0FDF4", fg: "#15803D" },
-          ].map(s => (
-            <div key={s.label} className="bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-md transition-shadow">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ backgroundColor: s.bg }}>
-                <s.icon size={17} style={{ color: s.fg }} />
-              </div>
-              <p className="text-2xl font-black text-gray-900">{s.value}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{s.label} · {s.sub}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── Main Tabs ── */}
-      <div className="flex gap-1 border-b border-gray-100">
-        {[{ key: "list", label: "কাস্টমার তালিকা" }, { key: "segments", label: "সেগমেন্ট ও ক্যাম্পেইন" }].map(t => (
-          <button key={t.key} onClick={() => setMainTab(t.key as "list" | "segments")}
-            className="px-5 py-3 text-sm font-bold border-b-2 transition-colors"
-            style={{ borderColor: mainTab === t.key ? "#7C3AED" : "transparent", color: mainTab === t.key ? "#7C3AED" : "#6B7280" }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        variant="underline"
+        tabs={[{ key: "list", label: "কাস্টমার তালিকা" }, { key: "segments", label: "সেগমেন্ট ও ক্যাম্পেইন" }]}
+        active={mainTab}
+        onChange={(k) => setMainTab(k as "list" | "segments")}
+      />
 
       {/* ════ LIST TAB ════ */}
       {mainTab === "list" && (
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-          {/* Toolbar */}
-          <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-gray-50">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input type="text" placeholder="নাম বা ফোন দিয়ে খুঁজুন..." value={search} onChange={e => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 h-10 rounded-xl border border-gray-200 text-sm bg-gray-50 text-gray-800 outline-none focus:border-gray-400 transition-colors" />
-            </div>
-            <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleCsvFile} />
-            <button onClick={() => fileRef.current?.click()}
-              className="flex items-center gap-1.5 px-3.5 h-10 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors flex-shrink-0">
-              <Upload size={14} /> CSV
-            </button>
-            <button onClick={exportToExcel} disabled={loading || total === 0}
-              className="flex items-center gap-1.5 px-3.5 h-10 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40 transition-colors flex-shrink-0">
-              <Download size={14} /> Excel
-            </button>
-            <p className="text-xs text-gray-400 font-medium flex-shrink-0 ml-auto">{total} জন</p>
+        <Card padding="none" className="overflow-hidden">
+          <div className="p-4 border-b" style={{ borderColor: "var(--c-border)" }}>
+            <FilterBar
+              tabs={GROUP_TABS.map(t => ({ key: t.key, label: t.label }))}
+              activeTab={tab}
+              onTabChange={setTab}
+              search={search}
+              onSearchChange={setSearch}
+              searchPlaceholder="নাম বা ফোন দিয়ে খুঁজুন..."
+              actions={
+                <>
+                  <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleCsvFile} />
+                  <Button variant="outline" size="sm" icon={Upload} onClick={() => fileRef.current?.click()}>CSV</Button>
+                  <Button variant="outline" size="sm" icon={Download} onClick={exportToExcel} disabled={loading || total === 0}>Excel</Button>
+                </>
+              }
+            />
           </div>
-
-          {/* Group Tabs */}
-          <div className="flex gap-1 px-5 py-3 border-b border-gray-50 overflow-x-auto">
-            {GROUP_TABS.map(t => (
-              <button key={t.key} onClick={() => setTab(t.key)}
-                className="px-4 py-2 rounded-xl text-sm font-semibold transition-all flex-shrink-0"
-                style={{ backgroundColor: tab === t.key ? "#111827" : "transparent", color: tab === t.key ? "#fff" : "#6B7280" }}>
-                {t.label}
-              </button>
-            ))}
-          </div>
+          <p className="px-5 py-2 text-xs font-medium" style={{ color: "var(--c-text-muted)" }}>{total} জন</p>
 
           {/* Content */}
           {loading ? (
@@ -592,11 +586,11 @@ export default function CustomersPage() {
               ))}
             </div>
           ) : customers.length === 0 ? (
-            <div className="py-20 text-center">
-              <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4"><Users size={28} className="text-gray-400" /></div>
-              <p className="text-gray-500 text-sm font-medium">{tab === "due" ? "কোনো বাকি নেই। সবাই সময়মতো দিয়েছে! 🎉" : "কোনো কাস্টমার নেই।"}</p>
-              {tab === "all" && <Link href="/customers/new" className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-purple-600 hover:underline"><Plus size={14} /> কাস্টমার যোগ করুন</Link>}
-            </div>
+            <EmptyState
+              icon={Users}
+              title={tab === "due" ? "কোনো বাকি নেই। সবাই সময়মতো দিয়েছে! 🎉" : "কোনো কাস্টমার নেই।"}
+              action={tab === "all" ? { label: "কাস্টমার যোগ করুন", onClick: () => {}, href: "/customers/new" } : undefined}
+            />
           ) : (
             <>
               {/* Desktop Table */}
@@ -637,7 +631,7 @@ export default function CustomersPage() {
                           <td className="px-5 py-3.5">
                             {c.dueAmount > 0
                               ? <span className="text-sm font-bold text-red-600">{formatBDT(c.dueAmount)}</span>
-                              : <span className="text-xs text-emerald-500 font-semibold">পরিশোধিত</span>}
+                              : <Badge variant="success">পরিশোধিত</Badge>}
                           </td>
                           <td className="px-5 py-3.5">
                             <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{ backgroundColor: gm.bg, color: gm.color }}>{gm.label}</span>
@@ -705,7 +699,7 @@ export default function CustomersPage() {
               )}
             </>
           )}
-        </div>
+        </Card>
       )}
 
       {/* ════ SEGMENTS TAB ════ */}
@@ -718,7 +712,7 @@ export default function CustomersPage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {segments.map(seg => (
-                <div key={seg.key} className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-md transition-shadow">
+                <Card key={seg.key} className="hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <span className="inline-block text-xs font-bold px-3 py-1 rounded-full mb-2" style={{ backgroundColor: seg.bg, color: seg.color }}>{seg.label}</span>
@@ -737,13 +731,13 @@ export default function CustomersPage() {
                     style={{ background: "linear-gradient(135deg,#7C3AED,#5B21B6)" }}>
                     <Send size={14} /> ক্যাম্পেইন পাঠান
                   </button>
-                </div>
+                </Card>
               ))}
             </div>
           )}
 
           {/* Campaign History */}
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <Card padding="none" className="overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
               <h3 className="font-bold text-gray-900">ক্যাম্পেইন ইতিহাস</h3>
               <button onClick={fetchCampaignLogs} className="flex items-center gap-1.5 text-sm font-semibold text-purple-600 hover:underline">
@@ -753,10 +747,7 @@ export default function CustomersPage() {
             {campaignLogsLoading ? (
               <div className="p-4 space-y-3 animate-pulse">{[1,2,3].map(i => <div key={i} className="h-12 bg-gray-100 rounded-xl" />)}</div>
             ) : campaignLogs.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3"><Send size={24} className="text-gray-400" /></div>
-                <p className="text-sm text-gray-400">এখনো কোনো ক্যাম্পেইন পাঠানো হয়নি।</p>
-              </div>
+              <EmptyState icon={Send} title="এখনো কোনো ক্যাম্পেইন পাঠানো হয়নি।" />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm min-w-[600px]">
@@ -785,9 +776,9 @@ export default function CustomersPage() {
                 </table>
               </div>
             )}
-          </div>
+          </Card>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

@@ -53,6 +53,6 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|icon.svg|invoice|checkout|slip|invite|payment|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|woff2?|ttf|eot)).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|icon.svg|invoice|inv|checkout|slip|invite|payment|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|woff2?|ttf|eot)).*)",
   ],
 };

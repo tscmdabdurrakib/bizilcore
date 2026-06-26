@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { Trophy, TrendingUp } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import { T } from "@/lib/theme";
+import { onIdle } from "@/lib/idle";
+import { useDashboardFetch } from "@/hooks/useDashboardFetch";
 
 const S = { surface: "var(--c-surface)", border: "var(--c-border)", text: "var(--c-text)", muted: "var(--c-text-muted)", secondary: "var(--c-text-sub)", primary: "var(--c-primary)", bg: "var(--c-bg)" };
 
@@ -18,14 +21,13 @@ interface LeaderData {
 const RANK_COLORS = ["#F59E0B", "#9CA3AF", "#CD7C41"];
 
 export default function LeaderboardWidget() {
-  const [data, setData] = useState<LeaderData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [enabled, setEnabled] = useState(false);
+  const { data, isLoading: loading } = useDashboardFetch<LeaderData>(
+    enabled ? "/api/leaderboard" : null,
+  );
 
   useEffect(() => {
-    fetch("/api/leaderboard")
-      .then(r => r.json())
-      .then(d => { if (!d.error) setData(d); })
-      .finally(() => setLoading(false));
+    return onIdle(() => setEnabled(true));
   }, []);
 
   if (loading) return (
@@ -37,7 +39,17 @@ export default function LeaderboardWidget() {
     </div>
   );
 
-  if (!data || data.totalSellers < 2) return null;
+  if (!data || data.totalSellers < 2) {
+    return (
+      <div className="rounded-2xl p-5" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
+        <div className="flex items-center gap-2 mb-2">
+          <Trophy size={16} style={{ color: "#F59E0B" }} />
+          <span className="font-semibold text-sm" style={{ color: S.text }}>সাপ্তাহিক লিডারবোর্ড</span>
+        </div>
+        <p className="text-xs" style={{ color: S.muted }}>এখনো পর্যাপ্ত ডেটা নেই — আরও বিক্রি হলে র‍্যাঙ্কিং দেখা যাবে</p>
+      </div>
+    );
+  }
 
   const rankLabel = data.myRank <= 3 ? ["🥇", "🥈", "🥉"][data.myRank - 1] : `#${data.myRank}`;
 
@@ -52,14 +64,14 @@ export default function LeaderboardWidget() {
       </div>
 
       {/* My rank highlight */}
-      <div className="rounded-xl p-3 mb-4 flex items-center justify-between" style={{ backgroundColor: "#F0FBF6", border: "1px solid #A7F3D0" }}>
+      <div className="rounded-xl p-3 mb-4 flex items-center justify-between border" style={{ backgroundColor: "var(--row-selected-bg)", borderColor: T.success.border }}>
         <div className="flex items-center gap-2">
-          <TrendingUp size={15} style={{ color: "#0F6E56" }} />
-          <span className="text-sm font-medium" style={{ color: "#0F6E56" }}>
+          <TrendingUp size={15} style={{ color: "var(--c-primary)" }} />
+          <span className="text-sm font-medium" style={{ color: "var(--c-primary)" }}>
             এই সপ্তাহে আপনার rank: <strong>{rankLabel}</strong>
           </span>
         </div>
-        <span className="text-xs" style={{ color: "#065F46" }}>
+        <span className="text-xs" style={{ color: "var(--c-primary-text)" }}>
           {data.totalSellers}জনের মধ্যে
         </span>
       </div>
@@ -68,20 +80,20 @@ export default function LeaderboardWidget() {
       <div className="space-y-2">
         {data.top5.map((entry) => (
           <div key={entry.rank} className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{
-            backgroundColor: entry.isMe ? "#F0FBF6" : S.bg,
-            border: entry.isMe ? "1px solid #A7F3D0" : "1px solid transparent",
+            backgroundColor: entry.isMe ? "var(--row-selected-bg)" : S.bg,
+            border: entry.isMe ? `1px solid ${T.success.border}` : "1px solid transparent",
           }}>
             <div className="w-6 text-center text-sm font-bold flex-shrink-0"
               style={{ color: entry.rank <= 3 ? RANK_COLORS[entry.rank - 1] : S.muted }}>
               {entry.rank <= 3 ? ["🥇", "🥈", "🥉"][entry.rank - 1] : `#${entry.rank}`}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate" style={{ color: entry.isMe ? "#0F6E56" : S.text }}>
+              <p className="text-sm font-medium truncate" style={{ color: entry.isMe ? "var(--c-primary)" : S.text }}>
                 {entry.label}
               </p>
               <p className="text-xs" style={{ color: S.muted }}>{entry.orders}টি অর্ডার</p>
             </div>
-            <span className="text-sm font-semibold flex-shrink-0" style={{ color: entry.isMe ? "#0F6E56" : S.text }}>
+            <span className="text-sm font-semibold flex-shrink-0" style={{ color: entry.isMe ? "var(--c-primary)" : S.text }}>
               {formatBDT(entry.revenue)}
             </span>
           </div>

@@ -76,6 +76,9 @@ import {
   Code2,
   Clock,
   FolderKanban,
+  ShoppingCart,
+  Send,
+  TrendingUp,
   type LucideIcon,
 } from "lucide-react";
 
@@ -421,111 +424,111 @@ const OFFLINE_ONLY_MODULES = new Set(["pos"]);
 const BUSINESS_MODULES: Record<BusinessType, string[]> = {
   fcommerce: [
     "dashboard", "inventory", "orders", "customers",
-    "hisab", "reports", "courier", "settings", "store",
+    "accounting", "reports", "courier", "settings", "store",
   ],
   restaurant: [
     "dashboard", "pos", "tables", "orders", "menu", "kitchen",
-    "inventory", "customers", "staff", "hisab", "reports", "settings",
+    "inventory", "customers", "staff", "accounting", "reports", "settings",
   ],
   pharmacy: [
     "dashboard", "inventory", "orders", "customers",
-    "hisab", "reports", "prescriptions", "expiry", "pos", "courier", "settings", "store",
+    "accounting", "reports", "prescriptions", "expiry", "pos", "courier", "settings", "store",
   ],
   retail: [
     "dashboard", "inventory", "pos", "cash-register", "orders", "customers",
-    "hisab", "reports", "courier", "settings", "store",
+    "accounting", "reports", "courier", "settings", "store",
   ],
   salon: [
     "dashboard", "services", "appointments", "inventory", "customers",
-    "hisab", "reports", "staff", "settings", "store",
+    "accounting", "reports", "staff", "settings", "store",
   ],
   tailor: [
     "dashboard", "inventory", "orders", "customers",
-    "hisab", "reports", "measurements", "courier", "settings", "store",
+    "accounting", "reports", "measurements", "courier", "settings", "store",
   ],
   hotel: [
     "dashboard", "rooms", "bookings", "housekeeping", "customers",
-    "hisab", "reports", "staff", "settings", "store",
+    "accounting", "reports", "staff", "settings", "store",
   ],
   garage: [
     "dashboard", "jobcards", "vehicles", "inventory",
-    "customers", "staff", "hisab", "reports", "settings",
+    "customers", "staff", "accounting", "reports", "settings",
   ],
   lab: [
     "dashboard", "tests", "testorders", "results", "patients",
-    "appointments", "hisab", "reports", "settings",
+    "appointments", "accounting", "reports", "settings",
   ],
   convention: [
     "dashboard", "halls", "events", "packages",
-    "vendors", "customers", "hisab", "reports", "settings",
+    "vendors", "customers", "accounting", "reports", "settings",
   ],
   school: [
     "dashboard", "students", "batches", "fees",
-    "attendance", "exams", "staff", "hisab", "reports", "settings",
+    "attendance", "exams", "staff", "accounting", "reports", "settings",
   ],
   farm: [
     "dashboard", "lands", "crops", "livestock",
-    "harvest", "buyers", "hisab", "reports", "settings",
+    "harvest", "buyers", "accounting", "reports", "settings",
   ],
   hospital: [
     "dashboard", "doctors", "opd", "ipd", "patients",
-    "billing", "staff", "hisab", "reports", "settings",
+    "billing", "staff", "accounting", "reports", "settings",
   ],
   travel: [
     "dashboard", "packages", "bookings", "customers",
-    "vendors", "visa", "hisab", "reports", "settings",
+    "vendors", "visa", "accounting", "reports", "settings",
   ],
   gym: [
     "dashboard", "members", "memberships", "attendance",
-    "trainers", "equipment", "hisab", "reports", "settings",
+    "trainers", "equipment", "accounting", "reports", "settings",
   ],
   photography: [
     "dashboard", "bookings", "packages", "portfolio",
-    "equipment", "customers", "hisab", "reports", "settings",
+    "equipment", "customers", "accounting", "reports", "settings",
   ],
   laundry: [
     "dashboard", "orders", "services", "customers",
-    "delivery", "hisab", "reports", "settings",
+    "delivery", "accounting", "reports", "settings",
   ],
   printing: [
     "dashboard", "orders", "services", "customers",
-    "inventory", "hisab", "reports", "settings",
+    "inventory", "accounting", "reports", "settings",
   ],
   realestate: [
     "dashboard", "properties", "leads", "deals",
-    "clients", "owners", "hisab", "reports", "settings",
+    "clients", "owners", "accounting", "reports", "settings",
   ],
   petshop: [
     "dashboard", "pets", "appointments", "inventory",
-    "customers", "hisab", "reports", "settings",
+    "customers", "accounting", "reports", "settings",
   ],
   electronics: [
     "dashboard", "jobcards", "devices", "inventory",
-    "customers", "staff", "hisab", "reports", "settings",
+    "customers", "staff", "accounting", "reports", "settings",
   ],
   kindergarten: [
     "dashboard", "children", "classes", "attendance",
-    "meals", "fees", "daily_report", "hisab", "reports", "settings",
+    "meals", "fees", "daily_report", "accounting", "reports", "settings",
   ],
   carrental: [
     "dashboard", "fleet", "bookings", "drivers",
-    "fuel", "customers", "hisab", "reports", "settings",
+    "fuel", "customers", "accounting", "reports", "settings",
   ],
   legal: [
     "dashboard", "cases", "clients", "hearings",
-    "documents", "fees", "hisab", "reports", "settings",
+    "documents", "fees", "accounting", "reports", "settings",
   ],
   spa: [
     "dashboard", "appointments", "services", "rooms",
-    "therapists", "customers", "hisab", "reports", "settings",
+    "therapists", "customers", "accounting", "reports", "settings",
   ],
   catering: [
     "dashboard", "events", "menus", "ingredients",
-    "staff", "customers", "hisab", "reports", "settings",
+    "staff", "customers", "accounting", "reports", "settings",
   ],
   freelance: [
     "dashboard", "projects", "clients", "invoices",
-    "timelog", "hisab", "reports", "settings",
+    "timelog", "accounting", "reports", "settings",
   ],
 };
 
@@ -550,13 +553,23 @@ const STORE_NAV_GROUP: NavGroup = {
     { href: "/store/theme", icon: Palette, label: "থিম", module: "store" },
     { href: "/store/appearance", icon: Image, label: "লুক ও ফিল", module: "store" },
     { href: "/store/products", icon: Package, label: "পণ্য", module: "store" },
-    { href: "/store/settings", icon: Settings2, label: "সেটিংস", module: "store" },
     { href: "/store/orders", icon: ShoppingBag, label: "অর্ডার", module: "store" },
+    { href: "/store/abandoned", icon: ShoppingCart, label: "পরিত্যক্ত কার্ট", module: "store" },
+    { href: "/store/posts", icon: Send, label: "পোস্ট শিডিউলার", module: "store" },
     { href: "/store/coupons", icon: Tag, label: "কুপন", module: "store" },
     { href: "/store/reviews", icon: Star, label: "রিভিউ", module: "store" },
+    { href: "/store/features", icon: Sparkles, label: "ফিচার", module: "store" },
+    { href: "/store/settings", icon: Settings2, label: "সেটিংস", module: "store" },
     { href: "/dashboard/store/analytics", icon: BarChart2, label: "অ্যানালিটিক্স", module: "store" },
+    { href: "/dashboard/store/insights", icon: TrendingUp, label: "ইনসাইট", module: "store" },
+    { href: "/dashboard/store/customers", icon: Users, label: "কাস্টমার", module: "store" },
   ],
 };
+
+/** Store subnav items for AppSidebar (single source of truth). */
+export function getStoreNavItems(): NavItem[] {
+  return STORE_NAV_GROUP.items;
+}
 
 const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
   fcommerce: [
@@ -576,7 +589,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",   icon: BookOpen,  label: "হিসাব",   module: "hisab"   },
+        { href: "/accounting",   icon: BookOpen,  label: "হিসাব",   module: "accounting"   },
         { href: "/reports", icon: BarChart2, label: "রিপোর্ট", module: "reports" },
       ],
     },
@@ -602,7 +615,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",                icon: BookOpen,  label: "হিসাব",     module: "hisab"    },
+        { href: "/accounting",                icon: BookOpen,  label: "হিসাব",     module: "accounting"    },
         { href: "/restaurant/reports",   icon: BarChart2, label: "রিপোর্ট",   module: "reports"  },
         { href: "/restaurant/settings",  icon: Settings,  label: "সেটিংস",    module: "settings" },
       ],
@@ -627,7 +640,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",   icon: BookOpen,  label: "হিসাব",   module: "hisab"   },
+        { href: "/accounting",   icon: BookOpen,  label: "হিসাব",   module: "accounting"   },
         { href: "/reports", icon: BarChart2, label: "রিপোর্ট", module: "reports" },
       ],
     },
@@ -650,7 +663,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",   icon: BookOpen,  label: "হিসাব",   module: "hisab"   },
+        { href: "/accounting",   icon: BookOpen,  label: "হিসাব",   module: "accounting"   },
         { href: "/reports", icon: BarChart2, label: "রিপোর্ট", module: "reports" },
       ],
     },
@@ -674,7 +687,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",   icon: BookOpen,  label: "হিসাব",   module: "hisab"   },
+        { href: "/accounting",   icon: BookOpen,  label: "হিসাব",   module: "accounting"   },
         { href: "/reports", icon: BarChart2, label: "রিপোর্ট", module: "reports" },
       ],
     },
@@ -698,7 +711,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",   icon: BookOpen,  label: "হিসাব",   module: "hisab"   },
+        { href: "/accounting",   icon: BookOpen,  label: "হিসাব",   module: "accounting"   },
         { href: "/reports", icon: BarChart2, label: "রিপোর্ট", module: "reports" },
       ],
     },
@@ -722,7 +735,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",   icon: BookOpen,  label: "হিসাব",   module: "hisab"   },
+        { href: "/accounting",   icon: BookOpen,  label: "হিসাব",   module: "accounting"   },
         { href: "/reports", icon: BarChart2, label: "রিপোর্ট", module: "reports" },
       ],
     },
@@ -745,7 +758,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",   icon: BookOpen,  label: "হিসাব",   module: "hisab"   },
+        { href: "/accounting",   icon: BookOpen,  label: "হিসাব",   module: "accounting"   },
         { href: "/reports", icon: BarChart2, label: "রিপোর্ট", module: "reports" },
       ],
     },
@@ -768,7 +781,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",   icon: BookOpen,  label: "হিসাব",   module: "hisab"   },
+        { href: "/accounting",   icon: BookOpen,  label: "হিসাব",   module: "accounting"   },
         { href: "/reports", icon: BarChart2, label: "রিপোর্ট", module: "reports" },
       ],
     },
@@ -790,7 +803,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",                    icon: BookOpen,  label: "হিসাব",    module: "hisab"   },
+        { href: "/accounting",                    icon: BookOpen,  label: "হিসাব",    module: "accounting"   },
         { href: "/convention/reports",       icon: BarChart2, label: "রিপোর্ট",  module: "reports" },
       ],
     },
@@ -814,7 +827,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",              icon: BookOpen,        label: "হিসাব",            module: "hisab"      },
+        { href: "/accounting",              icon: BookOpen,        label: "হিসাব",            module: "accounting"      },
         { href: "/school/reports",     icon: BarChart2,       label: "রিপোর্ট",          module: "reports"    },
       ],
     },
@@ -833,7 +846,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",              icon: BookOpen,        label: "হিসাব",              module: "hisab"      },
+        { href: "/accounting",              icon: BookOpen,        label: "হিসাব",              module: "accounting"      },
         { href: "/farm/reports",       icon: BarChart2,       label: "রিপোর্ট",             module: "reports"    },
       ],
     },
@@ -857,7 +870,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
       label: "আর্থিক",
       items: [
         { href: "/hospital/billing",       icon: Receipt,         label: "বিলিং",               module: "billing"   },
-        { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",               module: "hisab"     },
+        { href: "/accounting",                  icon: BookOpen,        label: "হিসাব",               module: "accounting"     },
         { href: "/hospital/reports",       icon: BarChart2,       label: "রিপোর্ট",             module: "reports"   },
       ],
     },
@@ -880,7 +893,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",               module: "hisab"     },
+        { href: "/accounting",                  icon: BookOpen,        label: "হিসাব",               module: "accounting"     },
         { href: "/travel/reports",         icon: BarChart2,       label: "রিপোর্ট",             module: "reports"   },
       ],
     },
@@ -905,7 +918,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",                module: "hisab"       },
+        { href: "/accounting",                  icon: BookOpen,        label: "হিসাব",                module: "accounting"       },
         { href: "/gym/reports",            icon: BarChart2,       label: "রিপোর্ট",              module: "reports"     },
       ],
     },
@@ -934,7 +947,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",                        icon: BookOpen,        label: "হিসাব",             module: "hisab"     },
+        { href: "/accounting",                        icon: BookOpen,        label: "হিসাব",             module: "accounting"     },
         { href: "/photography/reports",          icon: BarChart2,       label: "রিপোর্ট",           module: "reports"   },
       ],
     },
@@ -962,7 +975,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",    icon: BookOpen,  label: "হিসাব",    module: "hisab"   },
+        { href: "/accounting",    icon: BookOpen,  label: "হিসাব",    module: "accounting"   },
         { href: "/reports",  icon: BarChart2, label: "রিপোর্ট",  module: "reports" },
       ],
     },
@@ -990,7 +1003,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",              icon: BookOpen,        label: "হিসাব",              module: "hisab"     },
+        { href: "/accounting",              icon: BookOpen,        label: "হিসাব",              module: "accounting"     },
         { href: "/printing/reports",   icon: BarChart2,       label: "রিপোর্ট",            module: "reports"   },
       ],
     },
@@ -1019,7 +1032,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",                module: "hisab"       },
+        { href: "/accounting",                  icon: BookOpen,        label: "হিসাব",                module: "accounting"       },
         { href: "/realestate/reports",     icon: BarChart2,       label: "রিপোর্ট",              module: "reports"     },
       ],
     },
@@ -1047,7 +1060,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",                 module: "hisab"        },
+        { href: "/accounting",                  icon: BookOpen,        label: "হিসাব",                 module: "accounting"        },
         { href: "/petshop/reports",        icon: BarChart2,       label: "রিপোর্ট",               module: "reports"      },
       ],
     },
@@ -1076,7 +1089,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",                  module: "hisab"     },
+        { href: "/accounting",                  icon: BookOpen,        label: "হিসাব",                  module: "accounting"     },
         { href: "/electronics/reports",    icon: BarChart2,       label: "রিপোর্ট",                module: "reports"   },
       ],
     },
@@ -1102,7 +1115,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",                  module: "hisab"        },
+        { href: "/accounting",                  icon: BookOpen,        label: "হিসাব",                  module: "accounting"        },
         { href: "/kindergarten/reports",   icon: BarChart2,       label: "রিপোর্ট",                module: "reports"      },
       ],
     },
@@ -1127,7 +1140,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",                  module: "hisab"     },
+        { href: "/accounting",                  icon: BookOpen,        label: "হিসাব",                  module: "accounting"     },
         { href: "/carrental/reports",      icon: BarChart2,       label: "রিপোর্ট",                module: "reports"   },
       ],
     },
@@ -1150,7 +1163,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",                  module: "hisab"     },
+        { href: "/accounting",                  icon: BookOpen,        label: "হিসাব",                  module: "accounting"     },
         { href: "/legal/reports",          icon: BarChart2,       label: "রিপোর্ট",                module: "reports"   },
       ],
     },
@@ -1179,7 +1192,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",                  module: "hisab"        },
+        { href: "/accounting",                  icon: BookOpen,        label: "হিসাব",                  module: "accounting"        },
         { href: "/spa/reports",            icon: BarChart2,       label: "রিপোর্ট",                module: "reports"      },
       ],
     },
@@ -1203,7 +1216,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",                  module: "hisab"     },
+        { href: "/accounting",                  icon: BookOpen,        label: "হিসাব",                  module: "accounting"     },
         { href: "/catering/reports",       icon: BarChart2,       label: "রিপোর্ট",                module: "reports"   },
       ],
     },
@@ -1227,7 +1240,7 @@ const NAV_BY_TYPE: Record<BusinessType, NavGroup[]> = {
     {
       label: "আর্থিক",
       items: [
-        { href: "/hisab",                  icon: BookOpen,        label: "হিসাব",                  module: "hisab"     },
+        { href: "/accounting",                  icon: BookOpen,        label: "হিসাব",                  module: "accounting"     },
         { href: "/freelance/reports",      icon: BarChart2,       label: "রিপোর্ট",                module: "reports"   },
       ],
     },

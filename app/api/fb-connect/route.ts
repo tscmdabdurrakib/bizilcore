@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getCachedFbConnect } from "@/lib/data/cached-queries";
+import { revalidateFbPages } from "@/lib/cache/revalidate";
 
 export async function GET() {
   const session = await auth();
@@ -9,29 +11,8 @@ export async function GET() {
   const shop = await prisma.shop.findUnique({ where: { userId: session.user.id } });
   if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
 
-  const [pages, commentOrdersCount, messagesCount, repliedMessagesCount] = await Promise.all([
-    prisma.facebookPage.findMany({
-      where: { shopId: shop.id },
-      orderBy: { connectedAt: "desc" },
-    }),
-    prisma.suggestedOrder.count({ where: { shopId: shop.id } }),
-    prisma.messengerConversation.count({ where: { shopId: shop.id } }),
-    prisma.messengerConversation.count({ where: { shopId: shop.id, repliedAt: { not: null } } }),
-  ]);
-
-  const totalFollowers = pages.reduce((sum, p) => sum + (p.followers ?? 0), 0);
-
-  return NextResponse.json({
-    pages,
-    stats: {
-      totalPages: pages.length,
-      activePages: pages.filter((p) => p.isActive).length,
-      totalFollowers,
-      commentOrders: commentOrdersCount,
-      messages: messagesCount,
-      repliedMessages: repliedMessagesCount,
-    },
-  });
+  const data = await getCachedFbConnect(shop.id);
+  return NextResponse.json(data);
 }
 
 export async function POST(req: NextRequest) {
@@ -64,6 +45,7 @@ export async function POST(req: NextRequest) {
     // non-fatal
   }
 
+  revalidateFbPages(shop.id);
   return NextResponse.json({ success: true, page });
 }
 
@@ -99,6 +81,7 @@ export async function PATCH(req: NextRequest) {
   });
 
   const updated = await prisma.facebookPage.findFirst({ where: { shopId: shop.id, pageId } });
+  revalidateFbPages(shop.id);
   return NextResponse.json({ success: true, page: updated });
 }
 
@@ -114,5 +97,6 @@ export async function DELETE(req: NextRequest) {
     where: { shopId: shop.id, pageId },
     data: { isActive: false },
   });
+  revalidateFbPages(shop.id);
   return NextResponse.json({ success: true });
 }

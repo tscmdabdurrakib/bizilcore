@@ -70,7 +70,7 @@ export default function DashboardCatering({ shopName, userName, userGender }: {
   const statCards = [
     { label: "এই মাসের ইভেন্ট",         value: `${stats?.monthEvents ?? 0}টি`,            color: S.primary,  icon: CalendarRange },
     { label: "আসন্ন ইভেন্ট (৭ দিন)",   value: `${stats?.upcomingCount ?? 0}টি`,           color: "#7C3AED",  icon: Clock },
-    { label: "মোট Pending বাকি",         value: formatBDT(stats?.pendingDue ?? 0),          color: "#DC2626",  icon: DollarSign },
+    { label: "মোট অপেক্ষমান বাকি",         value: formatBDT(stats?.pendingDue ?? 0),          color: "#DC2626",  icon: DollarSign },
     { label: "এই মাসের মুনাফা",         value: formatBDT(stats?.monthProfit ?? 0),         color: "#10B981",  icon: BarChart2 },
   ];
 

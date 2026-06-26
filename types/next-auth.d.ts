@@ -8,6 +8,10 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
       onboarded?: boolean;
+      activeShopId?: string;
+      realAdminId?: string;
+      impersonatingUserId?: string;
+      impersonatingUserName?: string;
     };
   }
 
@@ -20,5 +24,9 @@ declare module "next-auth/jwt" {
   interface JWT {
     id?: string;
     onboarded?: boolean;
+    activeShopId?: string;
+    realAdminId?: string;
+    impersonatingUserId?: string;
+    impersonatingUserName?: string;
   }
 }

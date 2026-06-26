@@ -6,6 +6,7 @@ import {
   Pencil, Trash2, X, Save, Loader2, FileDown,
   ShieldCheck, Chrome, UserPlus, MapPin,
 } from "lucide-react";
+import { PageShell, StatCard, Card, Badge, EmptyState, Button, Tabs } from "@/components/ui";
 
 interface Customer {
   id: string;
@@ -163,13 +164,6 @@ export default function StoreCustomersPage() {
       return true;
     });
 
-  const stats = [
-    { label: "মোট কাস্টমার", value: customers.length, sub: "রেজিস্টার্ড", icon: Users, bg: "#EFF6FF", fg: "#1D4ED8", grad: "linear-gradient(135deg,#3B82F6,#1D4ED8)" },
-    { label: "ভেরিফাইড", value: customers.filter(c => c.emailVerified).length, sub: "ইমেইল নিশ্চিত", icon: ShieldCheck, bg: "#F0FDF4", fg: "#15803D", grad: "linear-gradient(135deg,#22C55E,#15803D)" },
-    { label: "Google ইউজার", value: customers.filter(c => c.googleId).length, sub: "OAuth লগিন", icon: Chrome, bg: "#FFF7ED", fg: "#C2410C", grad: "linear-gradient(135deg,#FB923C,#C2410C)" },
-    { label: "এই মাসে", value: thisMonthCount, sub: "নতুন সদস্য", icon: UserPlus, bg: "#FDF4FF", fg: "#7E22CE", grad: "linear-gradient(135deg,#A855F7,#7E22CE)" },
-  ];
-
   const TABS = [
     { key: "all", label: "সব", count: customers.length },
     { key: "verified", label: "ভেরিফাইড", count: customers.filter(c => c.emailVerified).length },
@@ -178,7 +172,24 @@ export default function StoreCustomersPage() {
   ] as const;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-5 pb-8">
+    <PageShell
+      title="স্টোর কাস্টমার"
+      subtitle="রেজিস্টার্ড কাস্টমারদের ব্যবস্থাপনা"
+      className="max-w-7xl pb-8"
+      actions={
+        <Button variant="outline" icon={FileDown} onClick={exportCSV}>CSV Export</Button>
+      }
+      stats={
+        loading ? undefined : (
+          <>
+            <StatCard label="মোট কাস্টমার" value={customers.length} icon={Users} accent="blue" iconBg="#EFF6FF" iconColor="#1D4ED8" />
+            <StatCard label="ভেরিফাইড" value={customers.filter(c => c.emailVerified).length} icon={ShieldCheck} accent="green" iconBg="#F0FDF4" iconColor="#15803D" />
+            <StatCard label="Google ইউজার" value={customers.filter(c => c.googleId).length} icon={Chrome} accent="gold" iconBg="#FFF7ED" iconColor="#C2410C" />
+            <StatCard label="এই মাসে" value={thisMonthCount} icon={UserPlus} accent="blue" iconBg="#FDF4FF" iconColor="#7E22CE" />
+          </>
+        )
+      }
+    >
 
       {/* Toast */}
       {toast && (
@@ -348,77 +359,27 @@ export default function StoreCustomersPage() {
         </div>
       )}
 
-      {/* ── Page Header ── */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: "linear-gradient(135deg,#3B82F6,#1D4ED8)" }}>
-            <Users size={20} color="#fff" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">স্টোর কাস্টমার</h1>
-            <p className="text-xs text-gray-500">রেজিস্টার্ড কাস্টমারদের ব্যবস্থাপনা</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={exportCSV}
-            className="flex items-center gap-1.5 px-3.5 h-10 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
-            <FileDown size={15} /> CSV Export
-          </button>
-        </div>
-      </div>
+      <Card padding="none" className="overflow-hidden">
 
-      {/* ── Stats Cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {loading ? (
-          Array(4).fill(0).map((_, i) => (
-            <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 animate-pulse">
-              <div className="w-9 h-9 bg-gray-100 rounded-xl mb-3" />
-              <div className="h-7 bg-gray-100 rounded-lg w-16 mb-2" />
-              <div className="h-3 bg-gray-100 rounded w-24" />
-            </div>
-          ))
-        ) : stats.map(s => (
-          <div key={s.label} className="bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-md transition-shadow">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ backgroundColor: s.bg }}>
-              <s.icon size={17} style={{ color: s.fg }} />
-            </div>
-            <p className="text-2xl font-black text-gray-900">{s.value}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{s.label} · {s.sub}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Table Card ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-
-        {/* Toolbar */}
-        <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b border-gray-50">
+        <div className="flex flex-wrap items-center gap-3 px-5 py-4 border-b" style={{ borderColor: "var(--c-border)" }}>
           <div className="relative flex-1 min-w-[200px]">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: "var(--c-text-muted)" }} />
             <input
               type="text" value={search} onChange={e => setSearch(e.target.value)}
               placeholder="নাম, ইমেইল বা ফোন দিয়ে খুঁজুন..."
-              className="w-full pl-10 pr-4 h-10 rounded-xl border border-gray-200 text-sm bg-gray-50 text-gray-800 outline-none focus:border-gray-400 transition-colors"
+              className="w-full pl-10 pr-4 h-10 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-[var(--c-primary)]/20"
+              style={{ borderColor: "var(--c-border)", backgroundColor: "var(--c-surface-raised)", color: "var(--c-text)" }}
             />
           </div>
-          <p className="text-xs text-gray-400 font-medium flex-shrink-0">{filtered.length} জন পাওয়া গেছে</p>
+          <p className="text-xs font-medium flex-shrink-0" style={{ color: "var(--c-text-muted)" }}>{filtered.length} জন পাওয়া গেছে</p>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 px-5 py-3 border-b border-gray-50 overflow-x-auto">
-          {TABS.map(t => (
-            <button key={t.key} onClick={() => setTab(t.key)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all flex-shrink-0"
-              style={{
-                backgroundColor: tab === t.key ? "#111827" : "transparent",
-                color: tab === t.key ? "#fff" : "#6B7280",
-              }}>
-              {t.label}
-              <span className={`text-xs px-1.5 py-0.5 rounded-md font-bold ${tab === t.key ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
-                {t.count}
-              </span>
-            </button>
-          ))}
+        <div className="px-5 py-3 border-b overflow-x-auto" style={{ borderColor: "var(--c-border)" }}>
+          <Tabs
+            tabs={TABS.map(t => ({ key: t.key, label: t.label, count: t.count }))}
+            active={tab}
+            onChange={(k) => setTab(k as typeof tab)}
+          />
         </div>
 
         {/* Content */}
@@ -438,14 +399,11 @@ export default function StoreCustomersPage() {
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="py-20 text-center">
-            <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <UserX size={28} className="text-gray-400" />
-            </div>
-            <p className="text-gray-500 text-sm font-medium">
-              {search ? "কোনো ফলাফল পাওয়া যায়নি" : "এখনো কোনো কাস্টমার নেই"}
-            </p>
-          </div>
+          <EmptyState
+            icon={UserX}
+            title={search ? "কোনো ফলাফল পাওয়া যায়নি" : "এখনো কোনো কাস্টমার নেই"}
+            className="border-0 shadow-none"
+          />
         ) : (
           <>
             {/* Desktop Table */}
@@ -495,13 +453,9 @@ export default function StoreCustomersPage() {
                       </td>
                       <td className="px-5 py-3.5">
                         {c.emailVerified ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-full">
-                            <UserCheck size={11} /> ভেরিফাইড
-                          </span>
+                          <Badge variant="success"><UserCheck size={11} className="inline mr-0.5" />ভেরিফাইড</Badge>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 text-gray-500 text-xs font-bold rounded-full">
-                            <UserX size={11} /> পেন্ডিং
-                          </span>
+                          <Badge variant="default"><UserX size={11} className="inline mr-0.5" />পেন্ডিং</Badge>
                         )}
                       </td>
                       <td className="px-5 py-3.5">
@@ -540,11 +494,11 @@ export default function StoreCustomersPage() {
                       </div>
                       <div className="flex flex-col items-end gap-1 flex-shrink-0">
                         {c.emailVerified ? (
-                          <span className="text-xs px-2 py-0.5 bg-emerald-50 text-emerald-700 font-bold rounded-full">ভেরিফাইড</span>
+                          <Badge variant="success">ভেরিফাইড</Badge>
                         ) : (
-                          <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 font-bold rounded-full">পেন্ডিং</span>
+                          <Badge variant="default">পেন্ডিং</Badge>
                         )}
-                        {c.googleId && <span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-600 font-bold rounded-full">Google</span>}
+                        {c.googleId && <Badge variant="info">Google</Badge>}
                       </div>
                     </div>
                     <div className="flex items-center gap-3 mt-2">
@@ -562,7 +516,7 @@ export default function StoreCustomersPage() {
             </div>
           </>
         )}
-      </div>
-    </div>
+      </Card>
+    </PageShell>
   );
 }

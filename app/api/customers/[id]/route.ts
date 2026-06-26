@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { classifySegment } from "@/lib/segments";
+import { revalidateCustomers } from "@/lib/cache/revalidate";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -52,6 +53,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(typeof body.loyaltyPoints === "number" ? { loyaltyPoints: body.loyaltyPoints } : {}),
     },
   });
+  revalidateCustomers(shop.id);
   return NextResponse.json(customer);
 }
 
@@ -68,5 +70,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   await prisma.order.updateMany({ where: { customerId: id }, data: { customerId: null } });
   await prisma.customer.delete({ where: { id } });
+  revalidateCustomers(shop.id);
   return NextResponse.json({ success: true });
 }

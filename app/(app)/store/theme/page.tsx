@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Palette, Check, Loader2, ExternalLink } from "lucide-react";
 import { minimalTheme } from "@/lib/themes";
+import { PageShell, Card, Badge, Button } from "@/components/ui";
 
 interface ShopData {
   storeTheme: string;
@@ -10,15 +11,6 @@ interface ShopData {
   storeAccentColor: string | null;
   storeSlug: string | null;
 }
-
-const S_VARS = {
-  surface: "var(--c-surface)",
-  border: "var(--c-border)",
-  text: "var(--c-text)",
-  muted: "var(--c-text-muted)",
-  secondary: "var(--c-text-sub)",
-  primary: "var(--c-primary)",
-};
 
 export default function StoreThemePage() {
   const [shop, setShop] = useState<ShopData | null>(null);
@@ -71,13 +63,22 @@ export default function StoreThemePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-40">
-        <Loader2 size={24} className="animate-spin" style={{ color: S_VARS.muted }} />
+        <Loader2 size={24} className="animate-spin" style={{ color: "var(--c-text-muted)" }} />
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
+    <PageShell
+      title="স্টোর থিম"
+      subtitle="থিমের রং কাস্টমাইজ করুন"
+      className="max-w-2xl"
+      actions={shop?.storeSlug ? (
+        <a href={`/store/${shop.storeSlug}`} target="_blank" rel="noopener noreferrer">
+          <Button variant="outline" size="sm" icon={ExternalLink}>লাইভ স্টোর</Button>
+        </a>
+      ) : undefined}
+    >
       {toast && (
         <div
           className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg"
@@ -87,69 +88,41 @@ export default function StoreThemePage() {
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)" }}>
-            <Palette size={18} color="#fff" />
-          </div>
+      <Card padding="none" className="border-2 overflow-hidden border-[var(--c-primary)]">
+        <div className="p-5 flex items-center justify-between border-b" style={{ borderColor: "var(--c-border)" }}>
           <div>
-            <h1 className="text-lg font-bold" style={{ color: S_VARS.text }}>স্টোর থিম</h1>
-            <p className="text-xs" style={{ color: S_VARS.muted }}>থিমের রং কাস্টমাইজ করুন</p>
-          </div>
-        </div>
-        {shop?.storeSlug && (
-          <a
-            href={`/store/${shop.storeSlug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 h-9 rounded-xl border text-xs font-medium"
-            style={{ borderColor: S_VARS.border, color: S_VARS.primary }}
-          >
-            <ExternalLink size={13} /> লাইভ স্টোর
-          </a>
-        )}
-      </div>
-
-      <div
-        className="rounded-2xl border-2 overflow-hidden"
-        style={{ borderColor: "var(--c-primary)" }}
-      >
-        <div className="p-5 flex items-center justify-between" style={{ backgroundColor: S_VARS.surface, borderBottom: `1px solid ${S_VARS.border}` }}>
-          <div>
-            <p className="font-bold text-sm" style={{ color: S_VARS.text }}>
+            <p className="font-bold text-sm" style={{ color: "var(--c-text)" }}>
               মিনিমাল <span className="font-normal opacity-60">(Minimal)</span>
             </p>
-            <p className="text-xs mt-0.5" style={{ color: S_VARS.muted }}>সাধারণ ও পরিষ্কার ডিজাইন, সব ধরনের পণ্যের জন্য</p>
+            <p className="text-xs mt-0.5" style={{ color: "var(--c-text-muted)" }}>সাধারণ ও পরিষ্কার ডিজাইন, সব ধরনের পণ্যের জন্য</p>
           </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white" style={{ backgroundColor: "#10B981" }}>
-            <Check size={12} /> ব্যবহার হচ্ছে
-          </div>
+          <Badge variant="success"><Check size={12} className="inline mr-1" />ব্যবহার হচ্ছে</Badge>
         </div>
 
-        <div className="p-5 grid grid-cols-2 gap-3" style={{ backgroundColor: S_VARS.surface }}>
+        <div className="p-5 grid grid-cols-2 gap-3">
           {[
             { label: "প্রাথমিক রঙ", value: primaryColor, onChange: (v: string) => { setPrimaryColor(v); setColorsDirty(true); } },
             { label: "সাথী রঙ (Accent)", value: accentColor, onChange: (v: string) => { setAccentColor(v); setColorsDirty(true); } },
           ].map(({ label, value, onChange }) => (
             <div key={label}>
-              <label className="text-xs font-medium mb-2 block" style={{ color: S_VARS.secondary }}>{label}</label>
+              <label className="text-xs font-medium mb-2 block" style={{ color: "var(--c-text-sub)" }}>{label}</label>
               <div className="flex items-center gap-3">
                 <input
                   type="color"
                   value={value}
                   onChange={e => onChange(e.target.value)}
                   className="w-10 h-10 rounded-xl cursor-pointer border"
-                  style={{ borderColor: S_VARS.border }}
+                  style={{ borderColor: "var(--c-border)" }}
                 />
-                <span className="text-sm font-mono" style={{ color: S_VARS.text }}>{value}</span>
+                <span className="text-sm font-mono" style={{ color: "var(--c-text)" }}>{value}</span>
               </div>
             </div>
           ))}
         </div>
 
         {colorsDirty && (
-          <div className="px-5 pb-4" style={{ backgroundColor: S_VARS.surface }}>
-            <p className="text-xs" style={{ color: S_VARS.muted }}>
+          <div className="px-5 pb-4">
+            <p className="text-xs" style={{ color: "var(--c-text-muted)" }}>
               * কাস্টম রং সেভ করলে থিমের ডিফল্ট রং বাতিল হবে।{" "}
               <button
                 className="underline"
@@ -164,16 +137,11 @@ export default function StoreThemePage() {
             </p>
           </div>
         )}
-      </div>
+      </Card>
 
-      <button
-        onClick={handleSave}
-        disabled={saving}
-        className="w-full py-3 rounded-xl text-white text-sm font-semibold disabled:opacity-50 transition-opacity"
-        style={{ backgroundColor: "var(--c-primary)" }}
-      >
+      <Button onClick={handleSave} disabled={saving} loading={saving} className="w-full" size="lg">
         {saving ? "সেভ হচ্ছে..." : "প্রয়োগ করুন"}
-      </button>
-    </div>
+      </Button>
+    </PageShell>
   );
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { revalidateProducts } from "@/lib/cache/revalidate";
 
 async function getShopId(userId: string) {
   const shop = await prisma.shop.findUnique({ where: { userId } });
@@ -54,6 +55,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       },
     });
     const result = await prisma.productVariant.findMany({ where: { productId: id }, orderBy: { createdAt: "asc" } });
+    revalidateProducts(shopId);
     return NextResponse.json(result);
   }
 
@@ -70,14 +72,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       stockQty: parseInt(body.stockQty) || 0,
     },
   });
+  revalidateProducts(shopId);
   return NextResponse.json(variant, { status: 201 });
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const shopId = await getShopId(session.user.id);
+  if (!shopId) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
   const { id } = await params;
   await prisma.productVariant.deleteMany({ where: { productId: id } });
   await prisma.product.update({ where: { id }, data: { hasVariants: false } });
+  revalidateProducts(shopId);
   return NextResponse.json({ success: true });
 }

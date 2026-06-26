@@ -3,15 +3,11 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Users, Search, RefreshCw, ShieldOff, ShieldCheck, Clock,
-  Trash2, Loader2, X, ChevronDown, Store, Star, Send,
+  Trash2, Loader2, X, Store, Star, Send, LogIn, Shield,
 } from "lucide-react";
-
-const S = {
-  surface: "var(--c-surface, #fff)", border: "var(--c-border, #E8E6DF)",
-  text: "var(--c-text, #1A1A18)", muted: "var(--c-text-muted, #9B9B97)",
-  secondary: "var(--c-text-sub, #6B6B67)", primary: "var(--c-primary, #0F6E56)",
-  bg: "var(--c-bg, #F7F6F2)",
-};
+import { useSession } from "next-auth/react";
+import AdminCard from "../components/AdminCard";
+import AdminPillTabs from "../components/AdminPillTabs";
 
 const STATUS_CFG = {
   active:    { label: "সক্রিয়",   color: "#059669", bg: "#ECFDF5", icon: ShieldCheck },
@@ -29,6 +25,8 @@ interface User {
   id: string;
   name: string;
   email: string;
+  adminRole: string | null;
+  isAdmin: boolean;
   accountStatus: string;
   statusReason: string | null;
   statusUpdatedAt: string | null;
@@ -64,6 +62,9 @@ export default function AdminUsersPage() {
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [roleModal, setRoleModal] = useState<User | null>(null);
+  const [selectedRole, setSelectedRole] = useState<string>("");
+  const [roleSaving, setRoleSaving] = useState(false);
 
   function showToast(type: "success" | "error", msg: string) {
     setToast({ type, msg });
@@ -91,6 +92,26 @@ export default function AdminUsersPage() {
   }
 
   const [reviewBusy, setReviewBusy] = useState<string | null>(null);
+  const [impersonating, setImpersonating] = useState<string | null>(null);
+  const { update } = useSession();
+
+  async function impersonateUser(user: User) {
+    setImpersonating(user.id);
+    const r = await fetch(`/api/admin/users/${user.id}/impersonate`, { method: "POST" });
+    const d = await r.json();
+    setImpersonating(null);
+    if (!r.ok) {
+      showToast("error", d.error ?? "Impersonation failed");
+      return;
+    }
+    await update({
+      impersonatingUserId: d.impersonatingUserId,
+      impersonatingUserName: d.impersonatingUserName,
+      onboarded: d.onboarded,
+      activeShopId: d.activeShopId,
+    });
+    window.location.href = "/dashboard";
+  }
 
   async function requestReview(user: User) {
     setReviewBusy(user.id);
@@ -112,6 +133,33 @@ export default function AdminUsersPage() {
     if (!r.ok) { showToast("error", "বাতিল করতে সমস্যা হয়েছে"); return; }
     setUsers(prev => prev.map(u => u.id === user.id ? { ...u, reviewRequestedAt: null } : u));
     showToast("success", "Review request বাতিল করা হয়েছে");
+  }
+
+  async function saveRole() {
+    if (!roleModal) return;
+    setRoleSaving(true);
+    const adminRole = selectedRole === "" ? null : selectedRole;
+    const r = await fetch(`/api/admin/users/${roleModal.id}/role`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ adminRole }),
+    });
+    const d = await r.json();
+    setRoleSaving(false);
+    if (!r.ok) {
+      showToast("error", d.error ?? "Role update failed");
+      return;
+    }
+    setUsers((prev) => prev.map((u) => u.id === roleModal.id
+      ? { ...u, adminRole: d.adminRole, isAdmin: d.isAdmin }
+      : u));
+    setRoleModal(null);
+    showToast("success", `${roleModal.name} এর admin role আপডেট হয়েছে`);
+  }
+
+  function openRoleModal(user: User) {
+    setSelectedRole(user.adminRole ?? "");
+    setRoleModal(user);
   }
 
   async function executeAction() {
@@ -163,86 +211,67 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-5">
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg"
-          style={{ backgroundColor: toast.type === "success" ? "#1D9E75" : "#E24B4A" }}>
+        <div className={`fixed bottom-6 right-6 z-50 rounded-xl px-5 py-3 text-sm font-medium text-white shadow-lg ${toast.type === "success" ? "bg-emerald-600" : "bg-red-500"}`}>
           {toast.msg}
         </div>
       )}
 
-      {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#EDE9FE" }}>
-            <Users size={20} style={{ color: "#7C3AED" }} />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold" style={{ color: S.text }}>User Management</h1>
-            <p className="text-sm" style={{ color: S.muted }}>সব seller অ্যাকাউন্ট পরিচালনা করুন</p>
-          </div>
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">User Management</h2>
+          <p className="text-sm text-gray-500">সব seller অ্যাকাউন্ট পরিচালনা করুন</p>
         </div>
-        <button onClick={load} className="p-2 rounded-xl border" style={{ borderColor: S.border }}>
-          <RefreshCw size={15} style={{ color: S.muted }} />
+        <button onClick={load} className="rounded-xl border border-gray-200 p-2.5 hover:bg-white active:scale-95">
+          <RefreshCw size={15} className="text-gray-500" />
         </button>
       </div>
 
-      {/* Stats pills */}
-      <div className="flex gap-2 flex-wrap">
-        {[
-          { key: "", label: "সব", count: counts.all, color: S.primary, bg: "var(--c-primary-light, #DCFCE7)" },
-          { key: "active", label: "সক্রিয়", count: counts.active, color: "#059669", bg: "#ECFDF5" },
-          { key: "suspended", label: "স্থগিত", count: counts.suspended, color: "#D97706", bg: "#FFFBEB" },
-          { key: "disabled", label: "নিষ্ক্রিয়", count: counts.disabled, color: "#DC2626", bg: "#FEF2F2" },
-        ].map(f => (
-          <button key={f.key} onClick={() => setStatusFilter(f.key)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all"
-            style={{
-              backgroundColor: statusFilter === f.key ? f.color : S.surface,
-              color: statusFilter === f.key ? "#fff" : f.color,
-              borderColor: statusFilter === f.key ? f.color : S.border,
-            }}>
-            {f.label} <span className="font-bold">{f.count}</span>
-          </button>
-        ))}
-      </div>
+      <AdminPillTabs
+        tabs={[
+          { key: "", label: `সব (${counts.all})` },
+          { key: "active", label: `সক্রিয় (${counts.active})` },
+          { key: "suspended", label: `স্থগিত (${counts.suspended})` },
+          { key: "disabled", label: `নিষ্ক্রিয় (${counts.disabled})` },
+        ]}
+        active={statusFilter}
+        onChange={setStatusFilter}
+      />
 
       {/* Search */}
       <div className="relative">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: S.muted }} />
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
         <input value={search} onChange={e => setSearch(e.target.value)}
           placeholder="নাম বা ইমেইল দিয়ে খুঁজুন..."
-          className="w-full h-10 pl-9 pr-4 rounded-xl border text-sm outline-none"
-          style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }} />
+          className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-9 pr-4 text-sm outline-none focus:border-emerald-500" />
       </div>
 
       {/* Users list */}
       {loading ? (
         <div className="space-y-2">
-          {[1,2,3,4,5].map(i => <div key={i} className="h-20 rounded-2xl animate-pulse" style={{ backgroundColor: S.surface }} />)}
+          {[1,2,3,4,5].map(i => <div key={i} className="h-20 animate-pulse rounded-xl bg-gray-200" />)}
         </div>
       ) : users.length === 0 ? (
-        <div className="rounded-2xl p-12 text-center" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
-          <Users size={32} className="mx-auto mb-3 opacity-30" style={{ color: S.muted }} />
-          <p className="font-medium" style={{ color: S.text }}>কোনো user পাওয়া যায়নি</p>
-        </div>
+        <AdminCard hover={false}>
+          <div className="py-12 text-center">
+            <Users size={32} className="mx-auto mb-3 text-gray-300" />
+            <p className="font-medium text-gray-700">কোনো user পাওয়া যায়নি</p>
+          </div>
+        </AdminCard>
       ) : (
-        <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${S.border}` }}>
-          {users.map((user, i) => {
+        <div className="space-y-3">
+          {users.map((user) => {
             const st = STATUS_CFG[user.accountStatus as keyof typeof STATUS_CFG] ?? STATUS_CFG.active;
             const StIcon = st.icon;
             const plan = user.subscription?.plan ?? "free";
             const planStyle = PLAN_COLOR[plan] ?? PLAN_COLOR.free;
             return (
-              <div key={user.id} className="p-4 flex flex-col md:flex-row md:items-center gap-3"
-                style={{
-                  backgroundColor: S.surface,
-                  borderTop: i > 0 ? `1px solid ${S.border}` : "none",
-                  opacity: user.accountStatus === "disabled" ? 0.8 : 1,
-                }}>
+              <AdminCard key={user.id} hover={false} className={`!p-4 ${user.accountStatus === "disabled" ? "opacity-80" : ""}`}>
+                <div className="flex flex-col gap-3 md:flex-row md:items-center">
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <p className="font-semibold text-sm" style={{ color: S.text }}>{user.name}</p>
-                    <span className="text-xs" style={{ color: S.muted }}>{user.email}</span>
+                    <p className="text-sm font-semibold text-gray-900">{user.name}</p>
+                    <span className="text-xs text-gray-500">{user.email}</span>
                     <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-semibold"
                       style={{ backgroundColor: st.bg, color: st.color }}>
                       <StIcon size={10} /> {st.label}
@@ -251,6 +280,12 @@ export default function AdminUsersPage() {
                       style={{ backgroundColor: planStyle.bg, color: planStyle.text }}>
                       {plan.toUpperCase()}
                     </span>
+                    {user.isAdmin && user.adminRole && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
+                        style={{ backgroundColor: "#EDE9FE", color: "#5B21B6" }}>
+                        Admin: {user.adminRole}
+                      </span>
+                    )}
                     {user.appReviews?.[0] && (
                       <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-semibold"
                         style={{ backgroundColor: "#FEF3C7", color: "#92400E" }}>
@@ -264,7 +299,7 @@ export default function AdminUsersPage() {
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-3 flex-wrap text-xs" style={{ color: S.muted }}>
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
                     {user.shop && (
                       <span className="flex items-center gap-1">
                         <Store size={11} /> {user.shop.name}
@@ -283,6 +318,17 @@ export default function AdminUsersPage() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap">
+                  {user.accountStatus === "active" && user.onboarded && (
+                    <button
+                      onClick={() => impersonateUser(user)}
+                      disabled={impersonating === user.id}
+                      className="flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 disabled:opacity-50 active:scale-95"
+                      title="Login as this user"
+                    >
+                      {impersonating === user.id ? <Loader2 size={12} className="animate-spin" /> : <LogIn size={12} />}
+                      Login as
+                    </button>
+                  )}
                   {!user.appReviews?.[0] && !user.reviewRequestedAt && user.accountStatus === "active" && (
                     <button
                       onClick={() => requestReview(user)}
@@ -307,6 +353,11 @@ export default function AdminUsersPage() {
                       Cancel
                     </button>
                   )}
+                  <button onClick={() => openRoleModal(user)}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-violet-200 bg-violet-50 text-violet-700"
+                    title="Admin role set করুন">
+                    <Shield size={12} /> Role
+                  </button>
                   {user.accountStatus !== "active" && (
                     <button onClick={() => openModal(user, "activate")}
                       className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white"
@@ -329,14 +380,45 @@ export default function AdminUsersPage() {
                     </button>
                   )}
                   <button onClick={() => openModal(user, "delete")}
-                    className="p-1.5 rounded-lg border hover:bg-red-50 transition-colors"
-                    style={{ borderColor: S.border }}>
-                    <Trash2 size={14} style={{ color: "#DC2626" }} />
+                    className="rounded-lg border border-gray-200 p-1.5 transition-colors hover:bg-red-50">
+                    <Trash2 size={14} className="text-red-600" />
                   </button>
                 </div>
-              </div>
+                </div>
+              </AdminCard>
             );
           })}
+        </div>
+      )}
+
+      {/* Role Modal */}
+      {roleModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="rounded-2xl p-6 max-w-md w-full bg-white shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-base">Admin Role</h3>
+              <button onClick={() => setRoleModal(null)}><X size={20} className="text-gray-500" /></button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">{roleModal.name} ({roleModal.email})</p>
+            <select value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)}
+              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm mb-4 outline-none focus:border-emerald-500">
+              <option value="">No admin access</option>
+              <option value="super">Super Admin</option>
+              <option value="support">Support</option>
+              <option value="billing">Billing</option>
+              <option value="content">Content</option>
+            </select>
+            <div className="flex gap-2">
+              <button onClick={() => setRoleModal(null)}
+                className="flex-1 py-2.5 rounded-xl border text-sm font-medium text-gray-600">
+                বাতিল
+              </button>
+              <button onClick={saveRole} disabled={roleSaving}
+                className="flex-1 py-2.5 rounded-xl bg-violet-600 text-white text-sm font-semibold disabled:opacity-60">
+                {roleSaving ? "Saving..." : "Save Role"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -385,9 +467,8 @@ export default function AdminUsersPage() {
         );
       })()}
 
-      {/* Dropdown hint for small hint */}
-      <p className="text-xs text-center" style={{ color: S.muted }}>
-        <ChevronDown size={12} className="inline" /> সর্বমোট {users.length}টি ব্যবহারকারী দেখাচ্ছে
+      <p className="text-center text-xs text-gray-500">
+        সর্বমোট {users.length}টি ব্যবহারকারী দেখাচ্ছে
       </p>
     </div>
   );

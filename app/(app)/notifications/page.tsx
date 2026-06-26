@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Bell, Check, Trash2, Trophy, Gift, TrendingUp, Lightbulb, Package, ShoppingBag, Star } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { PageShell, Tabs, Badge, Card, Button, EmptyState, StatCard } from "@/components/ui";
 
 interface NotifItem {
   id: string;
@@ -103,57 +104,35 @@ export default function NotificationsPage() {
   const meta = (type: string) => TYPE_META[type] ?? TYPE_META.system;
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm"
-            style={{ background: "linear-gradient(135deg, #0F6E56, #0A5442)" }}>
-            <Bell size={18} color="#fff" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold" style={{ color: "var(--c-text)" }}>নোটিফিকেশন</h1>
-            {unreadCount > 0 && (
-              <p className="text-xs font-semibold" style={{ color: "#EF4444" }}>{unreadCount}টি অপঠিত</p>
-            )}
-          </div>
-        </div>
+    <PageShell
+      title="নোটিফিকেশন"
+      subtitle={unreadCount > 0 ? `${unreadCount}টি অপঠিত` : "সব আপডেট এক জায়গায়"}
+      actions={
         <div className="flex items-center gap-2">
           {unreadCount > 0 && (
-            <button onClick={markAllRead}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:opacity-80"
-              style={{ backgroundColor: "#E8F5F0", color: "#0F6E56" }}>
-              <Check size={12} /> সব পড়া
-            </button>
+            <Button variant="secondary" size="sm" icon={Check} onClick={markAllRead}>সব পড়া</Button>
           )}
-          <button onClick={clearRead} disabled={deleting}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:opacity-80 disabled:opacity-50"
-            style={{ backgroundColor: "var(--c-bg)", color: "var(--c-text-muted)", border: "1px solid var(--c-border)" }}>
-            <Trash2 size={12} /> পড়া মুছুন
-          </button>
+          <Button variant="outline" size="sm" icon={Trash2} onClick={clearRead} disabled={deleting} loading={deleting}>
+            পড়া মুছুন
+          </Button>
         </div>
-      </div>
-
-      {/* Filter Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
-        {FILTER_TABS.map(tab => (
-          <button key={tab.key} onClick={() => setFilter(tab.key)}
-            className="flex-shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all"
-            style={{
-              backgroundColor: filter === tab.key ? "#0F6E56" : "var(--c-surface)",
-              color: filter === tab.key ? "#fff" : "var(--c-text-muted)",
-              border: `1px solid ${filter === tab.key ? "#0F6E56" : "var(--c-border)"}`,
-            }}>
-            {tab.label}
-            {tab.key === "unread" && unreadCount > 0 && (
-              <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-extrabold"
-                style={{ backgroundColor: "#EF4444", color: "#fff" }}>{unreadCount}</span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Content */}
+      }
+      stats={
+        <>
+          <StatCard label="মোট" value={notifications.length} icon={Bell} accent="blue" iconBg="var(--icon-blue-bg)" iconColor="var(--bg-info-text)" />
+          <StatCard label="অপঠিত" value={unreadCount} icon={Bell} accent="red" iconBg="var(--bg-danger-soft)" iconColor="var(--bg-danger-text)" />
+        </>
+      }
+    >
+      <Tabs
+        tabs={FILTER_TABS.map(tab => ({
+          key: tab.key,
+          label: tab.label,
+          count: tab.key === "unread" && unreadCount > 0 ? unreadCount : undefined,
+        }))}
+        active={filter}
+        onChange={setFilter}
+      />
       {loading ? (
         <div className="space-y-3 animate-pulse">
           {[1, 2, 3, 4].map(i => (
@@ -167,28 +146,23 @@ export default function NotificationsPage() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="py-20 text-center rounded-2xl" style={{ backgroundColor: "var(--c-surface)" }}>
-          <div className="w-20 h-20 rounded-3xl mx-auto mb-4 flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, #E8F5F0, #C8EDE3)" }}>
-            <Bell size={32} style={{ color: "#0F6E56" }} />
-          </div>
-          <p className="text-sm font-bold mb-1" style={{ color: "var(--c-text)" }}>কোনো নোটিফিকেশন নেই</p>
-          <p className="text-xs" style={{ color: "var(--c-text-muted)" }}>
-            {filter === "unread" ? "সব নোটিফিকেশন পড়া হয়ে গেছে!" : "এই বিভাগে এখন কোনো নোটিফিকেশন নেই।"}
-          </p>
-        </div>
+        <EmptyState
+          icon={Bell}
+          title="কোনো নোটিফিকেশন নেই"
+          description={filter === "unread" ? "সব নোটিফিকেশন পড়া হয়ে গেছে!" : "এই বিভাগে এখন কোনো নোটিফিকেশন নেই।"}
+        />
       ) : (
         <div className="space-y-2">
           {filtered.map(n => {
             const m = meta(n.type);
             return (
-              <button key={n.id} onClick={() => handleClick(n)}
-                className="w-full flex items-start gap-3.5 p-4 rounded-2xl text-left transition-all hover:brightness-95"
-                style={{
-                  backgroundColor: n.read ? "var(--c-surface)" : "#F0FDF7",
-                  border: `1px solid ${n.read ? "var(--c-border)" : "#86EFAC"}`,
-                  borderLeft: n.read ? `1px solid var(--c-border)` : "4px solid #0F6E56",
-                }}>
+              <Card
+                key={n.id}
+                padding="md"
+                className="cursor-pointer hover:opacity-95 transition-opacity"
+                onClick={() => handleClick(n)}
+              >
+                <div className="flex items-start gap-3.5 w-full text-left">
                 {/* Icon */}
                 <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm mt-0.5"
                   style={{ backgroundColor: n.read ? "var(--c-bg)" : m.bg, color: n.read ? "var(--c-text-muted)" : m.color }}>
@@ -216,10 +190,9 @@ export default function NotificationsPage() {
                     </p>
                   )}
                   <div className="flex items-center gap-2 mt-2">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg"
-                      style={{ backgroundColor: m.bg, color: m.color }}>
+                    <Badge variant={n.type === "plan_expiry" || n.type === "low_stock" ? "danger" : n.type === "achievement" ? "warning" : "success"}>
                       {m.label}
-                    </span>
+                    </Badge>
                     {n.link && (
                       <span className="text-[10px] font-semibold" style={{ color: "var(--c-primary)" }}>
                         দেখুন →
@@ -227,11 +200,12 @@ export default function NotificationsPage() {
                     )}
                   </div>
                 </div>
-              </button>
+                </div>
+              </Card>
             );
           })}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

@@ -14,6 +14,7 @@ import {
 import { useDraggable } from "@dnd-kit/core";
 import type { Task, TaskStatus } from "./page";
 import { getPriorityStyle, getCategoryLabel } from "./taskUtils";
+import { Card, Badge } from "@/components/ui";
 import { MessageSquare, Calendar, ExternalLink, CheckSquare, Play, Square } from "lucide-react";
 import { useTaskTimer } from "./TaskTimerContext";
 
@@ -58,20 +59,14 @@ function TaskCard({ task, onClick }: { task: Task; onClick: () => void }) {
       {...listeners}
       {...attributes}
       onClick={onClick}
-      className="rounded-xl border cursor-grab active:cursor-grabbing transition-all hover:shadow-md"
+      className="card-premium rounded-2xl border cursor-grab active:cursor-grabbing transition-all hover:shadow-md p-3"
       style={{
-        backgroundColor: "var(--c-surface)",
-        borderColor: running ? "var(--c-primary)" : "var(--c-border)",
         borderLeftColor: running ? "var(--c-primary)" : leftBorderColor,
         borderLeftWidth: 3,
         opacity: isDragging ? 0.4 : 1,
-        boxShadow: running
-          ? "0 0 0 2px var(--c-primary-light)"
-          : "0 1px 3px rgba(0,0,0,0.06)",
-        padding: "10px 12px 10px 10px",
+        boxShadow: running ? "0 0 0 2px var(--c-primary-light)" : "0 1px 3px rgba(0,0,0,0.06)",
       }}
     >
-      {/* Priority badge + Category + Order link */}
       <div className="flex items-center gap-1.5 mb-2 flex-wrap">
         <span
           className="text-[10px] font-bold px-1.5 py-0.5 rounded"
@@ -188,29 +183,22 @@ function Column({
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
   return (
-    <div className="flex-1 min-w-[240px] flex flex-col">
-      {/* Column header */}
+    <Card padding="none" className="flex-1 min-w-[240px] flex flex-col overflow-hidden">
       <div
-        className="flex items-center gap-2 mb-2 px-3 py-2.5 rounded-xl"
-        style={{ backgroundColor: isOver ? column.color + "22" : column.headerBg }}
+        className="flex items-center gap-2 px-3 py-2.5 border-b"
+        style={{ backgroundColor: isOver ? column.color + "22" : column.headerBg, borderColor: "var(--c-border)" }}
       >
         <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: column.color }} />
         <span className="text-sm font-bold flex-1" style={{ color: "var(--c-text)" }}>{column.label}</span>
-        <span
-          className="text-xs font-bold px-2 py-0.5 rounded-full"
-          style={{ backgroundColor: column.color + "20", color: column.color }}
-        >
-          {tasks.length}
-        </span>
+        <Badge variant="default">{tasks.length}</Badge>
       </div>
 
-      {/* Drop zone */}
       <div
         ref={setNodeRef}
-        className="flex-1 space-y-2 rounded-2xl p-2 min-h-[120px] transition-all"
+        className="flex-1 space-y-2 p-2 min-h-[120px] transition-all"
         style={{
           backgroundColor: isOver ? column.color + "12" : column.bg,
-          border: `2px dashed ${isOver ? column.color : "transparent"}`,
+          borderTop: `2px dashed ${isOver ? column.color : "transparent"}`,
         }}
       >
         {tasks.map(task => (
@@ -222,7 +210,7 @@ function Column({
           </div>
         )}
       </div>
-    </div>
+    </Card>
   );
 }
 

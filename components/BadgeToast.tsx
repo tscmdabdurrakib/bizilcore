@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
+import { onIdle } from "@/lib/idle";
 
 interface Badge {
   key: string;
@@ -40,6 +41,8 @@ export default function BadgeToast() {
     if (polledRef.current) return;
     polledRef.current = true;
 
+    let interval: ReturnType<typeof setInterval> | undefined;
+
     const poll = async () => {
       try {
         const res = await fetch("/api/gamification");
@@ -64,9 +67,15 @@ export default function BadgeToast() {
       }
     };
 
-    poll();
-    const interval = setInterval(poll, 60_000);
-    return () => clearInterval(interval);
+    const cancelIdle = onIdle(() => {
+      poll();
+      interval = setInterval(poll, 60_000);
+    });
+
+    return () => {
+      cancelIdle();
+      if (interval) clearInterval(interval);
+    };
   }, []);
 
   useEffect(() => {

@@ -38,7 +38,7 @@ export default function PatientsBoard() {
   const [selected, setSelected] = useState<PatientDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"opd" | "ipd">("opd");
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const load = useCallback(async () => {
     setLoading(true);

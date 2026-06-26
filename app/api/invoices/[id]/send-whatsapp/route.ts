@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { decryptToken, sendWhatsAppMessage } from "@/lib/whatsapp";
 
+import { getPublicInvoiceUrl } from "@/lib/invoices/utils";
+
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -35,6 +37,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     : "";
 
   const discountText = invoice.discount > 0 ? `\nছাড়: - ৳${invoice.discount.toLocaleString("bn-BD")}` : "";
+  const publicUrl = getPublicInvoiceUrl(invoice.token);
 
   const message = `🧾 ইনভয়েস: ${invoice.invoiceNumber}
 📅 তারিখ: ${new Date(invoice.createdAt).toLocaleDateString("bn-BD")}
@@ -44,6 +47,8 @@ ${itemsText}
 ━━━━━━━━━━━━━━━
 সাবটোটাল: ৳${invoice.subtotal.toLocaleString("bn-BD")}${discountText}
 💰 মোট দেনা: ৳${invoice.total.toLocaleString("bn-BD")}${dueDateText}
+
+🔗 ইনভয়েস দেখুন: ${publicUrl}
 
 ধন্যবাদ! — ${invoice.shop.name}`;
 

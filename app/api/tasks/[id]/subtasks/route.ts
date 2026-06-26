@@ -2,23 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireTaskPlan } from "@/lib/taskGuard";
+import { requireTaskContext } from "@/lib/tasks/server";
 
-async function getShopAndTask(userId: string, taskId: string) {
-  const shop = await prisma.shop.findUnique({ where: { userId } });
-  if (!shop) return null;
-  const task = await prisma.task.findFirst({ where: { id: taskId, shopId: shop.id } });
-  if (!task) return null;
-  return { shop, task };
-}
-
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!await requireTaskPlan(session.user.id)) return NextResponse.json({ error: "Pro plan required" }, { status: 403 });
 
   const { id } = await params;
-  const ctx = await getShopAndTask(session.user.id, id);
-  if (!ctx) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const ctx = await requireTaskContext(id);
+  if ("error" in ctx) {
+    if (ctx.error === "not_found") return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return ctx.error;
+  }
 
   const subtasks = await prisma.subTask.findMany({
     where: { taskId: id },
@@ -34,8 +30,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!await requireTaskPlan(session.user.id)) return NextResponse.json({ error: "Pro plan required" }, { status: 403 });
 
   const { id } = await params;
-  const ctx = await getShopAndTask(session.user.id, id);
-  if (!ctx) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const ctx = await requireTaskContext(id);
+  if ("error" in ctx) {
+    if (ctx.error === "not_found") return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return ctx.error;
+  }
 
   const { title } = await req.json();
   if (!title?.trim()) return NextResponse.json({ error: "Title required" }, { status: 400 });
@@ -55,8 +54,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!await requireTaskPlan(session.user.id)) return NextResponse.json({ error: "Pro plan required" }, { status: 403 });
 
   const { id } = await params;
-  const ctx = await getShopAndTask(session.user.id, id);
-  if (!ctx) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const ctx = await requireTaskContext(id);
+  if ("error" in ctx) {
+    if (ctx.error === "not_found") return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return ctx.error;
+  }
 
   const { subtaskId, done, title } = await req.json();
   if (!subtaskId) return NextResponse.json({ error: "subtaskId required" }, { status: 400 });
@@ -81,8 +83,11 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   if (!await requireTaskPlan(session.user.id)) return NextResponse.json({ error: "Pro plan required" }, { status: 403 });
 
   const { id } = await params;
-  const ctx = await getShopAndTask(session.user.id, id);
-  if (!ctx) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const ctx = await requireTaskContext(id);
+  if ("error" in ctx) {
+    if (ctx.error === "not_found") return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return ctx.error;
+  }
 
   const { subtaskId } = await req.json();
   if (!subtaskId) return NextResponse.json({ error: "subtaskId required" }, { status: 400 });

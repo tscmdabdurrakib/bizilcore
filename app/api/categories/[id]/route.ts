@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { cacheDel, CK } from "@/lib/cache";
+import { revalidateCategories } from "@/lib/cache/revalidate";
 
 async function getShopId(userId: string) {
   const shop = await prisma.shop.findUnique({ where: { userId }, select: { id: true } });
@@ -103,8 +103,7 @@ export async function PATCH(
       },
     });
 
-    // Clear cache
-    cacheDel(CK.categories(shopId));
+    revalidateCategories(shopId);
 
     return NextResponse.json(updated);
   } catch (error) {
@@ -176,8 +175,7 @@ export async function DELETE(
       where: { id },
     });
 
-    // Clear cache
-    cacheDel(CK.categories(shopId));
+    revalidateCategories(shopId);
 
     return NextResponse.json({ success: true, message: "ক্যাটাগরি মুছে ফেলা হয়েছে" });
   } catch (error) {

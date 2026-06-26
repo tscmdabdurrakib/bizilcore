@@ -3,10 +3,13 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, ChevronDown, ChevronRight, RefreshCw, Truck, Download, MessageCircle, Trash2, X, Copy, RotateCcw, Tag, Wallet, Check, Printer } from "lucide-react";
+import { ChevronDown, ChevronRight, RefreshCw, Truck, Download, MessageCircle, Trash2, X, Copy, RotateCcw, Tag, Wallet, Check, Printer } from "lucide-react";
 import RiskBadge from "@/components/orders/RiskBadge";
+import DeliveryRiskBadge from "@/components/orders/DeliveryRiskBadge";
 import { formatBDT, formatBanglaDate, getStatusStyle, STATUS_MAP } from "@/lib/utils";
+import SmsManualSendButton from "@/components/sms/SmsManualSendButton";
 import DatePicker from "@/components/ui/DatePicker";
+import { PageShell, StatCard, Card, Badge, Button, Input } from "@/components/ui";
 
 interface Order {
   id: string; status: string; source: string;
@@ -19,6 +22,7 @@ interface Order {
   riskScore: number | null;
   riskFlags: string | null;
   fakeReported: boolean;
+  confirmStatus: string | null;
   createdAt: string;
   customer: { id: string; name: string; phone: string | null; address: string | null } | null;
   items: { id: string; quantity: number; unitPrice: number; subtotal: number; productId: string | null; comboId: string | null; comboSnapshot: string | null; product: { id: string; name: string } | null; combo: { id: string; name: string; items: { quantity: number; product: { name: string } }[] } | null }[];
@@ -54,6 +58,7 @@ export default function OrderDetailPage() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [selectedCourier, setSelectedCourier] = useState<string>("pathao");
   const [bookingCourier, setBookingCourier] = useState(false);
+  const [sendingConfirm, setSendingConfirm] = useState(false);
   const [refreshingStatus, setRefreshingStatus] = useState(false);
   const [updatingCod, setUpdatingCod] = useState(false);
   const [togglingRemitted, setTogglingRemitted] = useState(false);
@@ -114,7 +119,7 @@ export default function OrderDetailPage() {
     }
   }
 
-  async function bookCourier() {
+  async function bookCourier(override = false) {
     if (MANUAL_COURIERS_LIST.includes(selectedCourier)) {
       setManualTrackInput("");
       setShowManualModal(true);
@@ -123,16 +128,40 @@ export default function OrderDetailPage() {
     setBookingCourier(true);
     const r = await fetch("/api/courier", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId: id, courierName: selectedCourier }),
+      body: JSON.stringify({ orderId: id, courierName: selectedCourier, override }),
     });
     const d = await r.json();
     if (r.ok) {
       setOrder((o) => o ? { ...o, courierName: d.courierName, courierTrackId: d.trackingId, courierStatus: "booked", codStatus: "with_courier", status: "shipped" } : o);
       showToast("success", `Courier book হয়েছে ✓ Tracking: ${d.trackingId}`);
+    } else if (r.status === 409 && d.needsConfirm) {
+      setBookingCourier(false);
+      const proceed = window.confirm(
+        `${d.error ?? "এই কাস্টমারের ডেলিভারি ঝুঁকি বেশি।"}\n\nকনফার্ম না করেই বুক করবেন?`
+      );
+      if (proceed) await bookCourier(true);
+      return;
     } else {
       showToast("error", d.error ?? "Courier booking failed");
     }
     setBookingCourier(false);
+  }
+
+  async function sendConfirm() {
+    if (!order?.customer?.phone) {
+      showToast("error", "কাস্টমারের ফোন নম্বর নেই");
+      return;
+    }
+    setSendingConfirm(true);
+    const r = await fetch(`/api/orders/${id}/confirm`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    const d = await r.json();
+    if (r.ok && d.sent) {
+      setOrder((o) => o ? { ...o, confirmStatus: "confirmed" } : o);
+      showToast("success", "কনফার্মেশন মেসেজ পাঠানো হয়েছে ✓");
+    } else {
+      showToast("error", d.error ?? "কনফার্মেশন পাঠানো যায়নি (WhatsApp/SMS সংযোগ দেখুন)");
+    }
+    setSendingConfirm(false);
   }
 
   async function bookManual() {
@@ -282,15 +311,79 @@ export default function OrderDetailPage() {
 
   const S = { surface: "var(--c-surface)", border: "var(--c-border)", text: "var(--c-text)", secondary: "var(--c-text-sub)", muted: "var(--c-text-muted)", primary: "var(--c-primary)" };
 
-  if (loading) return <div className="animate-pulse space-y-4 max-w-2xl">{[1,2,3,4].map(i => <div key={i} className="h-32 bg-gray-100 rounded-2xl" />)}</div>;
-  if (!order) return <div className="text-center py-20"><p style={{ color: S.muted }}>অর্ডার পাওয়া যায়নি।</p><button onClick={() => router.back()} className="mt-3 text-sm" style={{ color: S.primary }}>← ফিরে যান</button></div>;
+  if (loading) return (
+    <div className="animate-pulse space-y-4 max-w-2xl">
+      {[1,2,3,4].map(i => <div key={i} className="h-32 rounded-2xl skeleton-shimmer" />)}
+    </div>
+  );
+  if (!order) return (
+    <div className="text-center py-20">
+      <p style={{ color: S.muted }}>অর্ডার পাওয়া যায়নি।</p>
+      <Button variant="ghost" onClick={() => router.back()} className="mt-3">← ফিরে যান</Button>
+    </div>
+  );
 
   const st = getStatusStyle(order.status);
   const courierSt = order.courierStatus ? (COURIER_STATUS_MAP[order.courierStatus] ?? COURIER_STATUS_MAP.booked) : null;
   const codSt = order.codStatus ? COD_STYLE[order.codStatus] : null;
 
   return (
-    <div className="max-w-[1200px]">
+    <PageShell
+      title={`অর্ডার #${order.id.slice(-6).toUpperCase()}`}
+      subtitle={formatBanglaDate(order.createdAt)}
+      breadcrumbs={[{ label: "অর্ডার", href: "/orders" }, { label: `#${order.id.slice(-6).toUpperCase()}` }]}
+      className="max-w-[1200px]"
+      stats={
+        <>
+          <StatCard label="মোট" value={formatBDT(order.totalAmount)} accent="green" />
+          <StatCard label="পরিশোধিত" value={formatBDT(order.paidAmount)} accent="green" />
+          <StatCard label="বাকি" value={formatBDT(order.dueAmount)} accent={order.dueAmount > 0 ? "red" : "green"} />
+        </>
+      }
+      actions={
+        <>
+          <Badge status={order.status} dot>{st.label}</Badge>
+          <Button variant="outline" size="sm" icon={Download} onClick={downloadInvoice} loading={downloadingPdf}>
+            {downloadingPdf ? "তৈরি হচ্ছে..." : "Invoice"}
+          </Button>
+          <Button variant="outline" size="sm" icon={Download} onClick={() => window.open(`/orders/${id}/packing-slip`, "_blank")}>
+            Packing Slip
+          </Button>
+          {order.customer?.phone && <DeliveryRiskBadge phone={order.customer.phone} />}
+          {order.customer?.phone && order.confirmStatus !== "confirmed" && (
+            <Button variant="outline" size="sm" icon={Check} onClick={sendConfirm} loading={sendingConfirm}
+              style={{ borderColor: "#2B7CE9", color: "#2B7CE9" }}>
+              {sendingConfirm ? "পাঠানো হচ্ছে..." : "Confirm পাঠান"}
+            </Button>
+          )}
+          {order.confirmStatus === "confirmed" && (
+            <Badge variant="info"><Check size={12} className="inline mr-1" /> কনফার্মড</Badge>
+          )}
+          {order.customer?.phone && (
+            <>
+              <Button size="sm" icon={MessageCircle} onClick={openWhatsApp} style={{ backgroundColor: "#25D366" }}>
+                WhatsApp
+              </Button>
+              <SmsManualSendButton
+                phoneNumber={order.customer.phone}
+                customerId={order.customer.id}
+                defaultMessage={`আপনার অর্ডার #${order.id.slice(-6).toUpperCase()} সম্পর্কে — `}
+              />
+            </>
+          )}
+          <Button variant="outline" size="sm" icon={Printer} onClick={() => router.push(`/orders/${id}/slip`)}>স্লিপ</Button>
+          <Button variant="outline" size="sm" icon={Copy} onClick={handleDuplicate} loading={duplicating}>
+            {duplicating ? "কপি হচ্ছে..." : "Copy"}
+          </Button>
+          <Button variant="outline" size="sm" icon={RotateCcw} onClick={() => setReturnModal(true)}
+            style={{ borderColor: "#E24B4A", color: "#E24B4A" }}>
+            Return
+          </Button>
+          <Button variant="ghost" size="sm" icon={Trash2} onClick={() => setDeleteModal(true)} title="অর্ডার মুছুন"
+            style={{ color: "#E24B4A" }} />
+        </>
+      }
+    >
       {toast && <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg max-w-sm" style={{ backgroundColor: toast.type === "success" ? "#1D9E75" : "#E24B4A" }}>{toast.msg}</div>}
 
       {/* Delete Confirm Modal */}
@@ -313,60 +406,6 @@ export default function OrderDetailPage() {
           </div>
         </div>
       )}
-
-      {/* ── Header ─────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4 mb-7">
-        <div className="flex items-start gap-3">
-          <Link href="/orders" className="mt-1 p-2 rounded-xl hover:bg-gray-100 flex-shrink-0 transition-colors">
-            <ChevronLeft size={20} style={{ color: S.secondary }} />
-          </Link>
-          <div>
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h2 className="font-bold text-xl" style={{ color: S.text }}>অর্ডার #{order.id.slice(-6).toUpperCase()}</h2>
-              <span className="text-xs font-bold px-3 py-1.5 rounded-full" style={{ backgroundColor: st.bg, color: st.text }}>{st.label}</span>
-            </div>
-            <p className="text-xs mt-0.5" style={{ color: S.muted }}>{formatBanglaDate(order.createdAt)}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap flex-shrink-0">
-          <button onClick={downloadInvoice} disabled={downloadingPdf}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium hover:bg-gray-50 disabled:opacity-60 transition-colors"
-            style={{ borderColor: S.border, color: S.text }}>
-            <Download size={13} /> {downloadingPdf ? "তৈরি হচ্ছে..." : "Invoice"}
-          </button>
-          <button onClick={() => window.open(`/orders/${id}/packing-slip`, "_blank")}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium hover:bg-gray-50 transition-colors"
-            style={{ borderColor: S.border, color: S.secondary }}>
-            <Download size={13} /> Packing Slip
-          </button>
-          {order.customer?.phone && (
-            <button onClick={openWhatsApp}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-white text-xs font-semibold transition-opacity hover:opacity-90"
-              style={{ backgroundColor: "#25D366" }}>
-              <MessageCircle size={13} /> WhatsApp
-            </button>
-          )}
-          <button onClick={() => router.push(`/orders/${id}/slip`)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium hover:bg-gray-50 transition-colors"
-            style={{ borderColor: S.border, color: S.secondary }}>
-            <Printer size={13} /> স্লিপ
-          </button>
-          <button onClick={handleDuplicate} disabled={duplicating}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium hover:bg-gray-50 disabled:opacity-60 transition-colors"
-            style={{ borderColor: S.border, color: S.secondary }}>
-            <Copy size={13} /> {duplicating ? "কপি হচ্ছে..." : "Copy"}
-          </button>
-          <button onClick={() => setReturnModal(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition-colors"
-            style={{ borderColor: "#E24B4A", color: "#E24B4A" }}>
-            <RotateCcw size={13} /> Return
-          </button>
-          <button onClick={() => setDeleteModal(true)}
-            className="p-2 rounded-xl border border-transparent hover:bg-red-50 hover:border-red-200 transition-colors" title="অর্ডার মুছুন">
-            <Trash2 size={15} style={{ color: "#E24B4A" }} />
-          </button>
-        </div>
-      </div>
 
       {/* Return Modal */}
       {returnModal && (
@@ -448,14 +487,14 @@ export default function OrderDetailPage() {
               <div className="flex items-center gap-2 flex-wrap px-1">
                 <Tag size={13} style={{ color: S.muted }} />
                 {parsedTags.map(tag => (
-                  <span key={tag} className="text-xs px-2.5 py-1 rounded-full font-semibold" style={{ backgroundColor: "var(--c-primary-light)", color: "var(--c-primary)" }}>{tag}</span>
+                  <Badge key={tag} variant="info">{tag}</Badge>
                 ))}
               </div>
             ) : null;
           })()}
 
           {/* Items */}
-          <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+          <Card padding="none" className="overflow-hidden">
             <div className="px-5 py-4 border-b" style={{ borderColor: S.border }}>
               <h3 className="font-semibold text-sm" style={{ color: S.text }}>পণ্য সমূহ</h3>
             </div>
@@ -527,41 +566,29 @@ export default function OrderDetailPage() {
                 <span className="font-bold text-xl" style={{ color: S.primary }}>{formatBDT(order.totalAmount)}</span>
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Payment */}
-          <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+          <Card padding="none" className="overflow-hidden">
             <div className="px-5 py-4 border-b" style={{ borderColor: S.border }}>
               <h3 className="font-semibold text-sm" style={{ color: S.text }}>পেমেন্ট</h3>
             </div>
             <div className="px-5 py-4">
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                {[
-                  { label: "মোট", value: formatBDT(order.totalAmount), color: S.text, bg: "var(--c-bg)" },
-                  { label: "পরিশোধিত", value: formatBDT(order.paidAmount), color: "var(--c-primary)", bg: "var(--c-primary-light)" },
-                  { label: "বাকি", value: formatBDT(order.dueAmount), color: order.dueAmount > 0 ? "#E24B4A" : "var(--c-primary)", bg: order.dueAmount > 0 ? "#FFF0F0" : "var(--c-primary-light)" },
-                ].map((row) => (
-                  <div key={row.label} className="text-center rounded-xl py-3 px-2" style={{ backgroundColor: row.bg }}>
-                    <p className="text-xs mb-1" style={{ color: S.muted }}>{row.label}</p>
-                    <p className="font-bold text-base" style={{ color: row.color }}>{row.value}</p>
-                  </div>
-                ))}
-              </div>
               {order.dueAmount > 0 && (
-                <div className="flex gap-2">
-                  <input type="number" placeholder="পরিমাণ লিখুন" value={payment} onChange={(e) => setPayment(e.target.value)} min="0"
-                    className="flex-1 h-10 px-3 rounded-xl border text-sm outline-none"
-                    style={{ borderColor: S.border, color: S.text }} />
-                  <button onClick={addPayment} className="px-4 py-2 rounded-xl text-white text-sm font-semibold" style={{ backgroundColor: S.primary }}>যোগ করুন</button>
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1 min-w-0">
+                    <Input type="number" placeholder="পরিমাণ লিখুন" value={payment} onChange={(e) => setPayment(e.target.value)} min="0" />
+                  </div>
+                  <Button onClick={addPayment} className="flex-shrink-0">যোগ করুন</Button>
                 </div>
               )}
             </div>
-          </div>
+          </Card>
 
           {/* Note */}
-          <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+          <Card padding="md">
             <NoteEditor orderId={order.id} initialNote={order.note} onSaved={note => setOrder(o => o ? { ...o, note } : o)} showToast={showToast} S={S} />
-          </div>
+          </Card>
         </div>
 
         {/* ── RIGHT: Customer + Status + Courier ────── */}
@@ -569,7 +596,7 @@ export default function OrderDetailPage() {
 
           {/* Customer */}
           {order.customer && (
-            <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+            <Card padding="none" className="overflow-hidden">
               <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: S.border }}>
                 <h3 className="font-semibold text-sm" style={{ color: S.text }}>কাস্টমার</h3>
                 <Link href={`/customers/${order.customer.id}`} className="text-xs font-semibold" style={{ color: S.primary }}>প্রোফাইল →</Link>
@@ -602,11 +629,11 @@ export default function OrderDetailPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </Card>
           )}
 
           {/* Status update */}
-          <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+          <Card padding="none" className="overflow-hidden">
             <div className="px-5 py-4 border-b" style={{ borderColor: S.border }}>
               <h3 className="font-semibold text-sm" style={{ color: S.text }}>স্ট্যাটাস পরিবর্তন</h3>
             </div>
@@ -625,10 +652,10 @@ export default function OrderDetailPage() {
                 ))}
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Courier Booking */}
-          <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+          <Card padding="none" className="overflow-hidden">
             <div className="px-5 py-4 border-b flex items-center gap-2" style={{ borderColor: S.border }}>
               <Truck size={15} style={{ color: S.primary }} />
               <h3 className="font-semibold text-sm" style={{ color: S.text }}>Courier Booking</h3>
@@ -654,7 +681,7 @@ export default function OrderDetailPage() {
                   </optgroup>
                 </select>
               </div>
-              <button onClick={bookCourier} disabled={bookingCourier}
+              <button onClick={() => bookCourier()} disabled={bookingCourier}
                 className="w-full py-2.5 rounded-xl text-white text-sm font-medium disabled:opacity-60 transition-opacity"
                 style={{ backgroundColor: S.primary }}>
                 {bookingCourier ? "Book হচ্ছে..." : MANUAL_COURIERS_LIST.includes(selectedCourier) ? "Tracking ID সেট করুন" : "Courier Book করুন"}
@@ -681,9 +708,9 @@ export default function OrderDetailPage() {
                       }[order.courierName ?? ""] ?? order.courierName ?? "Courier"}
                     </span>
                     {courierSt && (
-                      <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: courierSt.bg, color: courierSt.text }}>
+                      <Badge variant={order.courierStatus === "delivered" ? "success" : order.courierStatus === "returned" ? "danger" : "info"}>
                         {courierSt.label}
-                      </span>
+                      </Badge>
                     )}
                   </div>
                   <p className="font-mono text-sm font-semibold" style={{ color: S.text }}>{order.courierTrackId}</p>
@@ -766,11 +793,11 @@ export default function OrderDetailPage() {
             </div>
           )}
             </div>
-          </div>
+          </Card>
 
           {/* COD Remittance standalone (no courier tracking) */}
           {!order.courierTrackId && (order.status === "shipped" || order.status === "delivered") && (
-            <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+            <Card padding="none" className="overflow-hidden">
               <div className="px-5 py-4 border-b flex items-center gap-2" style={{ borderColor: S.border }}>
                 <Wallet size={15} style={{ color: S.primary }} />
                 <h3 className="font-semibold text-sm" style={{ color: S.text }}>COD রেমিটেন্স</h3>
@@ -818,7 +845,7 @@ export default function OrderDetailPage() {
                   </div>
                 )}
               </div>
-            </div>
+            </Card>
           )}
         </div>
         {/* end right column */}
@@ -892,7 +919,7 @@ export default function OrderDetailPage() {
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }
 

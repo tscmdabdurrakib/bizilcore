@@ -105,7 +105,7 @@ export default function FreelanceReports() {
             <XAxis dataKey="label" tick={{ fontSize: 11, fill: S.muted }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 11, fill: S.muted }} axisLine={false} tickLine={false}
               tickFormatter={v => v >= 1000 ? `৳${(v / 1000).toFixed(0)}k` : `৳${v}`} />
-            <Tooltip formatter={(v: number) => [`৳${v.toLocaleString()}`, "আয়"]} />
+            <Tooltip formatter={((v: number) => [`৳${v.toLocaleString()}`, "আয়"]) as never} />
             <Bar dataKey="bdtRevenue" fill={S.primary} radius={[6, 6, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
@@ -118,7 +118,7 @@ export default function FreelanceReports() {
           <BarChart data={data.monthlyChart} barSize={28}>
             <XAxis dataKey="label" tick={{ fontSize: 11, fill: S.muted }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 11, fill: S.muted }} axisLine={false} tickLine={false} />
-            <Tooltip formatter={(v: number) => [`${v.toFixed(1)} hrs`, "সময়"]} />
+            <Tooltip formatter={((v: number) => [`${v.toFixed(1)} hrs`, "সময়"]) as never} />
             <Bar dataKey="hours" fill="#8B5CF6" radius={[6, 6, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
@@ -134,7 +134,7 @@ export default function FreelanceReports() {
                 <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name }) => name}>
                   {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                 </Pie>
-                <Tooltip formatter={(v: number) => `৳${v.toLocaleString()}`} />
+                <Tooltip formatter={((v: number) => `৳${v.toLocaleString()}`) as never} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>

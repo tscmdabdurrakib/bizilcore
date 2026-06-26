@@ -469,7 +469,7 @@ export default function BookingsBoard() {
                   {[["adults", "প্রাপ্তবয়স্ক"], ["children", "শিশু"], ["infants", "ইনফ্যান্ট"]].map(([key, label]) => (
                     <div key={key}>
                       <label className="text-xs font-medium mb-1 block" style={{ color: S.muted }}>{label}</label>
-                      <input className={inputCls} style={inputStyle} type="number" min="0" value={(form as Record<string, string>)[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} />
+                      <input className={inputCls} style={inputStyle} type="number" min="0" value={(form as unknown as Record<string, string>)[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} />
                     </div>
                   ))}
                 </div>

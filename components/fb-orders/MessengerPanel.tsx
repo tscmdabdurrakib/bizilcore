@@ -36,19 +36,13 @@ interface Thread {
   unreplied: number;
 }
 
-const QUICK_REPLIES = [
-  "আপনার বার্তার জন্য ধন্যবাদ! আমরা শীঘ্রই যোগাযোগ করব। 🙏",
-  "অর্ডার করতে নাম, ঠিকানা ও মোবাইল নম্বর দিন।",
-  "ডেলিভারি চার্জ ঢাকার ভিতরে ৭০ টাকা, বাইরে ১৩০ টাকা।",
-  "পণ্যটি স্টকে আছে, কনফার্ম করুন।",
-  "পণ্য বর্তমানে স্টকে নেই, শীঘ্রই আসবে।",
-];
-
 const FILTER_TABS = [
   { key: "all",       label: "সব" },
   { key: "pending",   label: "অপেক্ষায়" },
   { key: "replied",   label: "রিপ্লাই হয়েছে" },
 ];
+
+interface CannedReply { id: string; title: string; body: string; }
 
 function relativeTime(iso: string) {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -74,8 +68,9 @@ export default function MessengerPanel() {
   const [loading, setLoading]             = useState(true);
   const [convLoading, setConvLoading]     = useState(false);
   const [replyText, setReplyText]         = useState("");
-  const [sending, setSending]             = useState(false);
+  const [sending, setSending]               = useState(false);
   const [showSettings, setShowSettings]   = useState(false);
+  const [cannedReplies, setCannedReplies]   = useState<CannedReply[]>([]);
   const replyInputRef = useRef<HTMLTextAreaElement>(null);
 
   const loadPages = useCallback(async () => {
@@ -107,6 +102,9 @@ export default function MessengerPanel() {
   }, []);
 
   useEffect(() => { loadPages(); }, [loadPages]);
+  useEffect(() => {
+    fetch("/api/messenger/canned-replies").then(r => r.json()).then(setCannedReplies).catch(() => {});
+  }, []);
   useEffect(() => {
     if (selectedPage) loadConversations(selectedPage.pageId);
   }, [selectedPage, loadConversations]);
@@ -311,7 +309,7 @@ export default function MessengerPanel() {
             <h3 className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "var(--c-text-muted)" }}>Webhook সেটআপ</h3>
             <div className="space-y-2 text-xs">
               {[
-                { label: "Callback URL",  value: `${typeof window !== "undefined" ? window.location.origin : ""}/api/facebook/webhook` },
+                { label: "Callback URL",  value: `${typeof window !== "undefined" ? window.location.origin : ""}/api/webhooks/facebook` },
                 { label: "Verify Token",  value: process.env.NEXT_PUBLIC_FB_VERIFY_TOKEN ?? "bizilcore_verify_2024" },
                 { label: "Subscriptions", value: "messages, messaging_postbacks" },
               ].map((row) => (
@@ -504,14 +502,15 @@ export default function MessengerPanel() {
               {lastConv && (
                 <div className="border-t p-3 space-y-2" style={{ borderColor: "var(--c-border)" }}>
                   <div className="flex gap-1.5 overflow-x-auto pb-1">
-                    {QUICK_REPLIES.map((q, i) => (
+                    {cannedReplies.map((q) => (
                       <button
-                        key={i}
-                        onClick={() => { setReplyText(q); replyInputRef.current?.focus(); }}
+                        key={q.id}
+                        onClick={() => { setReplyText(q.body); replyInputRef.current?.focus(); }}
                         className="flex-shrink-0 px-2.5 py-1 rounded-full border text-[11px] whitespace-nowrap transition-colors hover:bg-blue-50"
                         style={{ borderColor: "var(--c-border)", color: "var(--c-text-sub)" }}
+                        title={q.body}
                       >
-                        {q.length > 35 ? q.slice(0, 35) + "…" : q}
+                        {q.title}
                       </button>
                     ))}
                   </div>

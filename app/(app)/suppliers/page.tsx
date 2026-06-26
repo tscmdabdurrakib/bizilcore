@@ -7,6 +7,7 @@ import {
   Loader2, Pencil, FileDown, BadgeDollarSign,
 } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import { PageShell, StatCard, FilterBar, Card, Badge, EmptyState, Button } from "@/components/ui";
 
 interface Supplier {
   id: string; name: string; phone: string | null; address: string | null;
@@ -126,7 +127,25 @@ export default function SuppliersPage() {
   );
 
   return (
-    <div className="max-w-7xl mx-auto space-y-5 pb-8">
+    <PageShell
+      title="Supplier ম্যানেজমেন্ট"
+      subtitle="সরবরাহকারীদের তথ্য ও পেমেন্ট পরিচালনা"
+      actions={
+        <>
+          <Button variant="outline" size="sm" icon={FileDown} onClick={exportCSV}>CSV</Button>
+          <Button size="sm" icon={Plus} onClick={() => openPanel()}>নতুন Supplier</Button>
+        </>
+      }
+      stats={loading ? undefined : (
+        <>
+          <StatCard label="মোট Supplier" value={suppliers.length} icon={Truck} accent="none" iconBg="#F5F3FF" iconColor="#7C3AED" />
+          <StatCard label="মোট Purchase" value={totalPurchases} icon={ShoppingBag} accent="blue" iconBg="#EFF6FF" iconColor="#1D4ED8" />
+          <StatCard label="বাকি Supplier" value={withDue} icon={AlertTriangle} accent="gold" />
+          <StatCard label="মোট বাকি" value={formatBDT(totalDue)} icon={BadgeDollarSign} accent="red" />
+        </>
+      )}
+      className="pb-8"
+    >
 
       {/* Toast */}
       {toast && (
@@ -246,56 +265,6 @@ export default function SuppliersPage() {
         </div>
       )}
 
-      {/* ── Page Header ── */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: "linear-gradient(135deg,#8B5CF6,#6D28D9)" }}>
-            <Truck size={20} color="#fff" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Supplier ম্যানেজমেন্ট</h1>
-            <p className="text-xs text-gray-500">সরবরাহকারীদের তথ্য ও পেমেন্ট পরিচালনা</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={exportCSV}
-            className="flex items-center gap-1.5 px-3.5 h-10 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
-            <FileDown size={15} /> CSV
-          </button>
-          <button onClick={() => openPanel()}
-            className="flex items-center gap-2 px-4 h-10 rounded-xl text-white text-sm font-bold shadow-sm hover:opacity-90 transition-opacity"
-            style={{ background: "linear-gradient(135deg,#8B5CF6,#6D28D9)" }}>
-            <Plus size={16} /> নতুন Supplier
-          </button>
-        </div>
-      </div>
-
-      {/* ── Stats Cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {loading ? (
-          Array(4).fill(0).map((_, i) => (
-            <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 animate-pulse">
-              <div className="w-9 h-9 bg-gray-100 rounded-xl mb-3" />
-              <div className="h-7 bg-gray-100 rounded-lg w-16 mb-2" />
-              <div className="h-3 bg-gray-100 rounded w-24" />
-            </div>
-          ))
-        ) : [
-          { label: "মোট Supplier", value: suppliers.length, sub: "নিবন্ধিত", icon: Truck, bg: "#F5F3FF", fg: "#7C3AED" },
-          { label: "মোট Purchase", value: totalPurchases, sub: "সব মিলিয়ে", icon: ShoppingBag, bg: "#EFF6FF", fg: "#1D4ED8" },
-          { label: "বাকি Supplier", value: withDue, sub: "জনের কাছে বাকি", icon: AlertTriangle, bg: "#FFFBEB", fg: "#92400E" },
-          { label: "মোট বাকি", value: formatBDT(totalDue), sub: "পরিশোধযোগ্য", icon: BadgeDollarSign, bg: "#FFF1F2", fg: "#BE123C" },
-        ].map(s => (
-          <div key={s.label} className="bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-md transition-shadow">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ backgroundColor: s.bg }}>
-              <s.icon size={17} style={{ color: s.fg }} />
-            </div>
-            <p className="text-2xl font-black text-gray-900">{s.value}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{s.label} · {s.sub}</p>
-          </div>
-        ))}
-      </div>
-
       {/* ── Due Alert ── */}
       {!loading && totalDue > 0 && (
         <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-2xl border border-amber-200">
@@ -306,19 +275,11 @@ export default function SuppliersPage() {
         </div>
       )}
 
-      {/* ── Main Card ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        {/* Toolbar */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-50">
-          <div className="relative flex-1">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input type="text" placeholder="নাম বা ফোন দিয়ে খুঁজুন..." value={search} onChange={e => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 h-10 rounded-xl border border-gray-200 text-sm bg-gray-50 text-gray-800 outline-none focus:border-gray-400 transition-colors" />
-          </div>
-          <p className="text-xs text-gray-400 font-medium flex-shrink-0">{filtered.length}টি</p>
+      <Card padding="none" className="overflow-hidden">
+        <div className="p-4 border-b" style={{ borderColor: "var(--c-border)" }}>
+          <FilterBar search={search} onSearchChange={setSearch} searchPlaceholder="নাম বা ফোন দিয়ে খুঁজুন..." />
         </div>
-
-        {/* Content */}
+        <p className="px-5 py-2 text-xs font-medium" style={{ color: "var(--c-text-muted)" }}>{filtered.length}টি</p>
         {loading ? (
           <div className="divide-y divide-gray-50">
             {Array(5).fill(0).map((_, i) => (
@@ -333,18 +294,12 @@ export default function SuppliersPage() {
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="py-20 text-center">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: "linear-gradient(135deg,#F5F3FF,#EDE9FE)" }}>
-              <Truck size={28} className="text-purple-500" />
-            </div>
-            <p className="font-semibold text-gray-600 text-sm">কোনো Supplier নেই।</p>
-            <p className="text-xs text-gray-400 mt-1 mb-5">সরবরাহকারী যোগ করুন</p>
-            <button onClick={() => openPanel()}
-              className="px-5 py-2.5 rounded-xl text-white text-sm font-bold hover:opacity-90 transition-opacity"
-              style={{ background: "linear-gradient(135deg,#8B5CF6,#6D28D9)" }}>
-              + নতুন Supplier যোগ করুন
-            </button>
-          </div>
+          <EmptyState
+            icon={Truck}
+            title="কোনো Supplier নেই।"
+            description="সরবরাহকারী যোগ করুন"
+            action={{ label: "+ নতুন Supplier যোগ করুন", onClick: () => openPanel() }}
+          />
         ) : (
           <>
             {/* Desktop Table */}
@@ -391,7 +346,7 @@ export default function SuppliersPage() {
                         <td className="px-5 py-4">
                           {sup.dueAmount > 0
                             ? <span className="font-bold text-red-600 text-sm">{formatBDT(sup.dueAmount)}</span>
-                            : <span className="text-xs font-semibold text-emerald-500">পরিশোধিত</span>}
+                            : <Badge variant="success">পরিশোধিত</Badge>}
                         </td>
                         <td className="px-5 py-4 text-xs text-gray-400 max-w-[140px]">
                           {sup.note ? <div className="flex items-start gap-1"><FileText size={11} className="text-gray-300 flex-shrink-0 mt-0.5" /><span className="truncate">{sup.note}</span></div> : <span className="text-gray-300">—</span>}
@@ -445,7 +400,7 @@ export default function SuppliersPage() {
             </div>
           </>
         )}
-      </div>
-    </div>
+      </Card>
+    </PageShell>
   );
 }

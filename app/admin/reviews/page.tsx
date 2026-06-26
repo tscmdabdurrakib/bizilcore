@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Star, Check, X, Globe, Trash2 } from "lucide-react";
+import AdminCard from "../components/AdminCard";
+import AdminPillTabs from "../components/AdminPillTabs";
 
 interface ReviewRow {
   id: string;
@@ -84,37 +86,19 @@ export default function AdminReviewsPage() {
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-5">
-        <h1 className="text-2xl font-bold">User Reviews</h1>
-        <div className="flex gap-1.5">
-          {FILTERS.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-              style={{
-                background: filter === f.key ? "#0F6E56" : "#fff",
-                color: filter === f.key ? "#fff" : "#374151",
-                border: "1px solid #E5E7EB",
-              }}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-      </div>
+    <div className="space-y-5">
+      <AdminPillTabs tabs={FILTERS.map((f) => ({ key: f.key, label: f.label }))} active={filter} onChange={setFilter} />
 
       {loading ? (
         <p className="text-sm text-gray-500">লোড হচ্ছে...</p>
       ) : items.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-2xl border" style={{ borderColor: "#E5E7EB" }}>
-          <p className="text-gray-500">কোনো রিভিউ নেই</p>
-        </div>
+        <AdminCard hover={false}>
+          <p className="py-12 text-center text-gray-500">কোনো রিভিউ নেই</p>
+        </AdminCard>
       ) : (
         <div className="space-y-3">
           {items.map((r) => (
-            <div key={r.id} className="bg-white rounded-2xl border p-4" style={{ borderColor: "#E5E7EB" }}>
+            <AdminCard key={r.id} hover={false} className="!p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -195,7 +179,7 @@ export default function AdminReviewsPage() {
                   <Trash2 size={14} /> Reject
                 </button>
               </div>
-            </div>
+            </AdminCard>
           ))}
         </div>
       )}

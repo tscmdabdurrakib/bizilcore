@@ -24,7 +24,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     select: {
       id: true, name: true, storeSlug: true, storeEnabled: true,
       storeShowStock: true, storeShowReviews: true,
-      storeSocialWA: true, phone: true,
+      storeSocialWA: true, phone: true, storeSocialProofEnabled: true,
     },
   });
   if (!shop || !shop.storeEnabled) notFound();

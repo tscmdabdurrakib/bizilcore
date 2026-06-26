@@ -44,6 +44,25 @@ export function getStatusStyle(status: string) {
   return STATUS_MAP[status] ?? STATUS_MAP.pending;
 }
 
+export function getOrderItemDisplayName(item: {
+  comboSnapshot?: string | null;
+  product?: { name: string } | null;
+  combo?: { name: string } | null;
+  comboId?: string | null;
+}): string {
+  if (item.comboSnapshot) {
+    try {
+      return (JSON.parse(item.comboSnapshot) as { name: string }).name;
+    } catch {
+      /* fall through */
+    }
+  }
+  if (item.comboId || item.combo) {
+    return item.combo?.name ?? "কমবো";
+  }
+  return item.product?.name ?? "পণ্য";
+}
+
 export function startOfToday(): Date {
   const d = new Date();
   d.setHours(0, 0, 0, 0);

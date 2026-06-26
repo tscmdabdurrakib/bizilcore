@@ -36,7 +36,7 @@ export default function TaskQuickComplete({ tasks, emptyMessage }: {
   if (tasks.length === 0 && emptyMessage) {
     return (
       <div className="text-center py-4">
-        <CheckCircle size={28} className="mx-auto mb-2" style={{ color: "#10B981" }} />
+        <CheckCircle size={28} className="mx-auto mb-2" style={{ color: "var(--c-primary)" }} />
         <p className="text-sm font-medium" style={{ color: "var(--c-text)" }}>দারুণ! সব টাস্ক সম্পন্ন</p>
       </div>
     );
@@ -51,7 +51,7 @@ export default function TaskQuickComplete({ tasks, emptyMessage }: {
           <div
             key={task.id}
             className="flex items-center gap-3 p-2.5 rounded-xl"
-            style={{ backgroundColor: "var(--c-bg, #F7F6F2)", opacity: isDone ? 0.5 : 1 }}
+            style={{ backgroundColor: "var(--c-bg)", opacity: isDone ? 0.5 : 1 }}
           >
             <button
               onClick={() => !isDone && markDone(task.id)}
@@ -59,7 +59,7 @@ export default function TaskQuickComplete({ tasks, emptyMessage }: {
               title="সম্পন্ন করুন"
             >
               {isDone
-                ? <CheckCircle size={16} style={{ color: "#10B981" }} />
+                ? <CheckCircle size={16} style={{ color: "var(--c-primary)" }} />
                 : <CheckSquare size={16} style={{ color: "var(--c-text-muted)" }} />
               }
             </button>

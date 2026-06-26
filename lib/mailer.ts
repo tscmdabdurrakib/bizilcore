@@ -588,6 +588,74 @@ export async function sendFeedbackNotification(data: {
   });
 }
 
+// ─── 6b. Store Order → Merchant Notification ─────────────────────────────────
+
+export async function sendStoreOrderNotificationEmail(data: {
+  toEmail: string;
+  shopName: string;
+  orderNumber: string;
+  customerName: string;
+  customerPhone: string;
+  customerAddress: string;
+  items: { name: string; quantity: number; unitPrice: number }[];
+  totalAmount: number;
+  paymentMethod: string;
+  dashboardUrl: string;
+}): Promise<void> {
+  const fmt = (n: number) => `৳${n.toLocaleString("bn-BD")}`;
+  const methodLabel =
+    data.paymentMethod === "cod" ? "Cash on Delivery"
+    : data.paymentMethod === "bkash" ? "bKash"
+    : data.paymentMethod === "nagad" ? "Nagad"
+    : data.paymentMethod;
+
+  const rows = data.items
+    .map(
+      (it, i) => `
+      <tr>
+        <td style="padding:8px 12px; font-size:13px; color:#1A1A18; background:${i % 2 === 0 ? "#fff" : "#F9FAFB"};">${it.name} × ${it.quantity}</td>
+        <td align="right" style="padding:8px 12px; font-size:13px; color:#1A1A18; font-weight:600; background:${i % 2 === 0 ? "#fff" : "#F9FAFB"};">${fmt(it.unitPrice * it.quantity)}</td>
+      </tr>`,
+    )
+    .join("");
+
+  const body = `
+    <div style="background:#E1F5EE; border-left:4px solid #0F6E56; border-radius:8px; padding:12px 16px; margin-bottom:20px;">
+      <p style="color:#0A5240; font-size:14px; font-weight:700; margin:0;">🛒 নতুন স্টোর অর্ডার — #${data.orderNumber}</p>
+    </div>
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#F7F6F2; border-radius:12px; padding:18px; margin-bottom:18px;">
+      <tr><td>
+        ${[
+          ["👤 কাস্টমার", data.customerName],
+          ["📞 ফোন", data.customerPhone],
+          ["📍 ঠিকানা", data.customerAddress],
+          ["💳 পেমেন্ট", methodLabel],
+        ].map(([label, value]) => `
+        <table cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom:8px;" width="100%">
+          <tr>
+            <td width="110" style="color:#8A8A86; font-size:12px; vertical-align:top; padding-right:8px;">${label}</td>
+            <td style="color:#1A1A18; font-size:13px; font-weight:600;">${value}</td>
+          </tr>
+        </table>`).join("")}
+      </td></tr>
+    </table>
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #E8E6DF; border-radius:10px; overflow:hidden; margin-bottom:8px;">
+      ${rows}
+      <tr>
+        <td style="padding:10px 12px; font-size:14px; font-weight:700; color:#1A1A18; border-top:2px solid #E8E6DF;">মোট</td>
+        <td align="right" style="padding:10px 12px; font-size:16px; font-weight:800; color:#0F6E56; border-top:2px solid #E8E6DF;">${fmt(data.totalAmount)}</td>
+      </tr>
+    </table>
+    ${ctaButton(data.dashboardUrl, "📦 অর্ডার দেখুন")}
+  `;
+  await sendEmail("subscription", {
+    to: data.toEmail,
+    subject: `🛒 নতুন অর্ডার #${data.orderNumber} — ${data.shopName}`,
+    html: baseEmailWrapper("নতুন স্টোর অর্ডার", `${data.shopName} — #${data.orderNumber}`, body),
+    text: `নতুন অর্ডার #${data.orderNumber}\n\nকাস্টমার: ${data.customerName} (${data.customerPhone})\nঠিকানা: ${data.customerAddress}\nপেমেন্ট: ${methodLabel}\nমোট: ${fmt(data.totalAmount)}\n\nDashboard: ${data.dashboardUrl}`,
+  });
+}
+
 // ─── 7. Newsletter Welcome ────────────────────────────────────────────────────
 
 export async function sendNewsletterWelcome(email: string): Promise<void> {

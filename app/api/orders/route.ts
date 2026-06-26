@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/logActivity";
-import { triggerOrderSMS } from "@/lib/sms";
+import { trackForUser } from "@/lib/activity/trackFromSession";
+import { triggerAutoOrderSMS } from "@/lib/sms/send";
 import { createAutoTask } from "@/lib/autoTasks";
 import { checkAndAwardBadges } from "@/lib/badges";
 import { markSetupTask } from "@/lib/setupProgress";
 import { detectFakeOrder, type RiskResult } from "@/lib/fakeOrderDetector";
+import { ALL_ROWS_CAP } from "@/lib/api-limits";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -14,6 +16,7 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status");
+  const branchId = searchParams.get("branchId");
   const page = parseInt(searchParams.get("page") ?? "1");
   const limit = Math.min(parseInt(searchParams.get("limit") ?? "50"), 50);
   const search = searchParams.get("search") ?? "";
@@ -22,11 +25,13 @@ export async function GET(req: NextRequest) {
   const where = {
     userId: session.user.id,
     ...(status && status !== "all" ? { status } : {}),
+    ...(branchId === "main" ? { branchId: null } : branchId && branchId !== "all" ? { branchId } : {}),
     ...(search ? { customer: { name: { contains: search, mode: "insensitive" as const } } } : {}),
   };
 
   const includeShape = {
     customer: { select: { id: true, name: true, phone: true } },
+    branch: { select: { id: true, name: true } },
     items: {
       include: {
         product: { select: { id: true, name: true, buyPrice: true } },
@@ -40,6 +45,7 @@ export async function GET(req: NextRequest) {
       where,
       include: includeShape,
       orderBy: { createdAt: "desc" },
+      take: ALL_ROWS_CAP,
     });
     return NextResponse.json(orders);
   }
@@ -63,7 +69,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { customerId, newCustomerName, newCustomerPhone, newCustomerAddress, newCustomerFacebook, newCustomerGroup, items, paidAmount, source, note, deliveryCharge, tags, forceCreate } = body;
+  const { customerId, newCustomerName, newCustomerPhone, newCustomerAddress, newCustomerFacebook, newCustomerGroup, items, paidAmount, source, note, deliveryCharge, tags, forceCreate, branchId: rawBranchId } = body;
 
   // Guard: each item must have exactly one of productId or comboId
   for (const item of items as { productId?: string | null; comboId?: string | null }[]) {
@@ -74,8 +80,20 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const shop = await prisma.shop.findUnique({ where: { userId: session.user.id } });
-  if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+  const { getActiveShopForApi } = await import("@/lib/shops/access");
+  const shopCtx = await getActiveShopForApi();
+  if ("error" in shopCtx) return NextResponse.json({ error: shopCtx.error }, { status: shopCtx.error === "Unauthorized" ? 401 : 404 });
+  const shop = shopCtx.activeShop;
+  const branchId = typeof rawBranchId === "string" && rawBranchId.trim() ? rawBranchId.trim() : null;
+
+  if (branchId) {
+    const branch = await prisma.shopBranch.findFirst({
+      where: { id: branchId, shopId: shop.id, isActive: true },
+    });
+    if (!branch) {
+      return NextResponse.json({ error: "Invalid or inactive branch" }, { status: 400 });
+    }
+  }
 
   const phoneForCheck = newCustomerPhone || (customerId
     ? (await prisma.customer.findUnique({ where: { id: customerId }, select: { phone: true } }))?.phone ?? ""
@@ -161,7 +179,16 @@ export async function POST(req: NextRequest) {
   let resolvedCustomerId: string | null = customerId || null;
 
   // All DB writes in a single atomic transaction
-  const order = await prisma.$transaction(async (tx) => {
+  let order;
+  try {
+  order = await prisma.$transaction(async (tx) => {
+    if (branchId) {
+      const stockErr = await import("@/lib/shops/order-stock").then(m =>
+        m.assertBranchStockAvailable(tx, branchId, regularItems, comboItems, comboMap)
+      );
+      if (stockErr) throw new Error(stockErr);
+    }
+
     if (!resolvedCustomerId && newCustomerName) {
       const customer = await tx.customer.create({
         data: {
@@ -191,6 +218,7 @@ export async function POST(req: NextRequest) {
         tags: tags ? JSON.stringify(tags) : "[]",
         riskScore: riskResult.riskScore > 0 ? riskResult.riskScore : null,
         riskFlags: riskResult.flags.length > 0 ? JSON.stringify(riskResult.flags) : null,
+        branchId,
         items: {
           create: [
             ...regularItems.map((item: { productId: string; quantity: number; unitPrice: number; subtotal: number }) => ({
@@ -227,31 +255,8 @@ export async function POST(req: NextRequest) {
     });
 
     // Deduct stock from regular product items
-    for (const item of regularItems) {
-      await tx.product.update({
-        where: { id: item.productId },
-        data: { stockQty: { decrement: item.quantity } },
-      });
-    }
-
-    // Deduct stock from combo component products/variants
-    for (const item of comboItems) {
-      const combo = comboMap[item.comboId];
-      if (!combo) continue;
-      for (const ci of combo.items) {
-        if (ci.variantId) {
-          await tx.productVariant.update({
-            where: { id: ci.variantId },
-            data: { stockQty: { decrement: ci.quantity * item.quantity } },
-          });
-        } else {
-          await tx.product.update({
-            where: { id: ci.productId },
-            data: { stockQty: { decrement: ci.quantity * item.quantity } },
-          });
-        }
-      }
-    }
+    const { deductOrderStock } = await import("@/lib/shops/order-stock");
+    await deductOrderStock(tx, branchId, regularItems, comboItems, comboMap);
 
     if (finalCustomerId && due > 0) {
       await tx.customer.update({
@@ -272,6 +277,13 @@ export async function POST(req: NextRequest) {
 
     return newOrder;
   });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Order failed";
+    if (msg.includes("branch stock") || msg.includes("Branch orders")) {
+      return NextResponse.json({ error: msg }, { status: 400 });
+    }
+    throw err;
+  }
 
   // Award badges in background — never block the order response
   checkAndAwardBadges(session.user.id, "order_created").catch(() => {});
@@ -285,13 +297,32 @@ export async function POST(req: NextRequest) {
     action: "নতুন অর্ডার তৈরি",
     detail: `অর্ডার #${order.id.slice(-6).toUpperCase()} · ৳${totalAmount.toLocaleString()}${customerName ? ` · ${customerName}` : ""}`,
   });
+  trackForUser(session.user.id, shop.id, {
+    actionType: "order_created",
+    actionLabel: `নতুন অর্ডার তৈরি: #${order.id.slice(-6).toUpperCase()}`,
+    metadata: {
+      order_id: order.id,
+      order_total: totalAmount,
+      items_count: items.length,
+    },
+  }).catch(() => {});
 
   const customerPhone = newCustomerPhone || (resolvedCustomerId
     ? (await prisma.customer.findUnique({ where: { id: resolvedCustomerId }, select: { phone: true } }))?.phone ?? null
     : null);
   if (customerPhone) {
-    triggerOrderSMS(session.user.id, "orderConfirmed", customerPhone,
-      `আপনার অর্ডার #${order.id.slice(-6).toUpperCase()} কনফার্ম হয়েছে! মোট: ৳${totalAmount}। ধন্যবাদ! — ${shop.name}`);
+    triggerAutoOrderSMS(
+      session.user.id,
+      "order_create",
+      customerPhone,
+      {
+        order_id: order.id.slice(-6).toUpperCase(),
+        customer_name: customerName,
+        amount: String(totalAmount),
+        shopName: shop.name,
+      },
+      resolvedCustomerId ?? undefined
+    ).catch(() => {});
   }
 
   const shortId = order.id.slice(-6).toUpperCase();
@@ -307,6 +338,23 @@ export async function POST(req: NextRequest) {
 
   for (const item of items) {
     if (!item.productId) continue;
+    if (branchId) {
+      const branchStock = await prisma.branchStock.findUnique({
+        where: { branchId_productId: { branchId, productId: item.productId } },
+        include: { product: { select: { name: true, lowStockAt: true } } },
+      });
+      if (branchStock && branchStock.quantity <= branchStock.product.lowStockAt) {
+        createAutoTask({
+          shopId: shop.id,
+          userId: session.user.id,
+          title: `Branch স্টক রিফিল: ${branchStock.product.name}`,
+          category: "supplier",
+          priority: "urgent",
+          dueDaysFromNow: 1,
+        }).catch(() => {});
+      }
+      continue;
+    }
     const product = productMap[item.productId];
     if (product && product.stockQty - item.quantity <= product.stockQty * 0.2 && product.stockQty > 0) {
       const productDetails = await prisma.product.findUnique({ where: { id: item.productId }, select: { name: true, stockQty: true, lowStockAt: true } });

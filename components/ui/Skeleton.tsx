@@ -1,12 +1,12 @@
 export function Skeleton({ className = "" }: { className?: string }) {
   return (
-    <div className={`animate-pulse bg-gray-200 rounded ${className}`} />
+    <div className={`skeleton-shimmer rounded ${className}`} />
   );
 }
 
 export function StatCardSkeleton() {
   return (
-    <div className="rounded-2xl p-5 border bg-white">
+    <div className="rounded-2xl p-5 card-premium">
       <div className="flex items-center justify-between mb-3">
         <Skeleton className="h-4 w-28" />
         <Skeleton className="h-8 w-8 rounded-xl" />
@@ -19,7 +19,7 @@ export function StatCardSkeleton() {
 
 export function DashboardSkeleton() {
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <Skeleton className="h-7 w-48" />
         <Skeleton className="h-9 w-32 rounded-xl" />
@@ -55,7 +55,7 @@ export function TableRowSkeleton({ cols = 5 }: { cols?: number }) {
 
 export function TableSkeleton({ rows = 8, cols = 5 }: { rows?: number; cols?: number }) {
   return (
-    <div className="rounded-2xl border bg-white overflow-hidden">
+    <div className="rounded-2xl card-premium overflow-hidden">
       <div className="p-4 border-b flex gap-3">
         <Skeleton className="h-9 w-64 rounded-xl" />
         <Skeleton className="h-9 w-32 rounded-xl" />
@@ -72,7 +72,7 @@ export function TableSkeleton({ rows = 8, cols = 5 }: { rows?: number; cols?: nu
 
 export function OrdersPageSkeleton() {
   return (
-    <div className="space-y-5 p-6">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <Skeleton className="h-7 w-36" />
         <Skeleton className="h-9 w-32 rounded-xl" />
@@ -87,7 +87,7 @@ export function OrdersPageSkeleton() {
 
 export function InventoryPageSkeleton() {
   return (
-    <div className="space-y-5 p-6">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <Skeleton className="h-7 w-40" />
         <Skeleton className="h-9 w-32 rounded-xl" />
@@ -97,7 +97,7 @@ export function InventoryPageSkeleton() {
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {[...Array(12)].map((_, i) => (
-          <div key={i} className="rounded-2xl border bg-white p-3">
+          <div key={i} className="rounded-2xl card-premium p-3">
             <Skeleton className="h-36 w-full rounded-xl mb-3" />
             <Skeleton className="h-4 w-3/4 mb-2" />
             <Skeleton className="h-4 w-1/2" />
@@ -110,7 +110,7 @@ export function InventoryPageSkeleton() {
 
 export function CustomersPageSkeleton() {
   return (
-    <div className="space-y-5 p-6">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <Skeleton className="h-7 w-40" />
         <Skeleton className="h-9 w-32 rounded-xl" />
@@ -125,7 +125,7 @@ export function CustomersPageSkeleton() {
 
 export function ReportsPageSkeleton() {
   return (
-    <div className="space-y-5 p-6">
+    <div className="space-y-5">
       <Skeleton className="h-7 w-44" />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => <StatCardSkeleton key={i} />)}
@@ -141,7 +141,7 @@ export function ReportsPageSkeleton() {
 
 export function HisabPageSkeleton() {
   return (
-    <div className="space-y-5 p-6">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <Skeleton className="h-7 w-36" />
         <Skeleton className="h-9 w-32 rounded-xl" />
@@ -156,7 +156,7 @@ export function HisabPageSkeleton() {
 
 export function TasksPageSkeleton() {
   return (
-    <div className="space-y-5 p-6">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <Skeleton className="h-7 w-32" />
         <Skeleton className="h-9 w-28 rounded-xl" />
@@ -176,7 +176,7 @@ export function TasksPageSkeleton() {
 
 export function GenericPageSkeleton() {
   return (
-    <div className="space-y-5 p-6">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <Skeleton className="h-7 w-40" />
         <Skeleton className="h-9 w-28 rounded-xl" />

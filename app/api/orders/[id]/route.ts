@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logActivity } from "@/lib/logActivity";
+import { trackForUser } from "@/lib/activity/trackFromSession";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { triggerOrderSMS } from "@/lib/sms";
+import { triggerAutoOrderSMS } from "@/lib/sms/send";
 import { createAutoTask } from "@/lib/autoTasks";
+import { createSaleJournalFromOrder } from "@/lib/accounting/journal-from-order";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -72,22 +74,55 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const updated = await prisma.order.update({ where: { id }, data: updateData });
 
+  if (body.status === "delivered" && order.status !== "delivered" && order.user.shop) {
+    const shop = order.user.shop;
+    const fullOrder = await prisma.order.findUnique({
+      where: { id },
+      include: { items: { include: { product: { select: { buyPrice: true } } } } },
+    });
+    if (fullOrder) {
+      await prisma.$transaction(async (tx) => {
+        await createSaleJournalFromOrder(
+          tx,
+          shop.id,
+          session.user.id,
+          {
+            ...fullOrder,
+            paymentMethod: fullOrder.paymentMethod ?? (fullOrder.dueAmount > 0 ? "cod" : "cash"),
+          },
+          {
+            vatEnabled: shop.vatEnabled ?? false,
+            vatRate: shop.vatRate ?? 15,
+            vatMethod: shop.vatMethod ?? "inclusive",
+          },
+        );
+      });
+    }
+  }
+
   if (body.status && body.status !== order.status && order.customer?.phone) {
     const shopName = order.user.shop?.name ?? "BizilCore";
     const phone = order.customer.phone;
+    const orderId = id.slice(-6).toUpperCase();
+    const statusLabels: Record<string, string> = {
+      pending: "অপেক্ষামান", confirmed: "নিশ্চিত", processing: "প্রস্তুত",
+      shipped: "শিপ", delivered: "ডেলিভারি", cancelled: "বাতিল",
+    };
 
-    if (body.status === "confirmed") {
-      triggerOrderSMS(session.user.id, "orderConfirmed", phone,
-        `আপনার অর্ডার নিশ্চিত হয়েছে! মোট: ৳${order.totalAmount}। ধন্যবাদ! — ${shopName}`);
-    } else if (body.status === "shipped") {
-      triggerOrderSMS(session.user.id, "orderStatusChanged", phone,
-        `আপনার পণ্য পাঠানো হয়েছে!${order.courierTrackId ? ` Tracking: ${order.courierTrackId}` : ""} — ${shopName}`);
-    } else if (body.status === "delivered") {
-      triggerOrderSMS(session.user.id, "deliveryConfirmed", phone,
-        `আপনার পণ্য পৌঁছেছে! ধন্যবাদ আমাদের সাথে কেনাকাটা করার জন্য। — ${shopName}`);
-    } else if (body.status !== "pending" && body.status !== "cancelled") {
-      triggerOrderSMS(session.user.id, "orderStatusChanged", phone,
-        `আপনার অর্ডারের অবস্থা পরিবর্তিত হয়েছে। — ${shopName}`);
+    if (body.status !== "pending" && body.status !== "cancelled") {
+      triggerAutoOrderSMS(
+        session.user.id,
+        "order_status_change",
+        phone,
+        {
+          order_id: orderId,
+          customer_name: order.customer.name ?? "",
+          amount: String(order.totalAmount),
+          status: statusLabels[body.status] ?? body.status,
+          shopName,
+        },
+        order.customerId ?? undefined
+      ).catch(() => {});
     }
   }
 
@@ -104,6 +139,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         action: "অর্ডার স্ট্যাটাস পরিবর্তন",
         detail: `#${id.slice(-6).toUpperCase()} → ${statusLabels[body.status] ?? body.status}`,
       });
+      trackForUser(session.user.id, shop.id, {
+        actionType: "order_status_changed",
+        actionLabel: `অর্ডার স্ট্যাটাস পরিবর্তন: #${id.slice(-6).toUpperCase()} → ${statusLabels[body.status] ?? body.status}`,
+        metadata: { order_id: id, new_status: body.status, old_status: order.status },
+      }).catch(() => {});
 
       if (body.status === "shipped") {
         createAutoTask({
@@ -170,39 +210,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   }
 
   await prisma.$transaction(async (tx) => {
-    for (const item of order.items) {
-      if (item.productId) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stockQty: { increment: item.quantity } },
-        });
-      } else if (item.comboId) {
-        // Use snapshot if available so historical component list is preserved
-        let components: { productId: string; variantId?: string | null; quantity: number }[] = [];
-        if (item.comboSnapshot) {
-          try {
-            const snap = JSON.parse(item.comboSnapshot) as { items: { productId: string; variantId?: string | null; quantity: number }[] };
-            components = snap.items;
-          } catch { components = item.combo?.items ?? []; }
-        } else {
-          components = item.combo?.items ?? [];
-        }
-        for (const ci of components) {
-          if (ci.variantId) {
-            // Tolerate stale snapshot variant IDs that no longer exist
-            await tx.productVariant.updateMany({
-              where: { id: ci.variantId },
-              data: { stockQty: { increment: ci.quantity * item.quantity } },
-            });
-          } else {
-            await tx.product.updateMany({
-              where: { id: ci.productId },
-              data: { stockQty: { increment: ci.quantity * item.quantity } },
-            });
-          }
-        }
-      }
-    }
+    const { restoreOrderStock } = await import("@/lib/shops/order-stock");
+    await restoreOrderStock(tx, order.branchId, order.items);
 
     if (order.customerId && order.dueAmount > 0) {
       await tx.customer.update({

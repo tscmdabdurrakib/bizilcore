@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { ClipboardList, Search, User, Clock, ChevronLeft, ChevronRight, RefreshCw, ActivityIcon } from "lucide-react";
+import { PageShell, StatCard, Card, Badge, Button, Input, EmptyState } from "@/components/ui";
 
 const S = {
   bg: "var(--c-bg)", surface: "var(--c-surface)", border: "var(--c-border)",
@@ -74,47 +75,27 @@ export default function ActivityLogPage() {
   useEffect(() => { load(); }, [load]);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-5">
-
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}>
-            <ClipboardList size={18} color="#fff" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold" style={{ color: S.text }}>Activity Log</h1>
-            <p className="text-xs" style={{ color: S.muted }}>কে কখন কী করেছে — সম্পূর্ণ Audit Trail</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold px-3 py-1.5 rounded-xl" style={{ backgroundColor: S.primaryLight, color: S.primary }}>
-            মোট {total} রেকর্ড
-          </span>
-          <button
-            onClick={load}
-            className="w-9 h-9 rounded-xl flex items-center justify-center border transition-colors hover:bg-gray-50"
-            style={{ borderColor: S.border, backgroundColor: S.surface, color: S.muted }}
-          >
-            <RefreshCw size={15} />
-          </button>
-        </div>
-      </div>
-
-      {/* Search */}
+    <PageShell
+      title="Activity Log"
+      subtitle="কে কখন কী করেছে — সম্পূর্ণ Audit Trail"
+      actions={
+        <Button variant="outline" size="sm" icon={RefreshCw} onClick={load} aria-label="রিফ্রেশ" />
+      }
+      stats={
+        <StatCard label="মোট রেকর্ড" value={total} icon={ClipboardList} accent="green" />
+      }
+    >
       <div className="relative">
-        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: S.muted }} />
-        <input
+        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: S.muted }} />
+        <Input
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           placeholder="Action-এ খুঁজুন... (যেমন: order, product, customer)"
-          className="w-full h-11 pl-10 pr-4 rounded-xl border text-sm outline-none transition-all"
-          style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }}
+          className="pl-10"
         />
       </div>
 
-      {/* Log List */}
-      <div className="rounded-2xl border overflow-hidden" style={{ borderColor: S.border }}>
+      <Card padding="none">
         {loading ? (
           <div className="divide-y" style={{ borderColor: S.border }}>
             {[1, 2, 3, 4, 5, 6].map(i => (
@@ -129,15 +110,7 @@ export default function ActivityLogPage() {
             ))}
           </div>
         ) : logs.length === 0 ? (
-          <div className="py-20 text-center" style={{ backgroundColor: S.surface }}>
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: S.bg }}>
-              <ClipboardList size={28} style={{ color: S.muted }} />
-            </div>
-            <p className="font-semibold text-sm" style={{ color: S.secondary }}>কোনো Activity Log নেই</p>
-            <p className="text-xs mt-1.5 max-w-xs mx-auto" style={{ color: S.muted }}>
-              অর্ডার, পণ্য, কাস্টমার সম্পর্কিত কাজ করলে এখানে দেখাবে
-            </p>
-          </div>
+          <EmptyState icon={ClipboardList} title="কোনো Activity Log নেই" description="অর্ডার, পণ্য, কাস্টমার সম্পর্কিত কাজ করলে এখানে দেখাবে" />
         ) : (
           <div className="divide-y" style={{ borderColor: S.border }}>
             {logs.map((log) => {
@@ -161,12 +134,7 @@ export default function ActivityLogPage() {
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span
-                        className="text-xs font-bold px-2.5 py-0.5 rounded-full"
-                        style={{ backgroundColor: meta.bg, color: meta.color }}
-                      >
-                        {log.action}
-                      </span>
+                      <Badge variant="info">{log.action}</Badge>
                     </div>
                     {log.detail && (
                       <p className="text-sm leading-relaxed" style={{ color: S.text }}>{log.detail}</p>
@@ -190,9 +158,8 @@ export default function ActivityLogPage() {
             })}
           </div>
         )}
-      </div>
+      </Card>
 
-      {/* Pagination */}
       {pages > 1 && (
         <div className="flex items-center justify-between px-1">
           <p className="text-xs" style={{ color: S.muted }}>
@@ -221,6 +188,6 @@ export default function ActivityLogPage() {
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

@@ -8,6 +8,7 @@ import {
 import { formatBDT, formatBanglaDate } from "@/lib/utils";
 import Link from "next/link";
 import DatePicker from "@/components/ui/DatePicker";
+import { PageShell, StatCard, Card, FilterBar, EmptyState, Badge, Button } from "@/components/ui";
 
 const COURIER_LABELS: Record<string, string> = {
   pathao: "Pathao",
@@ -226,9 +227,27 @@ export default function CodPage() {
   );
 
   return (
-    <div className="max-w-6xl mx-auto pb-8 space-y-5">
-
-      {/* Toast */}
+    <PageShell
+      title="COD ট্র্যাকার"
+      subtitle="Courier রেমিটেন্স পেমেন্ট ট্র্যাক করুন"
+      className="max-w-6xl"
+      actions={
+        <>
+          <Button variant="outline" size="sm" icon={RefreshCw} onClick={fetchData} loading={loading}>রিফ্রেশ</Button>
+          <Button variant="outline" size="sm" icon={Download} onClick={exportCsv} disabled={!data?.orders.length}>CSV</Button>
+        </>
+      }
+      stats={
+        loading ? undefined : (
+          <>
+            <StatCard label="মোট বকেয়া (সকল)" value={kpis ? formatBDT(kpis.totalPending) : "—"} icon={Wallet} accent="gold" iconBg="var(--icon-amber-bg)" iconColor="var(--icon-amber-text)" />
+            <StatCard label="এই মাসে রেমিট হয়েছে" value={kpis ? formatBDT(kpis.collectedThisMonth) : "—"} icon={TrendingUp} accent="green" />
+            <StatCard label="Overdue (৭+ দিন)" value={kpis ? formatBDT(kpis.overdueAmount) : "—"} icon={AlertCircle} accent="red" iconBg="var(--icon-red-bg)" iconColor="var(--icon-red-text)" />
+            <StatCard label="মোট COD অর্ডার" value={kpis ? `${kpis.totalOrders}টি` : "—"} icon={CheckCircle2} accent="green" />
+          </>
+        )
+      }
+    >
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl text-white text-sm font-bold shadow-xl flex items-center gap-2"
           style={{ backgroundColor: toast.type === "success" ? "#059669" : "#DC2626" }}>
@@ -240,56 +259,12 @@ export default function CodPage() {
         <RemittanceModal order={remittanceModal} onClose={() => setRemittanceModal(null)} onConfirm={confirmRemitted} />
       )}
 
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg"
-            style={{ background: "linear-gradient(135deg,#0F6E56,#065E48)" }}>
-            <Wallet size={20} color="#fff" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">COD ট্র্যাকার</h1>
-            <p className="text-xs text-gray-500">Courier রেমিটেন্স পেমেন্ট ট্র্যাক করুন</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={fetchData} disabled={loading}
-            className="flex items-center gap-1.5 px-3.5 h-10 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors">
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> রিফ্রেশ
-          </button>
-          <button onClick={exportCsv} disabled={exporting || !data?.orders.length}
-            className="flex items-center gap-1.5 px-3.5 h-10 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40 transition-colors">
-            <Download size={14} /> {exporting ? "..." : "CSV"}
-          </button>
-        </div>
-      </div>
+      <p className="text-[10px] px-1" style={{ color: "var(--c-text-muted)" }}>* KPI সংখ্যাগুলো সব সময়ের সামগ্রিক (ফিল্টার নির্বিশেষে)</p>
 
-      {/* ── KPI Cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {loading ? (
-          Array(4).fill(0).map((_, i) => <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 animate-pulse h-24" />)
-        ) : [
-          { label: "মোট বকেয়া (সকল)", value: kpis ? formatBDT(kpis.totalPending) : "—", color: "#D97706", bg: "#FEF3C7", icon: Wallet },
-          { label: "এই মাসে রেমিট হয়েছে", value: kpis ? formatBDT(kpis.collectedThisMonth) : "—", color: "#059669", bg: "#ECFDF5", icon: TrendingUp },
-          { label: "Overdue (৭+ দিন)", value: kpis ? formatBDT(kpis.overdueAmount) : "—", color: "#DC2626", bg: "#FEF2F2", icon: AlertCircle },
-          { label: "মোট COD অর্ডার", value: kpis ? `${kpis.totalOrders}টি` : "—", color: "#059669", bg: "#ECFDF5", icon: CheckCircle2 },
-        ].map(k => (
-          <div key={k.label} className="bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-md transition-shadow">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-2.5" style={{ backgroundColor: k.bg }}>
-              <k.icon size={16} style={{ color: k.color }} />
-            </div>
-            <p className="text-xl font-black text-gray-900 truncate">{k.value}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{k.label}</p>
-          </div>
-        ))}
-      </div>
-      <p className="text-[10px] text-gray-400 px-1">* KPI সংখ্যাগুলো সব সময়ের সামগ্রিক (ফিল্টার নির্বিশেষে)</p>
-
-      {/* ── Courier Summary ── */}
       {data?.courierSummary && data.courierSummary.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-50">
-            <h2 className="font-bold text-gray-800 text-sm">Courier অনুযায়ী সারাংশ</h2>
+        <Card padding="none">
+          <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--c-border)" }}>
+            <h2 className="font-bold text-sm">Courier অনুযায়ী সারাংশ</h2>
           </div>
           <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {data.courierSummary.map(c => {
@@ -332,74 +307,46 @@ export default function CodPage() {
               );
             })}
           </div>
-        </div>
+        </Card>
       )}
 
-      {/* ── Filters ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4">
-        <div className="flex flex-wrap gap-3 items-center">
-          {/* Date presets */}
-          <div className="flex gap-1.5 flex-wrap">
-            {DATE_PRESETS.map(p => (
-              <button key={p.value} onClick={() => setPreset(p.value)}
-                className="px-3 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap"
-                style={{ backgroundColor: preset === p.value ? "#0F6E56" : "#F3F4F6", color: preset === p.value ? "#fff" : "#6B7280" }}>
-                {p.label}
-              </button>
-            ))}
-          </div>
+      <Card padding="md">
+        <FilterBar
+          tabs={DATE_PRESETS.map((p) => ({ key: p.value, label: p.label }))}
+          activeTab={preset}
+          onTabChange={setPreset}
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="কাস্টমার, ট্র্যাকিং ID..."
+          filters={
+            <>
+              {preset === "custom" && (
+                <div className="flex items-center gap-2">
+                  <DatePicker value={customFrom} onChange={setCustomFrom} className="h-9 px-3 rounded-xl border text-xs" />
+                  <span style={{ color: "var(--c-text-muted)" }}>→</span>
+                  <DatePicker value={customTo} onChange={setCustomTo} className="h-9 px-3 rounded-xl border text-xs" />
+                </div>
+              )}
+              <select value={courierFilter} onChange={e => setCourierFilter(e.target.value)} className="h-9 px-3 rounded-xl border text-xs min-w-[120px]" style={{ borderColor: "var(--c-border)", backgroundColor: "var(--c-surface)" }}>
+                <option value="">সব Courier</option>
+                {Object.entries(COURIER_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+              <select value={remittedFilter} onChange={e => setRemittedFilter(e.target.value)} className="h-9 px-3 rounded-xl border text-xs min-w-[100px]" style={{ borderColor: "var(--c-border)", backgroundColor: "var(--c-surface)" }}>
+                <option value="">সব স্ট্যাটাস</option>
+                <option value="0">বকেয়া</option>
+                <option value="1">পাওয়া গেছে</option>
+              </select>
+            </>
+          }
+        />
+      </Card>
 
-          {preset === "custom" && (
-            <div className="flex items-center gap-2">
-              <DatePicker
-  value={customFrom}
-  onChange={v => setCustomFrom(v)}
-  className="h-9 px-3 rounded-xl border border-gray-200 text-xs outline-none focus:border-gray-400 bg-gray-50"
-/>
-              <span className="text-gray-400">→</span>
-              <DatePicker
-  value={customTo}
-  onChange={v => setCustomTo(v)}
-  className="h-9 px-3 rounded-xl border border-gray-200 text-xs outline-none focus:border-gray-400 bg-gray-50"
-/>
-            </div>
-          )}
-
-          <select value={courierFilter} onChange={e => setCourierFilter(e.target.value)}
-            className="h-9 px-3 rounded-xl border border-gray-200 text-xs outline-none focus:border-gray-400 bg-gray-50 text-gray-700 appearance-none min-w-[120px]">
-            <option value="">সব Courier</option>
-            {Object.entries(COURIER_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </select>
-
-          <select value={remittedFilter} onChange={e => setRemittedFilter(e.target.value)}
-            className="h-9 px-3 rounded-xl border border-gray-200 text-xs outline-none focus:border-gray-400 bg-gray-50 text-gray-700 appearance-none min-w-[100px]">
-            <option value="">সব স্ট্যাটাস</option>
-            <option value="0">বকেয়া</option>
-            <option value="1">পাওয়া গেছে</option>
-          </select>
-
-          {/* Search */}
-          <div className="relative flex-1 min-w-[180px]">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input type="text" placeholder="কাস্টমার, ট্র্যাকিং ID..." value={search} onChange={e => setSearch(e.target.value)}
-              className="w-full pl-8 pr-3 h-9 rounded-xl border border-gray-200 text-xs outline-none focus:border-gray-400 bg-gray-50 text-gray-700" />
-          </div>
-        </div>
-      </div>
-
-      {/* ── Orders Table grouped by Courier ── */}
       {loading ? (
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-3 animate-pulse">
-          {Array(4).fill(0).map((_, i) => <div key={i} className="h-14 bg-gray-100 rounded-xl" />)}
-        </div>
+        <Card padding="md" className="space-y-3 animate-pulse">
+          {Array(4).fill(0).map((_, i) => <div key={i} className="h-14 rounded-xl" style={{ backgroundColor: "var(--shell-surface)" }} />)}
+        </Card>
       ) : totalFilteredOrders === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 py-20 text-center">
-          <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Wallet size={28} className="text-emerald-600" />
-          </div>
-          <p className="font-semibold text-gray-700 mb-1">কোনো COD অর্ডার পাওয়া যায়নি</p>
-          <p className="text-xs text-gray-400">ফিল্টার পরিবর্তন করে আবার চেষ্টা করুন</p>
-        </div>
+        <EmptyState icon={Wallet} title="কোনো COD অর্ডার পাওয়া যায়নি" description="ফিল্টার পরিবর্তন করে আবার চেষ্টা করুন" />
       ) : (
         <div className="space-y-3">
           {Array.from(groupedByCourier.entries()).map(([courierKey, orders]) => {
@@ -409,7 +356,7 @@ export default function CodPage() {
             const overdueCount  = orders.filter(o => !o.codRemitted && o.status === "delivered" && new Date(o.courierBookedAt ?? o.createdAt).getTime() < now - sevenDaysMs).length;
 
             return (
-              <div key={courierKey} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              <Card key={courierKey} padding="none">
                 {/* Courier header */}
                 <button
                   className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50/40 transition-colors"
@@ -418,16 +365,16 @@ export default function CodPage() {
                     <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
                       <Package size={14} className="text-emerald-600" />
                     </div>
-                    <span className="font-bold text-gray-800 text-sm">{COURIER_LABELS[courierKey] ?? courierKey}</span>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">{orders.length}টি অর্ডার</span>
+                    <span className="font-bold text-sm">{COURIER_LABELS[courierKey] ?? courierKey}</span>
+                    <Badge variant="success">{orders.length}টি অর্ডার</Badge>
                     {groupPending > 0 && (
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">বকেয়া {formatBDT(groupPending)}</span>
+                      <Badge variant="warning">বকেয়া {formatBDT(groupPending)}</Badge>
                     )}
                     {groupRemitted > 0 && (
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">পাওয়া {formatBDT(groupRemitted)}</span>
+                      <Badge variant="success">পাওয়া {formatBDT(groupRemitted)}</Badge>
                     )}
                     {overdueCount > 0 && (
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-600">{overdueCount}টি Overdue</span>
+                      <Badge variant="danger">{overdueCount}টি Overdue</Badge>
                     )}
                   </div>
                   <div className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors">
@@ -477,13 +424,9 @@ export default function CodPage() {
                                 )}
                               </td>
                               <td className="px-4 py-3">
-                                <span className="text-xs font-bold px-2 py-1 rounded-xl"
-                                  style={{
-                                    backgroundColor: order.status === "delivered" ? "#ECFDF5" : "#FEF3C7",
-                                    color: order.status === "delivered" ? "#059669" : "#D97706",
-                                  }}>
+                                <Badge status={order.status === "delivered" ? "delivered" : "shipped"}>
                                   {order.status === "delivered" ? "ডেলিভারড" : "পাঠানো"}
-                                </span>
+                                </Badge>
                               </td>
                               <td className="px-4 py-3">
                                 <button
@@ -521,12 +464,11 @@ export default function CodPage() {
                     </div>
                   </div>
                 )}
-              </div>
+              </Card>
             );
           })}
 
-          {/* Grand footer */}
-          <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4 flex items-center justify-between">
+          <Card padding="md" className="flex items-center justify-between">
             <span className="text-sm text-gray-500">সর্বমোট {totalFilteredOrders}টি অর্ডার</span>
             <div className="flex gap-5">
               <div className="text-right">
@@ -538,9 +480,9 @@ export default function CodPage() {
                 <p className="font-black text-emerald-700">{formatBDT(Array.from(groupedByCourier.values()).flat().filter(o => o.codRemitted).reduce((s, o) => s + o.totalAmount, 0))}</p>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

@@ -37,7 +37,7 @@ const CAT_LABELS: Record<string, string> = {
 };
 
 type TemplateItem = { id?: string; itemName: string; category: string; perHeadCost: number; quantity?: string };
-type Template = { id: string; name: string; type: string; perHeadPrice: number; items: TemplateItem[] };
+type Template = { id: string; name: string; type: string; perHeadPrice: number; items: TemplateItem[]; isActive?: boolean };
 type Event = {
   id: string; bookingNumber: string; clientName: string; clientPhone: string;
   eventType: string; eventDate: string; eventTime: string | null; venue: string;

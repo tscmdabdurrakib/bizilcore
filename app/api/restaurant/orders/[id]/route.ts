@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import {
+  runDiscountEngine,
+  mapPrismaCouponToEngine,
+  customerGroupToMemberTier,
+} from "@/lib/restaurant/discount-engine";
 
 async function getShop(userId: string) {
   return prisma.shop.findUnique({
@@ -55,18 +61,21 @@ function calcTotals(
 
 const STOCK_DEDUCTED_STATUSES = ["served", "paid"];
 
+type StockClient = Pick<typeof prisma, "rawMaterial"> | Prisma.TransactionClient;
+
 async function restoreStockIfNeeded(
   shopId: string,
   autoDeduct: boolean,
   fromStatus: string,
-  items: { quantity: number; menuItem: { recipes: { materialId: string; quantity: number }[] } }[]
+  items: { quantity: number; menuItem: { recipes: { materialId: string; quantity: number }[] } }[],
+  db: StockClient = prisma
 ) {
   if (!autoDeduct) return;
   if (!STOCK_DEDUCTED_STATUSES.includes(fromStatus)) return;
 
   for (const item of items) {
     for (const recipe of item.menuItem.recipes ?? []) {
-      await prisma.rawMaterial.updateMany({
+      await db.rawMaterial.updateMany({
         where: { id: recipe.materialId, shopId },
         data: { currentStock: { increment: recipe.quantity * item.quantity } },
       });
@@ -79,7 +88,8 @@ async function deductStockIfNeeded(
   autoDeduct: boolean,
   fromStatus: string,
   toStatus: string,
-  items: { quantity: number; menuItem: { recipes: { materialId: string; quantity: number }[] } }[]
+  items: { quantity: number; menuItem: { recipes: { materialId: string; quantity: number }[] } }[],
+  db: StockClient = prisma
 ) {
   if (!autoDeduct) return;
   if (!STOCK_DEDUCTED_STATUSES.includes(toStatus)) return;
@@ -87,7 +97,7 @@ async function deductStockIfNeeded(
 
   for (const item of items) {
     for (const recipe of item.menuItem.recipes) {
-      await prisma.rawMaterial.updateMany({
+      await db.rawMaterial.updateMany({
         where: { id: recipe.materialId, shopId },
         data: { currentStock: { decrement: recipe.quantity * item.quantity } },
       });
@@ -144,6 +154,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     voidReason?: string;
     refundAmount?: number;
     refundReason?: string;
+    couponCode?: string;
   };
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }
 
@@ -261,6 +272,172 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json(updated);
   }
 
+  /* ── APPLY COUPON TO ACTIVE ORDER ─────────────────────────────── */
+  if (action === "apply_coupon") {
+    const code = (body.couponCode as string | undefined)?.trim().toUpperCase();
+    if (!code) return NextResponse.json({ error: "কুপন কোড দিন" }, { status: 400 });
+    if (["paid", "cancelled"].includes(existing.status)) {
+      return NextResponse.json({ error: "এই অর্ডারে কুপন প্রয়োগ করা যাবে না" }, { status: 400 });
+    }
+
+    const engineItems = existing.items.filter(i => !i.isVoided).map(i => ({
+      menuItemId: i.menuItemId,
+      name: i.menuItem.name,
+      category: i.menuItem.category,
+      unitPrice: i.unitPrice,
+      quantity: i.quantity,
+    }));
+
+    let customerTier: string | null = null;
+    if (existing.customerPhone) {
+      const cust = await prisma.customer.findFirst({
+        where: { shopId: shop.id, phone: existing.customerPhone },
+        select: { group: true },
+      });
+      customerTier = customerGroupToMemberTier(cust?.group);
+    }
+
+    const activeCoupons = await prisma.coupon.findMany({
+      where: { shopId: shop.id, isActive: true },
+    });
+    const engineCoupons = activeCoupons.map(mapPrismaCouponToEngine);
+    const result = runDiscountEngine(engineItems, engineCoupons, new Date(), customerTier, code);
+
+    const couponDiscount = result.discounts.find(d => d.type === "coupon" && d.couponCode === code);
+    if (!couponDiscount) {
+      return NextResponse.json({ error: "কুপন প্রযোজ্য নয়" }, { status: 400 });
+    }
+
+    // Calculate auto-discounts (happy hour / member) that also apply
+    const autoDiscounts = result.discounts.filter(d => d.type !== "coupon");
+    const totalAutoDiscount = couponDiscount.amount + autoDiscounts.reduce((s, d) => s + d.amount, 0);
+
+    const discountBreakdown: { type: string; label: string; amount: number; couponId?: string; couponCode?: string }[] = [
+      couponDiscount,
+      ...autoDiscounts,
+    ];
+
+    // Handle BOGO: add free/discounted item to the order
+    const bogoSuggestion = result.bogoSuggestions[0];
+    if (bogoSuggestion) {
+      const getItemId = bogoSuggestion.getItemId ?? bogoSuggestion.triggerItemId;
+      const getMenuItem = await prisma.menuItem.findFirst({
+        where: { id: getItemId, shopId: shop.id },
+        select: { id: true, price: true, name: true },
+      });
+      if (getMenuItem) {
+        const discountPct = bogoSuggestion.getDiscountPct ?? 100;
+        const freeUnitPrice = Math.round(getMenuItem.price * (1 - discountPct / 100) * 100) / 100;
+        await prisma.restaurantOrderItem.create({
+          data: {
+            orderId: id,
+            menuItemId: getMenuItem.id,
+            quantity: bogoSuggestion.getQty,
+            unitPrice: freeUnitPrice,
+            note: `🎁 BOGO: ${code}`,
+          },
+        });
+      }
+    }
+
+    // Fetch latest items after possible BOGO item addition
+    const orderAfterBogo = await prisma.restaurantOrder.findFirst({
+      where: { id },
+      include: { items: { include: { menuItem: { select: { id: true, name: true, category: true } } } } },
+    });
+    const allItems = (orderAfterBogo?.items ?? []).filter(i => !i.isVoided);
+    const { subtotal, vatAmount, serviceAmount, totalAmount } = calcTotals(
+      allItems, totalAutoDiscount, vatPct, svcPct
+    );
+
+    await prisma.restaurantOrder.update({
+      where: { id },
+      data: {
+        discount: totalAutoDiscount,
+        subtotal, vatAmount, serviceAmount, totalAmount,
+        couponCode: code,
+        discountBreakdown: discountBreakdown,
+      },
+    });
+
+    // Increment usedCount for the applied coupon
+    await prisma.coupon.updateMany({
+      where: { id: couponDiscount.couponId, shopId: shop.id },
+      data: { usedCount: { increment: 1 } },
+    });
+
+    const updated = await prisma.restaurantOrder.findFirst({
+      where: { id },
+      include: { ...ORDER_INCLUDE, splits: { orderBy: { splitIndex: "asc" as const } } },
+    });
+    return NextResponse.json(updated);
+  }
+
+  /* ── REMOVE COUPON FROM ACTIVE ORDER ──────────────────────────── */
+  if (action === "remove_coupon") {
+    if (["paid", "cancelled"].includes(existing.status)) {
+      return NextResponse.json({ error: "এই অর্ডারে কুপন সরানো যাবে না" }, { status: 400 });
+    }
+
+    // Remove BOGO items (note starts with "🎁 BOGO:")
+    const bogoItems = existing.items.filter(i => i.note?.startsWith("🎁 BOGO:"));
+    for (const bogoItem of bogoItems) {
+      await prisma.restaurantOrderItem.delete({ where: { id: bogoItem.id } });
+    }
+
+    const remainingItems = existing.items.filter(i => !i.note?.startsWith("🎁 BOGO:") && !i.isVoided);
+
+    // Re-run auto-discounts without the coupon code (happy hour / member still apply)
+    const engineItems = remainingItems.map(i => ({
+      menuItemId: i.menuItemId,
+      name: i.menuItem.name,
+      category: i.menuItem.category,
+      unitPrice: i.unitPrice,
+      quantity: i.quantity,
+    }));
+
+    let customerTier: string | null = null;
+    if (existing.customerPhone) {
+      const cust = await prisma.customer.findFirst({
+        where: { shopId: shop.id, phone: existing.customerPhone },
+        select: { group: true },
+      });
+      customerTier = customerGroupToMemberTier(cust?.group);
+    }
+
+    const activeCoupons = await prisma.coupon.findMany({
+      where: { shopId: shop.id, isActive: true },
+    });
+    const engineCoupons = activeCoupons.map(mapPrismaCouponToEngine);
+    // Run engine WITHOUT any coupon code — only auto-discounts remain
+    const result = runDiscountEngine(engineItems, engineCoupons, new Date(), customerTier, null);
+    const autoDiscount = result.totalDiscount;
+
+    const { subtotal, vatAmount, serviceAmount, totalAmount } = calcTotals(
+      remainingItems, autoDiscount, vatPct, svcPct
+    );
+
+    const newBreakdown = result.discounts.length > 0
+      ? result.discounts.map(d => ({ ...d }))
+      : null;
+
+    await prisma.restaurantOrder.update({
+      where: { id },
+      data: {
+        discount: autoDiscount,
+        subtotal, vatAmount, serviceAmount, totalAmount,
+        couponCode: null,
+        discountBreakdown: newBreakdown ?? undefined,
+      },
+    });
+
+    const updated = await prisma.restaurantOrder.findFirst({
+      where: { id },
+      include: { ...ORDER_INCLUDE, splits: { orderBy: { splitIndex: "asc" as const } } },
+    });
+    return NextResponse.json(updated);
+  }
+
   if (action === "request_bill") {
     const updated = await prisma.restaurantOrder.update({
       where: { id },
@@ -341,35 +518,64 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       existing.items, discount, vatPct, svcPct
     );
 
-    await deductStockIfNeeded(shop.id, shop.restAutoStockDeduct, existing.status, "paid", existing.items);
-
-    const updated = await prisma.restaurantOrder.update({
-      where: { id },
-      data: {
-        status: "paid",
-        paidAmount: totalAmount,
-        dueAmount: 0,
-        tipAmount,
-        paymentMethod,
-        discount,
-        vatAmount,
-        serviceAmount,
-        totalAmount,
-        subtotal,
-        billRequested: false,
-      },
-      include: ORDER_INCLUDE,
-    });
+    // Active shift (if any) — cash payments are recorded against the drawer.
+    const activeShift = paymentMethod === "cash"
+      ? await prisma.posShift.findFirst({ where: { shopId: shop.id, status: "open" }, select: { id: true } })
+      : null;
+    const performedBy = String(session.user.name || "POS");
 
     const UNPAID_STATUSES = ["pending", "preparing", "ready", "served", "billing"];
-    if (existing.tableId) {
-      const remaining = await prisma.restaurantOrder.count({
-        where: { tableId: existing.tableId, status: { in: UNPAID_STATUSES }, id: { not: id } },
+
+    const updated = await prisma.$transaction(async (tx) => {
+      await deductStockIfNeeded(shop.id, shop.restAutoStockDeduct, existing.status, "paid", existing.items, tx);
+
+      const ord = await tx.restaurantOrder.update({
+        where: { id },
+        data: {
+          status: "paid",
+          paidAmount: totalAmount,
+          dueAmount: 0,
+          tipAmount,
+          paymentMethod,
+          discount,
+          vatAmount,
+          serviceAmount,
+          totalAmount,
+          subtotal,
+          billRequested: false,
+        },
+        include: ORDER_INCLUDE,
       });
-      if (remaining === 0) {
-        await prisma.diningTable.update({ where: { id: existing.tableId }, data: { status: "available" } });
+
+      // Cash sale → drawer log + expected-cash bump so shift reconciliation is correct.
+      if (activeShift) {
+        await tx.cashDrawerLog.create({
+          data: {
+            shopId: shop.id,
+            shiftId: activeShift.id,
+            type: "sale",
+            amount: totalAmount,
+            note: `Order #${ord.orderNumber ?? id}`,
+            performedBy,
+          },
+        });
+        await tx.posShift.update({
+          where: { id: activeShift.id },
+          data: { expectedCash: { increment: totalAmount } },
+        });
       }
-    }
+
+      if (existing.tableId) {
+        const remaining = await tx.restaurantOrder.count({
+          where: { tableId: existing.tableId, status: { in: UNPAID_STATUSES }, id: { not: id } },
+        });
+        if (remaining === 0) {
+          await tx.diningTable.update({ where: { id: existing.tableId }, data: { status: "available" } });
+        }
+      }
+
+      return ord;
+    });
 
     return NextResponse.json(updated);
   }

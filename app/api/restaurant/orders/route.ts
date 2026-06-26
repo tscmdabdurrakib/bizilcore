@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
+import { trackForUser } from "@/lib/activity/trackFromSession";
 
 async function getShopByUser(userId: string) {
   return prisma.shop.findUnique({
@@ -104,6 +106,7 @@ export async function POST(req: NextRequest) {
     discount?: number;
     discountBreakdown?: { type: string; label: string; amount: number; couponId?: string; couponCode?: string }[];
     couponCode?: string;
+    managerToken?: string;
     items?: {
       menuItemId: string;
       quantity: number;
@@ -116,7 +119,8 @@ export async function POST(req: NextRequest) {
 
   const isQrOrder = !!body.shopSlug;
 
-  let shop: { id: string; restVatPct: number | null; restServiceChargePct: number | null; restOrderPrefix: string | null } | null = null;
+  let shop: { id: string; restVatPct: number | null; restServiceChargePct: number | null; restOrderPrefix: string | null; restRequireShift: boolean | null; managerDiscountThreshold: number | null } | null = null;
+  let actorUserId: string | null = null;
 
   if (isQrOrder) {
     if (!body.shopSlug) return NextResponse.json({ error: "shopSlug required" }, { status: 400 });
@@ -125,6 +129,7 @@ export async function POST(req: NextRequest) {
   } else {
     const session = await auth();
     if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    actorUserId = session.user.id;
     shop = await getShopByUser(session.user.id);
     if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
   }
@@ -197,7 +202,7 @@ export async function POST(req: NextRequest) {
       shopId: shop.id,
       ...(isQrOrder && { isAvailable: true }),
     },
-    select: { id: true, price: true, variants: true, addons: true },
+    select: { id: true, price: true, variants: true, addons: true, category: true, name: true },
   });
 
   if (menuItems.length !== menuItemIds.length) {
@@ -235,12 +240,84 @@ export async function POST(req: NextRequest) {
       unitPrice,
       note: it.note ?? null,
       selectedVariant: resolvedVariant,
-      selectedAddons: resolvedAddons.length > 0 ? resolvedAddons : null,
+      selectedAddons: resolvedAddons.length > 0 ? (resolvedAddons as Prisma.InputJsonValue) : Prisma.JsonNull,
       addonTotal,
     };
   });
 
   const subtotal = itemsWithPrices.reduce((sum, it) => sum + it.unitPrice * it.quantity, 0);
+
+  // Recompute auto-discounts server-side (coupon > happy hour > member + combo)
+  let resolvedDiscount = orderDiscount;
+  let resolvedBreakdown = orderDiscountBreakdown;
+
+  if (!isQrOrder) {
+    const { runDiscountEngine, mapPrismaCouponToEngine, customerGroupToMemberTier } =
+      await import("@/lib/restaurant/discount-engine");
+
+    let customerTier: string | null = null;
+    if (body.customerPhone) {
+      const cust = await prisma.customer.findFirst({
+        where: { shopId: shop.id, phone: body.customerPhone },
+        select: { group: true },
+      });
+      customerTier = customerGroupToMemberTier(cust?.group);
+    }
+
+    const activeCoupons = await prisma.coupon.findMany({
+      where: { shopId: shop.id, isActive: true },
+    });
+
+    const engineItems = itemsWithPrices.map(it => {
+      const mi = menuMap.get(it.menuItemId)!;
+      return {
+        menuItemId: it.menuItemId,
+        name: mi.name,
+        category: mi.category,
+        unitPrice: it.unitPrice,
+        quantity: it.quantity,
+      };
+    });
+
+    const engineCoupons = activeCoupons.map(mapPrismaCouponToEngine);
+    const engineResult = runDiscountEngine(
+      engineItems,
+      engineCoupons,
+      new Date(),
+      customerTier,
+      orderCouponCode ? orderCouponCode.toUpperCase() : null
+    );
+
+    const manualLines = (orderDiscountBreakdown ?? []).filter(d => d.type === "manual");
+    const manualDiscount = manualLines.reduce((s, d) => s + d.amount, 0);
+    const serverAutoDiscount = engineResult.totalDiscount;
+
+    // When the client sends couponCode without discount/breakdown (e.g. TablesBoard flow),
+    // skip client-vs-server validation and trust the engine result directly.
+    const clientSentBreakdown = orderDiscountBreakdown !== null && orderDiscountBreakdown !== undefined;
+
+    if (clientSentBreakdown) {
+      const clientAutoDiscount = orderDiscount - manualDiscount;
+      if (Math.abs(clientAutoDiscount - serverAutoDiscount) > 0.02) {
+        return NextResponse.json(
+          { error: "ছাড়ের হিসাব মিলছে না। POS রিফ্রেশ করে আবার চেষ্টা করুন।" },
+          { status: 400 }
+        );
+      }
+      resolvedDiscount = serverAutoDiscount + manualDiscount;
+      resolvedBreakdown = [
+        ...engineResult.discounts,
+        ...manualLines,
+      ];
+    } else {
+      // Client didn't send breakdown — use engine result directly (coupon-only flow)
+      resolvedDiscount = serverAutoDiscount;
+      resolvedBreakdown = engineResult.discounts.length > 0
+        ? [...engineResult.discounts]
+        : null;
+    }
+    if (resolvedBreakdown && (resolvedBreakdown as unknown[]).length === 0) resolvedBreakdown = null;
+  }
 
   // Server-side manager threshold enforcement.
   // Auto-discounts (happyhour/member/combo/coupon) are allowed without manager approval.
@@ -248,8 +325,8 @@ export async function POST(req: NextRequest) {
   // when the discount percentage exceeds the configured threshold.
   // A crafted request sending discountBreakdown:null with a large manual discount is blocked
   // because we treat missing/null breakdown as potentially manual when discount > threshold.
-  if (!isQrOrder && orderDiscount > 0 && subtotal > 0) {
-    const discountPct = (orderDiscount / subtotal) * 100;
+  if (!isQrOrder && resolvedDiscount > 0 && subtotal > 0) {
+    const discountPct = (resolvedDiscount / subtotal) * 100;
     const shopCfg = await prisma.shop.findUnique({
       where: { id: shop.id },
       select: { managerDiscountThreshold: true },
@@ -259,9 +336,9 @@ export async function POST(req: NextRequest) {
       // Allow without token ONLY if breakdown is present and contains exclusively auto-discount types
       const AUTO_TYPES = new Set(["coupon", "happyhour", "member", "bogo", "combo"]);
       const isAutoOnlyBreakdown =
-        Array.isArray(orderDiscountBreakdown) &&
-        (orderDiscountBreakdown as { type: string }[]).length > 0 &&
-        (orderDiscountBreakdown as { type: string }[]).every(d => AUTO_TYPES.has(d.type));
+        Array.isArray(resolvedBreakdown) &&
+        (resolvedBreakdown as { type: string }[]).length > 0 &&
+        (resolvedBreakdown as { type: string }[]).every(d => AUTO_TYPES.has(d.type));
 
       if (!isAutoOnlyBreakdown) {
         const token = (body.managerToken as string | undefined) ?? null;
@@ -282,7 +359,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const discountedBase = Math.max(0, subtotal - orderDiscount);
+  const discountedBase = Math.max(0, subtotal - resolvedDiscount);
   const vatPct = shop.restVatPct ?? 0;
   const svcPct = shop.restServiceChargePct ?? 0;
   const vatAmount = Math.round(discountedBase * (vatPct / 100) * 100) / 100;
@@ -303,52 +380,62 @@ export async function POST(req: NextRequest) {
     resolvedWaiterId = waiter.id;
   }
 
-  const order = await prisma.restaurantOrder.create({
-    data: {
-      shopId: shop.id,
-      orderNumber,
-      type: orderType,
-      tableId: resolvedTableId,
-      waiterId: resolvedWaiterId,
-      customerName: body.customerName ?? null,
-      customerPhone: body.customerPhone ?? null,
-      note: isQrOrder
-        ? (body.note ? `[QR অর্ডার] ${body.note}` : "[QR অর্ডার]")
-        : (body.note ?? null),
-      paymentMethod: orderPaymentMethod,
-      subtotal,
-      discount: orderDiscount,
-      vatAmount,
-      serviceAmount,
-      totalAmount,
-      status: "pending",
-      discountBreakdown: orderDiscountBreakdown ?? undefined,
-      couponCode: orderCouponCode,
-      items: { create: itemsWithPrices },
-    },
-    include: ORDER_INCLUDE,
+  const couponIds = (resolvedBreakdown ?? [])
+    .filter(d => d.couponId)
+    .map(d => d.couponId as string);
+
+  // Order create + table occupancy + coupon usage are one atomic unit so a
+  // partial failure can never leave an order without its table/coupon updates.
+  const order = await prisma.$transaction(async (tx) => {
+    const created = await tx.restaurantOrder.create({
+      data: {
+        shopId: shop.id,
+        orderNumber,
+        type: orderType,
+        tableId: resolvedTableId,
+        waiterId: resolvedWaiterId,
+        customerName: body.customerName ?? null,
+        customerPhone: body.customerPhone ?? null,
+        note: isQrOrder
+          ? (body.note ? `[QR অর্ডার] ${body.note}` : "[QR অর্ডার]")
+          : (body.note ?? null),
+        paymentMethod: orderPaymentMethod,
+        subtotal,
+        discount: resolvedDiscount,
+        vatAmount,
+        serviceAmount,
+        totalAmount,
+        status: "pending",
+        discountBreakdown: resolvedBreakdown ?? undefined,
+        couponCode: orderCouponCode,
+        items: { create: itemsWithPrices },
+      },
+      include: ORDER_INCLUDE,
+    });
+
+    if (resolvedTableId) {
+      await tx.diningTable.update({
+        where: { id: resolvedTableId },
+        data: { status: "occupied" },
+      });
+    }
+
+    for (const cId of couponIds) {
+      await tx.coupon.updateMany({
+        where: { id: cId, shopId: shop.id },
+        data: { usedCount: { increment: 1 } },
+      });
+    }
+
+    return created;
   });
 
-  if (resolvedTableId) {
-    await prisma.diningTable.update({
-      where: { id: resolvedTableId },
-      data: { status: "occupied" },
-    });
-  }
-
-  // Increment usedCount for any applied coupons
-  if (orderDiscountBreakdown && orderDiscountBreakdown.length > 0) {
-    const couponIds = orderDiscountBreakdown
-      .filter(d => d.couponId)
-      .map(d => d.couponId as string);
-    if (couponIds.length > 0) {
-      for (const cId of couponIds) {
-        await prisma.coupon.updateMany({
-          where: { id: cId, shopId: shop.id },
-          data: { usedCount: { increment: 1 } },
-        });
-      }
-    }
+  if (actorUserId) {
+    trackForUser(actorUserId, shop.id, {
+      actionType: "order_created",
+      actionLabel: `রেস্তোরাঁ অর্ডার: #${order.id.slice(-6).toUpperCase()}`,
+      metadata: { order_id: order.id, source: "restaurant" },
+    }).catch(() => {});
   }
 
   return NextResponse.json(order, { status: 201 });

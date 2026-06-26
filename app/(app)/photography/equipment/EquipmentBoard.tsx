@@ -3,9 +3,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { formatBDT } from "@/lib/utils";
 import {
-import DatePicker from "@/components/ui/DatePicker";
   Camera, Plus, Loader2, X, Check, Edit2, Trash2, AlertTriangle,
 } from "lucide-react";
+import DatePicker from "@/components/ui/DatePicker";
 
 interface PhotoEquipment {
   id: string;

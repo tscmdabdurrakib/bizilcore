@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { revalidateFbPages } from "@/lib/cache/revalidate";
 
 export const dynamic = "force-dynamic";
 
@@ -63,5 +64,6 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  revalidateFbPages(shop.id);
   return NextResponse.redirect(`${BASE_URL}/fb-connect?success=1`);
 }

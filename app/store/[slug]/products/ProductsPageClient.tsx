@@ -8,10 +8,11 @@ interface Product {
   id: string; name: string; description: string | null; category: string | null;
   sellPrice: number; stockQty: number; imageUrl: string | null; images: unknown;
   hasVariants: boolean; storeVisible: boolean; storeFeatured: boolean;
+  variants?: { id: string; size: string | null; color: string | null; price: number | null; stockQty: number }[];
 }
 
 interface Props {
-  shop: { id: string; name: string; storeSlug: string; storeShowStock: boolean };
+  shop: { id: string; name: string; storeSlug: string; storeShowStock: boolean; storeSocialProofEnabled?: boolean };
   products: Product[];
   categories: string[];
   initialQ?: string;
@@ -73,6 +74,22 @@ export function ProductsPageClient({ shop, products, categories, initialQ, initi
   const [sort, setSort] = useState("newest");
   const [page, setPage] = useState(1);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [flashMap, setFlashMap] = useState<Record<string, { endAt: string; salePrice: number }>>({});
+
+  useEffect(() => {
+    fetch(`/api/store/flash-sales?slug=${slug}`)
+      .then(r => r.json())
+      .then((sales: Array<{ endAt: string; products: Array<{ productId: string; salePrice: number }> }>) => {
+        const map: Record<string, { endAt: string; salePrice: number }> = {};
+        for (const sale of sales) {
+          for (const fp of sale.products) {
+            map[fp.productId] = { endAt: sale.endAt, salePrice: fp.salePrice };
+          }
+        }
+        setFlashMap(map);
+      })
+      .catch(() => {});
+  }, [slug]);
 
   // Price range from products
   const allPrices = products.map(p => p.sellPrice);
@@ -119,11 +136,21 @@ export function ProductsPageClient({ shop, products, categories, initialQ, initi
     if (selectedCategories.length > 0)
       list = list.filter(p => p.category && selectedCategories.includes(p.category));
     list = list.filter(p => p.sellPrice >= minPrice && p.sellPrice <= maxPrice);
+    if (selectedColors.length > 0) {
+      list = list.filter(p =>
+        (p.variants ?? []).some(v => v.color && selectedColors.includes(v.color))
+      );
+    }
+    if (selectedSizes.length > 0) {
+      list = list.filter(p =>
+        (p.variants ?? []).some(v => v.size && selectedSizes.includes(v.size))
+      );
+    }
     if (sort === "price_asc") list.sort((a, b) => a.sellPrice - b.sellPrice);
     else if (sort === "price_desc") list.sort((a, b) => b.sellPrice - a.sellPrice);
     else if (sort === "name_asc") list.sort((a, b) => a.name.localeCompare(b.name));
     return list;
-  }, [products, selectedCategories, minPrice, maxPrice, sort]);
+  }, [products, selectedCategories, minPrice, maxPrice, selectedColors, selectedSizes, sort]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
@@ -358,7 +385,11 @@ export function ProductsPageClient({ shop, products, categories, initialQ, initi
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-5">
                 {paginated.map(p => (
-                  <DynamicProductCard key={p.id} product={p} slug={slug} fullWidth />
+                  <DynamicProductCard key={p.id} product={p} slug={slug} fullWidth
+                    flashEndAt={flashMap[p.id]?.endAt}
+                    flashSalePrice={flashMap[p.id]?.salePrice}
+                    socialProofEnabled={shop.storeSocialProofEnabled}
+                  />
                 ))}
               </div>
             )}

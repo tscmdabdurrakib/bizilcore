@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { ChevronLeft, Plus, Trash2, X, Tag, Truck, Loader2, ShoppingCart } from "lucide-react";
+import { Plus, Trash2, X, ShoppingCart } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
+import { PageShell, Card, Button, Input } from "@/components/ui";
 
 interface Customer { id: string; name: string; phone: string | null; }
 interface ProductVariant { id: string; name: string; size: string | null; color: string | null; sku: string | null; price: number | null; stockQty: number; }
@@ -33,8 +33,9 @@ export default function NewOrderPage() {
   const searchParams = useSearchParams();
   const prefillCustomerId = searchParams.get("customerId");
   const prefillCustomerName = searchParams.get("customerName");
+  const prefillCustomerPhone = searchParams.get("phone");
   const prefillSuggestId = searchParams.get("suggestId");
-  const hasPrefillName = !prefillCustomerId && !!prefillCustomerName;
+  const hasPrefillName = !prefillCustomerId && (!!prefillCustomerName || !!prefillCustomerPhone);
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -47,7 +48,7 @@ export default function NewOrderPage() {
   const [customerMode, setCustomerMode] = useState<"existing" | "new">(hasPrefillName ? "new" : "existing");
   const [selectedCustomerId, setSelectedCustomerId] = useState(prefillCustomerId ?? "");
   const [newCustomerName, setNewCustomerName] = useState(prefillCustomerName ?? "");
-  const [newCustomerPhone, setNewCustomerPhone] = useState("");
+  const [newCustomerPhone, setNewCustomerPhone] = useState(prefillCustomerPhone ?? "");
   const [newCustomerAddress, setNewCustomerAddress] = useState("");
   const [newCustomerFacebook, setNewCustomerFacebook] = useState("");
   const [newCustomerGroup, setNewCustomerGroup] = useState("regular");
@@ -59,6 +60,8 @@ export default function NewOrderPage() {
   const [note, setNote] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
+  const [branchId, setBranchId] = useState("");
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
   const [wantCourier, setWantCourier] = useState(false);
   const [newOrderCourier, setNewOrderCourier] = useState("pathao");
   const [newOrderTrackId, setNewOrderTrackId] = useState("");
@@ -74,10 +77,12 @@ export default function NewOrderPage() {
       fetch("/api/customers?all=1").then(r => r.json()),
       fetch("/api/products?withVariants=1").then(r => r.json()),
       fetch("/api/combos?active=1").then(r => r.json()),
-    ]).then(([c, p, combo]) => {
+      fetch("/api/shops").then(r => r.ok ? r.json() : null).catch(() => null),
+    ]).then(([c, p, combo, sh]) => {
       setCustomers(Array.isArray(c) ? c : []);
       setProducts(Array.isArray(p) ? p : []);
       setCombos(Array.isArray(combo) ? combo : []);
+      if (sh?.branches?.length) setBranches(sh.branches);
       setLoading(false);
     });
   }, []);
@@ -175,6 +180,7 @@ export default function NewOrderPage() {
           subtotal: it.subtotal,
         })),
         paidAmount, deliveryCharge, source, note, tags,
+        ...(branchId ? { branchId } : {}),
       }),
     });
     if (r.ok) {
@@ -206,7 +212,7 @@ export default function NewOrderPage() {
       }
       setTimeout(() => router.push("/orders"), 1200);
     } else {
-      showToast("error", "কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করুন।");
+      showToast("error", (await r.json().catch(() => ({}))).error ?? "কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করুন।");
     }
     setSubmitting(false);
   }
@@ -224,39 +230,32 @@ export default function NewOrderPage() {
 
   if (loading) return (
     <div className="max-w-[760px] mx-auto animate-pulse space-y-4">
-      {[1, 2, 3].map(i => <div key={i} className="h-24 rounded-2xl" style={{ backgroundColor: "var(--c-bg)" }} />)}
+      {[1, 2, 3].map(i => <div key={i} className="h-24 rounded-2xl skeleton-shimmer" />)}
     </div>
   );
 
   return (
-    <div className="max-w-[760px] mx-auto">
+    <PageShell
+      title="নতুন অর্ডার"
+      subtitle="সব তথ্য পূরণ করুন ও অর্ডার সেভ করুন"
+      breadcrumbs={[{ label: "অর্ডার", href: "/orders" }, { label: "নতুন অর্ডার" }]}
+      className="max-w-[760px]"
+      actions={
+        <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl shadow-sm flex-shrink-0 card-stat">
+          <ShoppingCart size={16} style={{ color: "var(--c-primary)" }} />
+          <div>
+            <p className="text-[9px] font-bold uppercase tracking-wide" style={{ color: "var(--c-primary)" }}>মোট</p>
+            <p className="text-sm font-extrabold leading-none" style={{ color: "var(--c-primary)" }}>{formatBDT(totalAmount)}</p>
+          </div>
+        </div>
+      }
+    >
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-semibold shadow-xl"
           style={{ backgroundColor: toast.type === "success" ? "#1D9E75" : "#E24B4A" }}>
           {toast.msg}
         </div>
       )}
-
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <Link href="/orders"
-          className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 border transition-colors hover:bg-gray-50"
-          style={{ borderColor: S.border, backgroundColor: S.surface }}>
-          <ChevronLeft size={20} style={{ color: S.secondary }} />
-        </Link>
-        <div className="flex-1 min-w-0">
-          <h2 className="font-bold text-xl" style={{ color: S.text }}>নতুন অর্ডার</h2>
-          <p className="text-xs mt-0.5" style={{ color: S.muted }}>সব তথ্য পূরণ করুন ও অর্ডার সেভ করুন</p>
-        </div>
-        <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl shadow-sm flex-shrink-0"
-          style={{ background: "linear-gradient(135deg, #E8F5F0, #C8EDE3)", border: "1px solid #A3D9C9" }}>
-          <ShoppingCart size={16} style={{ color: "#0F6E56" }} />
-          <div>
-            <p className="text-[9px] font-bold uppercase tracking-wide" style={{ color: "#0F6E56" }}>মোট</p>
-            <p className="text-sm font-extrabold leading-none" style={{ color: "#0F6E56" }}>{formatBDT(totalAmount)}</p>
-          </div>
-        </div>
-      </div>
 
       {/* Progress Steps */}
       <div className="flex items-center gap-1 mb-6 overflow-x-auto pb-1">
@@ -281,7 +280,7 @@ export default function NewOrderPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
 
         {/* ── 1. Customer Card ────────────────────── */}
-        <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+        <Card padding="none" className="overflow-hidden">
           <div className="px-5 py-4 border-b flex items-center gap-3" style={{ borderColor: S.border, backgroundColor: "var(--c-bg)" }}>
             <div className="w-7 h-7 rounded-xl flex items-center justify-center text-white text-xs font-black flex-shrink-0 shadow-sm" style={{ background: "linear-gradient(135deg, #0F6E56, #0A5442)" }}>১</div>
             <h3 className="font-bold text-sm" style={{ color: S.text }}>কাস্টমার</h3>
@@ -409,10 +408,10 @@ export default function NewOrderPage() {
               </div>
             )}
           </div>
-        </div>
+        </Card>
 
         {/* ── 2. Products Card ───────────────────── */}
-        <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+        <Card padding="none" className="overflow-hidden">
           <div className="px-5 py-4 border-b flex items-center gap-3" style={{ borderColor: S.border, backgroundColor: "var(--c-bg)" }}>
             <div className="w-7 h-7 rounded-xl flex items-center justify-center text-white text-xs font-black flex-shrink-0 shadow-sm" style={{ background: "linear-gradient(135deg, #3B82F6, #1D4ED8)" }}>২</div>
             <h3 className="font-bold text-sm" style={{ color: S.text }}>পণ্য</h3>
@@ -541,16 +540,16 @@ export default function NewOrderPage() {
               );
             })}
 
-            <button type="button" onClick={addItem}
-              className="flex items-center gap-2.5 text-sm font-bold px-4 py-3.5 rounded-2xl border-2 w-full justify-center transition-all hover:bg-blue-50 active:scale-[0.98]"
-              style={{ borderColor: "#3B82F6", color: "#3B82F6", borderStyle: "dashed", backgroundColor: "#F8FBFF" }}>
-              <Plus size={16} /> পণ্য বা কমবো যোগ করুন
-            </button>
+            <Button type="button" variant="outline" icon={Plus} onClick={addItem}
+              className="w-full border-2 border-dashed"
+              style={{ borderColor: "#3B82F6", color: "#3B82F6", backgroundColor: "#F8FBFF" }}>
+              পণ্য বা কমবো যোগ করুন
+            </Button>
           </div>
-        </div>
+        </Card>
 
         {/* ── 3. Payment Card ───────────────────── */}
-        <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+        <Card padding="none" className="overflow-hidden">
           <div className="px-5 py-4 border-b flex items-center gap-3" style={{ borderColor: S.border, backgroundColor: "var(--c-bg)" }}>
             <div className="w-7 h-7 rounded-xl flex items-center justify-center text-white text-xs font-black flex-shrink-0 shadow-sm" style={{ background: "linear-gradient(135deg, #8B5CF6, #6D28D9)" }}>৩</div>
             <h3 className="font-bold text-sm" style={{ color: S.text }}>পেমেন্ট</h3>
@@ -559,19 +558,8 @@ export default function NewOrderPage() {
             </span>
           </div>
           <div className="p-5 space-y-4">
-            <div>
-              <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wide" style={{ color: S.muted }}>ডেলিভারি চার্জ</label>
-              <div className="flex items-center rounded-2xl border overflow-hidden transition-all"
-                style={{ borderColor: focused === "delivery" ? "#8B5CF6" : S.border, borderWidth: focused === "delivery" ? 2 : 1 }}>
-                <div className="h-12 px-4 flex items-center text-sm font-bold flex-shrink-0"
-                  style={{ backgroundColor: "#F5F3FF", color: "#8B5CF6", borderRight: `1px solid ${S.border}` }}>৳</div>
-                <input type="number" value={deliveryCharge} min="0" onChange={(e) => setDeliveryCharge(e.target.value)}
-                  placeholder="০"
-                  className="flex-1 h-12 px-4 text-sm font-semibold outline-none bg-transparent"
-                  style={{ color: S.text }}
-                  onFocus={() => setFocused("delivery")} onBlur={() => setFocused(null)} />
-              </div>
-            </div>
+            <Input label="ডেলিভারি চার্জ" type="number" value={deliveryCharge} min="0"
+              onChange={(e) => setDeliveryCharge(e.target.value)} placeholder="০" />
 
             {/* Payment Summary Cards */}
             <div className="grid grid-cols-3 gap-3">
@@ -593,6 +581,25 @@ export default function NewOrderPage() {
               </div>
             </div>
 
+            {branches.length > 0 && (
+              <div>
+                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wide" style={{ color: S.muted }}>বিক্রির লোকেশন</label>
+                <select value={branchId} onChange={e => setBranchId(e.target.value)}
+                  className="w-full h-12 px-4 rounded-2xl border text-sm font-semibold outline-none"
+                  style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }}>
+                  <option value="">মূল শপ (Main)</option>
+                  {branches.map(b => (
+                    <option key={b.id} value={b.id}>🏪 {b.name}</option>
+                  ))}
+                </select>
+                {branchId && (
+                  <p className="text-[10px] mt-1.5" style={{ color: S.muted }}>
+                    Branch অর্ডার — স্টক branch inventory থেকে কাটা হবে
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wide" style={{ color: S.muted }}>অর্ডার সোর্স</label>
@@ -610,23 +617,13 @@ export default function NewOrderPage() {
                   </span>
                 </div>
               </div>
-              <div>
-                <label className="block text-[11px] font-bold mb-1.5 uppercase tracking-wide" style={{ color: S.muted }}>নোট</label>
-                <div className="flex items-center rounded-2xl border overflow-hidden transition-all"
-                  style={{ borderColor: focused === "note" ? "#0F6E56" : S.border, borderWidth: focused === "note" ? 2 : 1 }}>
-                  <span className="pl-3 text-base flex-shrink-0">📝</span>
-                  <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="অতিরিক্ত তথ্য..."
-                    className="flex-1 h-12 px-3 text-sm font-medium outline-none bg-transparent"
-                    style={{ color: S.text }}
-                    onFocus={() => setFocused("note")} onBlur={() => setFocused(null)} />
-                </div>
-              </div>
+              <Input label="নোট" type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="অতিরিক্ত তথ্য..." />
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* ── 4. Tags Card ──────────────────────── */}
-        <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+        <Card padding="none" className="overflow-hidden">
           <div className="px-5 py-4 border-b flex items-center gap-3" style={{ borderColor: S.border, backgroundColor: "var(--c-bg)" }}>
             <div className="w-7 h-7 rounded-xl flex items-center justify-center text-white text-xs font-black flex-shrink-0 shadow-sm" style={{ background: "linear-gradient(135deg, #EF9F27, #D97706)" }}>৪</div>
             <h3 className="font-bold text-sm" style={{ color: S.text }}>ট্যাগ</h3>
@@ -664,22 +661,13 @@ export default function NewOrderPage() {
             </div>
 
             {/* Custom tag input */}
-            <div className="flex gap-2">
-              <div className="flex items-center rounded-2xl border overflow-hidden flex-1 transition-all"
-                style={{ borderColor: focused === "tag" ? "#EF9F27" : S.border, borderWidth: focused === "tag" ? 2 : 1 }}>
-                <span className="pl-3 text-base flex-shrink-0">#</span>
-                <input type="text" value={tagInput} onChange={e => setTagInput(e.target.value)}
+            <div className="flex gap-2 items-end">
+              <div className="flex-1 min-w-0">
+                <Input type="text" value={tagInput} onChange={e => setTagInput(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
-                  placeholder="কাস্টম ট্যাগ লিখুন..."
-                  className="flex-1 h-11 px-2 text-sm font-medium outline-none bg-transparent"
-                  style={{ color: S.text }}
-                  onFocus={() => setFocused("tag")} onBlur={() => setFocused(null)} />
+                  placeholder="# কাস্টম ট্যাগ লিখুন..." />
               </div>
-              <button type="button" onClick={addTag}
-                className="px-4 h-11 rounded-2xl text-sm font-bold transition-all active:scale-95"
-                style={{ backgroundColor: "#FFF3DC", color: "#EF9F27", border: "2px solid #EF9F27" }}>
-                + যোগ
-              </button>
+              <Button type="button" variant="secondary" onClick={addTag} className="flex-shrink-0">+ যোগ</Button>
             </div>
 
             {/* Active custom tags */}
@@ -695,11 +683,11 @@ export default function NewOrderPage() {
               </div>
             )}
           </div>
-        </div>
+        </Card>
 
         {/* ── 5. Courier Card (optional) ─────────── */}
-        <div className="rounded-2xl border overflow-hidden transition-all"
-          style={{ borderColor: wantCourier ? "#3B82F6" : S.border, borderWidth: wantCourier ? 2 : 1 }}>
+        <Card padding="none" className="overflow-hidden transition-all"
+          style={{ borderColor: wantCourier ? "#3B82F6" : undefined, borderWidth: wantCourier ? 2 : undefined }}>
           <button type="button" onClick={() => setWantCourier(v => !v)}
             className="w-full flex items-center justify-between px-5 py-4 transition-colors"
             style={{ backgroundColor: wantCourier ? "#EFF6FF" : "var(--c-bg)" }}>
@@ -736,16 +724,9 @@ export default function NewOrderPage() {
                 </div>
               </div>
               {isManualCourierSelected && (
-                <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>Tracking ID</label>
-                  <input type="text" value={newOrderTrackId} onChange={e => setNewOrderTrackId(e.target.value)}
-                    placeholder="Courier ওয়েবসাইট থেকে বুক করে ID দিন"
-                    className="w-full px-3 py-2.5 text-sm rounded-xl border outline-none"
-                    style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
-                  <p className="text-xs mt-1" style={{ color: S.muted }}>
-                    প্রথমে courier এর website থেকে বুক করুন, তারপর Tracking ID এখানে লিখুন।
-                  </p>
-                </div>
+                <Input label="Tracking ID" type="text" value={newOrderTrackId} onChange={e => setNewOrderTrackId(e.target.value)}
+                  placeholder="Courier ওয়েবসাইট থেকে বুক করে ID দিন"
+                  hint="প্রথমে courier এর website থেকে বুক করুন, তারপর Tracking ID এখানে লিখুন।" />
               )}
               {!isManualCourierSelected && (
                 <p className="text-xs px-3 py-2.5 rounded-xl font-medium" style={{ backgroundColor: "var(--c-primary-light)", color: S.primary }}>
@@ -754,10 +735,10 @@ export default function NewOrderPage() {
               )}
             </div>
           )}
-        </div>
+        </Card>
 
         {/* ── Order Summary Bar ─────────────────── */}
-        <div className="rounded-2xl p-4 border" style={{ backgroundColor: "var(--c-bg)", borderColor: S.border }}>
+        <Card padding="md" variant="bordered">
           <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: S.muted }}>অর্ডার সারাংশ</p>
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-4">
@@ -782,18 +763,15 @@ export default function NewOrderPage() {
               </div>
             )}
           </div>
-        </div>
+        </Card>
 
         {/* ── Submit ────────────────────────────── */}
-        <button type="submit" disabled={submitting || bookingCourier}
-          className="w-full py-4 rounded-2xl text-white font-bold text-base disabled:opacity-60 transition-all hover:opacity-90 active:scale-[0.98] flex items-center justify-center gap-2.5 shadow-xl"
-          style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}>
-          {(submitting || bookingCourier) && <Loader2 size={18} className="animate-spin" />}
+        <Button type="submit" size="lg" className="w-full shadow-xl"
+          loading={submitting || bookingCourier} disabled={submitting || bookingCourier}>
           {bookingCourier ? "কুরিয়ার বুক হচ্ছে..." : submitting ? "সেভ হচ্ছে..." : wantCourier ? "অর্ডার সেভ ও কুরিয়ার বুক করুন" : "অর্ডার সেভ করুন"}
-        </button>
-        <div className="h-4" />
+        </Button>
 
       </form>
-    </div>
+    </PageShell>
   );
 }

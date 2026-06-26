@@ -61,7 +61,7 @@ export default function DashboardFreelance() {
   const statCards = [
     { label: "সক্রিয় প্রজেক্ট", value: String(data.activeProjects), sub: "in progress + review", icon: FolderKanban, color: S.primary, bg: "#EEF2FF" },
     { label: "এই মাসের আয়", value: formatBDT(data.monthRevenueBDT), sub: data.usdMonthRevenue > 0 ? `+ $${data.usdMonthRevenue.toFixed(0)} USD` : "BDT", icon: TrendingUp, color: "#10B981", bg: "#ECFDF5" },
-    { label: "Pending Invoice", value: formatBDT(data.pendingInvoiceTotal), sub: "পাঠানো ও Viewed", icon: FileText, color: "#F59E0B", bg: "#FFFBEB" },
+    { label: "অপেক্ষমান ইনভয়েস", value: formatBDT(data.pendingInvoiceTotal), sub: "পাঠানো ও দেখা হয়েছে", icon: FileText, color: "#F59E0B", bg: "#FFFBEB" },
     { label: "Overdue প্রজেক্ট", value: String(data.overdueProjects), sub: "Deadline পেরিয়ে গেছে", icon: AlertTriangle, color: "#EF4444", bg: "#FEF2F2" },
   ];
 

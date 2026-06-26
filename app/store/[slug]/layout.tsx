@@ -7,6 +7,10 @@ import { StoreFooter } from "@/components/store/StoreFooter";
 import { StoreVisitTracker } from "@/components/store/StoreVisitTracker";
 import { FloatingWhatsApp } from "@/components/store/FloatingWhatsApp";
 import { StoreCustomerProvider } from "@/components/store/StoreCustomerProvider";
+import { StorePixelTracker } from "@/components/store/StorePixelTracker";
+import { StoreAnnouncementBar } from "@/components/store/StoreAnnouncementBar";
+import { ExitIntentPopup } from "@/components/store/ExitIntentPopup";
+import { PwaInstallBanner } from "@/components/store/PwaInstallBanner";
 
 async function getStoreCategories(shopId: string): Promise<string[]> {
   const products = await prisma.product.findMany({
@@ -45,6 +49,15 @@ async function getStoreShop(slug: string) {
       storeSocialFB: true,
       storeSocialIG: true,
       storeSocialWA: true,
+      storeFbPixelId: true,
+      storeGoogleAnalyticsId: true,
+      storeTiktokPixelId: true,
+      storePwaEnabled: true,
+      storeAnnouncementBar: true,
+      storeAnnouncementEndsAt: true,
+      storeSocialProofEnabled: true,
+      storeExitPopupEnabled: true,
+      storeExitPopupCoupon: true,
     },
   });
 }
@@ -78,6 +91,9 @@ export default async function StoreLayout({
 
   return (
     <>
+      {shop.storePwaEnabled && (
+        <link rel="manifest" href={`/store/${slug}/manifest.webmanifest`} />
+      )}
       {fontUrls.map(url => (
         <link key={url} rel="stylesheet" href={url} />
       ))}
@@ -92,10 +108,18 @@ export default async function StoreLayout({
         >
           <StoreVisitTracker slug={slug} />
           <StoreCustomerProvider />
+          <StorePixelTracker
+            fbPixelId={shop.storeFbPixelId}
+            gaId={shop.storeGoogleAnalyticsId}
+            tiktokPixelId={shop.storeTiktokPixelId}
+          />
+          <StoreAnnouncementBar message={shop.storeAnnouncementBar ?? ""} expiresAt={shop.storeAnnouncementEndsAt?.toISOString()} />
           <DynamicNav shop={{ ...shop, storeSlug: shop.storeSlug!, storeFreeShipping: !!shop.storeFreeShipping }} categories={categories} />
           <main className="flex-1">{children}</main>
           <StoreFooter shop={{ ...shop, storeSlug: shop.storeSlug!, storeFreeShipping: !!shop.storeFreeShipping }} />
           <FloatingWhatsApp whatsappNumber={waNumber} shopName={shop.name} primary={primary} />
+          <ExitIntentPopup slug={slug} enabled={shop.storeExitPopupEnabled} couponCode={shop.storeExitPopupCoupon} />
+          <PwaInstallBanner enabled={shop.storePwaEnabled} />
         </div>
       </StoreThemeProvider>
     </>

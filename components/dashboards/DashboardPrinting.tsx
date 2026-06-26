@@ -33,7 +33,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   design_approval: { label: "Design Approval", color: "#F59E0B" },
   printing:        { label: "Printing",         color: "#3B82F6" },
   finishing:       { label: "Finishing",        color: "#8B5CF6" },
-  ready:           { label: "Ready",            color: "#10B981" },
+  ready:           { label: "প্রস্তুত",            color: "#10B981" },
   delivered:       { label: "Delivered",        color: "#0F6E56" },
 };
 
@@ -69,7 +69,7 @@ export default function DashboardPrinting({ shopName, userName, userGender }: {
     { label: "আজ আসা অর্ডার", value: stats?.todayOrders ?? 0, icon: Package, color: "#6366F1", bg: "#EEF2FF" },
     { label: "Design Approval অপেক্ষায়", value: stats?.pendingApproval ?? 0, icon: AlertTriangle, color: "#F59E0B", bg: "#FFFBEB" },
     { label: "Printing চলছে", value: stats?.printing ?? 0, icon: Printer, color: PRINT_COLOR, bg: PRINT_LIGHT },
-    { label: "Ready অর্ডার", value: stats?.ready ?? 0, icon: CheckCircle, color: "#10B981", bg: "#ECFDF5" },
+    { label: "প্রস্তুত অর্ডার", value: stats?.ready ?? 0, icon: CheckCircle, color: "#10B981", bg: "#ECFDF5" },
   ];
 
   const pipeline = [
@@ -77,7 +77,7 @@ export default function DashboardPrinting({ shopName, userName, userGender }: {
     { key: "design_approval", label: "Design ✓",        color: "#F59E0B" },
     { key: "printing",        label: "Printing",         color: "#3B82F6" },
     { key: "finishing",       label: "Finishing",        color: "#8B5CF6" },
-    { key: "ready",           label: "Ready",            color: "#10B981" },
+    { key: "ready",           label: "প্রস্তুত",            color: "#10B981" },
   ];
 
   return (

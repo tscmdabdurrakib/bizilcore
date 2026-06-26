@@ -65,7 +65,7 @@ export default function RealEstateReports() {
             <BarChart data={data.dealsByMonth} barSize={16}>
               <XAxis dataKey="month" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `৳${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: number) => [formatBDT(v), "কমিশন"]} contentStyle={{ borderRadius: 10, fontSize: 12 }} />
+              <Tooltip formatter={((v: number) => [formatBDT(v), "কমিশন"]) as never} contentStyle={{ borderRadius: 10, fontSize: 12 }} />
               <Bar dataKey="commission" fill={RE_COLOR} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>

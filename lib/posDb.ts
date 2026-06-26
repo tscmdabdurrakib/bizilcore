@@ -48,8 +48,20 @@ export async function getOfflineProducts(search = "", category = ""): Promise<Po
   });
 }
 
+/** Generate a stable idempotency key for a single sale attempt. */
+export function newIdempotencyKey(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `pos-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 export async function enqueueSale(payload: object) {
-  await posDb.saleQueue.add({ payload: JSON.stringify(payload), createdAt: Date.now() });
+  // Ensure every queued sale carries an idempotency key so the sync replay
+  // (and any retry) is deduplicated server-side.
+  const withKey =
+    payload && typeof payload === "object" && "idempotencyKey" in payload
+      ? payload
+      : { ...payload, idempotencyKey: newIdempotencyKey() };
+  await posDb.saleQueue.add({ payload: JSON.stringify(withKey), createdAt: Date.now() });
 }
 
 export async function flushSaleQueue(): Promise<{ flushed: number; failed: number }> {

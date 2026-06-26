@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireShop } from "@/lib/getShop";
 import { prisma } from "@/lib/prisma";
-import { runDiscountEngine, EngineCartItem, EngineCoupon } from "@/lib/restaurant/discount-engine";
+import { getRestaurantShop } from "@/lib/restaurant/api-shop";
+import { runDiscountEngine, EngineCartItem, mapPrismaCouponToEngine } from "@/lib/restaurant/discount-engine";
 
 export async function POST(req: NextRequest) {
-  const { shop } = await requireShop();
+  const ctx = await getRestaurantShop();
+  if ("error" in ctx) return ctx.error;
+  const { shop } = ctx;
   const body = await req.json();
   const { code, items, customerTier } = body as {
     code: string;
@@ -20,12 +22,7 @@ export async function POST(req: NextRequest) {
     where: { shopId: shop.id, isActive: true },
   });
 
-  const engineCoupons: EngineCoupon[] = coupons.map(c => ({
-    ...c,
-    applicableItemIds: (c.applicableItemIds as string[] | null) ?? [],
-    applicableCategories: (c.applicableCategories as string[] | null) ?? [],
-    happyHourDays: (c.happyHourDays as number[] | null) ?? [0, 1, 2, 3, 4, 5, 6],
-  }));
+  const engineCoupons = coupons.map(mapPrismaCouponToEngine);
 
   const result = runDiscountEngine(items, engineCoupons, new Date(), customerTier ?? null, code.toUpperCase());
   const couponDiscount = result.discounts.find(d => d.couponCode === code.toUpperCase());

@@ -62,7 +62,7 @@ export default function PetShopReports() {
             <BarChart data={data.monthlyChart} barSize={18}>
               <XAxis dataKey="month" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `৳${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: number) => [formatBDT(v), "আয়"]} contentStyle={{ borderRadius: 10, fontSize: 12 }} />
+              <Tooltip formatter={((v: number) => [formatBDT(v), "আয়"]) as never} contentStyle={{ borderRadius: 10, fontSize: 12 }} />
               <Bar dataKey="revenue" fill={PET_COLOR} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -76,7 +76,7 @@ export default function PetShopReports() {
             <ResponsiveContainer width="100%" height={150}>
               <PieChart>
                 <Pie data={data.petTypeBreakdown.map(r => ({ name: TYPE_LABELS[r.type] ?? r.type, value: r.count }))}
-                  cx="50%" cy="50%" outerRadius={60} dataKey="value" label={({ name, value }) => `${name.split(" ")[1] ?? name}:${value}`} labelLine={false}>
+                  cx="50%" cy="50%" outerRadius={60} dataKey="value" label={({ name, value }: any) => `${name.split(" ")[1] ?? name}:${value}`} labelLine={false}>
                   {data.petTypeBreakdown.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                 </Pie>
                 <Tooltip />

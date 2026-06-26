@@ -17,8 +17,8 @@ export async function POST(req: NextRequest) {
 
   const apiKey = decryptApiKey(settings.apiKey);
   const message = "BizilCore SMS সংযোগ সফল! আপনার নোটিফিকেশন সিস্টেম চালু আছে।";
-  const ok = await sendSMS(apiKey, phone.trim(), message);
+  const result = await sendSMS(apiKey, phone.trim(), message);
 
-  if (!ok) return NextResponse.json({ error: "SMS পাঠানো যায়নি। নম্বরটি সঠিক কিনা দেখুন।" }, { status: 500 });
+  if (!result.success) return NextResponse.json({ error: "SMS পাঠানো যায়নি। নম্বরটি সঠিক কিনা দেখুন।" }, { status: 500 });
   return NextResponse.json({ success: true });
 }

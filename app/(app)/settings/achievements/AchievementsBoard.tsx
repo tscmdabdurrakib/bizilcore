@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Flame, Lock, ChevronRight, Star } from "lucide-react";
+import { Card, Badge, SectionTitle } from "@/components/ui";
 
 const S = {
   surface: "var(--c-surface)",
@@ -81,9 +82,8 @@ export default function AchievementsBoard() {
   const earnedCount = data.allBadges.filter(b => b.earned).length;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      {/* Header card: level + XP bar + streak */}
-      <div className="rounded-2xl border p-6" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+    <div className="space-y-6">
+      <Card className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           {/* Level badge */}
           <div className="flex items-center gap-3 flex-1">
@@ -94,12 +94,7 @@ export default function AchievementsBoard() {
               <Star size={28} style={{ color: levelColor.bar }} fill={levelColor.bar} />
             </div>
             <div>
-              <span
-                className="inline-block text-sm font-bold px-3 py-1 rounded-full"
-                style={{ backgroundColor: levelColor.bg, color: levelColor.text }}
-              >
-                {data.level}
-              </span>
+              <Badge variant="info">{data.level}</Badge>
               <p className="text-xs mt-1" style={{ color: S.muted }}>
                 {data.xp} XP · পরের level এর জন্য আরো {Math.max(0, data.nextLevelXp - data.xp)} XP দরকার
               </p>
@@ -153,36 +148,29 @@ export default function AchievementsBoard() {
             );
           })}
         </div>
-      </div>
+      </Card>
 
-      {/* Badge grid */}
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-bold text-sm" style={{ color: S.text }}>পদক সংগ্রহ</h2>
-          <span className="text-xs" style={{ color: S.muted }}>{earnedCount}/{data.allBadges.length} অর্জিত</span>
-        </div>
+        <SectionTitle title="পদক সংগ্রহ" className="mb-3" />
+        <p className="text-xs -mt-2 mb-3" style={{ color: S.muted }}>{earnedCount}/{data.allBadges.length} অর্জিত</p>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {data.allBadges.map(badge => (
             <div
               key={badge.key}
-              className="relative rounded-2xl border p-4 flex flex-col items-center text-center cursor-default transition-all"
-              style={{
-                backgroundColor: badge.earned ? S.surface : S.bg,
-                borderColor: badge.earned ? "#10B981" : S.border,
-                opacity: badge.earned ? 1 : 0.7,
-              }}
               onMouseEnter={() => !badge.earned && setHoveredKey(badge.key)}
               onMouseLeave={() => setHoveredKey(null)}
+            >
+            <Card
+              padding="md"
+              className={`relative flex flex-col items-center text-center ${badge.earned ? "border-[#10B981]" : ""} ${!badge.earned ? "opacity-70" : ""}`}
             >
               {badge.earned ? (
                 <>
                   <div className="text-3xl mb-2">{badge.icon}</div>
                   <p className="text-xs font-bold mb-0.5" style={{ color: S.text }}>{badge.title}</p>
                   <p className="text-xs" style={{ color: S.muted }}>{badge.desc}</p>
-                  <span className="mt-2 text-xs font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: "#D1FAE5", color: "#047857" }}>
-                    +{badge.xp} XP
-                  </span>
+                  <Badge variant="success">+{badge.xp} XP</Badge>
                   {badge.earnedAt && (
                     <p className="text-xs mt-1" style={{ color: S.muted }}>
                       {new Date(badge.earnedAt).toLocaleDateString("bn-BD", { day: "numeric", month: "short", year: "numeric" })}
@@ -214,6 +202,7 @@ export default function AchievementsBoard() {
                   )}
                 </>
               )}
+            </Card>
             </div>
           ))}
         </div>

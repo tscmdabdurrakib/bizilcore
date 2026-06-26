@@ -470,7 +470,7 @@ export default function ShiftManager({ onShiftChange }: ShiftManagerProps) {
               )}
 
               {/* Step 2: Pre-close summary — show expected vs counted before irreversible action */}
-              {wizardStep === 2 && (() => {
+              {wizardStep === 2 && activeShift && (() => {
                 const manualCashIn  = activeShift.logs.filter(l => l.type === "in").reduce((s, l) => s + l.amount, 0);
                 const manualCashOut = activeShift.logs.filter(l => l.type === "out").reduce((s, l) => s + l.amount, 0);
                 const knownExpected = activeShift.openingCash + manualCashIn - manualCashOut;

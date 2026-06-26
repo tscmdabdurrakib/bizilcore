@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { sendOTPVerificationEmail } from "@/lib/mailer";
 import { createNotification } from "@/lib/notifications";
+import { applySignupBonus } from "@/lib/sms/credits";
 
 const AFFILIATE_COMMISSION: Record<string, number> = { pro: 50, business: 150 };
 
@@ -150,6 +151,22 @@ export async function POST(req: NextRequest) {
       "আপনার ব্যবসা পরিচালনা এখন আরও সহজ। ড্যাশবোর্ড থেকে শুরু করুন!",
       "/dashboard"
     ).catch(() => {});
+
+    applySignupBonus(user.id)
+      .then((bonus) => {
+        if (!bonus.granted) return;
+        const parts: string[] = [];
+        if (bonus.masking > 0) parts.push(`${bonus.masking} Masking`);
+        if (bonus.nonMasking > 0) parts.push(`${bonus.nonMasking} Non-Masking`);
+        createNotification(
+          user.id,
+          "system",
+          "🎁 Signup SMS Bonus!",
+          `আপনি ${parts.join(" + ")} SMS credit পেয়েছেন। এখনই SMS পাঠাতে পারবেন!`,
+          "/billing#sms-credits"
+        ).catch(() => {});
+      })
+      .catch(() => {});
 
     if (referrerId) {
       createNotification(

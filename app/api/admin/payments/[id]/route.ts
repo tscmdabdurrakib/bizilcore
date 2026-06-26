@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendSubscriptionUpgradeEmail } from "@/lib/mailer";
+import { activateSubscriptionFromPayment } from "@/lib/payment/activate-subscription";
+import { confirmTransaction, getPlatformZiniPayApiKey } from "@/lib/zinipay";
 
 export async function PATCH(
   req: NextRequest,
@@ -26,33 +28,43 @@ export async function PATCH(
   if (action === "approve") {
     const planToSet = plan || payment.plan;
     const monthsToUse = months || payment.months;
-    const startDate = new Date();
-    const endDate = new Date();
-    endDate.setMonth(endDate.getMonth() + monthsToUse);
 
-    await prisma.$transaction([
-      prisma.payment.update({
+    if (
+      payment.status === "pending" &&
+      payment.zinipayVerifyId &&
+      payment.transactionId &&
+      getPlatformZiniPayApiKey()
+    ) {
+      try {
+        await confirmTransaction(getPlatformZiniPayApiKey()!, {
+          transactionId: payment.transactionId,
+          amount: payment.amount,
+          id: payment.zinipayVerifyId,
+          invoiceId: payment.id,
+        });
+      } catch (err) {
+        console.error("[AdminPayment] ZiniPay confirm retry failed:", err);
+      }
+    }
+
+    const { endDate } = await activateSubscriptionFromPayment({
+      userId: payment.userId,
+      plan: planToSet,
+      months: monthsToUse,
+      paymentId: payment.id,
+      trxId: payment.transactionId ?? payment.id,
+      senderPhone: payment.senderPhone,
+      status: "approved",
+    });
+
+    if (adminNote) {
+      await prisma.payment.update({
         where: { id },
-        data: { status: "approved", adminNote: adminNote || null },
-      }),
-      prisma.subscription.upsert({
-        where: { userId: payment.userId },
-        create: {
-          userId: payment.userId,
-          plan: planToSet,
-          status: "active",
-          startDate,
-          endDate,
-        },
-        update: {
-          plan: planToSet,
-          status: "active",
-          startDate,
-          endDate,
-        },
-      }),
-    ]);
+        data: { adminNote, verificationNote: "manual_approve" },
+      });
+    }
 
+    const startDate = new Date();
     const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`;
     sendSubscriptionUpgradeEmail({
       toEmail: payment.user.email,

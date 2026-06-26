@@ -2,19 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/logActivity";
+import { getApiShop } from "@/lib/shops/api-shop";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const shop = await prisma.shop.findUnique({ where: { userId: session.user.id } });
-  if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+  const ctx = await getApiShop();
+  if ("error" in ctx) return ctx.error;
 
   const search = new URL(req.url).searchParams.get("search") ?? "";
 
   const suppliers = await prisma.supplier.findMany({
     where: {
-      shopId: shop.id,
+      shopId: ctx.activeShop.id,
       ...(search ? { name: { contains: search, mode: "insensitive" } } : {}),
     },
     include: { _count: { select: { purchases: true } } },
@@ -28,8 +29,8 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const shop = await prisma.shop.findUnique({ where: { userId: session.user.id } });
-  if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+  const ctx = await getApiShop();
+  if ("error" in ctx) return ctx.error;
 
   const body = await req.json();
   const supplier = await prisma.supplier.create({
@@ -39,11 +40,11 @@ export async function POST(req: NextRequest) {
       address: body.address || null,
       email: body.email || null,
       note: body.note || null,
-      shopId: shop.id,
+      shopId: ctx.activeShop.id,
     },
   });
   await logActivity({
-    shopId: shop.id,
+    shopId: ctx.activeShop.id,
     userId: session.user.id,
     action: "নতুন সরবরাহকারী যোগ",
     detail: `${supplier.name}${supplier.phone ? ` · ${supplier.phone}` : ""}`,

@@ -37,6 +37,7 @@ export function ProductCard({ product, slug }: Props) {
     if (!inStock) return;
     if (product.hasVariants) return;
     addItem({
+      itemType: "product",
       productId: product.id,
       productName: product.name,
       productImage: product.imageUrl,

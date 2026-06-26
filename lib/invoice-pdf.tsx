@@ -1,5 +1,5 @@
 import React from "react";
-import { Document, Page, Text, View, StyleSheet, Font } from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 
 const styles = StyleSheet.create({
   page: { padding: 40, fontSize: 11, fontFamily: "Helvetica", backgroundColor: "#FFFFFF" },
@@ -49,6 +49,149 @@ function fmt(n: number) {
   return `৳${n.toLocaleString("en-BD", { minimumFractionDigits: 0 })}`;
 }
 
+export interface ShopInvoiceData {
+  invoiceNumber: string;
+  createdAt: string;
+  dueDate?: string | null;
+  shop: {
+    name: string;
+    phone?: string | null;
+    address?: string | null;
+    invoiceNote?: string | null;
+    bankName?: string | null;
+    bankAccount?: string | null;
+  };
+  customer?: { name: string; phone?: string | null; address?: string | null } | null;
+  items: { description: string; quantity: number; unitPrice: number; subtotal: number }[];
+  subtotal: number;
+  discount: number;
+  taxRate: number;
+  taxAmount: number;
+  total: number;
+  paidAmount: number;
+  notes?: string | null;
+}
+
+export function ShopInvoiceDocument({ data }: { data: ShopInvoiceData }) {
+  const dateStr = new Date(data.createdAt).toLocaleDateString("en-BD", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+  const due = Math.max(0, data.total - data.paidAmount);
+
+  return (
+    <Document>
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.shopName}>{data.shop.name}</Text>
+            {data.shop.phone && <Text style={styles.shopMeta}>{data.shop.phone}</Text>}
+            {data.shop.address && <Text style={styles.shopMeta}>{data.shop.address}</Text>}
+          </View>
+          <View>
+            <Text style={styles.invoiceLabel}>INVOICE</Text>
+            <Text style={styles.invoiceNum}>{data.invoiceNumber}</Text>
+            <Text style={styles.invoiceNum}>{dateStr}</Text>
+            {data.dueDate && (
+              <Text style={styles.invoiceNum}>
+                Due: {new Date(data.dueDate).toLocaleDateString("en-BD")}
+              </Text>
+            )}
+          </View>
+        </View>
+
+        {data.customer && (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Bill To</Text>
+            <Text style={styles.bodyText}>{data.customer.name}</Text>
+            {data.customer.phone && <Text style={styles.bodyText}>{data.customer.phone}</Text>}
+            {data.customer.address && <Text style={styles.bodyText}>{data.customer.address}</Text>}
+          </View>
+        )}
+
+        <View style={styles.table}>
+          <View style={styles.tableHeader}>
+            <Text style={[styles.tableHeaderCell, styles.colName]}>বিবরণ</Text>
+            <Text style={[styles.tableHeaderCell, styles.colQty]}>পরিমাণ</Text>
+            <Text style={[styles.tableHeaderCell, styles.colPrice]}>একক মূল্য</Text>
+            <Text style={[styles.tableHeaderCell, styles.colTotal]}>মোট</Text>
+          </View>
+          {data.items.map((item, i) => (
+            <View key={i} style={i % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
+              <Text style={[styles.tableCell, styles.colName]}>{item.description}</Text>
+              <Text style={[styles.tableCell, styles.colQty]}>{item.quantity}</Text>
+              <Text style={[styles.tableCell, styles.colPrice]}>{fmt(item.unitPrice)}</Text>
+              <Text style={[styles.tableCell, styles.colTotal]}>{fmt(item.subtotal)}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>Subtotal</Text>
+          <Text style={styles.summaryValue}>{fmt(data.subtotal)}</Text>
+        </View>
+        {data.discount > 0 && (
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Discount</Text>
+            <Text style={styles.summaryValue}>- {fmt(data.discount)}</Text>
+          </View>
+        )}
+        {data.taxAmount > 0 && (
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>VAT ({data.taxRate}%)</Text>
+            <Text style={styles.summaryValue}>+ {fmt(data.taxAmount)}</Text>
+          </View>
+        )}
+        <View style={styles.totalRow}>
+          <Text style={styles.totalLabel}>মোট</Text>
+          <Text style={styles.totalValue}>{fmt(data.total)}</Text>
+        </View>
+        {data.paidAmount > 0 && (
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Paid</Text>
+            <Text style={styles.summaryValue}>{fmt(data.paidAmount)}</Text>
+          </View>
+        )}
+        {due > 0 && (
+          <View style={styles.dueRow}>
+            <Text style={styles.dueLabel}>Due</Text>
+            <Text style={styles.dueValue}>{fmt(due)}</Text>
+          </View>
+        )}
+
+        {data.shop.bankName && data.shop.bankAccount && (
+          <View style={[styles.section, { marginTop: 16 }]}>
+            <Text style={styles.sectionLabel}>Bank Payment</Text>
+            <Text style={styles.bodyText}>{data.shop.bankName}</Text>
+            <Text style={styles.bodyText}>{data.shop.bankAccount}</Text>
+          </View>
+        )}
+
+        {data.shop.invoiceNote && (
+          <View style={[styles.section, { marginTop: 8 }]}>
+            <Text style={styles.bodyText}>{data.shop.invoiceNote}</Text>
+          </View>
+        )}
+
+        {data.notes && (
+          <View style={[styles.section, { marginTop: 8 }]}>
+            <Text style={styles.sectionLabel}>Note</Text>
+            <Text style={styles.bodyText}>{data.notes}</Text>
+          </View>
+        )}
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>ধন্যবাদ!</Text>
+          <Text style={[styles.footerText, { marginTop: 4, fontSize: 8, color: "#A8A69E" }]}>
+            Powered by BizilCore
+          </Text>
+        </View>
+      </Page>
+    </Document>
+  );
+}
+
 export function InvoiceDocument({ data }: { data: InvoiceData }) {
   const invNum = `INV-${data.orderId.slice(-8).toUpperCase()}`;
   const dateStr = new Date(data.createdAt).toLocaleDateString("en-BD", { day: "2-digit", month: "short", year: "numeric" });
@@ -56,7 +199,6 @@ export function InvoiceDocument({ data }: { data: InvoiceData }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* Header */}
         <View style={styles.header}>
           <View>
             <Text style={styles.shopName}>{data.shop.name}</Text>
@@ -69,7 +211,6 @@ export function InvoiceDocument({ data }: { data: InvoiceData }) {
           </View>
         </View>
 
-        {/* Customer */}
         {data.customer && (
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Bill To</Text>
@@ -79,7 +220,6 @@ export function InvoiceDocument({ data }: { data: InvoiceData }) {
           </View>
         )}
 
-        {/* Items Table */}
         <View style={styles.table}>
           <View style={styles.tableHeader}>
             <Text style={[styles.tableHeaderCell, styles.colName]}>পণ্য</Text>
@@ -97,7 +237,6 @@ export function InvoiceDocument({ data }: { data: InvoiceData }) {
           ))}
         </View>
 
-        {/* Summary */}
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Subtotal</Text>
           <Text style={styles.summaryValue}>{fmt(data.totalAmount)}</Text>
@@ -117,7 +256,6 @@ export function InvoiceDocument({ data }: { data: InvoiceData }) {
           </View>
         )}
 
-        {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>ধন্যবাদ আপনার কেনাকাটার জন্য!</Text>
           <Text style={[styles.footerText, { marginTop: 4, fontSize: 8, color: "#A8A69E" }]}>

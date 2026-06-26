@@ -6,6 +6,7 @@ import {
   PieChart, Pie, Cell, Legend,
 } from "recharts";
 import { TrendingUp, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
+import { Card, StatCard, Tabs, Badge, EmptyState } from "@/components/ui";
 
 const BRAND_COLORS = ["#0F6E56", "#1BAA78", "#0A5240", "#2DD4A0", "#166E50", "#4ECBA0", "#37996B", "#10B981"];
 
@@ -81,25 +82,20 @@ const RANGE_OPTIONS = [
   { value: "90", label: "শেষ ৯০ দিন" },
 ];
 
-function KPICard({ icon, label, value, sub, color }: {
+function KPICard({ icon, label, value, sub, accent }: {
   icon: React.ReactNode;
   label: string;
   value: string | number;
   sub?: string;
-  color?: string;
+  accent?: "green" | "gold" | "blue" | "red" | "none";
 }) {
   return (
-    <div
-      className="rounded-2xl p-5 border flex flex-col gap-2"
-      style={{ backgroundColor: S.surface, borderColor: S.border }}
-    >
-      <div className="flex items-center gap-2">
-        <span style={{ color: color ?? S.primary }}>{icon}</span>
-        <span className="text-xs font-medium" style={{ color: S.muted }}>{label}</span>
-      </div>
-      <div className="text-2xl font-bold" style={{ color: S.text }}>{value}</div>
-      {sub && <div className="text-xs" style={{ color: S.muted }}>{sub}</div>}
-    </div>
+    <StatCard
+      label={label}
+      value={value}
+      accent={accent ?? "green"}
+      trend={sub ? { value: sub, up: undefined } : undefined}
+    />
   );
 }
 
@@ -136,21 +132,11 @@ export default function TaskReports() {
       {/* Date range filter */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="text-base font-semibold" style={{ color: S.text }}>টাস্ক রিপোর্ট</h2>
-        <div className="flex rounded-xl overflow-hidden border" style={{ borderColor: S.border, backgroundColor: S.surface }}>
-          {RANGE_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => setDays(opt.value)}
-              className="px-3 py-2 text-xs font-medium transition-colors"
-              style={{
-                backgroundColor: days === opt.value ? S.primary : "transparent",
-                color: days === opt.value ? "#fff" : S.muted,
-              }}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
+        <Tabs
+          tabs={RANGE_OPTIONS.map(o => ({ key: o.value, label: o.label }))}
+          active={days}
+          onChange={setDays}
+        />
       </div>
 
       {loading ? (
@@ -163,38 +149,16 @@ export default function TaskReports() {
         <>
           {/* KPI Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <KPICard
-              icon={<TrendingUp size={18} />}
-              label="মোট টাস্ক"
-              value={data.kpi.total}
-              sub={`${data.kpi.done}টি সম্পন্ন`}
-            />
-            <KPICard
-              icon={<CheckCircle2 size={18} />}
-              label="সম্পন্নের হার"
-              value={`${data.kpi.completionRate}%`}
-              sub={`${data.kpi.done} / ${data.kpi.total}`}
-              color={data.kpi.completionRate >= 70 ? "#16A34A" : S.warn}
-            />
-            <KPICard
-              icon={<Clock size={18} />}
-              label="গড় সময় (দিন)"
-              value={data.kpi.avgDaysToComplete}
-              sub="সম্পন্ন করতে"
-            />
-            <KPICard
-              icon={<AlertTriangle size={18} />}
-              label="মেয়াদোত্তীর্ণ হার"
-              value={`${data.kpi.overdueRate}%`}
-              sub={`${data.kpi.overdue}টি মেয়াদোত্তীর্ণ`}
-              color={data.kpi.overdueRate > 20 ? S.danger : S.warn}
-            />
+            <KPICard icon={<TrendingUp size={18} />} label="মোট টাস্ক" value={data.kpi.total} sub={`${data.kpi.done}টি সম্পন্ন`} accent="green" />
+            <KPICard icon={<CheckCircle2 size={18} />} label="সম্পন্নের হার" value={`${data.kpi.completionRate}%`} sub={`${data.kpi.done} / ${data.kpi.total}`} accent={data.kpi.completionRate >= 70 ? "green" : "gold"} />
+            <KPICard icon={<Clock size={18} />} label="গড় সময় (দিন)" value={data.kpi.avgDaysToComplete} sub="সম্পন্ন করতে" accent="blue" />
+            <KPICard icon={<AlertTriangle size={18} />} label="মেয়াদোত্তীর্ণ হার" value={`${data.kpi.overdueRate}%`} sub={`${data.kpi.overdue}টি মেয়াদোত্তীর্ণ`} accent={data.kpi.overdueRate > 20 ? "red" : "gold"} />
           </div>
 
           {/* Charts row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Weekly completion bar chart — dashboard-style gradient + line overlay */}
-            <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+            <Card>
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-sm font-bold" style={{ color: S.text }}>সাপ্তাহিক সম্পন্ন টাস্ক</h3>
@@ -238,10 +202,10 @@ export default function TaskReports() {
                   />
                 </ComposedChart>
               </ResponsiveContainer>
-            </div>
+            </Card>
 
             {/* Category donut chart */}
-            <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+            <Card>
               <h3 className="text-sm font-semibold mb-4" style={{ color: S.text }}>ক্যাটাগরি বিতরণ</h3>
               {data.categoryDistribution.length === 0 ? (
                 <div className="flex items-center justify-center h-[200px] text-sm" style={{ color: S.muted }}>কোনো ডেটা নেই</div>
@@ -266,12 +230,12 @@ export default function TaskReports() {
                   </PieChart>
                 </ResponsiveContainer>
               )}
-            </div>
+            </Card>
           </div>
 
           {/* Team member chart */}
           {data.memberStats.length > 0 && (
-            <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+            <Card>
               <h3 className="text-sm font-semibold mb-4" style={{ color: S.text }}>সদস্যপ্রতি টাস্ক</h3>
               <ResponsiveContainer width="100%" height={Math.max(180, data.memberStats.length * 44)}>
                 <BarChart
@@ -287,12 +251,12 @@ export default function TaskReports() {
                   <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
                 </BarChart>
               </ResponsiveContainer>
-            </div>
+            </Card>
           )}
 
           {/* Oldest stuck tasks table */}
           {data.oldestStuck.length > 0 && (
-            <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+            <Card padding="none" className="overflow-hidden">
               <div className="px-5 py-4 border-b" style={{ borderColor: S.border }}>
                 <h3 className="text-sm font-semibold" style={{ color: S.text }}>সবচেয়ে পুরনো অমীমাংসিত টাস্ক</h3>
               </div>
@@ -346,7 +310,7 @@ export default function TaskReports() {
                   </tbody>
                 </table>
               </div>
-            </div>
+            </Card>
           )}
         </>
       )}

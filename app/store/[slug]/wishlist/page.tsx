@@ -26,6 +26,7 @@ export default function WishlistPage() {
 
   function handleAddToCart(item: typeof items[0]) {
     addItem({
+      itemType: "product",
       productId: item.productId,
       productName: item.productName,
       productImage: item.productImage,

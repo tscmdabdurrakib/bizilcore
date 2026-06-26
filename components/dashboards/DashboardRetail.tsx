@@ -98,7 +98,7 @@ export default function DashboardRetail({ shopName, userName, userGender, todayS
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: "আজকের বিক্রি",   value: formatBDT(todaySales),             sub: `${todayOrderCount}টি লেনদেন`,            color: "#F59E0B", bg: "#FFFBEB" },
-          { label: "Pending অর্ডার", value: `${pendingCount}টি`,               sub: "ডেলিভারি বাকি",                          color: "#3B82F6", bg: "#EFF6FF" },
+          { label: "অপেক্ষমান অর্ডার", value: `${pendingCount}টি`,               sub: "ডেলিভারি বাকি",                          color: "#3B82F6", bg: "#EFF6FF" },
           { label: "কম স্টক",        value: `${mockLowStock.length}টি`,        sub: "পণ্য রিঅর্ডার করুন",                    color: "#EF4444", bg: "#FEF2F2" },
           { label: "আজকের লাভ",      value: formatBDT(todayProfit),            sub: todayProfit >= 0 ? "ইনকাম বেশি" : "লোকসান", color: "#10B981", bg: "#ECFDF5" },
         ].map((stat) => (

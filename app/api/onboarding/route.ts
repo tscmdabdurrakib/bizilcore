@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateUniqueSlug } from "@/lib/slug";
 import { getModules, isValidBusinessType, isValidSalesChannel } from "@/lib/modules";
+import { createDefaultCoa } from "@/lib/accounting/seed-coa";
 
 export async function PATCH(req: NextRequest) {
   const session = await auth();
@@ -45,6 +46,9 @@ export async function PATCH(req: NextRequest) {
         slug,
       },
     });
+
+    const shopAfter = await prisma.shop.findUnique({ where: { userId: session.user.id } });
+    if (shopAfter) await createDefaultCoa(shopAfter.id);
 
     if (gender) {
       await prisma.user.update({
@@ -94,6 +98,8 @@ export async function PATCH(req: NextRequest) {
       where: { id: session.user.id },
       data: { onboarded: true },
     });
+
+    await createDefaultCoa(shop.id);
 
     return NextResponse.json({ success: true });
   }

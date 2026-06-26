@@ -89,3 +89,44 @@ export async function generateAutoReply(
 
   return ruleBasedReply(message);
 }
+
+/**
+ * Generate a Bangla social-media caption for a product. Uses OpenAI when
+ * configured, otherwise falls back to a clean template so the feature works
+ * without an API key.
+ */
+export async function generateProductCaption(opts: {
+  name: string;
+  price?: number | null;
+  description?: string | null;
+  shopName?: string | null;
+}): Promise<string> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (apiKey) {
+    try {
+      const prompt = `পণ্যের নাম: ${opts.name}\n${opts.price ? `দাম: ৳${opts.price}\n` : ""}${opts.description ? `বিবরণ: ${opts.description}\n` : ""}এই পণ্যের জন্য একটি আকর্ষণীয় ফেসবুক পোস্ট ক্যাপশন লিখুন (Bangla, ২-৪ লাইন, ইমোজি ও ৩-৫টি হ্যাশট্যাগসহ)।`;
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: "gpt-3.5-turbo",
+          max_tokens: 220,
+          messages: [
+            { role: "system", content: "You are a Bangladeshi social-media marketer. Write engaging Facebook captions in Bangla with emojis and hashtags." },
+            { role: "user", content: prompt },
+          ],
+        }),
+      });
+      const data = await res.json();
+      const caption = data?.choices?.[0]?.message?.content?.trim();
+      if (caption) return caption;
+    } catch {
+      /* fall through to template */
+    }
+  }
+
+  // Template fallback
+  const priceLine = opts.price ? `\n\n💰 দাম: মাত্র ৳${opts.price}` : "";
+  const shopLine = opts.shopName ? `\n\n🛍️ ${opts.shopName}` : "";
+  return `✨ ${opts.name} ✨${priceLine}\n\n📦 ক্যাশ অন ডেলিভারি · সারাদেশে ডেলিভারি\n📲 অর্ডার করতে ইনবক্সে মেসেজ দিন।${shopLine}\n\n#fcommerce #bdshopping #onlineshopbd #${opts.name.replace(/\s+/g, "")}`;
+}

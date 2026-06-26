@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
-import { BarChart2, Eye, ShoppingBag, TrendingUp, ArrowUpRight, Package } from "lucide-react";
+import { BarChart2, Eye, ShoppingBag, TrendingUp, ArrowUpRight, Package, Loader2 } from "lucide-react";
 import DatePicker from "@/components/ui/DatePicker";
+import { PageShell, StatCard, Card, Tabs, EmptyState, SectionTitle, Button } from "@/components/ui";
 
 interface DailyPoint { date: string; visits: number; orders: number; revenue: number; }
 interface TopProduct { productId: string | null; name: string; qty: number; revenue: number; }
@@ -19,10 +19,10 @@ interface Analytics {
 
 type RangeMode = "7d" | "30d" | "custom";
 
-const RANGE_OPTIONS: { label: string; value: RangeMode }[] = [
-  { label: "৭ দিন", value: "7d" },
-  { label: "৩০ দিন", value: "30d" },
-  { label: "কাস্টম", value: "custom" },
+const RANGE_TABS = [
+  { key: "7d", label: "৭ দিন" },
+  { key: "30d", label: "৩০ দিন" },
+  { key: "custom", label: "কাস্টম" },
 ];
 
 function formatBDT(n: number) {
@@ -131,16 +131,6 @@ export default function StoreAnalyticsPage() {
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const S = {
-    surface: "var(--c-surface)",
-    border: "var(--c-border)",
-    text: "var(--c-text)",
-    muted: "var(--c-text-muted)",
-    secondary: "var(--c-text-sub)",
-    primary: "var(--c-primary)",
-    primaryLight: "var(--c-primary-light)",
-  };
-
   const fetchAnalytics = useCallback(() => {
     setLoading(true);
     let url = `/api/dashboard/store-analytics?range=${range}`;
@@ -159,135 +149,70 @@ export default function StoreAnalyticsPage() {
     }
   }, [range, fetchAnalytics]);
 
-  const stats = [
-    {
-      icon: Eye, label: "মোট ভিজিট", value: analytics?.totalVisits?.toLocaleString("en-IN") ?? "—",
-      color: "var(--icon-blue-text)", bg: "var(--icon-blue-bg)",
-    },
-    {
-      icon: ShoppingBag, label: "মোট অর্ডার", value: analytics?.totalOrders?.toLocaleString("en-IN") ?? "—",
-      color: "var(--bg-success-text)", bg: "var(--bg-success-soft)",
-    },
-    {
-      icon: TrendingUp, label: "মোট রাজস্ব", value: analytics ? formatBDT(analytics.totalRevenue) : "—",
-      color: "var(--icon-green-text)", bg: "var(--icon-green-bg)",
-    },
-    {
-      icon: ArrowUpRight, label: "গড় অর্ডার মূল্য", value: analytics ? formatBDT(analytics.aov) : "—",
-      color: "var(--icon-amber-text)", bg: "var(--icon-amber-bg)",
-    },
-    {
-      icon: BarChart2, label: "রূপান্তর হার", value: analytics ? `${analytics.conversionRate.toFixed(1)}%` : "—",
-      color: "var(--icon-purple-text)", bg: "var(--icon-purple-bg)",
-    },
-  ];
-
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg,#0F6E56,#0A5442)" }}>
-            <BarChart2 size={18} color="#fff" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold" style={{ color: S.text }}>স্টোর অ্যানালিটিক্স</h1>
-            <p className="text-xs" style={{ color: S.muted }}>আপনার স্টোরের পারফরম্যান্স দেখুন</p>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <div className="flex gap-1 rounded-xl p-1 border self-start" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-            {RANGE_OPTIONS.map(o => (
-              <button
-                key={o.value}
-                onClick={() => setRange(o.value)}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                style={{
-                  backgroundColor: range === o.value ? S.primary : "transparent",
-                  color: range === o.value ? "#fff" : S.muted,
-                }}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
-
+    <PageShell
+      title="স্টোর অ্যানালিটিক্স"
+      subtitle="আপনার স্টোরের পারফরম্যান্স দেখুন"
+      className="max-w-4xl"
+      actions={
+        <div className="flex flex-col gap-2 items-end">
+          <Tabs tabs={RANGE_TABS} active={range} onChange={(k) => setRange(k as RangeMode)} />
           {range === "custom" && (
             <div className="flex items-center gap-2">
               <DatePicker
-  value={customFrom}
-  onChange={v => setCustomFrom(v)}
-  className="text-xs rounded-lg border px-2 py-1.5 outline-none"
-  style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }}
-  max={customTo}
-/>
-              <span className="text-xs" style={{ color: S.muted }}>—</span>
+                value={customFrom}
+                onChange={v => setCustomFrom(v)}
+                className="text-xs rounded-lg border px-2 py-1.5 outline-none"
+                style={{ borderColor: "var(--c-border)", backgroundColor: "var(--c-surface)", color: "var(--c-text)" }}
+                max={customTo}
+              />
+              <span className="text-xs" style={{ color: "var(--c-text-muted)" }}>—</span>
               <DatePicker
-  value={customTo}
-  onChange={v => setCustomTo(v)}
-  className="text-xs rounded-lg border px-2 py-1.5 outline-none"
-  style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }}
-  min={customFrom}
-  max={toInputDate(today)}
-/>
-              <button
-                onClick={fetchAnalytics}
-                disabled={!customFrom || !customTo}
-                className="text-xs font-semibold px-3 py-1.5 rounded-lg text-white disabled:opacity-50"
-                style={{ backgroundColor: S.primary }}
-              >
-                দেখুন
-              </button>
+                value={customTo}
+                onChange={v => setCustomTo(v)}
+                className="text-xs rounded-lg border px-2 py-1.5 outline-none"
+                style={{ borderColor: "var(--c-border)", backgroundColor: "var(--c-surface)", color: "var(--c-text)" }}
+                min={customFrom}
+                max={toInputDate(today)}
+              />
+              <Button size="sm" onClick={fetchAnalytics} disabled={!customFrom || !customTo}>দেখুন</Button>
             </div>
           )}
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {stats.map(stat => (
-          <div key={stat.label} className="rounded-2xl p-4 border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-2.5" style={{ backgroundColor: stat.bg }}>
-              <stat.icon size={15} style={{ color: stat.color }} />
-            </div>
-            <p className="text-[11px] mb-1" style={{ color: S.muted }}>{stat.label}</p>
-            <p className="text-lg font-bold" style={{ color: S.text }}>
-              {loading
-                ? <span className="inline-block w-12 h-4 rounded animate-pulse" style={{ backgroundColor: S.border }} />
-                : stat.value}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      <div className="rounded-2xl p-5 border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-        <h2 className="font-bold text-sm mb-4" style={{ color: S.text }}>দৈনিক ভিজিট ও অর্ডার</h2>
+      }
+      stats={
+        <>
+          <StatCard label="মোট ভিজিট" value={loading ? "—" : (analytics?.totalVisits?.toLocaleString("en-IN") ?? "—")} icon={Eye} accent="blue" iconBg="var(--icon-blue-bg)" iconColor="var(--icon-blue-text)" />
+          <StatCard label="মোট অর্ডার" value={loading ? "—" : (analytics?.totalOrders?.toLocaleString("en-IN") ?? "—")} icon={ShoppingBag} accent="green" />
+          <StatCard label="মোট রাজস্ব" value={loading ? "—" : (analytics ? formatBDT(analytics.totalRevenue) : "—")} icon={TrendingUp} accent="green" />
+          <StatCard label="গড় অর্ডার মূল্য" value={loading ? "—" : (analytics ? formatBDT(analytics.aov) : "—")} icon={ArrowUpRight} accent="gold" iconBg="var(--icon-amber-bg)" iconColor="var(--icon-amber-text)" />
+          <StatCard label="রূপান্তর হার" value={loading ? "—" : (analytics ? `${analytics.conversionRate.toFixed(1)}%` : "—")} icon={BarChart2} accent="blue" iconBg="var(--icon-purple-bg)" iconColor="var(--icon-purple-text)" />
+        </>
+      }
+    >
+      <Card>
+        <SectionTitle title="দৈনিক ভিজিট ও অর্ডার" className="mb-4" />
         {loading
           ? <div className="h-36 flex items-center justify-center">
-              <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: S.primary, borderTopColor: "transparent" }} />
+              <Loader2 size={24} className="animate-spin" style={{ color: "var(--c-primary)" }} />
             </div>
           : <SVGLineChart data={analytics?.daily ?? []} />
         }
-      </div>
+      </Card>
 
-      <div className="rounded-2xl p-5 border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-sm" style={{ color: S.text }}>শীর্ষ পণ্য (বিক্রয় অনুযায়ী)</h2>
-          <Link href="/store/products" className="text-xs font-semibold" style={{ color: S.primary }}>সব পণ্য →</Link>
-        </div>
+      <Card>
+        <SectionTitle title="শীর্ষ পণ্য (বিক্রয় অনুযায়ী)" action={{ label: "সব পণ্য →", href: "/store/products" }} />
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map(i => (
               <div key={i} className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg animate-pulse" style={{ backgroundColor: S.border }} />
-                <div className="flex-1 h-4 rounded animate-pulse" style={{ backgroundColor: S.border }} />
+                <div className="w-8 h-8 rounded-lg animate-pulse" style={{ backgroundColor: "var(--c-border)" }} />
+                <div className="flex-1 h-4 rounded animate-pulse" style={{ backgroundColor: "var(--c-border)" }} />
               </div>
             ))}
           </div>
         ) : !analytics?.topProducts?.length ? (
-          <div className="text-center py-8">
-            <Package size={32} className="mx-auto mb-2 opacity-30" style={{ color: S.muted }} />
-            <p className="text-sm" style={{ color: S.muted }}>এখনো কোনো অর্ডার নেই</p>
-          </div>
+          <EmptyState icon={Package} title="এখনো কোনো অর্ডার নেই" className="py-8" />
         ) : (
           <div className="space-y-2">
             {analytics.topProducts.map((p, i) => {
@@ -296,19 +221,19 @@ export default function StoreAnalyticsPage() {
               return (
                 <div key={p.productId ?? i} className="flex items-center gap-3">
                   <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
-                    style={{ backgroundColor: S.primaryLight, color: S.primary }}>
+                    style={{ backgroundColor: "var(--c-primary-light)", color: "var(--c-primary)" }}>
                     {i + 1}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <p className="text-sm font-medium truncate" style={{ color: S.text }}>{p.name}</p>
+                      <p className="text-sm font-medium truncate" style={{ color: "var(--c-text)" }}>{p.name}</p>
                       <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                        <span className="text-[11px]" style={{ color: S.muted }}>{p.qty}টি</span>
-                        <span className="text-[11px] font-semibold" style={{ color: S.text }}>{formatBDT(p.revenue)}</span>
+                        <span className="text-[11px]" style={{ color: "var(--c-text-muted)" }}>{p.qty}টি</span>
+                        <span className="text-[11px] font-semibold" style={{ color: "var(--c-text)" }}>{formatBDT(p.revenue)}</span>
                       </div>
                     </div>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: S.border }}>
-                      <div className="h-1.5 rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: S.primary }} />
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: "var(--c-border)" }}>
+                      <div className="h-1.5 rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: "var(--c-primary)" }} />
                     </div>
                   </div>
                 </div>
@@ -316,7 +241,7 @@ export default function StoreAnalyticsPage() {
             })}
           </div>
         )}
-      </div>
-    </div>
+      </Card>
+    </PageShell>
   );
 }

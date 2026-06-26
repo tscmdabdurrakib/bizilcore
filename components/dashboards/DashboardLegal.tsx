@@ -128,7 +128,7 @@ export default function DashboardLegal() {
             {[
               { label: "সক্রিয় মামলা", value: String(stats.activeCases), sub: "মামলা" },
               { label: "আজকের শুনানি", value: String(stats.todayHearings), sub: "শুনানি" },
-              { label: "Pending ফি", value: formatBDT(stats.pendingFeeSum), sub: "বাকি" },
+              { label: "অপেক্ষমান ফি", value: formatBDT(stats.pendingFeeSum), sub: "বাকি" },
             ].map(c => (
               <div
                 key={c.label}
@@ -150,7 +150,7 @@ export default function DashboardLegal() {
           { label: "সক্রিয় মামলা", value: stats.activeCases, icon: Scale, color: "#1D4ED8", bg: "#EFF6FF" },
           { label: "আজকের শুনানি", value: stats.todayHearings, icon: Calendar, color: "#7C3AED", bg: "#F5F3FF" },
           { label: "এই সপ্তাহে", value: stats.weekHearings, icon: Clock, color: "#0891B2", bg: "#ECFEFF" },
-          { label: "Pending ফি", value: formatBDT(stats.pendingFeeSum), icon: DollarSign, color: "#DC2626", bg: "#FEF2F2", isStr: true },
+          { label: "অপেক্ষমান ফি", value: formatBDT(stats.pendingFeeSum), icon: DollarSign, color: "#DC2626", bg: "#FEF2F2", isStr: true },
         ].map(card => (
           <div
             key={card.label}

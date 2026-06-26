@@ -22,6 +22,7 @@ interface EventPackage {
   name: string;
   price: number;
   includes: Array<{ item: string; value: string }>;
+  isActive?: boolean;
 }
 
 interface HallEvent {

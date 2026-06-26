@@ -30,11 +30,27 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  try {
   const newOrder = await prisma.$transaction(async (tx) => {
+    const regularItems = original.items.filter(i => i.productId).map(i => ({ productId: i.productId!, quantity: i.quantity }));
+    const comboItems = original.items.filter(i => i.comboId).map(i => ({ comboId: i.comboId!, quantity: i.quantity, comboSnapshot: i.comboSnapshot }));
+    const comboMap = Object.fromEntries(
+      original.items
+        .filter(i => i.combo)
+        .map(i => [i.comboId!, i.combo!])
+    );
+
+    if (original.branchId) {
+      const { assertBranchStockAvailable } = await import("@/lib/shops/order-stock");
+      const stockErr = await assertBranchStockAvailable(tx, original.branchId, regularItems, comboItems, comboMap);
+      if (stockErr) throw new Error(stockErr);
+    }
+
     const created = await tx.order.create({
       data: {
         userId: original.userId,
         customerId: original.customerId,
+        branchId: original.branchId,
         status: "pending",
         source: original.source,
         note: original.note,
@@ -56,42 +72,8 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       },
     });
 
-    // Deduct stock for each item
-    for (const item of original.items) {
-      if (item.productId) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stockQty: { decrement: item.quantity } },
-        });
-      } else if (item.comboId) {
-        // Prefer snapshot for historical accuracy; fall back to current combo items
-        let components: { productId: string; variantId?: string | null; quantity: number }[] = [];
-        if (item.comboSnapshot) {
-          try {
-            const snap = JSON.parse(item.comboSnapshot) as { items: { productId: string; variantId?: string | null; quantity: number }[] };
-            components = snap.items;
-          } catch {
-            components = item.combo?.items.map(ci => ({ productId: ci.product.id, variantId: ci.variantId ?? null, quantity: ci.quantity })) ?? [];
-          }
-        } else {
-          components = item.combo?.items.map(ci => ({ productId: ci.product.id, variantId: ci.variantId ?? null, quantity: ci.quantity })) ?? [];
-        }
-        for (const ci of components) {
-          if (ci.variantId) {
-            // Tolerate stale snapshot variant IDs that no longer exist
-            await tx.productVariant.updateMany({
-              where: { id: ci.variantId },
-              data: { stockQty: { decrement: ci.quantity * item.quantity } },
-            });
-          } else {
-            await tx.product.updateMany({
-              where: { id: ci.productId },
-              data: { stockQty: { decrement: ci.quantity * item.quantity } },
-            });
-          }
-        }
-      }
-    }
+    const { deductOrderStock } = await import("@/lib/shops/order-stock");
+    await deductOrderStock(tx, original.branchId, regularItems, comboItems, comboMap);
 
     if (original.customerId && original.totalAmount > 0) {
       await tx.customer.update({
@@ -104,4 +86,11 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   });
 
   return NextResponse.json(newOrder, { status: 201 });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Duplicate failed";
+    if (msg.includes("branch stock") || msg.includes("Branch orders")) {
+      return NextResponse.json({ error: msg }, { status: 400 });
+    }
+    throw err;
+  }
 }

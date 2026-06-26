@@ -18,6 +18,7 @@ import {
   Facebook,
 } from "lucide-react";
 import Link from "next/link";
+import { PageShell, Card, Badge, Button, Input } from "@/components/ui";
 
 const topics = [
   "সাধারণ প্রশ্ন",
@@ -70,17 +71,11 @@ export default function SupportPage() {
     "w-full px-3.5 py-2.5 text-sm rounded-xl border outline-none transition-all";
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-
-      {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold" style={{ color: "var(--c-text)" }}>
-          সাপোর্ট ও সাহায্য
-        </h1>
-        <p className="text-sm mt-1" style={{ color: "var(--c-text-sub)" }}>
-          যেকোনো সমস্যায় আমরা আছি। সাধারণত ৬ ঘণ্টার মধ্যে উত্তর দেওয়া হয়।
-        </p>
-      </div>
+    <PageShell
+      title="সাপোর্ট ও সাহায্য"
+      subtitle="যেকোনো সমস্যায় আমরা আছি। সাধারণত ৬ ঘণ্টার মধ্যে উত্তর দেওয়া হয়।"
+      className="max-w-5xl"
+    >
 
       {/* Quick channels */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -123,10 +118,7 @@ export default function SupportPage() {
           },
         ].map((ch) => {
           const content = (
-            <div
-              className="rounded-2xl border p-4 flex items-start gap-3"
-              style={{ backgroundColor: "var(--c-surface)", borderColor: "var(--c-border)" }}
-            >
+            <Card className="p-4 flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: ch.bg }}>
                 <ch.icon size={18} style={{ color: ch.color }} />
               </div>
@@ -135,7 +127,7 @@ export default function SupportPage() {
                 <p className="text-sm font-semibold truncate" style={{ color: "var(--c-text)" }}>{ch.desc}</p>
                 <p className="text-xs" style={{ color: "var(--c-text-muted)" }}>{ch.sub}</p>
               </div>
-            </div>
+            </Card>
           );
           return ch.href ? (
             <a key={ch.title} href={ch.href} target="_blank" rel="noreferrer" className="hover:scale-[1.01] transition-transform">
@@ -154,7 +146,7 @@ export default function SupportPage() {
         <div className="md:col-span-2 space-y-4">
 
           {/* Quick links */}
-          <div className="rounded-2xl border p-5" style={{ backgroundColor: "var(--c-surface)", borderColor: "var(--c-border)" }}>
+          <Card>
             <p className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--c-text)" }}>
               <Zap size={14} style={{ color: "#0F6E56" }} />
               দ্রুত সাহায্য
@@ -178,10 +170,10 @@ export default function SupportPage() {
                 </Link>
               ))}
             </div>
-          </div>
+          </Card>
 
           {/* Service status */}
-          <div className="rounded-2xl border p-5" style={{ backgroundColor: "var(--c-surface)", borderColor: "var(--c-border)" }}>
+          <Card>
             <p className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--c-text)" }}>
               <Shield size={14} style={{ color: "#0F6E56" }} />
               System Status
@@ -195,23 +187,14 @@ export default function SupportPage() {
               ].map((s) => (
                 <div key={s.name} className="flex items-center justify-between">
                   <span className="text-sm" style={{ color: "var(--c-text-sub)" }}>{s.name}</span>
-                  <span
-                    className="text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1"
-                    style={{
-                      backgroundColor: s.ok ? "#ECFDF5" : "#FEF2F2",
-                      color: s.ok ? "#059669" : "#DC2626",
-                    }}
-                  >
-                    <div className={`w-1.5 h-1.5 rounded-full ${s.ok ? "bg-green-500" : "bg-red-500"}`} />
-                    {s.status}
-                  </span>
+                  <Badge variant={s.ok ? "success" : "danger"} dot>{s.status}</Badge>
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
 
           {/* Docs */}
-          <div className="rounded-2xl border p-5" style={{ backgroundColor: "var(--c-surface)", borderColor: "var(--c-border)" }}>
+          <Card>
             <p className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: "var(--c-text)" }}>
               <BookOpen size={14} style={{ color: "#0F6E56" }} />
               Useful Links
@@ -235,12 +218,12 @@ export default function SupportPage() {
                 </a>
               ))}
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* Right: Contact form */}
         <div className="md:col-span-3">
-          <div className="rounded-2xl border" style={{ backgroundColor: "var(--c-surface)", borderColor: "var(--c-border)" }}>
+          <Card padding="none">
             <div className="px-6 py-4 border-b flex items-center gap-3" style={{ borderColor: "var(--c-border)" }}>
               <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#E1F5EE" }}>
                 <MessageSquare size={15} style={{ color: "#0F6E56" }} />
@@ -261,16 +244,12 @@ export default function SupportPage() {
                   <p className="text-sm mb-5" style={{ color: "var(--c-text-sub)" }}>
                     আমাদের সাপোর্ট টিম শীঘ্রই যোগাযোগ করবে।
                   </p>
-                  <button
-                    onClick={() => {
+                  <Button variant="outline" onClick={() => {
                       setSubmitted(false);
                       setForm({ name: "", email: "", phone: "", topic: "সাধারণ প্রশ্ন", message: "" });
-                    }}
-                    className="text-sm font-medium px-4 py-2 rounded-xl border transition-colors hover:bg-gray-50"
-                    style={{ borderColor: "var(--c-border)", color: "var(--c-text)" }}
-                  >
+                    }}>
                     আরো একটি বার্তা পাঠান
-                  </button>
+                  </Button>
                 </div>
               ) : (
                 <>
@@ -281,40 +260,8 @@ export default function SupportPage() {
                   )}
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--c-text)" }}>
-                          নাম <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          name="name"
-                          type="text"
-                          value={form.name}
-                          onChange={handleChange}
-                          placeholder="আপনার নাম"
-                          required
-                          className={inputClass}
-                          style={{ border: "1px solid var(--c-border)", backgroundColor: "var(--c-surface)", color: "var(--c-text)" }}
-                          onFocus={(e) => (e.target.style.borderColor = "#0F6E56")}
-                          onBlur={(e) => (e.target.style.borderColor = "var(--c-border)")}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--c-text)" }}>
-                          ইমেইল <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          name="email"
-                          type="email"
-                          value={form.email}
-                          onChange={handleChange}
-                          placeholder="email@example.com"
-                          required
-                          className={inputClass}
-                          style={{ border: "1px solid var(--c-border)", backgroundColor: "var(--c-surface)", color: "var(--c-text)" }}
-                          onFocus={(e) => (e.target.style.borderColor = "#0F6E56")}
-                          onBlur={(e) => (e.target.style.borderColor = "var(--c-border)")}
-                        />
-                      </div>
+                      <Input name="name" type="text" label="নাম *" value={form.name} onChange={handleChange} placeholder="আপনার নাম" required />
+                      <Input name="email" type="email" label="ইমেইল *" value={form.email} onChange={handleChange} placeholder="email@example.com" required />
                     </div>
 
                     <div>
@@ -361,31 +308,16 @@ export default function SupportPage() {
                       </p>
                     </div>
 
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-white font-semibold text-sm transition-opacity disabled:opacity-60 hover:opacity-90"
-                      style={{ backgroundColor: "#0F6E56" }}
-                    >
-                      {loading ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          পাঠানো হচ্ছে...
-                        </>
-                      ) : (
-                        <>
-                          <Send size={14} />
-                          টিকেট পাঠান
-                        </>
-                      )}
-                    </button>
+                    <Button type="submit" loading={loading} icon={Send} className="w-full">
+                      {loading ? "পাঠানো হচ্ছে..." : "টিকেট পাঠান"}
+                    </Button>
                   </form>
                 </>
               )}
             </div>
-          </div>
+          </Card>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

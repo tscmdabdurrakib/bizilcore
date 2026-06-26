@@ -1,0 +1,89 @@
+"use client";
+
+import { useEditor, EditorContent } from "@tiptap/react";
+import { useEffect, useRef } from "react";
+import { createCodeExtensions, emptyCodeContent } from "@/lib/blog-editor/tiptap/code-extensions";
+import { parseTipTapContent } from "@/lib/blog-editor/tiptap/parse-content";
+import { useEditorStore } from "@/lib/blog-editor/store/editor-store";
+
+interface CodeBlockEditorProps {
+  content?: string;
+  language?: string;
+  onChange: (json: string) => void;
+  onLanguageChange: (language: string) => void;
+}
+
+const LANGUAGES = ["javascript", "typescript", "python", "html", "css", "sql", "bash"];
+
+export function CodeBlockEditor({
+  content,
+  language = "javascript",
+  onChange,
+  onLanguageChange,
+}: CodeBlockEditorProps) {
+  const contentVersion = useEditorStore(s => s.contentVersion);
+  const readOnly = useEditorStore(s => s.readOnly);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastContent = useRef(content);
+
+  const editor = useEditor({
+    extensions: createCodeExtensions(language),
+    content: content ? parseTipTapContent(content) : JSON.parse(emptyCodeContent(language)),
+    editable: !readOnly,
+    immediatelyRender: false,
+    editorProps: {
+      attributes: {
+        class: "outline-none min-h-[120px] prose-editor font-mono text-sm",
+      },
+    },
+    onUpdate: ({ editor: ed }) => {
+      const json = JSON.stringify(ed.getJSON());
+      lastContent.current = json;
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => onChange(json), 300);
+    },
+  });
+
+  useEffect(() => {
+    if (!editor) return;
+    editor.setEditable(!readOnly);
+  }, [editor, readOnly]);
+
+  useEffect(() => {
+    if (!editor || content === lastContent.current) return;
+    lastContent.current = content;
+    editor.commands.setContent(
+      content ? parseTipTapContent(content) : JSON.parse(emptyCodeContent(language)),
+      { emitUpdate: false }
+    );
+  }, [editor, content, contentVersion, language]);
+
+  useEffect(() => {
+    if (!editor) return;
+    editor.chain().focus().updateAttributes("codeBlock", { language }).run();
+  }, [editor, language]);
+
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
+
+  if (!editor) return <div className="prose-editor-loading min-h-[120px]" aria-hidden="true" />;
+
+  return (
+    <div>
+      {!readOnly && (
+        <select
+          value={language}
+          onChange={e => onLanguageChange(e.target.value)}
+          className="mb-2 text-xs rounded-lg px-2 py-1 border"
+          style={{ borderColor: "var(--c-border)", background: "var(--c-bg)" }}
+        >
+          {LANGUAGES.map(l => (
+            <option key={l} value={l}>{l}</option>
+          ))}
+        </select>
+      )}
+      <pre className="rounded-xl p-4 overflow-x-auto" style={{ background: "var(--c-bg)" }}>
+        <EditorContent editor={editor} />
+      </pre>
+    </div>
+  );
+}

@@ -118,7 +118,7 @@ export default function DashboardRestaurant({ shopName, userName, userGender }: 
               <p className="text-white/80 text-[11px] mt-1.5 font-medium">এখন চালু</p>
             </div>
             <div className="rounded-2xl px-4 py-3 text-center" style={{ backgroundColor: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)" }}>
-              <p className="text-white text-[11px] font-bold uppercase tracking-wider mb-1.5">Pending</p>
+              <p className="text-white text-[11px] font-bold uppercase tracking-wider mb-1.5">অপেক্ষমান</p>
               <p className="text-white text-2xl font-bold leading-none">{s.pendingOrders}</p>
               <p className="text-white/80 text-[11px] mt-1.5 font-medium">কিচেনে বাকি</p>
             </div>
@@ -166,7 +166,7 @@ export default function DashboardRestaurant({ shopName, userName, userGender }: 
         {[
           { label: "আজকের বিক্রি",   value: formatBDT(s.todaySales),   sub: `${s.todayOrderCount}টি অর্ডার`, color: S.primary, bg: "#FFF7ED" },
           { label: "ব্যস্ত টেবিল",  value: `${s.activeTables}টি`,     sub: "এখন চলছে",                      color: "#D97706",  bg: "#FFFBEB" },
-          { label: "Pending অর্ডার", value: `${s.pendingOrders}টি`,    sub: "কিচেনে বাকি",                  color: "#3B82F6",  bg: "#EFF6FF" },
+          { label: "অপেক্ষমান অর্ডার", value: `${s.pendingOrders}টি`,    sub: "কিচেনে বাকি",                  color: "#3B82F6",  bg: "#EFF6FF" },
           s.autoDeduct
             ? { label: "কম স্টক", value: `${s.lowStockCount}টি`, sub: "উপাদান শেষ হচ্ছে", color: "#EF4444", bg: "#FEF2F2" }
             : { label: "কম স্টক", value: "—", sub: "ডিডাকশন বন্ধ", color: "#9CA3AF", bg: "#F3F4F6" },

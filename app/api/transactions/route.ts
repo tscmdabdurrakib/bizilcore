@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { markSetupTask } from "@/lib/setupProgress";
+import { getApiShop, shopRecordFilter } from "@/lib/shops/api-shop";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const ctx = await getApiShop();
+  if ("error" in ctx) return ctx.error;
 
   const { searchParams } = new URL(req.url);
   const dateStr = searchParams.get("date");
@@ -28,7 +32,11 @@ export async function GET(req: NextRequest) {
   }
 
   const transactions = await prisma.transaction.findMany({
-    where: { userId: session.user.id, ...dateFilter },
+    where: {
+      userId: session.user.id,
+      ...shopRecordFilter(ctx.primaryShop.id, ctx.activeShop.id),
+      ...dateFilter,
+    },
     orderBy: { date: "desc" },
   });
   return NextResponse.json(transactions);
@@ -38,13 +46,19 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const ctx = await getApiShop();
+  if ("error" in ctx) return ctx.error;
+
   const body = await req.json();
   const taxRate = parseFloat(body.taxRate || "0");
   const taxAmount = parseFloat(body.taxAmount || "0");
+
   const transaction = await prisma.transaction.create({
     data: {
       userId: session.user.id,
+      shopId: ctx.activeShop.id,
       type: body.type,
+      title: body.title || null,
       amount: parseFloat(body.amount),
       category: body.category || null,
       note: body.note || null,
@@ -61,9 +75,17 @@ export async function PATCH(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const ctx = await getApiShop();
+  if ("error" in ctx) return ctx.error;
+
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
+
+  const existing = await prisma.transaction.findFirst({
+    where: { id, userId: session.user.id, ...shopRecordFilter(ctx.primaryShop.id, ctx.activeShop.id) },
+  });
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json();
   const taxRate = parseFloat(body.taxRate || "0");
@@ -87,9 +109,17 @@ export async function DELETE(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const ctx = await getApiShop();
+  if ("error" in ctx) return ctx.error;
+
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
+
+  const existing = await prisma.transaction.findFirst({
+    where: { id, userId: session.user.id, ...shopRecordFilter(ctx.primaryShop.id, ctx.activeShop.id) },
+  });
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   await prisma.transaction.delete({ where: { id } });
   return NextResponse.json({ success: true });

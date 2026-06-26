@@ -82,6 +82,39 @@ export async function sendFacebookMessage(
   }
 }
 
+/**
+ * Publish a post to a Facebook Page feed. If an image URL is provided it posts
+ * a photo (with the caption); otherwise a plain text/message post.
+ */
+export async function publishFacebookPagePost(
+  pageId: string,
+  pageAccessToken: string,
+  caption: string,
+  imageUrl?: string,
+): Promise<{ success: boolean; postId?: string; error?: string }> {
+  try {
+    const endpoint = imageUrl
+      ? `${GRAPH_URL}/${pageId}/photos`
+      : `${GRAPH_URL}/${pageId}/feed`;
+    const payload: Record<string, string> = imageUrl
+      ? { url: imageUrl, caption, access_token: pageAccessToken }
+      : { message: caption, access_token: pageAccessToken };
+
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      return { success: false, error: data?.error?.message ?? "Publish failed" };
+    }
+    return { success: true, postId: data.post_id ?? data.id };
+  } catch (err) {
+    return { success: false, error: String(err) };
+  }
+}
+
 export async function getMessengerUserProfile(
   fbUserId: string,
   pageAccessToken: string,

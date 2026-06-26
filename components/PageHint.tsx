@@ -40,27 +40,26 @@ export default function PageHint({ page, text, targetId }: PageHintProps) {
   if (!visible) return null;
 
   return (
-    <div className="flex items-start gap-3 p-4 rounded-2xl border animate-in slide-in-from-top-2 fade-in duration-300"
+    <div className="flex items-start gap-3 p-4 rounded-2xl card-premium animate-in slide-in-from-top-2 fade-in duration-300"
       style={{
-        backgroundColor: "#F0FDF7",
-        borderColor: "#86EFAC",
         borderLeftWidth: "4px",
-        borderLeftColor: "#0F6E56",
+        borderLeftColor: "var(--c-primary)",
+        backgroundColor: "var(--c-primary-light)",
       }}>
       <div className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
-        style={{ background: "linear-gradient(135deg, #0F6E56, #0A5442)" }}>
+        style={{ background: "linear-gradient(135deg, var(--c-primary), #0A5442)" }}>
         <span className="text-white text-sm">💡</span>
       </div>
-      <p className="flex-1 text-sm font-medium leading-relaxed" style={{ color: "#0F6E56" }}>
+      <p className="flex-1 text-sm font-medium leading-relaxed" style={{ color: "var(--c-primary-text)" }}>
         {text}
       </p>
       <button onClick={dismiss}
         className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all hover:opacity-80"
-        style={{ backgroundColor: "#0F6E56", color: "#fff" }}>
+        style={{ backgroundColor: "var(--c-primary)", color: "#fff" }}>
         বুঝেছি
       </button>
       <button onClick={dismiss}
-        className="flex-shrink-0 w-7 h-7 rounded-xl flex items-center justify-center transition-colors hover:bg-green-100">
+        className="flex-shrink-0 w-7 h-7 rounded-xl flex items-center justify-center transition-colors hover:bg-green-100 cursor-pointer">
         <X size={13} style={{ color: "#0F6E56" }} />
       </button>
     </div>

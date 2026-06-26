@@ -148,7 +148,7 @@ export default function DashboardTravel({ shopName, userName, userGender }: Prop
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard icon={Ticket}      label="এই মাসের বুকিং" value={`${stats?.monthBookings ?? 0}টি`}              color="#0891B2" bg="#ECFEFF" />
         <StatCard icon={CalendarClock} label="আসন্ন ট্যুর (৭ দিন)" value={`${stats?.upcomingCount ?? 0}টি`}    color="#7C3AED" bg="#F5F3FF" />
-        <StatCard icon={AlertCircle} label="মোট Pending বাকি" value={formatBDT(stats?.totalDue ?? 0)}            color="#DC2626" bg="#FEE2E2" />
+        <StatCard icon={AlertCircle} label="মোট অপেক্ষমান বাকি" value={formatBDT(stats?.totalDue ?? 0)}            color="#DC2626" bg="#FEE2E2" />
         <StatCard icon={TrendingUp}  label="এই মাসের মুনাফা" value={formatBDT(stats?.monthProfit ?? 0)}          color="#0F6E56" bg="#E1F5EE" />
       </div>
 

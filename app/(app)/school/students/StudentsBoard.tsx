@@ -32,7 +32,7 @@ export default function StudentsBoard() {
   const [statusFilter, setStatusFilter] = useState("active");
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const [form, setForm] = useState({
     name: "", nameBangla: "", phone: "", guardianName: "", guardianPhone: "",

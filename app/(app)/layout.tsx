@@ -1,26 +1,25 @@
-import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { getSession, getShopContext } from "@/lib/getShop";
 import AppSidebar from "@/components/AppSidebar";
 import AppTopbar from "@/components/AppTopbar";
 import AccountStatusModal from "@/components/AccountStatusModal";
 import GrowthPrompts from "@/components/growth/GrowthPrompts";
 import BadgeToast from "@/components/BadgeToast";
+import ActivityTrackerProvider from "@/components/activity/ActivityTrackerProvider";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) redirect("/login");
 
-  const [shop, user, sub] = await Promise.all([
-    prisma.shop.findUnique({ where: { userId: session.user.id } }),
-    prisma.user.findUnique({ where: { id: session.user.id } }),
-    prisma.subscription.findUnique({ where: { userId: session.user.id } }),
-  ]);
+  const { shop, user, subscription: sub } = await getShopContext(
+    session.user.id,
+    (session.user as { activeShopId?: string }).activeShopId ?? null,
+  );
 
   if (!shop || !user?.onboarded) redirect("/onboarding");
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ backgroundColor: "var(--shell-outer-bg)" }}>
+    <div className="flex h-screen overflow-hidden app-bg">
       <AppSidebar
         shopName={shop.name}
         plan={sub?.plan ?? "free"}
@@ -30,10 +29,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         salesChannel={shop.salesChannel ?? "both"}
       />
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <AppTopbar />
+        <AppTopbar shopId={shop.id} shopName={shop.name} logoUrl={shop.logoUrl ?? null} />
         <main className="app-main flex-1 overflow-y-auto pb-20 md:pb-5">
           <GrowthPrompts />
-          <div className="p-5">{children}</div>
+          <div className="p-6 lg:p-8">{children}</div>
         </main>
       </div>
       {/* Show status popup if account is disabled or suspended */}
@@ -44,6 +43,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         />
       )}
       <BadgeToast />
+      <ActivityTrackerProvider />
     </div>
   );
 }

@@ -144,7 +144,7 @@ export default function ConventionReports() {
             <YAxis yAxisId="left" tick={{ fontSize: 10, fill: "var(--c-text-muted)" }} tickFormatter={(v) => `৳${(v / 1000).toFixed(0)}k`} />
             <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: "var(--c-text-muted)" }} />
             <Tooltip
-              formatter={(v: number, name: string) => name === "বুকিং" ? [`${v}টি`, name] : [formatBDT(v), name]}
+              formatter={((v: number, name: string) => name === "বুকিং" ? [`${v}টি`, name] : [formatBDT(v), name]) as never}
               contentStyle={{ backgroundColor: "var(--c-surface)", borderColor: "var(--c-border)", borderRadius: 8, fontSize: 11 }}
             />
             <Bar yAxisId="left" dataKey="আয়" fill="#7C3AED" radius={[4, 4, 0, 0]} />
@@ -181,7 +181,7 @@ export default function ConventionReports() {
                   formatter={(value) => <span style={{ fontSize: 10, color: "var(--c-text-muted)" }}>{value}</span>}
                 />
                 <Tooltip
-                  formatter={(v: number) => [`${v}টি`, "বুকিং"]}
+                  formatter={((v: number) => [`${v}টি`, "বুকিং"]) as never}
                   contentStyle={{ backgroundColor: "var(--c-surface)", borderColor: "var(--c-border)", borderRadius: 8, fontSize: 11 }}
                 />
               </PieChart>

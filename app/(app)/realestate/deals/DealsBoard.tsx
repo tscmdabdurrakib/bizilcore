@@ -217,7 +217,7 @@ export default function DealsBoard() {
               ].map(f => (
                 <div key={f.key}>
                   <label className="text-xs font-semibold mb-1 block" style={{ color: S.muted }}>{f.label}</label>
-                  <input value={(form as Record<string, string>)[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
+                  <input value={(form as unknown as Record<string, string>)[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
                     placeholder={f.placeholder} className="w-full h-10 px-3 rounded-xl border text-sm" style={{ borderColor: S.border, color: S.text }} />
                 </div>
               ))}

@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { Lightbulb, ThumbsUp, ThumbsDown, ChevronRight } from "lucide-react";
+import { onIdle } from "@/lib/idle";
+import { T } from "@/lib/theme";
+import { useDashboardFetch } from "@/hooks/useDashboardFetch";
 
 const S = { surface: "var(--c-surface)", border: "var(--c-border)", text: "var(--c-text)", muted: "var(--c-text-muted)", secondary: "var(--c-text-sub)", primary: "var(--c-primary)", bg: "var(--c-bg)" };
 
@@ -16,22 +19,26 @@ interface Tip {
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-  "বিক্রয়": "#3B82F6", "ডেলিভারি": "#8B5CF6", "কাস্টমার": "#F59E0B",
-  "অ্যাকাউন্টিং": "#10B981", "মার্কেটিং": "#EC4899", "সাধারণ": "#6B7280",
+  "বিক্রয়": "var(--bg-info-text)", "ডেলিভারি": "var(--bg-purple-text)", "কাস্টমার": "var(--accent-warm)",
+  "অ্যাকাউন্টিং": "var(--c-primary)", "মার্কেটিং": "var(--bg-danger-text)", "সাধারণ": "var(--c-text-muted)",
 };
 
 export default function CommunityTipsWidget() {
-  const [tips, setTips] = useState<Tip[]>([]);
+  const [enabled, setEnabled] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [tips, setTips] = useState<Tip[]>([]);
+  const { data, isLoading: loading } = useDashboardFetch<Tip[] | { tips: Tip[] }>(
+    enabled ? "/api/community-tips?limit=3" : null,
+  );
 
   useEffect(() => {
-    fetch("/api/community-tips?limit=3")
-      .then(r => r.json())
-      .then(d => setTips(Array.isArray(d) ? d : (d.tips ?? [])))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    return onIdle(() => setEnabled(true));
   }, []);
+
+  useEffect(() => {
+    const fetched = Array.isArray(data) ? data : (data?.tips ?? []);
+    if (fetched.length > 0) setTips(fetched);
+  }, [data]);
 
   async function react(tipId: string, reaction: "helpful" | "not_helpful") {
     setTips(prev => prev.map(t => {
@@ -60,14 +67,25 @@ export default function CommunityTipsWidget() {
     }
   }
 
-  if (loading || tips.length === 0) return null;
+  if (loading) return null;
+
+  if (tips.length === 0) {
+    return (
+      <div className="rounded-2xl border px-5 py-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+        <div className="flex items-center gap-2">
+          <Lightbulb size={16} style={{ color: T.warning.iconText }} />
+          <p className="text-xs" style={{ color: S.muted }}>এখনো কোনো কমিউনিটি টিপস নেই</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-2xl border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
       <div className="flex items-center justify-between px-5 pt-5 pb-4">
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#FFFBEB" }}>
-            <Lightbulb size={17} style={{ color: "#D97706" }} />
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: T.warning.iconBg }}>
+            <Lightbulb size={17} style={{ color: T.warning.iconText }} />
           </div>
           <h3 className="font-bold text-sm" style={{ color: S.text }}>Community টিপস</h3>
         </div>
@@ -78,13 +96,13 @@ export default function CommunityTipsWidget() {
 
       <div className="divide-y" style={{ borderColor: S.border }}>
         {tips.map(tip => {
-          const catColor = CATEGORY_COLORS[tip.category ?? ""] ?? "#6B7280";
+          const catColor = CATEGORY_COLORS[tip.category ?? ""] ?? "var(--c-text-muted)";
           return (
             <div key={tip.id} className="px-5 py-4">
               <div className="mb-2">
                 {tip.category && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full font-medium inline-block mb-1.5"
-                    style={{ backgroundColor: `${catColor}18`, color: catColor }}>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full font-medium inline-block mb-1.5 border"
+                    style={{ backgroundColor: "var(--c-bg)", color: catColor, borderColor: "var(--c-border)" }}>
                     {tip.category}
                   </span>
                 )}
@@ -102,11 +120,11 @@ export default function CommunityTipsWidget() {
                 </button>
                 <div className="flex items-center gap-3">
                   <button onClick={() => react(tip.id, "helpful")} className="flex items-center gap-1 text-xs"
-                    style={{ color: tip.myReaction === "helpful" ? "#10B981" : S.muted }}>
+                    style={{ color: tip.myReaction === "helpful" ? "var(--c-primary)" : S.muted }}>
                     <ThumbsUp size={12} fill={tip.myReaction === "helpful" ? "currentColor" : "none"} /> {tip.helpful}
                   </button>
                   <button onClick={() => react(tip.id, "not_helpful")} className="flex items-center gap-1 text-xs"
-                    style={{ color: tip.myReaction === "not_helpful" ? "#EF4444" : S.muted }}>
+                    style={{ color: tip.myReaction === "not_helpful" ? T.danger.text : S.muted }}>
                     <ThumbsDown size={12} fill={tip.myReaction === "not_helpful" ? "currentColor" : "none"} /> {tip.notHelpful}
                   </button>
                 </div>

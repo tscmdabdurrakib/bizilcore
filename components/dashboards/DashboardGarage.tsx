@@ -46,7 +46,7 @@ const STATUS_LABEL: Record<string, { label: string; color: string; bg: string }>
   waiting_parts:  { label: "Parts অপেক্ষা", color: "#7C3AED", bg: "#EDE9FE" },
   repairing:      { label: "মেরামত",        color: "#0F6E56", bg: "#E1F5EE" },
   quality_check:  { label: "Quality Check", color: "#0369A1", bg: "#E0F2FE" },
-  ready:          { label: "Ready",         color: "#166534", bg: "#DCFCE7" },
+  ready:          { label: "প্রস্তুত",         color: "#166534", bg: "#DCFCE7" },
   delivered:      { label: "Delivered",     color: "#6B7280", bg: "#F3F4F6" },
 };
 
@@ -101,7 +101,7 @@ export default function DashboardGarage({ shopName, userName, userGender }: Prop
       href: "/jobcards?filter=today",
     },
     {
-      label: "Ready গাড়ি",
+      label: "প্রস্তুত গাড়ি",
       value: stats?.readyCount ?? 0,
       icon: CheckCircle,
       color: "#166534",

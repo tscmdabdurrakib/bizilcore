@@ -11,6 +11,7 @@ import PostCard, { type PostData } from "@/components/community/PostCard";
 import TipCard, { type TipData } from "@/components/community/TipCard";
 import CreatePost from "@/components/community/CreatePost";
 import TrendingSidebar from "@/components/community/TrendingSidebar";
+import { PageShell, Tabs, Card, Button, EmptyState } from "@/components/ui";
 
 const TABS = [
   { key: "all",      label: "সব পোস্ট",      icon: MessageCircle },
@@ -169,43 +170,25 @@ export default function CommunityPage() {
   });
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="rounded-2xl p-5 overflow-hidden relative" style={{ background: "linear-gradient(135deg,#0F6E56 0%,#10B981 60%,#3B82F6 100%)" }}>
-        <div className="flex items-center justify-between gap-3 relative z-10">
-          <div>
-            <div className="flex items-center gap-2.5 mb-1">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: "rgba(255,255,255,0.2)" }}>
-                <Users size={18} color="white" />
-              </div>
-              <h1 className="text-xl font-black text-white">কমিউনিটি</h1>
-            </div>
-            <p className="text-sm text-white" style={{ opacity: 0.85 }}>অভিজ্ঞতা, টিপস ও প্রশ্ন শেয়ার করুন</p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            <button
-              onClick={() => { setShowSrch((v) => !v); setTimeout(() => searchRef.current?.focus(), 100); }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold"
-              style={{ backgroundColor: "rgba(255,255,255,0.2)", color: "white" }}
-            >
-              <Search size={14} />
-              <span className="hidden sm:inline">খুঁজুন</span>
-            </button>
-            <button
-              onClick={refresh}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold"
-              style={{ backgroundColor: "rgba(255,255,255,0.2)", color: "white" }}
-            >
-              <RefreshCw size={14} className={(loading || tipsLoading) ? "animate-spin" : ""} />
-              <span className="hidden sm:inline">রিফ্রেশ</span>
-            </button>
-          </div>
-        </div>
-        <div className="absolute -top-6 -right-6 w-28 h-28 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.07)" }} />
-        <div className="absolute -bottom-8 -left-4 w-24 h-24 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.05)" }} />
-      </div>
-
-      {/* Search bar */}
+    <PageShell
+      title="কমিউনিটি"
+      subtitle="অভিজ্ঞতা, টিপস ও প্রশ্ন শেয়ার করুন"
+      actions={
+        <>
+          <Button
+            variant="outline"
+            size="sm"
+            icon={Search}
+            onClick={() => { setShowSrch((v) => !v); setTimeout(() => searchRef.current?.focus(), 100); }}
+          >
+            <span className="hidden sm:inline">খুঁজুন</span>
+          </Button>
+          <Button variant="outline" size="sm" icon={RefreshCw} loading={loading || tipsLoading} onClick={refresh}>
+            <span className="hidden sm:inline">রিফ্রেশ</span>
+          </Button>
+        </>
+      }
+    >
       {showSearch && !isTeamTab && (
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
@@ -215,7 +198,7 @@ export default function CommunityPage() {
               value={search}
               onChange={(e) => { setSearch(e.target.value); setActiveHashtag(null); }}
               placeholder="পোস্ট বা সদস্যের নাম খুঁজুন…"
-              className="w-full pl-9 pr-9 py-2.5 rounded-xl border text-sm outline-none"
+              className="w-full pl-9 pr-9 py-2.5 rounded-xl border text-sm outline-none focus:ring-2 focus:ring-[var(--c-primary)]/20 focus:border-[var(--c-primary)]"
               style={{ borderColor: search ? "#0F6E56" : "var(--c-border)", backgroundColor: "var(--c-surface)", color: "var(--c-text)" }}
             />
             {search && (
@@ -224,9 +207,7 @@ export default function CommunityPage() {
               </button>
             )}
           </div>
-          <button onClick={() => { setShowSrch(false); setSearch(""); }} className="px-3 py-2.5 rounded-xl border text-sm font-medium" style={{ borderColor: "var(--c-border)", color: "var(--c-text-sub)", backgroundColor: "var(--c-surface)" }}>
-            বাতিল
-          </button>
+          <Button variant="outline" onClick={() => { setShowSrch(false); setSearch(""); }}>বাতিল</Button>
         </div>
       )}
 
@@ -244,43 +225,12 @@ export default function CommunityPage() {
 
       {/* Tabs + Sort in one row */}
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 flex-1" style={{ scrollbarWidth: "none" }}>
-          {TABS.map((t) => {
-            const Icon   = t.icon;
-            const active = tab === t.key;
-            const isTeam = t.key === "teamtips";
-            return (
-              <button
-                key={t.key}
-                onClick={() => handleTabChange(t.key)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap flex-shrink-0"
-                style={{
-                  background:  active && isTeam ? "linear-gradient(135deg, #4F46E5, #0F6E56)" :
-                               active            ? "#0F6E56" : "var(--c-surface)",
-                  color:       active ? "#fff" : isTeam ? "#4F46E5" : "var(--c-text-sub)",
-                  borderColor: active && isTeam ? "#4F46E5" :
-                               active           ? "#0F6E56" :
-                               isTeam           ? "#C7D2FE" : "var(--c-border)",
-                  boxShadow:   active && isTeam ? "0 2px 8px rgba(79,70,229,0.25)" :
-                               active           ? "0 2px 8px rgba(15,110,86,0.2)" : "none",
-                }}
-              >
-                <Icon size={13} />
-                {t.label}
-                {isTeam && !active && (
-                  <span style={{
-                    display: "inline-flex", alignItems: "center", justifyContent: "center",
-                    width: 13, height: 13, borderRadius: "50%", backgroundColor: "#4F46E5",
-                  }}>
-                    <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
-                      <path d="M5 1L6.2 3.7L9 4.1L7 6L7.5 9L5 7.6L2.5 9L3 6L1 4.1L3.8 3.7L5 1Z" fill="white"/>
-                    </svg>
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+        <Tabs
+          tabs={TABS.map((t) => ({ key: t.key, label: t.label, icon: t.icon }))}
+          active={tab}
+          onChange={handleTabChange}
+          className="flex-1 overflow-x-auto"
+        />
 
         {/* Sort toggle — hidden for team tips */}
         {!isTeamTab && (
@@ -310,8 +260,8 @@ export default function CommunityPage() {
             <>
               {/* BizilCore header */}
               <div
-                className="rounded-2xl p-4 flex items-center gap-3"
-                style={{ background: "linear-gradient(135deg, #EEF2FF 0%, #D1FAE5 100%)", border: "1px solid #C7D2FE" }}
+                className="p-4 flex items-center gap-3 card-premium rounded-2xl border"
+                style={{ background: "linear-gradient(135deg, #EEF2FF 0%, #D1FAE5 100%)", borderColor: "#C7D2FE" }}
               >
                 <div
                   className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
@@ -347,13 +297,10 @@ export default function CommunityPage() {
               {tipsLoading ? (
                 <div className="space-y-4">{[1, 2, 3].map((i) => <PostSkeleton key={i} />)}</div>
               ) : tips.length === 0 ? (
-                <div className="rounded-2xl border p-12 text-center" style={{ borderColor: "#C7D2FE", backgroundColor: "var(--c-surface)" }}>
-                  <div className="text-4xl mb-3">💡</div>
-                  <p className="font-bold text-sm mb-1" style={{ color: "var(--c-text)" }}>
-                    {tipsCat === "সব" ? "এখনো কোনো টিপস নেই" : `"${tipsCat}" ক্যাটাগরিতে কোনো টিপস নেই`}
-                  </p>
-                  <p className="text-xs" style={{ color: "var(--c-text-muted)" }}>শীঘ্রই নতুন টিপস যোগ হবে</p>
-                </div>
+                <EmptyState
+                  title={tipsCat === "সব" ? "এখনো কোনো টিপস নেই" : `"${tipsCat}" ক্যাটাগরিতে কোনো টিপস নেই`}
+                  description="শীঘ্রই নতুন টিপস যোগ হবে"
+                />
               ) : (
                 <div className="space-y-4">
                   {tips.map((tip) => <TipCard key={tip.id} tip={tip} />)}
@@ -370,16 +317,9 @@ export default function CommunityPage() {
               {loading ? (
                 <div className="space-y-4">{[1, 2, 3].map((i) => <PostSkeleton key={i} />)}</div>
               ) : visiblePosts.length === 0 ? (
-                <div className="rounded-2xl border p-12 text-center" style={{ borderColor: "var(--c-border)", backgroundColor: "var(--c-surface)" }}>
-                  <div className="text-4xl mb-3">
-                    {activeHashtag ? "🔍" :
-                     tab === "mine"     ? "📝" :
-                     tab === "tips"     ? "💡" :
-                     tab === "question" ? "❓" :
-                     tab === "success"  ? "🎉" : "💬"}
-                  </div>
-                  <p className="font-bold text-sm mb-1" style={{ color: "var(--c-text)" }}>
-                    {activeHashtag
+                <EmptyState
+                  title={
+                    activeHashtag
                       ? `${activeHashtag} — কোনো পোস্ট পাওয়া যায়নি`
                       : search
                         ? `"${search}" — কোনো ফলাফল নেই`
@@ -391,17 +331,11 @@ export default function CommunityPage() {
                               ? "এখনো কোনো প্রশ্ন নেই"
                               : tab === "success"
                                 ? "এখনো কোনো সাফল্যের গল্প নেই"
-                                : "কোনো পোস্ট নেই"}
-                  </p>
-                  <p className="text-xs mb-4" style={{ color: "var(--c-text-muted)" }}>
-                    {hasActiveFilter ? "অন্য কীওয়ার্ড দিয়ে খুঁজুন" : "প্রথম পোস্টটি করুন এবং কমিউনিটিতে আলোচনা শুরু করুন!"}
-                  </p>
-                  {hasActiveFilter && (
-                    <button onClick={clearFilters} className="px-4 py-2 rounded-xl text-xs font-semibold text-white" style={{ backgroundColor: "#0F6E56" }}>
-                      ফিল্টার সরান
-                    </button>
-                  )}
-                </div>
+                                : "কোনো পোস্ট নেই"
+                  }
+                  description={hasActiveFilter ? "অন্য কীওয়ার্ড দিয়ে খুঁজুন" : "প্রথম পোস্টটি করুন এবং কমিউনিটিতে আলোচনা শুরু করুন!"}
+                  action={hasActiveFilter ? { label: "ফিল্টার সরান", onClick: clearFilters } : undefined}
+                />
               ) : (
                 <>
                   {(search || activeHashtag) && (
@@ -417,19 +351,13 @@ export default function CommunityPage() {
                   ))}
                   {hasMore && !catFilter && !hasActiveFilter && (
                     <div className="text-center pt-2">
-                      <button
+                      <Button
                         onClick={loadMore}
-                        disabled={loadingMore}
-                        className="px-6 py-2.5 rounded-xl text-sm font-semibold border transition-all disabled:opacity-50"
-                        style={{ borderColor: "#0F6E56", color: "#0F6E56", backgroundColor: "#D1FAE5" }}
+                        loading={loadingMore}
+                        variant="secondary"
                       >
-                        {loadingMore ? (
-                          <span className="flex items-center gap-2">
-                            <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                            লোড হচ্ছে…
-                          </span>
-                        ) : "আরো দেখুন ↓"}
-                      </button>
+                        {loadingMore ? "লোড হচ্ছে…" : "আরো দেখুন ↓"}
+                      </Button>
                     </div>
                   )}
                 </>
@@ -442,6 +370,6 @@ export default function CommunityPage() {
           <TrendingSidebar />
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getApiShop } from "@/lib/shops/api-shop";
 
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const shop = await prisma.shop.findUnique({ where: { userId: session.user.id }, select: { id: true } });
-  if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+  const ctx = await getApiShop();
+  if ("error" in ctx) return ctx.error;
 
   const coupons = await prisma.coupon.findMany({
-    where: { shopId: shop.id },
+    where: { shopId: ctx.activeShop.id },
     orderBy: { createdAt: "desc" },
   });
 
@@ -21,8 +22,8 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const shop = await prisma.shop.findUnique({ where: { userId: session.user.id }, select: { id: true } });
-  if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+  const ctx = await getApiShop();
+  if ("error" in ctx) return ctx.error;
 
   const body = await req.json();
   const { code, type, value, minOrder, maxDiscount, maxUse, expiresAt } = body;
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
   }
 
   const existing = await prisma.coupon.findFirst({
-    where: { shopId: shop.id, code: code.toUpperCase() },
+    where: { shopId: ctx.activeShop.id, code: code.toUpperCase() },
   });
   if (existing) {
     return NextResponse.json({ error: "এই কোড ইতিমধ্যে আছে" }, { status: 409 });
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
 
   const coupon = await prisma.coupon.create({
     data: {
-      shopId: shop.id,
+      shopId: ctx.activeShop.id,
       code: code.toUpperCase(),
       type,
       value: Number(value),

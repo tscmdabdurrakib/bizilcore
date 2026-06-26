@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Check, X, ChevronRight, Sparkles } from "lucide-react";
 import { SETUP_TASKS, type SetupProgress } from "@/lib/setupTasks";
+import Card from "@/components/ui/Card";
 
 declare global {
   interface Window { confetti?: (opts: Record<string, unknown>) => void }
@@ -17,9 +18,13 @@ function loadConfetti() {
   document.head.appendChild(s);
 }
 
+interface ProgressResponse extends SetupProgress {
+  shouldShow?: boolean;
+}
+
 export default function SetupChecklist() {
   const router = useRouter();
-  const [progress, setProgress] = useState<SetupProgress | null>(null);
+  const [progress, setProgress] = useState<ProgressResponse | null>(null);
   const [hidden, setHidden] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   const celebratedRef = useRef(false);
@@ -28,11 +33,17 @@ export default function SetupChecklist() {
 
   useEffect(() => {
     fetch("/api/onboarding/progress").then(r => r.json()).then(d => {
-      if (!d.error) setProgress(d as SetupProgress);
+      if (d.error) return;
+      if (d.shouldShow === false) {
+        setHidden(true);
+        return;
+      }
+      setProgress(d as ProgressResponse);
     }).catch(() => {});
   }, []);
 
-  if (!progress) return null;
+  if (!progress || hidden) return null;
+  if (progress.shouldShow === false) return null;
   if (progress.dismissed) return null;
 
   if (progress.snoozedUntil && new Date(progress.snoozedUntil) > new Date()) return null;
@@ -77,8 +88,7 @@ export default function SetupChecklist() {
 
   if (celebrating) {
     return (
-      <div className="rounded-2xl border p-6 text-center shadow-md animate-pulse"
-        style={{ backgroundColor: "var(--c-surface)", borderColor: "#86EFAC" }}>
+      <Card className="text-center animate-pulse" style={{ borderColor: "var(--bg-success-border)" }}>
         <div className="text-4xl mb-2">🎉</div>
         <h3 className="text-base font-extrabold mb-1" style={{ color: "var(--c-text)" }}>
           Setup সম্পন্ন! আপনি এখন প্রস্তুত।
@@ -86,13 +96,12 @@ export default function SetupChecklist() {
         <p className="text-sm" style={{ color: "var(--c-text-muted)" }}>
           মোট {maxXp} XP অর্জিত হয়েছে। আপনার ব্যবসা চালু করুন!
         </p>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="rounded-2xl border shadow-sm overflow-hidden"
-      style={{ backgroundColor: "var(--c-surface)", borderColor: "var(--c-border)" }}>
+    <Card padding="none" className="overflow-hidden">
       {/* Header */}
       <div className="px-5 py-4 flex items-center justify-between"
         style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}>
@@ -129,7 +138,7 @@ export default function SetupChecklist() {
               style={{ backgroundColor: done ? "var(--c-bg)" : "var(--c-surface)", opacity: done ? 0.75 : 1 }}>
               <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all"
                 style={{
-                  backgroundColor: done ? "#0F6E56" : "transparent",
+                  backgroundColor: done ? "var(--c-primary)" : "transparent",
                   border: done ? "none" : "2px solid var(--c-border)",
                 }}>
                 {done && <Check size={13} color="#fff" strokeWidth={3} />}
@@ -143,8 +152,8 @@ export default function SetupChecklist() {
               </p>
               <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full flex-shrink-0"
                 style={{
-                  backgroundColor: done ? "#DCFCE7" : "#E8F5F0",
-                  color: done ? "#15803D" : "#0F6E56",
+                  backgroundColor: done ? "var(--bg-success-soft)" : "var(--c-primary-light)",
+                  color: done ? "var(--bg-success-text)" : "var(--c-primary)",
                 }}>
                 +{task.xp} XP
               </span>
@@ -170,6 +179,6 @@ export default function SetupChecklist() {
           </button>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

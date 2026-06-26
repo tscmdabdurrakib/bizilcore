@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getActiveShopForApi } from "@/lib/shops/access";
 
-async function getShop(userId: string) {
-  return prisma.shop.findUnique({ where: { userId } });
+async function resolveShop() {
+  const shopCtx = await getActiveShopForApi();
+  if ("error" in shopCtx) {
+    return { error: NextResponse.json({ error: shopCtx.error }, { status: shopCtx.error === "Unauthorized" ? 401 : 404 }) };
+  }
+  return { shop: shopCtx.activeShop };
 }
 
 function computeAvailableStock(
@@ -23,8 +28,9 @@ const ITEM_INCLUDE = {
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const shop = await getShop(session.user.id);
-  if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+  const resolved = await resolveShop();
+  if ("error" in resolved) return resolved.error;
+  const shop = resolved.shop;
 
   const { searchParams } = new URL(req.url);
   const activeOnly = searchParams.get("active") === "1";
@@ -41,8 +47,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const shop = await getShop(session.user.id);
-  if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+  const resolved = await resolveShop();
+  if ("error" in resolved) return resolved.error;
+  const shop = resolved.shop;
 
   const body = await req.json();
   const { name, description, sellPrice, imageUrl, items } = body;

@@ -56,24 +56,32 @@ export async function GET() {
   if (shop?.category) {
     const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-    const [myWeekly, peers] = await Promise.all([
-      prisma.order.count({ where: { userId, createdAt: { gte: oneWeekAgo } } }),
-      prisma.shop.findMany({
-        where: { category: shop.category },
-        select: { userId: true, name: true },
-        take: 50,
-      }),
-    ]);
+    const peers = await prisma.shop.findMany({
+      where: { category: shop.category, userId: { not: null } },
+      select: { userId: true, name: true },
+      take: 50,
+    });
 
-    const peerCounts = await Promise.all(
-      peers.map(async p => {
-        const cnt = await prisma.order.count({ where: { userId: p.userId, createdAt: { gte: oneWeekAgo } } });
-        return { name: p.name, orders: cnt, isMe: p.userId === userId };
-      })
-    );
+    const peerIds = peers.map((p) => p.userId!).filter(Boolean);
+    const orderCounts = peerIds.length
+      ? await prisma.order.groupBy({
+          by: ["userId"],
+          where: { userId: { in: peerIds }, createdAt: { gte: oneWeekAgo } },
+          _count: { id: true },
+        })
+      : [];
+
+    const countByUser = new Map(orderCounts.map((r) => [r.userId, r._count?.id ?? 0]));
+    const peerCounts = peers
+      .filter((p) => p.userId)
+      .map((p) => ({
+      name: p.name,
+      orders: countByUser.get(p.userId!) ?? 0,
+      isMe: p.userId === userId,
+    }));
 
     peerCounts.sort((a, b) => b.orders - a.orders);
-    weeklyRank = peerCounts.findIndex(p => p.isMe) + 1 || null;
+    weeklyRank = peerCounts.findIndex((p) => p.isMe) + 1 || null;
 
     const top = peerCounts.slice(0, 3);
     for (const p of top) {

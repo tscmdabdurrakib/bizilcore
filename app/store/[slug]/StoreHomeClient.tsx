@@ -5,6 +5,8 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, Star, Mail, CheckCircle, ArrowRight } from "lucide-react";
 import { DynamicHero } from "@/components/store/DynamicHero";
 import { DynamicProductCard } from "@/components/store/DynamicProductCard";
+import { ComboCard, type StoreCombo } from "@/components/store/ComboCard";
+import { RecentlyViewedSection } from "@/components/store/RecentlyViewedSection";
 import { useStoreTheme } from "@/components/store/ThemeProvider";
 
 /* ── Types ── */
@@ -21,7 +23,7 @@ interface Shop {
   storeFreeShipping: boolean | null; storeCODEnabled: boolean | null;
   storeBkashNumber: string | null; storeNagadNumber: string | null;
 }
-interface Props { shop: Shop; products: Product[]; categories: string[]; totalOrders: number; reviews: Review[]; }
+interface Props { shop: Shop; products: Product[]; categories: string[]; totalOrders: number; reviews: Review[]; combos: StoreCombo[]; }
 
 /* ── Brand logos marquee ── */
 const BRANDS = ["VERSACE", "ZARA", "GUCCI", "PRADA", "Calvin Klein"];
@@ -73,7 +75,7 @@ function SectionHeader({ title, href }: { title: string; href?: string }) {
 }
 
 /* ── Main ── */
-export function StoreHomeClient({ shop, products, categories, totalOrders, reviews }: Props) {
+export function StoreHomeClient({ shop, products, categories, totalOrders, reviews, combos }: Props) {
   const { primary } = useStoreTheme();
   const [mounted, setMounted] = useState(false);
   const [email, setEmail] = useState("");
@@ -124,6 +126,22 @@ export function StoreHomeClient({ shop, products, categories, totalOrders, revie
             </div>
           </section>
         )}
+
+        {/* Divider */}
+        <div className="h-px bg-gray-200 mx-4" />
+
+        {/* ── BUNDLE DEALS ── */}
+        {combos.length > 0 && (
+          <section className="py-16">
+            <SectionHeader title="Bundle Deals" href={`/store/${slug}/products`} />
+            <div className="flex gap-5 overflow-x-auto pb-2" style={{ scrollbarWidth: "none" }}>
+              {combos.map(c => <ComboCard key={c.id} combo={c} slug={slug} />)}
+            </div>
+          </section>
+        )}
+
+        {/* ── RECENTLY VIEWED ── */}
+        <RecentlyViewedSection slug={slug} />
 
         {/* Divider */}
         <div className="h-px bg-gray-200 mx-4" />

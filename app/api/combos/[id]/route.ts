@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getActiveShopForApi } from "@/lib/shops/access";
 
-async function getShop(userId: string) {
-  return prisma.shop.findUnique({ where: { userId } });
+async function resolveShop() {
+  const shopCtx = await getActiveShopForApi();
+  if ("error" in shopCtx) {
+    return { error: NextResponse.json({ error: shopCtx.error }, { status: shopCtx.error === "Unauthorized" ? 401 : 404 }) };
+  }
+  return { shop: shopCtx.activeShop };
 }
 
 function computeAvailableStock(
@@ -23,8 +28,9 @@ const ITEM_INCLUDE = {
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const shop = await getShop(session.user.id);
-  if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+  const resolved = await resolveShop();
+  if ("error" in resolved) return resolved.error;
+  const shop = resolved.shop;
   const { id } = await params;
 
   const combo = await prisma.comboProduct.findUnique({
@@ -38,8 +44,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const shop = await getShop(session.user.id);
-  if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+  const resolved = await resolveShop();
+  if ("error" in resolved) return resolved.error;
+  const shop = resolved.shop;
   const { id } = await params;
 
   const existing = await prisma.comboProduct.findUnique({ where: { id } });
@@ -128,8 +135,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const shop = await getShop(session.user.id);
-  if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+  const resolved = await resolveShop();
+  if ("error" in resolved) return resolved.error;
+  const shop = resolved.shop;
   const { id } = await params;
 
   const existing = await prisma.comboProduct.findUnique({ where: { id } });

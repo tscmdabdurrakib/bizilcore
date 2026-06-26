@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { getSetupProgress, updateSetupProgress, type SetupTaskKey } from "@/lib/setupProgress";
+import { syncSetupProgress, updateSetupProgress, type SetupTaskKey } from "@/lib/setupProgress";
 
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const progress = await getSetupProgress(session.user.id);
+  const progress = await syncSetupProgress(session.user.id);
   return NextResponse.json(progress);
 }
 
@@ -26,8 +26,8 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (body.task && typeof body.task === "string") {
-    const current = await getSetupProgress(session.user.id);
-    await updateSetupProgress(session.user.id, { [body.task as SetupTaskKey]: true, ...current });
+    await syncSetupProgress(session.user.id);
+    await updateSetupProgress(session.user.id, { [body.task as SetupTaskKey]: true });
     return NextResponse.json({ ok: true });
   }
 

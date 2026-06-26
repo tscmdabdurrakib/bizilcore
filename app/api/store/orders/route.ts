@@ -3,30 +3,27 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendSMS, decryptApiKey } from "@/lib/sms";
 import { detectFakeOrder, type RiskResult } from "@/lib/fakeOrderDetector";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { sendStoreOrderNotificationEmail } from "@/lib/mailer";
+import { sendWhatsAppOrderConfirmation } from "@/lib/social/whatsapp-notify";
+import { getAppUrl } from "@/lib/app-url";
+import { normalizePhone } from "@/lib/courier-fraud";
+import { attemptZiniPayVerification } from "@/lib/payment/zinipay-flow";
+import {
+  validateStoreOrderItems,
+  applyGiftCard,
+  applyLoyaltyDiscount,
+  type ValidatedStoreItem,
+} from "@/lib/store/order-processing";
+import { calculateEarnedPoints } from "@/lib/store/loyalty";
+import { getStoreCustomer } from "@/lib/store-customer-auth";
+import { verifyGuestOtpToken } from "@/lib/store/guest-otp";
 
 const MAX_ITEM_QTY = 999;
 const MAX_ITEMS = 50;
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 5;
-const ipRequestMap = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  if (ipRequestMap.size > 10_000) {
-    for (const [key, val] of ipRequestMap) {
-      if (now > val.resetAt) ipRequestMap.delete(key);
-    }
-  }
-  const entry = ipRequestMap.get(ip);
-  if (!entry || now > entry.resetAt) {
-    ipRequestMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT_MAX) return false;
-  entry.count += 1;
-  return true;
-}
 
 function generateOrderNumber(): string {
   const date = new Date();
@@ -46,17 +43,20 @@ async function generateUniqueOrderNumber(maxAttempts = 5): Promise<string> {
   throw new Error("অর্ডার নম্বর তৈরি করা যায়নি, আবার চেষ্টা করুন।");
 }
 
-function validateItems(items: unknown): { productId: string; variantId?: string; quantity: number }[] {
+function validateItems(items: unknown): { productId?: string; comboId?: string; variantId?: string; quantity: number }[] {
   if (!Array.isArray(items) || items.length === 0) throw new Error("কার্টে কোনো পণ্য নেই।");
   if (items.length > MAX_ITEMS) throw new Error(`একবারে সর্বোচ্চ ${MAX_ITEMS}টি পণ্য অর্ডার করা যাবে।`);
   return items.map((item, i) => {
     if (!item || typeof item !== "object") throw new Error(`আইটেম ${i + 1}: অবৈধ।`);
-    const { productId, variantId, quantity } = item as Record<string, unknown>;
-    if (typeof productId !== "string" || !productId.trim()) throw new Error(`আইটেম ${i + 1}: পণ্য ID নেই।`);
+    const { productId, comboId, variantId, quantity } = item as Record<string, unknown>;
     const qty = Number(quantity);
     if (!Number.isInteger(qty) || qty <= 0 || qty > MAX_ITEM_QTY) {
       throw new Error(`আইটেম ${i + 1}: পরিমাণ অবৈধ (১–${MAX_ITEM_QTY} এর মধ্যে হতে হবে)।`);
     }
+    if (typeof comboId === "string" && comboId.trim()) {
+      return { comboId: comboId.trim(), quantity: qty };
+    }
+    if (typeof productId !== "string" || !productId.trim()) throw new Error(`আইটেম ${i + 1}: পণ্য ID নেই।`);
     return {
       productId: productId.trim(),
       variantId: typeof variantId === "string" ? variantId.trim() : undefined,
@@ -109,22 +109,29 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
-    if (!checkRateLimit(ip)) {
-      return NextResponse.json({ error: "অনেক বেশি অনুরোধ। কিছুক্ষণ পর আবার চেষ্টা করুন।" }, { status: 429 });
+    const ip = getClientIp(req);
+    const rl = await rateLimit(`store-order:${ip}`, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "অনেক বেশি অনুরোধ। কিছুক্ষণ পর আবার চেষ্টা করুন।" },
+        { status: 429, headers: rl.retryAfterMs ? { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } : undefined },
+      );
     }
 
     const body = await req.json();
     const {
       slug, customerName, customerPhone, customerAddress, customerDistrict, customerUpazila,
       customerNote, items: rawItems, paymentMethod, transactionId, couponCode,
+      giftCardCode, loyaltyPointsUsed, affiliateCode, utmSource, utmCampaign,
+      guestOtpToken, fulfillmentType, deliverySlot,
     } = body;
 
-    if (!slug || !customerName || !customerPhone || !customerAddress) {
+    const isPickup = fulfillmentType === "pickup";
+    if (!slug || !customerName || !customerPhone || (!isPickup && !customerAddress)) {
       return NextResponse.json({ error: "প্রয়োজনীয় তথ্য দেওয়া হয়নি।" }, { status: 400 });
     }
 
-    let validatedItems: { productId: string; variantId?: string; quantity: number }[];
+    let validatedItems: { productId?: string; comboId?: string; variantId?: string; quantity: number }[];
     let storeRiskResult: RiskResult = { riskScore: 0, riskLevel: "safe", flags: [], action: "allow" };
     try {
       validatedItems = validateItems(rawItems);
@@ -132,24 +139,55 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: (err as Error).message }, { status: 400 });
     }
 
+    const storeCustomer = await getStoreCustomer();
+
     const shop = await prisma.shop.findUnique({
       where: { storeSlug: slug },
       select: {
         id: true, name: true, phone: true, userId: true,
         storeEnabled: true, storeShippingFee: true, storeDhakaFee: true, storeFreeShipping: true,
         storeCODEnabled: true, storeBkashNumber: true, storeNagadNumber: true,
+        storeSslcommerzEnabled: true,
+        zinipayApiKey: true,
         storeMinOrder: true,
+        storeLoyaltyEnabled: true,
+        storeLoyaltyEarnRate: true,
+        storeLoyaltyRedeemRate: true,
+        storeCheckoutOtpEnabled: true,
+        storePickupEnabled: true,
+        storePickupAddress: true,
       },
     });
     if (!shop || !shop.storeEnabled) {
       return NextResponse.json({ error: "স্টোর পাওয়া যায়নি।" }, { status: 404 });
     }
+    if (!shop.userId) {
+      return NextResponse.json({ error: "স্টোর সেটআপ সম্পূর্ণ নয়।" }, { status: 503 });
+    }
+
+    if (isPickup) {
+      if (!shop.storePickupEnabled) {
+        return NextResponse.json({ error: "Pickup সক্রিয় নেই।" }, { status: 400 });
+      }
+    } else if (shop.storeCheckoutOtpEnabled && !storeCustomer && !guestOtpToken) {
+      return NextResponse.json({ error: "ফোন OTP যাচাই করুন।" }, { status: 400 });
+    } else if (shop.storeCheckoutOtpEnabled && !storeCustomer && guestOtpToken) {
+      const ok = await verifyGuestOtpToken(shop.id, customerPhone, guestOtpToken);
+      if (!ok) return NextResponse.json({ error: "OTP যাচাই ব্যর্থ।" }, { status: 400 });
+    }
+
+    const resolvedAddress = isPickup
+      ? (shop.storePickupAddress || "Store pickup")
+      : customerAddress;
+    const resolvedDistrict = isPickup ? null : (customerDistrict || null);
+    const resolvedUpazila = isPickup ? null : (customerUpazila || null);
+    const ownerUserId = shop.userId;
 
     storeRiskResult = await detectFakeOrder({
       shopId: shop.id,
       phone: customerPhone,
       customerName,
-      customerAddress,
+      customerAddress: resolvedAddress,
       ip,
     });
     if (storeRiskResult.action === "block") {
@@ -159,7 +197,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const ALLOWED_PAYMENT_METHODS = ["cod", "bkash", "nagad"] as const;
+    const ALLOWED_PAYMENT_METHODS = ["cod", "bkash", "nagad", "sslcommerz"] as const;
     type PaymentMethod = typeof ALLOWED_PAYMENT_METHODS[number];
     if (!ALLOWED_PAYMENT_METHODS.includes(paymentMethod)) {
       return NextResponse.json({ error: "অবৈধ পেমেন্ট পদ্ধতি।" }, { status: 400 });
@@ -175,73 +213,24 @@ export async function POST(req: Request) {
     if (pm === "nagad" && !shop.storeNagadNumber) {
       return NextResponse.json({ error: "নগদ পেমেন্ট সংযুক্ত নেই।" }, { status: 400 });
     }
+    if (pm === "sslcommerz" && !shop.storeSslcommerzEnabled) {
+      return NextResponse.json({ error: "কার্ড পেমেন্ট সক্রিয় নেই।" }, { status: 400 });
+    }
     if ((pm === "bkash" || pm === "nagad") && (!transactionId || typeof transactionId !== "string" || !transactionId.trim())) {
       return NextResponse.json({ error: "Transaction ID প্রয়োজন।" }, { status: 400 });
     }
 
-    const isDhaka = ["ঢাকা", "গাজীপুর", "নারায়ণগঞ্জ", "মানিকগঞ্জ", "মুন্সিগঞ্জ", "নরসিংদী"].includes(customerDistrict || "");
-    let shippingFee = isDhaka ? (shop.storeDhakaFee ?? 60) : (shop.storeShippingFee ?? 120);
+    const isDhaka = !isPickup && ["ঢাকা", "গাজীপুর", "নারায়ণগঞ্জ", "মানিকগঞ্জ", "মুন্সিগঞ্জ", "নরসিংদী"].includes(customerDistrict || "");
+    let shippingFee = isPickup ? 0 : isDhaka ? (shop.storeDhakaFee ?? 60) : (shop.storeShippingFee ?? 120);
 
+    let itemLines: ValidatedStoreItem[];
     let subtotal = 0;
-    const itemLines: {
-      productId: string; variantId?: string; productName: string;
-      variantName?: string; quantity: number; unitPrice: number; subtotal: number;
-    }[] = [];
-
-    for (const item of validatedItems) {
-      const product = await prisma.product.findFirst({
-        where: { id: item.productId, shopId: shop.id, storeVisible: true },
-        select: {
-          id: true, name: true, sellPrice: true, stockQty: true, hasVariants: true,
-          variants: { select: { id: true, name: true, price: true, stockQty: true } },
-        },
-      });
-      if (!product) {
-        return NextResponse.json({ error: `পণ্য পাওয়া যায়নি।` }, { status: 400 });
-      }
-
-      let unitPrice = product.sellPrice;
-      let variantName: string | undefined;
-      let availableStock = product.stockQty;
-
-      if (product.hasVariants && product.variants.length > 0) {
-        if (!item.variantId) {
-          return NextResponse.json({ error: `"${product.name}" এর জন্য ভ্যারিয়েন্ট বেছে নেওয়া প্রয়োজন।` }, { status: 400 });
-        }
-        const variant = product.variants.find((v) => v.id === item.variantId);
-        if (!variant) {
-          return NextResponse.json({ error: `"${product.name}" এর নির্বাচিত ভ্যারিয়েন্ট পাওয়া যায়নি।` }, { status: 400 });
-        }
-        if (variant.price != null) unitPrice = variant.price;
-        variantName = variant.name;
-        availableStock = variant.stockQty;
-      } else if (item.variantId) {
-        const variant = product.variants.find((v) => v.id === item.variantId);
-        if (variant) {
-          if (variant.price != null) unitPrice = variant.price;
-          variantName = variant.name;
-          availableStock = variant.stockQty;
-        }
-      }
-
-      if (availableStock <= 0) {
-        return NextResponse.json({ error: `"${product.name}"${variantName ? ` (${variantName})` : ""} স্টক শেষ।` }, { status: 400 });
-      }
-      if (item.quantity > availableStock) {
-        return NextResponse.json({ error: `"${product.name}"${variantName ? ` (${variantName})` : ""} এ মাত্র ${availableStock}টি আছে।` }, { status: 400 });
-      }
-
-      const lineSubtotal = unitPrice * item.quantity;
-      subtotal += lineSubtotal;
-      itemLines.push({
-        productId: product.id,
-        variantId: item.variantId,
-        productName: product.name,
-        variantName,
-        quantity: item.quantity,
-        unitPrice,
-        subtotal: lineSubtotal,
-      });
+    try {
+      const validated = await validateStoreOrderItems(shop.id, validatedItems);
+      itemLines = validated.items;
+      subtotal = validated.subtotal;
+    } catch (err: unknown) {
+      return NextResponse.json({ error: (err as Error).message }, { status: 400 });
     }
 
     if (shop.storeMinOrder && subtotal < shop.storeMinOrder) {
@@ -273,34 +262,100 @@ export async function POST(req: Request) {
       }
     }
 
-    const totalAmount = Math.max(0, subtotal + shippingFee - discountAmount);
+    let giftCardAmount = 0;
+    let appliedGiftCardCode: string | undefined;
+    let giftCardId: string | undefined;
+    try {
+      const gift = await applyGiftCard(shop.id, giftCardCode, subtotal + shippingFee - discountAmount);
+      giftCardAmount = gift.giftCardAmount;
+      appliedGiftCardCode = gift.giftCardCode;
+      giftCardId = gift.giftCardId;
+    } catch (err: unknown) {
+      return NextResponse.json({ error: (err as Error).message }, { status: 400 });
+    }
+
+    const customerId = storeCustomer?.shopId === shop.id ? storeCustomer.id : undefined;
+    let loyaltyDiscount = 0;
+    let pointsUsed = 0;
+    if (shop.storeLoyaltyEnabled && customerId && loyaltyPointsUsed) {
+      const loyalty = await applyLoyaltyDiscount(
+        shop.id,
+        customerId,
+        parseInt(String(loyaltyPointsUsed), 10) || 0,
+        shop.storeLoyaltyRedeemRate,
+        subtotal + shippingFee - discountAmount - giftCardAmount,
+      );
+      loyaltyDiscount = loyalty.loyaltyDiscount;
+      pointsUsed = loyalty.pointsUsed;
+    }
+
+    const totalAmount = Math.max(0, subtotal + shippingFee - discountAmount - giftCardAmount - loyaltyDiscount);
     const orderNumber = await generateUniqueOrderNumber();
     const ipAddress = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
+    const pointsEarned = shop.storeLoyaltyEnabled
+      ? calculateEarnedPoints(subtotal, shop.storeLoyaltyEarnRate)
+      : 0;
+
+    let verifiedPaymentStatus = "pending";
+    let verifiedTransactionId = transactionId?.trim() || null;
+
+    if (
+      (pm === "bkash" || pm === "nagad") &&
+      shop.zinipayApiKey?.trim() &&
+      verifiedTransactionId
+    ) {
+      const result = await attemptZiniPayVerification(shop.zinipayApiKey.trim(), {
+        transactionId: verifiedTransactionId,
+        amount: totalAmount,
+        invoiceId: orderNumber,
+        expectedMethod: pm,
+      });
+
+      if (result.success && result.transactionId) {
+        verifiedPaymentStatus = "paid";
+        verifiedTransactionId = result.transactionId;
+      }
+    }
+
+    const treatAsPaid = pm !== "cod" && pm !== "sslcommerz" && (!shop.zinipayApiKey?.trim() || verifiedPaymentStatus === "paid");
 
     const storeOrder = await prisma.$transaction(async (tx) => {
       const so = await tx.storeOrder.create({
         data: {
           shopId: shop.id,
           orderNumber,
+          storeCustomerId: customerId || null,
           customerName,
           customerPhone,
-          customerAddress,
-          customerDistrict: customerDistrict || null,
-          customerUpazila: customerUpazila || null,
+          customerAddress: resolvedAddress,
+          customerDistrict: resolvedDistrict,
+          customerUpazila: resolvedUpazila,
           customerNote: customerNote || null,
+          fulfillmentType: isPickup ? "pickup" : "delivery",
+          deliverySlot: deliverySlot || null,
+          guestOtpVerified: !!guestOtpToken,
           subtotal,
           shippingFee,
-          discountAmount,
+          discountAmount: discountAmount + giftCardAmount + loyaltyDiscount,
           totalAmount,
           paymentMethod,
-          transactionId: transactionId || null,
+          transactionId: verifiedTransactionId,
+          paymentStatus: pm === "cod" ? "pending" : verifiedPaymentStatus,
           couponCode: appliedCouponCode || null,
+          affiliateCode: affiliateCode || null,
+          utmSource: utmSource || null,
+          utmCampaign: utmCampaign || null,
+          giftCardCode: appliedGiftCardCode || null,
+          giftCardAmount,
+          loyaltyPointsUsed: pointsUsed,
+          loyaltyPointsEarned: pointsEarned,
           ipAddress,
           riskScore: storeRiskResult.riskScore > 0 ? storeRiskResult.riskScore : null,
           riskFlags: storeRiskResult.flags.length > 0 ? JSON.stringify(storeRiskResult.flags) : null,
           items: {
             create: itemLines.map(i => ({
-              productId: i.productId,
+              productId: i.productId || null,
+              comboId: i.comboId || null,
               variantId: i.variantId || null,
               productName: i.productName,
               variantName: i.variantName || null,
@@ -314,12 +369,12 @@ export async function POST(req: Request) {
 
       await tx.order.create({
         data: {
-          userId: shop.userId,
+          userId: ownerUserId,
           source: "store",
           status: "pending",
           totalAmount,
-          paidAmount: paymentMethod !== "cod" ? totalAmount : 0,
-          dueAmount: paymentMethod !== "cod" ? 0 : totalAmount,
+          paidAmount: treatAsPaid ? totalAmount : 0,
+          dueAmount: treatAsPaid ? 0 : totalAmount,
           deliveryCharge: shippingFee,
           riskScore: storeRiskResult.riskScore > 0 ? storeRiskResult.riskScore : null,
           riskFlags: storeRiskResult.flags.length > 0 ? JSON.stringify(storeRiskResult.flags) : null,
@@ -328,12 +383,13 @@ export async function POST(req: Request) {
             `👤 ${customerName} | 📞 ${customerPhone}`,
             `📍 ${customerAddress}${customerDistrict ? `, ${customerDistrict}` : ""}`,
             customerNote ? `📝 ${customerNote}` : null,
-            paymentMethod !== "cod" && transactionId ? `💳 TxID: ${transactionId}` : null,
+            paymentMethod !== "cod" && verifiedTransactionId ? `💳 TxID: ${verifiedTransactionId}` : null,
           ].filter(Boolean).join("\n"),
           storeOrderId: so.id,
           items: {
-            create: itemLines.map(i => ({
-              productId: i.productId,
+            create: itemLines.filter(i => i.productId).map(i => ({
+              productId: i.productId!,
+              comboId: i.comboId || null,
               quantity: i.quantity,
               unitPrice: i.unitPrice,
               subtotal: i.subtotal,
@@ -356,7 +412,94 @@ export async function POST(req: Request) {
         });
       }
 
+      if (giftCardId && giftCardAmount > 0) {
+        await tx.giftCard.update({
+          where: { id: giftCardId },
+          data: { balance: { decrement: giftCardAmount } },
+        });
+      }
+
+      if (customerId && pointsUsed > 0) {
+        const updated = await tx.storeCustomer.update({
+          where: { id: customerId },
+          data: { loyaltyPoints: { decrement: pointsUsed } },
+        });
+        await tx.storeLoyaltyTransaction.create({
+          data: {
+            shopId: shop.id,
+            storeCustomerId: customerId,
+            type: "redeem",
+            points: -pointsUsed,
+            balanceAfter: updated.loyaltyPoints,
+            orderId: orderNumber,
+            note: "Checkout redemption",
+          },
+        });
+      }
+
+      if (customerId && pointsEarned > 0) {
+        const updated = await tx.storeCustomer.update({
+          where: { id: customerId },
+          data: { loyaltyPoints: { increment: pointsEarned } },
+        });
+        await tx.storeLoyaltyTransaction.create({
+          data: {
+            shopId: shop.id,
+            storeCustomerId: customerId,
+            type: "earn",
+            points: pointsEarned,
+            balanceAfter: updated.loyaltyPoints,
+            orderId: orderNumber,
+            note: "Order reward",
+          },
+        });
+      }
+
+      if (affiliateCode) {
+        await tx.storeAffiliate.updateMany({
+          where: { shopId: shop.id, code: String(affiliateCode).toUpperCase(), isActive: true },
+          data: {
+            totalOrders: { increment: 1 },
+            totalEarnings: { increment: totalAmount * 0.05 },
+          },
+        });
+      }
+
       for (const item of itemLines) {
+        if (item.itemType === "combo" && item.comboId) {
+          const combo = await tx.comboProduct.findUnique({
+            where: { id: item.comboId },
+            include: { items: true },
+          });
+          if (!combo) throw new Error(`"${item.productName}" কম্বো পাওয়া যায়নি।`);
+          for (const ci of combo.items) {
+            const qty = ci.quantity * item.quantity;
+            if (ci.variantId) {
+              await tx.productVariant.updateMany({
+                where: { id: ci.variantId, stockQty: { gte: qty } },
+                data: { stockQty: { decrement: qty } },
+              });
+            } else {
+              await tx.product.updateMany({
+                where: { id: ci.productId, stockQty: { gte: qty } },
+                data: { stockQty: { decrement: qty } },
+              });
+            }
+            await tx.stockMovement.create({
+              data: {
+                productId: ci.productId,
+                userId: ownerUserId,
+                type: "out",
+                quantity: qty,
+                reason: `store_combo:${orderNumber}`,
+              },
+            });
+          }
+          continue;
+        }
+
+        if (!item.productId) continue;
+
         if (item.variantId) {
           const decremented = await tx.productVariant.updateMany({
             where: { id: item.variantId, stockQty: { gte: item.quantity } },
@@ -370,12 +513,46 @@ export async function POST(req: Request) {
           });
           if (decremented.count === 0) throw new Error(`"${item.productName}" এর স্টক শেষ হয়ে গেছে।`);
         }
+
+        await tx.stockMovement.create({
+          data: {
+            productId: item.productId,
+            userId: ownerUserId,
+            type: "out",
+            quantity: item.quantity,
+            reason: `store_order:${orderNumber}`,
+          },
+        });
       }
 
       return so;
     });
 
-    sendSMSNotifications(shop, slug, storeOrder.orderNumber, customerName, customerPhone, totalAmount);
+    // Mark any matching abandoned cart as recovered (best-effort).
+    prisma.abandonedCart
+      .updateMany({
+        where: { shopId: shop.id, phone: normalizePhone(customerPhone), status: { in: ["open", "reminded"] } },
+        data: { status: "recovered", recoveredOrderId: storeOrder.id },
+      })
+      .catch(() => {});
+
+    sendSMSNotifications({ ...shop, userId: ownerUserId }, slug, storeOrder.orderNumber, customerName, customerPhone, totalAmount);
+    sendMerchantEmail(
+      { userId: ownerUserId, name: shop.name },
+      storeOrder.orderNumber,
+      { customerName, customerPhone, customerAddress, paymentMethod },
+      itemLines.map(i => ({ name: i.productName + (i.variantName ? ` (${i.variantName})` : ""), quantity: i.quantity, unitPrice: i.unitPrice })),
+      totalAmount,
+    );
+
+    if (pm === "sslcommerz") {
+      return NextResponse.json({
+        orderNumber: storeOrder.orderNumber,
+        requiresPayment: true,
+        paymentMethod: "sslcommerz",
+        amount: totalAmount,
+      }, { status: 201 });
+    }
 
     return NextResponse.json({ orderNumber: storeOrder.orderNumber }, { status: 201 });
   } catch (err) {
@@ -407,4 +584,38 @@ async function sendSMSNotifications(
       `আপনার অর্ডার পেয়েছি!\nঅর্ডার নং: #${orderNumber}\nট্র্যাক করুন: bizilcore.com/store/${slug}/track\n- ${shop.name}`
     ).catch(() => {});
   } catch {}
+
+  // WhatsApp confirmation (best-effort, independent of SMS config)
+  sendWhatsAppOrderConfirmation({
+    userId: shop.userId,
+    toPhone: customerPhone,
+    message: `আপনার অর্ডার নিশ্চিত হয়েছে! ✅\nঅর্ডার নং: #${orderNumber}\nমোট: ৳${total.toLocaleString()}\nট্র্যাক করুন: ${getAppUrl()}/store/${slug}/track\n- ${shop.name}`,
+  }).catch(() => {});
+}
+
+async function sendMerchantEmail(
+  shop: { userId: string; name: string },
+  orderNumber: string,
+  cust: { customerName: string; customerPhone: string; customerAddress: string; paymentMethod: string },
+  items: { name: string; quantity: number; unitPrice: number }[],
+  totalAmount: number,
+) {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: shop.userId }, select: { email: true } });
+    if (!user?.email) return;
+    await sendStoreOrderNotificationEmail({
+      toEmail: user.email,
+      shopName: shop.name,
+      orderNumber,
+      customerName: cust.customerName,
+      customerPhone: cust.customerPhone,
+      customerAddress: cust.customerAddress,
+      items,
+      totalAmount,
+      paymentMethod: cust.paymentMethod,
+      dashboardUrl: `${getAppUrl()}/orders`,
+    });
+  } catch {
+    /* email is best-effort */
+  }
 }

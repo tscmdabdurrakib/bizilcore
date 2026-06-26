@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Settings2, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { PageShell, Card, Button, Input, SectionTitle } from "@/components/ui";
 
 interface ShopData {
   storeCODEnabled: boolean;
   storeBkashNumber: string | null;
   storeNagadNumber: string | null;
+  zinipayConfigured?: boolean;
   storeShippingFee: number;
   storeDhakaFee: number;
   storeFreeShipping: number | null;
@@ -29,16 +31,9 @@ export default function StoreSettingsPage() {
     storeMinOrder: "",
     storeShowStock: false,
     storeShowReviews: true,
+    zinipayApiKey: "",
+    zinipayConfigured: false,
   });
-
-  const S = {
-    surface: "var(--c-surface)",
-    border: "var(--c-border)",
-    text: "var(--c-text)",
-    muted: "var(--c-text-muted)",
-    secondary: "var(--c-text-sub)",
-    primary: "var(--c-primary)",
-  };
 
   function showToast(type: "success" | "error", msg: string) {
     setToast({ type, msg });
@@ -59,6 +54,8 @@ export default function StoreSettingsPage() {
           storeMinOrder: d.storeMinOrder != null ? String(d.storeMinOrder) : "",
           storeShowStock: d.storeShowStock,
           storeShowReviews: d.storeShowReviews,
+          zinipayApiKey: "",
+          zinipayConfigured: d.zinipayConfigured ?? false,
         });
         setLoading(false);
       })
@@ -80,6 +77,7 @@ export default function StoreSettingsPage() {
         storeMinOrder: form.storeMinOrder ? Number(form.storeMinOrder) : null,
         storeShowStock: form.storeShowStock,
         storeShowReviews: form.storeShowReviews,
+        ...(form.zinipayApiKey.trim() ? { zinipayApiKey: form.zinipayApiKey.trim() } : {}),
       }),
     });
     setSaving(false);
@@ -90,13 +88,13 @@ export default function StoreSettingsPage() {
   const Toggle = ({ value, onChange, label, desc }: { value: boolean; onChange: (v: boolean) => void; label: string; desc?: string }) => (
     <div className="flex items-center justify-between">
       <div>
-        <p className="text-sm font-medium" style={{ color: S.text }}>{label}</p>
-        {desc && <p className="text-xs mt-0.5" style={{ color: S.muted }}>{desc}</p>}
+        <p className="text-sm font-medium" style={{ color: "var(--c-text)" }}>{label}</p>
+        {desc && <p className="text-xs mt-0.5" style={{ color: "var(--c-text-muted)" }}>{desc}</p>}
       </div>
       <button
         onClick={() => onChange(!value)}
         className="relative w-12 h-6 rounded-full transition-colors flex-shrink-0"
-        style={{ backgroundColor: value ? S.primary : S.border }}>
+        style={{ backgroundColor: value ? "var(--c-primary)" : "var(--c-border)" }}>
         <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${value ? "translate-x-6" : "translate-x-0.5"}`} />
       </button>
     </div>
@@ -104,16 +102,16 @@ export default function StoreSettingsPage() {
 
   const NumberInput = ({ label, value, onChange, placeholder, prefix = "৳" }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; prefix?: string }) => (
     <div>
-      <label className="text-xs font-medium mb-1.5 block" style={{ color: S.secondary }}>{label}</label>
-      <div className="flex items-center gap-0 rounded-xl border overflow-hidden" style={{ borderColor: S.border }}>
-        <span className="px-3 py-2.5 text-sm border-r" style={{ backgroundColor: "var(--c-surface-raised)", color: S.muted, borderColor: S.border }}>{prefix}</span>
+      <label className="text-xs font-semibold uppercase tracking-wide mb-1.5 block" style={{ color: "var(--c-text-sub)" }}>{label}</label>
+      <div className="flex items-center gap-0 rounded-xl border overflow-hidden" style={{ borderColor: "var(--c-border)" }}>
+        <span className="px-3 py-2.5 text-sm border-r" style={{ backgroundColor: "var(--c-surface-raised)", color: "var(--c-text-muted)", borderColor: "var(--c-border)" }}>{prefix}</span>
         <input
           type="number"
           value={value}
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
           className="flex-1 px-3 py-2.5 text-sm outline-none"
-          style={{ backgroundColor: "transparent", color: S.text }}
+          style={{ backgroundColor: "transparent", color: "var(--c-text)" }}
         />
       </div>
     </div>
@@ -122,13 +120,17 @@ export default function StoreSettingsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-40">
-        <Loader2 size={24} className="animate-spin" style={{ color: S.muted }} />
+        <Loader2 size={24} className="animate-spin" style={{ color: "var(--c-text-muted)" }} />
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <PageShell
+      title="স্টোর সেটিংস"
+      subtitle="ডেলিভারি, পেমেন্ট ও অন্যান্য সেটিংস"
+      className="max-w-2xl"
+    >
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg"
           style={{ backgroundColor: toast.type === "success" ? "#1D9E75" : "#E24B4A" }}>
@@ -136,18 +138,8 @@ export default function StoreSettingsPage() {
         </div>
       )}
 
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)" }}>
-          <Settings2 size={18} color="#fff" />
-        </div>
-        <div>
-          <h1 className="text-lg font-bold" style={{ color: S.text }}>স্টোর সেটিংস</h1>
-          <p className="text-xs" style={{ color: S.muted }}>ডেলিভারি, পেমেন্ট ও অন্যান্য সেটিংস</p>
-        </div>
-      </div>
-
-      <div className="rounded-2xl border p-5 space-y-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-        <h2 className="font-semibold text-sm" style={{ color: S.text }}>ডেলিভারি ফি</h2>
+      <Card className="space-y-4">
+        <SectionTitle title="ডেলিভারি ফি" className="mb-0" />
         <NumberInput
           label="ডেলিভারি চার্জ — ঢাকা ও আশেপাশে (ঢাকা, গাজীপুর, নারায়ণগঞ্জ ইত্যাদি)"
           value={form.storeDhakaFee}
@@ -172,40 +164,43 @@ export default function StoreSettingsPage() {
           onChange={v => setForm(f => ({ ...f, storeMinOrder: v }))}
           placeholder="0 = নেই"
         />
-      </div>
+      </Card>
 
-      <div className="rounded-2xl border p-5 space-y-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-        <h2 className="font-semibold text-sm" style={{ color: S.text }}>পেমেন্ট পদ্ধতি</h2>
+      <Card className="space-y-4">
+        <SectionTitle title="পেমেন্ট পদ্ধতি" className="mb-0" />
         <Toggle
           value={form.storeCODEnabled}
           onChange={v => setForm(f => ({ ...f, storeCODEnabled: v }))}
           label="ক্যাশ অন ডেলিভারি (COD)"
           desc="ডেলিভারির সময় পেমেন্ট"
         />
-        <div>
-          <label className="text-xs font-medium mb-1.5 block" style={{ color: S.secondary }}>bKash নম্বর</label>
-          <input
-            value={form.storeBkashNumber}
-            onChange={e => setForm(f => ({ ...f, storeBkashNumber: e.target.value }))}
-            placeholder="01XXXXXXXXX"
-            className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
-            style={{ backgroundColor: S.surface, borderColor: S.border, color: S.text }}
-          />
-        </div>
-        <div>
-          <label className="text-xs font-medium mb-1.5 block" style={{ color: S.secondary }}>Nagad নম্বর</label>
-          <input
-            value={form.storeNagadNumber}
-            onChange={e => setForm(f => ({ ...f, storeNagadNumber: e.target.value }))}
-            placeholder="01XXXXXXXXX"
-            className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
-            style={{ backgroundColor: S.surface, borderColor: S.border, color: S.text }}
-          />
-        </div>
-      </div>
+        <Input
+          label="bKash নম্বর"
+          value={form.storeBkashNumber}
+          onChange={e => setForm(f => ({ ...f, storeBkashNumber: e.target.value }))}
+          placeholder="01XXXXXXXXX"
+        />
+        <Input
+          label="Nagad নম্বর"
+          value={form.storeNagadNumber}
+          onChange={e => setForm(f => ({ ...f, storeNagadNumber: e.target.value }))}
+          placeholder="01XXXXXXXXX"
+        />
+        <Input
+          label="ZiniPay API Key (automatic payment verification)"
+          type="password"
+          value={form.zinipayApiKey}
+          onChange={e => setForm(f => ({ ...f, zinipayApiKey: e.target.value }))}
+          placeholder={form.zinipayConfigured ? "•••••••• (configured — new key to replace)" : "ZiniPay service API key"}
+          className="font-mono"
+          hint={form.zinipayConfigured
+            ? "Auto verification সক্রিয়। নতুন key দিলে replace হবে।"
+            : "Optional — set করলে customer TxID automatic verify হবে।"}
+        />
+      </Card>
 
-      <div className="rounded-2xl border p-5 space-y-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-        <h2 className="font-semibold text-sm" style={{ color: S.text }}>ডিসপ্লে সেটিংস</h2>
+      <Card className="space-y-4">
+        <SectionTitle title="ডিসপ্লে সেটিংস" className="mb-0" />
         <Toggle
           value={form.storeShowStock}
           onChange={v => setForm(f => ({ ...f, storeShowStock: v }))}
@@ -218,16 +213,11 @@ export default function StoreSettingsPage() {
           label="রিভিউ দেখাবে"
           desc="স্টোরে কাস্টমার রিভিউ প্রদর্শন করবে"
         />
-      </div>
+      </Card>
 
-      <button
-        onClick={handleSave}
-        disabled={saving}
-        className="w-full py-3 rounded-xl text-white text-sm font-semibold disabled:opacity-50"
-        style={{ backgroundColor: S.primary }}
-      >
+      <Button onClick={handleSave} disabled={saving} loading={saving} className="w-full" size="lg">
         {saving ? "সেভ হচ্ছে..." : "সেভ করুন"}
-      </button>
-    </div>
+      </Button>
+    </PageShell>
   );
 }

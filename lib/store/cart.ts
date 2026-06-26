@@ -4,7 +4,9 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 export interface CartItem {
+  itemType: "product" | "combo";
   productId: string;
+  comboId?: string | null;
   productName: string;
   productImage: string | null;
   variantId: string | null;
@@ -17,12 +19,18 @@ interface CartState {
   items: CartItem[];
   shopSlug: string | null;
   addItem: (item: CartItem, slug: string) => void;
-  removeItem: (productId: string, variantId: string | null) => void;
-  updateQty: (productId: string, variantId: string | null, qty: number) => void;
+  removeItem: (key: { productId: string; variantId: string | null; comboId?: string | null }) => void;
+  updateQty: (key: { productId: string; variantId: string | null; comboId?: string | null }, qty: number) => void;
   clearCart: () => void;
   ensureShop: (slug: string) => void;
   getTotal: () => number;
   getCount: () => number;
+}
+
+function itemKey(i: CartItem) {
+  return i.itemType === "combo"
+    ? `combo:${i.comboId ?? i.productId}`
+    : `${i.productId}:${i.variantId ?? ""}`;
 }
 
 export const useCart = create<CartState>()(
@@ -43,9 +51,8 @@ export const useCart = create<CartState>()(
       addItem: (item, slug) => {
         set((state) => {
           const items = state.shopSlug !== slug ? [] : [...state.items];
-          const idx = items.findIndex(
-            (i) => i.productId === item.productId && i.variantId === item.variantId
-          );
+          const key = itemKey(item);
+          const idx = items.findIndex((i) => itemKey(i) === key);
           if (idx >= 0) {
             items[idx] = { ...items[idx], quantity: items[idx].quantity + item.quantity };
           } else {
@@ -55,24 +62,28 @@ export const useCart = create<CartState>()(
         });
       },
 
-      removeItem: (productId, variantId) => {
+      removeItem: ({ productId, variantId, comboId }) => {
         set((state) => ({
-          items: state.items.filter(
-            (i) => !(i.productId === productId && i.variantId === variantId)
-          ),
+          items: state.items.filter((i) => {
+            if (comboId || i.itemType === "combo") {
+              return (i.comboId ?? i.productId) !== (comboId ?? productId);
+            }
+            return !(i.productId === productId && i.variantId === variantId);
+          }),
         }));
       },
 
-      updateQty: (productId, variantId, qty) => {
+      updateQty: (key, qty) => {
         if (qty <= 0) {
-          get().removeItem(productId, variantId);
+          get().removeItem(key);
           return;
         }
+        const matchKey = key.comboId
+          ? `combo:${key.comboId}`
+          : `${key.productId}:${key.variantId ?? ""}`;
         set((state) => ({
           items: state.items.map((i) =>
-            i.productId === productId && i.variantId === variantId
-              ? { ...i, quantity: qty }
-              : i
+            itemKey(i) === matchKey ? { ...i, quantity: qty } : i,
           ),
         }));
       },
@@ -84,6 +95,6 @@ export const useCart = create<CartState>()(
 
       getCount: () => get().items.reduce((sum, i) => sum + i.quantity, 0),
     }),
-    { name: "bizilcore-cart" }
-  )
+    { name: "bizilcore-cart" },
+  ),
 );

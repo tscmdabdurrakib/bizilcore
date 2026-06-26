@@ -19,7 +19,7 @@ const FEATURE_INFO: Record<FeatureName, { label: string; desc: string; icon: str
   staff:          { label: "Staff Management",    desc: "টিম মেম্বার যোগ করুন, permission দিন, কাজ assign করুন।", icon: "👥" },
   taskManagement: { label: "Task Management",     desc: "অর্ডার, ডেলিভারি, সাপ্লায়ার — সব কাজ একটি Kanban বোর্ডে ট্র্যাক করুন।", icon: "✅" },
   affiliate:      { label: "Affiliate Program",   desc: "আপনার affiliate link share করুন এবং প্রতি signup-এ commission পান।", icon: "💰" },
-  multiShop:      { label: "Multi-Shop",          desc: "একটি account দিয়ে একাধিক শপ manage করুন — Business plan-এ পাওয়া যায়।", icon: "🏪" },
+  multiShop:      { label: "শাখা ব্যবস্থাপনা",   desc: "একটি account দিয়ে একাধিক লোকেশন manage করুন — Business plan-এ পাওয়া যায়।", icon: "🏪" },
 };
 
 export default function PlanGate({ feature, requiredPlan = "pro", children }: PlanGateProps) {

@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, Phone, MapPin, Mail, FileText, Package, Pencil, X, Check } from "lucide-react";
+import { ChevronLeft, Phone, MapPin, Mail, FileText, Package, Pencil, X, Check, ShoppingCart, Plus } from "lucide-react";
 import { formatBDT, formatBanglaDate } from "@/lib/utils";
-import { S } from "@/lib/theme";
+import { PageShell, Card, StatCard, Badge, Button, Input, EmptyState } from "@/components/ui";
 
 interface PurchaseItem {
   id: string; name: string; quantity: number; unitPrice: number; subtotal: number;
@@ -17,10 +17,17 @@ interface Purchase {
   items: PurchaseItem[];
 }
 
+interface PurchaseOrderSummary {
+  id: string; poNumber: string; status: string; total: number;
+  expectedDate: string | null; createdAt: string;
+  items: { name: string; quantity: number }[];
+}
+
 interface Supplier {
   id: string; name: string; phone: string | null; address: string | null;
   email: string | null; note: string | null; dueAmount: number;
   purchases: Purchase[];
+  purchaseOrders: PurchaseOrderSummary[];
 }
 
 const inp = (focused: boolean) => ({
@@ -28,6 +35,11 @@ const inp = (focused: boolean) => ({
   borderRadius: "8px", backgroundColor: "var(--c-surface)", color: "var(--c-text)",
   padding: "0 12px", fontSize: "14px", outline: "none",
 });
+
+const S = {
+  surface: "var(--c-surface)", border: "var(--c-border)", text: "var(--c-text)",
+  muted: "var(--c-text-muted)", secondary: "var(--c-text-sub)",
+};
 
 export default function SupplierDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -40,6 +52,7 @@ export default function SupplierDetailPage() {
   const [focused, setFocused] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [expandedPurchase, setExpandedPurchase] = useState<string | null>(null);
+  const [expandedPO, setExpandedPO] = useState<string | null>(null);
 
   function showToast(type: "success" | "error", msg: string) {
     setToast({ type, msg });
@@ -50,7 +63,7 @@ export default function SupplierDetailPage() {
     fetch(`/api/suppliers/${id}`)
       .then((r) => r.json())
       .then((d) => {
-        setSupplier(d);
+        setSupplier({ ...d, purchaseOrders: d.purchaseOrders ?? [] });
         setForm({ name: d.name, phone: d.phone ?? "", address: d.address ?? "", email: d.email ?? "", note: d.note ?? "" });
       })
       .finally(() => setLoading(false));
@@ -78,28 +91,41 @@ export default function SupplierDetailPage() {
 
   if (loading) {
     return (
-      <div style={{ backgroundColor: S.bg, minHeight: "100vh", padding: "16px" }}>
-        <div className="max-w-2xl mx-auto space-y-4 animate-pulse">
-          {[1, 2, 3].map((i) => <div key={i} className="h-24 rounded-2xl" style={{ backgroundColor: S.surface }} />)}
+      <PageShell title="Supplier" className="max-w-2xl">
+        <div className="space-y-4 animate-pulse">
+          {[1, 2, 3].map((i) => <Card key={i} className="h-24" padding="md"><div /></Card>)}
         </div>
-      </div>
+      </PageShell>
     );
   }
 
   if (!supplier) {
     return (
-      <div style={{ backgroundColor: S.bg, minHeight: "100vh", padding: "16px" }}>
-        <div className="flex flex-col items-center justify-center py-20" style={{ color: S.muted }}>
-          <p>Supplier পাওয়া যায়নি।</p>
-          <Link href="/suppliers" className="mt-4 text-sm hover:underline" style={{ color: S.primary }}>← Supplier তালিকায় ফিরুন</Link>
-        </div>
-      </div>
+      <PageShell title="Supplier" className="max-w-2xl">
+        <EmptyState title="Supplier পাওয়া যায়নি।" action={{ label: "← Supplier তালিকায় ফিরুন", onClick: () => {}, href: "/suppliers" }} />
+      </PageShell>
     );
   }
 
   return (
-    <div style={{ backgroundColor: S.bg, minHeight: "100vh", padding: "16px" }}>
-      <div style={{ maxWidth: "720px", margin: "0 auto" }}>
+    <PageShell
+      title={supplier.name}
+      subtitle={`${supplier.purchases.length}টি ক্রয় · মোট ${formatBDT(totalPurchased)}`}
+      breadcrumbs={[{ label: "Supplier", href: "/suppliers" }, { label: supplier.name }]}
+      actions={
+        <Button variant="outline" size="sm" icon={Pencil} onClick={() => setEditing(!editing)}>
+          {editing ? "বাতিল" : "সম্পাদনা"}
+        </Button>
+      }
+      stats={
+        <>
+          <StatCard label="মোট ক্রয়" value={formatBDT(totalPurchased)} accent="none" />
+          <StatCard label="পরিশোধ" value={formatBDT(totalPaid)} accent="green" />
+          <StatCard label="বাকি" value={formatBDT(supplier.dueAmount)} accent={supplier.dueAmount > 0 ? "red" : "none"} />
+        </>
+      }
+      className="max-w-2xl"
+    >
 
         {/* Toast */}
         {toast && (
@@ -109,28 +135,8 @@ export default function SupplierDetailPage() {
           </div>
         )}
 
-        {/* Back + Header */}
-        <div className="flex items-center gap-3 mb-5">
-          <Link href="/suppliers" className="p-2 rounded-xl" style={{ border: `1px solid ${S.border}`, backgroundColor: S.surface, color: S.secondary }}>
-            <ChevronLeft size={18} />
-          </Link>
-          <div className="flex-1">
-            <h1 className="text-lg font-bold" style={{ color: S.text }}>{supplier.name}</h1>
-            <p className="text-xs" style={{ color: S.muted }}>{supplier.purchases.length}টি ক্রয় · মোট {formatBDT(totalPurchased)}</p>
-          </div>
-          <button
-            onClick={() => setEditing(!editing)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium"
-            style={{ border: `1px solid ${S.border}`, backgroundColor: S.surface, color: S.secondary }}
-          >
-            <Pencil size={14} />
-            {editing ? "বাতিল" : "সম্পাদনা"}
-          </button>
-        </div>
-
-        {/* Edit form */}
         {editing && (
-          <div className="rounded-2xl p-4 mb-4" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
+          <Card className="mb-4">
             <h3 className="text-sm font-semibold mb-3" style={{ color: S.text }}>তথ্য সম্পাদনা</h3>
             <div className="space-y-3">
               {[
@@ -154,20 +160,13 @@ export default function SupplierDetailPage() {
                 </div>
               ))}
             </div>
-            <button
-              onClick={saveEdit}
-              disabled={saving}
-              className="mt-4 w-full h-10 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
-              style={{ backgroundColor: "var(--c-primary)", color: "#fff", opacity: saving ? 0.7 : 1 }}
-            >
-              <Check size={15} />
+            <Button onClick={saveEdit} disabled={saving} loading={saving} className="mt-4 w-full" icon={Check}>
               {saving ? "সেভ হচ্ছে..." : "সেভ করুন"}
-            </button>
-          </div>
+            </Button>
+          </Card>
         )}
 
-        {/* Info card */}
-        <div className="rounded-2xl p-4 mb-4" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
+        <Card className="mb-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2 flex flex-wrap gap-4">
               {supplier.phone && (
@@ -192,34 +191,79 @@ export default function SupplierDetailPage() {
               )}
             </div>
           </div>
-        </div>
+        </Card>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-5">
-          {[
-            { label: "মোট ক্রয়", value: formatBDT(totalPurchased), color: S.text },
-            { label: "পরিশোধ", value: formatBDT(totalPaid), color: "var(--c-primary)" },
-            { label: "বাকি", value: formatBDT(supplier.dueAmount), color: supplier.dueAmount > 0 ? "#E24B4A" : S.muted },
-          ].map((s) => (
-            <div key={s.label} className="rounded-xl p-3 text-center" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
-              <p className="text-xs mb-1" style={{ color: S.muted }}>{s.label}</p>
-              <p className="text-base font-bold" style={{ color: s.color }}>{s.value}</p>
+        {/* Purchase Orders */}
+        <div className="mb-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold" style={{ color: S.text }}>
+              ক্রয় অর্ডার ({supplier.purchaseOrders?.length ?? 0})
+            </h2>
+            <Link
+              href={`/purchase-orders?supplierId=${supplier.id}`}
+              className="flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-xl"
+              style={{ backgroundColor: "var(--c-primary-light)", color: "var(--c-primary)" }}
+            >
+              <Plus size={12} /> নতুন PO
+            </Link>
+          </div>
+          {(supplier.purchaseOrders?.length ?? 0) === 0 ? (
+            <EmptyState icon={ShoppingCart} title="কোনো PO নেই" className="py-8" />
+          ) : (
+            <div className="space-y-2">
+              {(supplier.purchaseOrders ?? []).map((po) => (
+                <Card key={po.id} padding="none" className="overflow-hidden">
+                  <button
+                    onClick={() => setExpandedPO(expandedPO === po.id ? null : po.id)}
+                    className="w-full flex items-center justify-between p-4 text-left"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-sm font-mono font-bold" style={{ color: "var(--c-primary)" }}>
+                          {po.poNumber}
+                        </span>
+                        <Badge variant="default">{po.status}</Badge>
+                      </div>
+                      <p className="text-xs" style={{ color: S.muted }}>
+                        {formatBanglaDate(po.createdAt)} · {po.items.length}টি আইটেম
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-sm" style={{ color: S.text }}>{formatBDT(po.total)}</p>
+                      <Link
+                        href={`/purchase-orders/${po.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-xs hover:underline"
+                        style={{ color: "var(--c-primary)" }}
+                      >
+                        বিস্তারিত →
+                      </Link>
+                    </div>
+                  </button>
+                  {expandedPO === po.id && (
+                    <div className="border-t px-4 pb-4 pt-3" style={{ borderColor: S.border }}>
+                      {po.items.map((item, i) => (
+                        <p key={i} className="text-xs py-0.5" style={{ color: S.secondary }}>
+                          {item.name} × {item.quantity}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              ))}
             </div>
-          ))}
+          )}
         </div>
 
         {/* Purchase history */}
         <div>
           <h2 className="text-sm font-semibold mb-3" style={{ color: S.text }}>ক্রয়ের ইতিহাস ({supplier.purchases.length})</h2>
           {supplier.purchases.length === 0 ? (
-            <div className="text-center py-10 rounded-2xl" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}`, color: S.muted }}>
-              <Package size={32} className="mx-auto mb-2 opacity-30" />
-              <p className="text-sm">কোনো ক্রয় নেই</p>
-            </div>
+            <EmptyState icon={Package} title="কোনো ক্রয় নেই" className="py-10" />
           ) : (
             <div className="space-y-2">
               {supplier.purchases.map((p) => (
-                <div key={p.id} className="rounded-2xl overflow-hidden" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
+                <Card key={p.id} padding="none" className="overflow-hidden">
                   <button
                     onClick={() => setExpandedPurchase(expandedPurchase === p.id ? null : p.id)}
                     className="w-full flex items-center justify-between p-4 text-left"
@@ -229,14 +273,9 @@ export default function SupplierDetailPage() {
                         <span className="text-sm font-semibold" style={{ color: S.text }}>
                           {formatBanglaDate(p.createdAt)}
                         </span>
-                        <span
-                          className="text-xs px-2 py-0.5 rounded-full font-medium"
-                          style={p.status === "paid"
-                            ? { backgroundColor: "var(--c-primary-light)", color: "var(--c-primary)" }
-                            : { backgroundColor: "#FFF3DC", color: "#EF9F27" }}
-                        >
+                        <Badge variant={p.status === "paid" ? "success" : "warning"}>
                           {p.status === "paid" ? "পরিশোধ" : "বাকি আছে"}
-                        </span>
+                        </Badge>
                       </div>
                       <p className="text-xs" style={{ color: S.muted }}>{p.items.length}টি আইটেম</p>
                     </div>
@@ -275,12 +314,11 @@ export default function SupplierDetailPage() {
                       </table>
                     </div>
                   )}
-                </div>
+                </Card>
               ))}
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </PageShell>
   );
 }

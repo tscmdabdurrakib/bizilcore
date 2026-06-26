@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getApiShop } from "@/lib/shops/api-shop";
+import { revalidateProducts } from "@/lib/cache/revalidate";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const shop = await prisma.shop.findUnique({ where: { userId: session.user.id } });
-  if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+  const ctx = await getApiShop();
+  if ("error" in ctx) return ctx.error;
 
   const body = await req.json();
   const rows = body.rows as {
@@ -35,11 +37,12 @@ export async function POST(req: NextRequest) {
           stockQty: parseInt(r.stockQty) || 0,
           category: r.category?.trim() || null,
           sku: r.sku?.trim() || null,
-          shopId: shop.id,
+          shopId: ctx.activeShop.id,
         },
       })
     )
   );
 
+  revalidateProducts(ctx.activeShop.id);
   return NextResponse.json({ count: products.length });
 }

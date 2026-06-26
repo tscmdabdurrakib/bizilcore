@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendFacebookMessage } from "@/lib/facebook";
+import { trackForUser } from "@/lib/activity/trackFromSession";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -22,6 +23,9 @@ export async function POST(req: NextRequest) {
   if (!conv || conv.shopId !== shop.id) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+  if (!conv.facebookPage) {
+    return NextResponse.json({ error: "No connected Facebook Page for this conversation" }, { status: 400 });
+  }
 
   const sent = await sendFacebookMessage(conv.senderId, message, conv.facebookPage.accessToken);
   if (!sent.success) {
@@ -32,6 +36,12 @@ export async function POST(req: NextRequest) {
     where: { id: conversationId },
     data: { reply: message, repliedAt: new Date() },
   });
+
+  trackForUser(session.user.id, shop.id, {
+    actionType: "facebook_reply_sent",
+    actionLabel: "Messenger রিপ্লাই পাঠানো হয়েছে",
+    metadata: { conversation_id: conversationId },
+  }).catch(() => {});
 
   return NextResponse.json(updated);
 }

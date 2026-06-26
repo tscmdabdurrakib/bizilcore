@@ -162,7 +162,7 @@ export default function MembershipsBoard() {
                   {ALL_FEATURES.map(ft => (
                     <label key={ft.key} className="flex items-center gap-2 cursor-pointer">
                       <div onClick={() => toggleFeature(ft.key)}
-                        className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border transition-colors"
+                        className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border transition-colors cursor-pointer"
                         style={{ backgroundColor: form.features.includes(ft.key) ? "#7C3AED" : "transparent", borderColor: form.features.includes(ft.key) ? "#7C3AED" : "var(--c-border)" }}>
                         {form.features.includes(ft.key) && <Check size={10} color="white" />}
                       </div>

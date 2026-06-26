@@ -5,6 +5,7 @@ import {
   Users, CheckCircle2, Clock, AlertCircle, Loader2,
   ChevronRight, Plus, Briefcase, TrendingUp, BarChart2, RefreshCw,
 } from "lucide-react";
+import { Card, StatCard, EmptyState, Badge } from "@/components/ui";
 
 interface EmployeeStat {
   id: string;
@@ -131,27 +132,12 @@ export default function EmployeeTaskBoard({ onViewTasks, onCreateTask }: Props) 
 
   if (employees.length === 0) {
     return (
-      <div className="rounded-2xl border overflow-hidden" style={{ borderColor: S.border, backgroundColor: S.surface }}>
-        <div className="p-12 flex flex-col items-center justify-center gap-4 text-center">
-          <div className="w-16 h-16 rounded-3xl flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, #E8F5F0, #C6E8DE)" }}>
-            <Users size={28} style={{ color: S.primary }} />
-          </div>
-          <div>
-            <p className="text-base font-extrabold mb-1" style={{ color: S.text }}>কোনো কর্মী নেই</p>
-            <p className="text-sm" style={{ color: S.muted }}>
-              কর্মী ব্যবস্থাপনা থেকে কর্মী যোগ করুন, তারপর তাদের টাস্ক দিন
-            </p>
-          </div>
-          <a
-            href="/hr"
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
-            style={{ background: "linear-gradient(135deg, #0F6E56, #0A5442)" }}
-          >
-            <Users size={14} /> কর্মী ব্যবস্থাপনায় যান
-          </a>
-        </div>
-      </div>
+      <EmptyState
+        icon={Users}
+        title="কোনো কর্মী নেই"
+        description="কর্মী ব্যবস্থাপনা থেকে কর্মী যোগ করুন, তারপর তাদের টাস্ক দিন"
+        action={{ label: "কর্মী ব্যবস্থাপনায় যান", onClick: () => {}, href: "/hr" }}
+      />
     );
   }
 
@@ -160,21 +146,10 @@ export default function EmployeeTaskBoard({ onViewTasks, onCreateTask }: Props) 
 
       {/* Summary row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: "মোট কর্মী", value: employees.length, color: "#0F6E56", bg: "#E8F5F0", icon: Users },
-          { label: "মোট টাস্ক", value: totalStats.total, color: "#3B82F6", bg: "#EFF6FF", icon: BarChart2 },
-          { label: "বাকি টাস্ক", value: totalStats.pending, color: "#F59E0B", bg: "#FFFBEB", icon: Clock },
-          { label: "মেয়াদোত্তীর্ণ", value: totalStats.overdue, color: "#EF4444", bg: "#FEF2F2", icon: AlertCircle },
-        ].map(({ label, value, color, bg, icon: Icon }) => (
-          <div key={label} className="rounded-2xl p-4 border"
-            style={{ borderColor: color + "40", backgroundColor: bg }}>
-            <div className="flex items-center gap-2 mb-2">
-              <Icon size={14} style={{ color }} />
-              <p className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color }}>{label}</p>
-            </div>
-            <p className="text-2xl font-black" style={{ color }}>{value}</p>
-          </div>
-        ))}
+        <StatCard label="মোট কর্মী" value={employees.length} icon={Users} accent="green" />
+        <StatCard label="মোট টাস্ক" value={totalStats.total} icon={BarChart2} accent="blue" iconBg="#EFF6FF" iconColor="#3B82F6" />
+        <StatCard label="বাকি টাস্ক" value={totalStats.pending} icon={Clock} accent="gold" />
+        <StatCard label="মেয়াদোত্তীর্ণ" value={totalStats.overdue} icon={AlertCircle} accent="red" />
       </div>
 
       {/* Sort controls */}
@@ -232,10 +207,10 @@ export default function EmployeeTaskBoard({ onViewTasks, onCreateTask }: Props) 
           const hasDueSoon = emp.stats.dueSoon > 0;
 
           return (
-            <div
+            <Card
               key={emp.id}
-              className="rounded-2xl border overflow-hidden transition-all hover:shadow-lg"
-              style={{ borderColor: hasOverdue ? "#FCA5A580" : S.border, backgroundColor: S.surface }}
+              padding="none"
+              className={`overflow-hidden transition-all hover:shadow-lg ${hasOverdue ? "border-red-200" : ""}`}
             >
               {/* Card header */}
               <div className="px-4 pt-4 pb-3 flex items-start gap-3"
@@ -334,10 +309,7 @@ export default function EmployeeTaskBoard({ onViewTasks, onCreateTask }: Props) 
                           {isOverdue && (
                             <span className="text-[9px] font-bold" style={{ color: "#DC2626" }}>⚠</span>
                           )}
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                            style={{ backgroundColor: STATUS_COLOR[task.status] + "20", color: STATUS_COLOR[task.status] }}>
-                            {STATUS_LABEL[task.status]}
-                          </span>
+                          <Badge variant={isOverdue ? "danger" : "warning"}>{STATUS_LABEL[task.status]}</Badge>
                         </div>
                       </div>
                     );
@@ -376,15 +348,14 @@ export default function EmployeeTaskBoard({ onViewTasks, onCreateTask }: Props) 
                   <Plus size={12} /> টাস্ক দিন
                 </button>
               </div>
-            </div>
+            </Card>
           );
         })}
       </div>
 
       {/* Team workload bar */}
       {employees.length > 1 && (
-        <div className="rounded-2xl border p-4 space-y-3"
-          style={{ borderColor: S.border, backgroundColor: S.surface }}>
+        <Card className="space-y-3">
           <div className="flex items-center gap-2">
             <TrendingUp size={14} style={{ color: S.primary }} />
             <p className="text-sm font-extrabold" style={{ color: S.text }}>দলীয় কর্মভার বিশ্লেষণ</p>
@@ -431,7 +402,7 @@ export default function EmployeeTaskBoard({ onViewTasks, onCreateTask }: Props) 
                 );
               })}
           </div>
-        </div>
+        </Card>
       )}
     </div>
   );

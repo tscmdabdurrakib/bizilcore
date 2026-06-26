@@ -31,6 +31,8 @@ export async function GET(req: NextRequest) {
       id: true,
       name: true,
       email: true,
+      adminRole: true,
+      isAdmin: true,
       accountStatus: true,
       statusReason: true,
       statusUpdatedAt: true,

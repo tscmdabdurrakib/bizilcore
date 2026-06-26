@@ -1,129 +1,70 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { bookPathaoDelivery, getPathaoStatus, PathaoCreds } from "@/lib/pathao";
-import { bookSteadfastDelivery, getSteadfastStatus, SteadfastCreds } from "@/lib/steadfast";
-import { bookRedxDelivery, getRedxStatus, RedxCreds } from "@/lib/redx";
-
-const MANUAL_COURIERS = ["paperfly", "delivery_tiger", "other"];
-
-async function getUserPathaoCreds(userId: string): Promise<PathaoCreds | null> {
-  const settings = await prisma.pathaoSettings.findUnique({ where: { userId } });
-  if (!settings?.isConnected || !settings.clientId || !settings.clientSecret || !settings.username || !settings.password || !settings.storeId) {
-    return null;
-  }
-  return {
-    clientId: settings.clientId,
-    clientSecret: settings.clientSecret,
-    username: settings.username,
-    password: settings.password,
-    storeId: parseInt(settings.storeId, 10),
-    sandboxMode: settings.sandboxMode,
-    defaultCityId: settings.defaultCityId ?? 1,
-    defaultZoneId: settings.defaultZoneId ?? 1,
-  };
-}
-
-async function getUserRedxCreds(userId: string): Promise<RedxCreds | null> {
-  const settings = await prisma.redxSettings.findUnique({ where: { userId } });
-  if (!settings?.isConnected || !settings.apiKey) return null;
-  return { apiKey: settings.apiKey };
-}
-
-async function getUserSteadfastCreds(userId: string): Promise<SteadfastCreds | null> {
-  const settings = await prisma.steadfastSettings.findUnique({ where: { userId } });
-  if (!settings?.isConnected || !settings.apiKey || !settings.secretKey) return null;
-  return { apiKey: settings.apiKey, secretKey: settings.secretKey };
-}
+import { getPathaoStatus } from "@/lib/pathao";
+import { getSteadfastStatus } from "@/lib/steadfast";
+import { getRedxStatus } from "@/lib/redx";
+import {
+  bookCourierForOrder,
+  CourierBookingError,
+  getUserPathaoCreds,
+  getUserRedxCreds,
+  getUserSteadfastCreds,
+} from "@/lib/courier-booking";
+import { getPhoneRisk } from "@/lib/courier-fraud";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { orderId, courierName, manualTrackId } = body as {
+  const { orderId, courierName, manualTrackId, override } = body as {
     orderId: string;
     courierName: string;
     manualTrackId?: string;
+    override?: boolean;
   };
 
   if (!orderId || !courierName) {
     return NextResponse.json({ error: "orderId and courierName required" }, { status: 400 });
   }
 
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    include: { customer: true, items: true },
-  });
-
-  if (!order || order.userId !== session.user.id) {
-    return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  // Block booking of high-risk COD orders unless they've been confirmed or the
+  // merchant explicitly overrides. Best-effort: never blocks on lookup errors.
+  if (!override) {
+    try {
+      const ord = await prisma.order.findFirst({
+        where: { id: orderId, userId: session.user.id },
+        select: { confirmStatus: true, customer: { select: { phone: true, shopId: true } } },
+      });
+      const phone = ord?.customer?.phone;
+      const shopId = ord?.customer?.shopId;
+      if (ord && phone && shopId && ord.confirmStatus !== "confirmed") {
+        const risk = await getPhoneRisk(shopId, phone);
+        if (risk.level === "red") {
+          return NextResponse.json(
+            {
+              error: "এই কাস্টমারের ডেলিভারি ঝুঁকি বেশি। বুকিংয়ের আগে কনফার্ম করুন।",
+              needsConfirm: true,
+              risk,
+            },
+            { status: 409 },
+          );
+        }
+      }
+    } catch {
+      /* risk gate is advisory only */
+    }
   }
-
-  if (order.courierTrackId) {
-    return NextResponse.json({ error: "Courier already booked" }, { status: 400 });
-  }
-
-  const input = {
-    orderId,
-    recipientName: order.customer?.name ?? "Customer",
-    recipientPhone: order.customer?.phone ?? "",
-    recipientAddress: order.customer?.address ?? "Dhaka",
-    amountToCollect: order.dueAmount > 0 ? order.dueAmount : order.totalAmount,
-    itemCount: order.items.reduce((s, it) => s + it.quantity, 0),
-    note: order.note ?? undefined,
-  };
 
   try {
-    let trackingId: string;
-    let isManual = false;
-
-    if (courierName === "pathao") {
-      const creds = await getUserPathaoCreds(session.user.id);
-      if (!creds) {
-        return NextResponse.json({ error: "Pathao সংযোগ করা নেই। Settings → কুরিয়ার থেকে API credentials সেট করুন।" }, { status: 400 });
-      }
-      trackingId = await bookPathaoDelivery(input, creds);
-
-    } else if (courierName === "steadfast") {
-      const creds = await getUserSteadfastCreds(session.user.id);
-      if (!creds) {
-        return NextResponse.json({ error: "Steadfast সংযোগ করা নেই। Settings → কুরিয়ার থেকে API credentials সেট করুন।" }, { status: 400 });
-      }
-      trackingId = await bookSteadfastDelivery(input, creds);
-
-    } else if (courierName === "redx") {
-      const creds = await getUserRedxCreds(session.user.id);
-      if (!creds) {
-        return NextResponse.json({ error: "RedX সংযোগ করা নেই। Settings → কুরিয়ার থেকে API Key সেট করুন।" }, { status: 400 });
-      }
-      trackingId = await bookRedxDelivery(input, creds);
-
-    } else if (MANUAL_COURIERS.includes(courierName)) {
-      if (!manualTrackId?.trim()) {
-        return NextResponse.json({ error: "Tracking ID দিন" }, { status: 400 });
-      }
-      trackingId = manualTrackId.trim();
-      isManual = true;
-
-    } else {
-      return NextResponse.json({ error: "Unknown courier" }, { status: 400 });
-    }
-
-    await prisma.order.update({
-      where: { id: orderId },
-      data: {
-        courierName,
-        courierTrackId: trackingId,
-        courierStatus: isManual ? "manual" : "booked",
-        courierBookedAt: new Date(),
-        codStatus: "with_courier",
-        status: "shipped",
-      },
-    });
-
-    return NextResponse.json({ trackingId, status: isManual ? "manual" : "booked", courierName });
+    const result = await bookCourierForOrder(session.user.id, orderId, courierName, manualTrackId);
+    return NextResponse.json(result);
   } catch (err: unknown) {
+    if (err instanceof CourierBookingError) {
+      const notFound = err.message === "Order not found";
+      return NextResponse.json({ error: err.message }, { status: notFound ? 404 : 400 });
+    }
     const message = err instanceof Error ? err.message : "Courier booking failed";
     return NextResponse.json({ error: message }, { status: 502 });
   }

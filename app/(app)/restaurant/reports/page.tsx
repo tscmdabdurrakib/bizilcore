@@ -567,10 +567,10 @@ function RestaurantReportsPageInner() {
                     <XAxis dataKey="name" tick={{ fontSize: 11, fill: S.muted }} />
                     <YAxis tick={{ fontSize: 11, fill: S.muted }} tickFormatter={v => `৳${(v / 1000).toFixed(0)}k`} />
                     <Tooltip
-                      formatter={(v: number, n: string) => [
+                      formatter={((v: number, n: string) => [
                         n === "revenue" ? formatBDT(v) : n === "tips" ? formatBDT(v) : `${v}টি`,
                         n === "revenue" ? "রাজস্ব" : n === "tips" ? "টিপ" : "অর্ডার",
-                      ]}
+                      ]) as never}
                       contentStyle={{ borderRadius: 12, border: `1px solid ${S.border}`, backgroundColor: S.surface, fontSize: 12 }}
                     />
                     <Bar dataKey="revenue" name="revenue" fill={S.primary} radius={[6, 6, 0, 0]} />
@@ -736,10 +736,10 @@ function RestaurantReportsPageInner() {
               <YAxis yAxisId="left" tick={{ fontSize: 11, fill: S.muted }} tickFormatter={v => `৳${(v / 1000).toFixed(0)}k`} />
               <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: S.muted }} />
               <Tooltip
-                formatter={(value: number, name: string) => [
+                formatter={((value: number, name: string) => [
                   name === "revenue" ? formatBDT(value) : `${value}টি`,
                   name === "revenue" ? "রাজস্ব" : "অর্ডার",
-                ]}
+                ]) as never}
                 contentStyle={{ borderRadius: 12, border: `1px solid ${S.border}`, backgroundColor: S.surface, fontSize: 12 }}
               />
               <Bar yAxisId="left" dataKey="revenue" name="revenue" fill={S.primary} radius={[6, 6, 0, 0]} />
@@ -761,12 +761,12 @@ function RestaurantReportsPageInner() {
               <PieChart>
                 <Pie data={data.categoryRevenue} dataKey="revenue" nameKey="category"
                   cx="50%" cy="50%" outerRadius={80}
-                  label={({ name, percent }) => `${CATEGORY_LABELS[name] ?? name} ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }: any) => `${CATEGORY_LABELS[name] ?? name} ${(percent * 100).toFixed(0)}%`}
                   labelLine={false}>
                   {data.categoryRevenue.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                 </Pie>
                 <Tooltip
-                  formatter={(v: number, n: string) => [formatBDT(v), CATEGORY_LABELS[n] ?? n]}
+                  formatter={((v: number, n: string) => [formatBDT(v), CATEGORY_LABELS[n] ?? n]) as never}
                   contentStyle={{ borderRadius: 12, border: `1px solid ${S.border}`, backgroundColor: S.surface, fontSize: 12 }}
                 />
                 <Legend formatter={(v: string) => CATEGORY_LABELS[v] ?? v} />
@@ -788,14 +788,14 @@ function RestaurantReportsPageInner() {
               <PieChart>
                 <Pie data={data.orderTypeBreakdown} dataKey="count" nameKey="type"
                   cx="50%" cy="50%" outerRadius={80}
-                  label={({ name, percent }) => `${ORDER_TYPE_LABELS[name] ?? name} ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }: any) => `${ORDER_TYPE_LABELS[name] ?? name} ${(percent * 100).toFixed(0)}%`}
                   labelLine={false}>
                   {data.orderTypeBreakdown.map((_, i) => (
                     <Cell key={i} fill={[S.primary, "#3B82F6", "#10B981"][i % 3]} />
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(v: number, n: string) => [`${v}টি`, ORDER_TYPE_LABELS[n] ?? n]}
+                  formatter={((v: number, n: string) => [`${v}টি`, ORDER_TYPE_LABELS[n] ?? n]) as never}
                   contentStyle={{ borderRadius: 12, border: `1px solid ${S.border}`, backgroundColor: S.surface, fontSize: 12 }}
                 />
                 <Legend formatter={(v: string) => ORDER_TYPE_LABELS[v] ?? v} />
@@ -870,7 +870,7 @@ function RestaurantReportsPageInner() {
                 <XAxis dataKey="label" tick={{ fontSize: 10, fill: S.muted }} />
                 <YAxis tick={{ fontSize: 10, fill: S.muted }} />
                 <Tooltip
-                  formatter={(v: number) => [`${v}টি অর্ডার`, "অর্ডার"]}
+                  formatter={((v: number) => [`${v}টি অর্ডার`, "অর্ডার"]) as never}
                   contentStyle={{ borderRadius: 12, border: `1px solid ${S.border}`, backgroundColor: S.surface, fontSize: 12 }}
                 />
                 <Bar dataKey="count" fill="#D97706" radius={[6, 6, 0, 0]} />

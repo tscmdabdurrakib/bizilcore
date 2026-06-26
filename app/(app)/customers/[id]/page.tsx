@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, Phone, MapPin, ExternalLink, Pencil, Trash2, X, Ruler, Check } from "lucide-react";
 import { formatBDT, formatRelativeDate, getStatusStyle } from "@/lib/utils";
+import { PageShell, Card, StatCard, Badge, Button, Input } from "@/components/ui";
 
 interface Customer {
   id: string; name: string; phone: string | null; address: string | null; fbProfile: string | null; dueAmount: number;
@@ -45,6 +46,13 @@ export default function CustomerDetailPage() {
   const [measureEdit, setMeasureEdit] = useState(false);
   const [measureForm, setMeasureForm] = useState<Record<string, string>>({});
   const [savingMeasure, setSavingMeasure] = useState(false);
+  const [customerInvoices, setCustomerInvoices] = useState<Array<{
+    id: string; invoiceNumber: string; status: string; total: number; paidAmount: number; createdAt: string;
+  }>>([]);
+
+  const INVOICE_STATUS_LABELS: Record<string, string> = {
+    draft: "খসড়া", sent: "পাঠানো", paid: "পরিশোধিত", overdue: "বকেয়া", partial: "আংশিক", cancelled: "বাতিল",
+  };
 
   const MEASURE_FIELDS = [
     { key: "chest", label: "বুক" }, { key: "waist", label: "কোমর" },
@@ -81,6 +89,11 @@ export default function CustomerDetailPage() {
       }
       setMeasurementLoaded(true);
     }).catch(() => {});
+
+    fetch(`/api/invoices?customerId=${id}&limit=20`)
+      .then(r => r.json())
+      .then(d => setCustomerInvoices(d.invoices ?? []))
+      .catch(() => {});
   }, [id]);
 
   async function handleSave(e: React.FormEvent) {
@@ -131,7 +144,25 @@ export default function CustomerDetailPage() {
   if (!customer) return <div className="text-center py-20"><p style={{ color: S.muted }}>কাস্টমার পাওয়া যায়নি।</p></div>;
 
   return (
-    <div className="max-w-2xl">
+    <PageShell
+      title={customer.name}
+      subtitle="কাস্টমার প্রোফাইল"
+      breadcrumbs={[{ label: "কাস্টমার", href: "/customers" }, { label: customer.name }]}
+      actions={
+        <>
+          <Button variant="outline" size="sm" onClick={() => setEditModal(true)}>সম্পাদনা</Button>
+          <Button variant="ghost" size="sm" onClick={() => setDeleteModal(true)} className="text-red-500">মুছুন</Button>
+        </>
+      }
+      stats={
+        <>
+          <StatCard label="মোট অর্ডার" value={`${customer.orders.length}টি`} accent="blue" />
+          <StatCard label="মোট কেনা" value={formatBDT(customer.orders.reduce((s, o) => s + o.totalAmount, 0))} accent="green" />
+          <StatCard label="বাকি" value={formatBDT(customer.dueAmount)} accent={customer.dueAmount > 0 ? "red" : "none"} />
+        </>
+      }
+      className="max-w-2xl"
+    >
       {toast && <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg" style={{ backgroundColor: toast.type === "success" ? "#1D9E75" : "#E24B4A" }}>{toast.msg}</div>}
 
       {/* Edit Modal */}
@@ -186,22 +217,8 @@ export default function CustomerDetailPage() {
         </div>
       )}
 
-      <div className="flex items-center gap-3 mb-6">
-        <Link href="/customers" className="p-2 rounded-xl hover:bg-gray-100"><ChevronLeft size={20} style={{ color: S.secondary }} /></Link>
-        <h2 className="font-semibold text-lg" style={{ color: S.text }}>কাস্টমার প্রোফাইল</h2>
-        <div className="ml-auto flex items-center gap-2">
-          <button onClick={() => setEditModal(true)} className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-medium hover:bg-gray-50 transition-colors" style={{ borderColor: S.border, color: S.secondary }}>
-            <Pencil size={14} /> সম্পাদনা
-          </button>
-          <button onClick={() => setDeleteModal(true)} className="p-2 rounded-xl hover:bg-red-50 transition-colors">
-            <Trash2 size={16} style={{ color: "#E24B4A" }} />
-          </button>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-          <div className="flex items-start gap-4">
+      <Card>
+        <div className="flex items-start gap-4">
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-xl flex-shrink-0" style={{ backgroundColor: S.primary }}>
               {customer.name[0].toUpperCase()}
             </div>
@@ -209,10 +226,7 @@ export default function CustomerDetailPage() {
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-bold text-xl" style={{ color: S.text }}>{customer.name}</h3>
                 {customer.segment && customer.segment !== "none" && SEGMENT_META[customer.segment] && (
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                    style={{ backgroundColor: SEGMENT_META[customer.segment].bg, color: SEGMENT_META[customer.segment].color }}>
-                    {SEGMENT_META[customer.segment].label}
-                  </span>
+                  <Badge variant="warning">{SEGMENT_META[customer.segment].label}</Badge>
                 )}
               </div>
               <div className="space-y-1.5 mt-2">
@@ -231,30 +245,15 @@ export default function CustomerDetailPage() {
                 <p className="text-xl font-bold" style={{ color: "#E24B4A" }}>{formatBDT(customer.dueAmount)}</p>
               </div>
             )}
-          </div>
         </div>
+      </Card>
 
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: "মোট অর্ডার", value: `${customer.orders.length}টি` },
-            { label: "মোট কেনা", value: formatBDT(customer.orders.reduce((s, o) => s + o.totalAmount, 0)) },
-            { label: "বাকি", value: formatBDT(customer.dueAmount) },
-          ].map(stat => (
-            <div key={stat.label} className="rounded-xl border p-3 text-center" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-              <p className="text-xs mb-1" style={{ color: S.muted }}>{stat.label}</p>
-              <p className="font-bold" style={{ color: S.text }}>{stat.value}</p>
-            </div>
-          ))}
-        </div>
+      <Link href={`/orders/new?customerId=${customer.id}`}>
+        <Button className="w-full">+ নতুন অর্ডার</Button>
+      </Link>
 
-        <Link href={`/orders/new?customerId=${customer.id}`}
-          className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-white font-medium"
-          style={{ backgroundColor: S.primary }}>
-          + নতুন অর্ডার
-        </Link>
-
-        {measurementLoaded && (
-          <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "#DDD6FE" }}>
+      {measurementLoaded && (
+        <Card padding="none" className="border-purple-200 overflow-hidden">
             <div className="px-5 py-3 border-b flex items-center justify-between" style={{ backgroundColor: "#F5F3FF", borderColor: "#DDD6FE" }}>
               <div className="flex items-center gap-2">
                 <Ruler size={16} style={{ color: "#8B5CF6" }} />
@@ -322,10 +321,10 @@ export default function CustomerDetailPage() {
                 )}
               </div>
             )}
-          </div>
-        )}
+        </Card>
+      )}
 
-        <div className="rounded-2xl border overflow-hidden" style={{ borderColor: S.border }}>
+      <Card padding="none" className="overflow-hidden">
           <div className="px-5 py-3 border-b" style={{ backgroundColor: "var(--c-surface)", borderColor: S.border }}>
             <h3 className="font-semibold text-sm" style={{ color: S.text }}>অর্ডার ইতিহাস</h3>
           </div>
@@ -361,8 +360,38 @@ export default function CustomerDetailPage() {
               );
             })
           )}
-        </div>
-      </div>
-    </div>
+        </Card>
+
+      <Card padding="none" className="overflow-hidden">
+          <div className="px-5 py-3 border-b" style={{ backgroundColor: "var(--c-surface)", borderColor: S.border }}>
+            <h3 className="font-semibold text-sm" style={{ color: S.text }}>ইনভয়েস ইতিহাস</h3>
+          </div>
+          {customerInvoices.length === 0 ? (
+            <div className="text-center py-10"><p className="text-sm" style={{ color: S.muted }}>কোনো ইনভয়েস নেই।</p></div>
+          ) : (
+            customerInvoices.map((inv) => (
+              <Link
+                key={inv.id}
+                href={`/invoices/${inv.id}`}
+                className="flex items-center gap-3 px-5 py-3.5 border-b last:border-0 hover:bg-gray-50 transition-colors"
+                style={{ borderColor: S.border }}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-mono font-bold text-emerald-700">{inv.invoiceNumber}</p>
+                  <p className="text-xs mt-0.5" style={{ color: S.muted }}>
+                    {INVOICE_STATUS_LABELS[inv.status] ?? inv.status} • {formatRelativeDate(inv.createdAt)}
+                  </p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="font-semibold text-sm" style={{ color: S.text }}>{formatBDT(inv.total)}</p>
+                  {inv.paidAmount > 0 && inv.paidAmount < inv.total && (
+                    <p className="text-xs text-amber-600">বাকি {formatBDT(inv.total - inv.paidAmount)}</p>
+                  )}
+                </div>
+              </Link>
+            ))
+          )}
+        </Card>
+    </PageShell>
   );
 }

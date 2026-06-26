@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Plus, Trash2, Layers, Sparkles, Loader2, Lightbulb, Wand2, Package, ChevronDown, ChevronUp } from "lucide-react";
+import { X, Plus, Trash2, Sparkles, Loader2, Lightbulb, Wand2, Package, ChevronDown, ChevronUp } from "lucide-react";
+import { Card, Button } from "@/components/ui";
 
 const SIZES = ["S","M","L","XL","XXL","2XL","3XL","Free Size"];
 const COLORS = ["লাল","নীল","সবুজ","হলুদ","কালো","সাদা","গোলাপী","কমলা","বেগুনী","ধূসর","বাদামী"];
@@ -516,13 +517,9 @@ export default function ProductCreatePanel({ onClose, onCreated }: Props) {
               {hasVariants && <span className="flex-shrink-0">{variants.length}টি Variant</span>}
             </div>
           )}
-          <button type="submit" form="product-create-form"
-            disabled={submitting}
-            className="w-full py-3.5 rounded-2xl text-white font-extrabold text-sm disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg transition-all hover:opacity-90 active:scale-[0.98]"
-            style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}>
-            {submitting && <Loader2 size={16} className="animate-spin" />}
+          <Button type="submit" form="product-create-form" disabled={submitting} loading={submitting} className="w-full" size="lg">
             {submitting ? "সেভ হচ্ছে..." : "✓ পণ্য সেভ করুন"}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -563,7 +560,7 @@ function PanelSection({
   children: React.ReactNode; headerRight?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: expanded ? color + "60" : "var(--c-border)", backgroundColor: "var(--c-surface)" }}>
+    <Card variant="default" padding="none" className="overflow-hidden">
       <button type="button" onClick={onToggle}
         className="w-full flex items-center gap-2.5 px-4 py-3.5 text-left"
         style={{ backgroundColor: expanded ? color + "08" : "transparent" }}>
@@ -577,6 +574,6 @@ function PanelSection({
           {children}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

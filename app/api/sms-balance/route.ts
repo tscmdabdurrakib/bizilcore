@@ -1,18 +1,11 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { checkSMSBalance, decryptApiKey } from "@/lib/sms";
+import { requireSession } from "@/lib/sms/auth";
+import { getSmsCreditBalance } from "@/lib/sms/credits";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const authResult = await requireSession();
+  if ("error" in authResult) return authResult.error;
 
-  const settings = await prisma.smsSettings.findUnique({ where: { userId: session.user.id } });
-  if (!settings?.isConnected || !settings.apiKey) {
-    return NextResponse.json({ balance: null });
-  }
-
-  const plainKey = decryptApiKey(settings.apiKey);
-  const balance = await checkSMSBalance(plainKey);
-  return NextResponse.json({ balance });
+  const balance = await getSmsCreditBalance(authResult.userId);
+  return NextResponse.json({ balance: balance.balance, isLow: balance.isLow });
 }

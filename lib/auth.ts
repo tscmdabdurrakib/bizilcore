@@ -4,9 +4,24 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { authConfig } from "@/auth.config";
 import { updateLoginStreak } from "@/lib/badges";
+import { closeUserSession } from "@/lib/activity/sessions";
+import { trackUserActivity } from "@/lib/activity/trackUserActivity";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
+  events: {
+    signOut: async (message) => {
+      const userId =
+        "token" in message && message.token?.id ? (message.token.id as string) : null;
+      if (!userId) return;
+      await closeUserSession(userId);
+      await trackUserActivity({
+        userId,
+        actionType: "logout",
+        actionLabel: "লগআউট করা হয়েছে",
+      });
+    },
+  },
   providers: [
     Credentials({
       credentials: {

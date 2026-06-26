@@ -31,7 +31,7 @@ export default async function ProductsPage({
 
   const shop = await prisma.shop.findUnique({
     where: { storeSlug: slug },
-    select: { id: true, name: true, storeSlug: true, storeEnabled: true, storeShowStock: true, storePrimaryColor: true, storeTheme: true },
+    select: { id: true, name: true, storeSlug: true, storeEnabled: true, storeShowStock: true, storePrimaryColor: true, storeTheme: true, storeSocialProofEnabled: true },
   });
   if (!shop || !shop.storeEnabled) notFound();
 
@@ -43,6 +43,7 @@ export default async function ProductsPage({
       id: true, name: true, description: true, category: true,
       sellPrice: true, stockQty: true, imageUrl: true, images: true,
       hasVariants: true, storeVisible: true, storeFeatured: true,
+      variants: { select: { id: true, size: true, color: true, price: true, stockQty: true } },
     },
   });
 

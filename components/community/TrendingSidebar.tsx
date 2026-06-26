@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { TrendingUp, Heart, Users, Flame, MessageCircle } from "lucide-react";
+import { Heart, Users, Flame, MessageCircle } from "lucide-react";
+import { Card, Badge, StatCard } from "@/components/ui";
 
 interface TrendingPost {
   id:           string;
@@ -11,11 +12,11 @@ interface TrendingPost {
   user:         { id: string; name: string };
 }
 
-const CATEGORY_MAP: Record<string, { emoji: string; label: string; color: string; bg: string }> = {
-  "[💡টিপস]":  { emoji: "💡", label: "টিপস",   color: "#D97706", bg: "#FEF3C7" },
-  "[❓প্রশ্ন]": { emoji: "❓", label: "প্রশ্ন",  color: "#2563EB", bg: "#DBEAFE" },
-  "[🎉সাফল্য]": { emoji: "🎉", label: "সাফল্য", color: "#0F6E56", bg: "#D1FAE5" },
-  "[📦পণ্য]":  { emoji: "📦", label: "পণ্য",   color: "#7C3AED", bg: "#EDE9FE" },
+const CATEGORY_MAP: Record<string, { emoji: string; label: string; variant: "warning" | "info" | "success" | "purple" }> = {
+  "[💡টিপস]":  { emoji: "💡", label: "টিপস",   variant: "warning" },
+  "[❓প্রশ্ন]": { emoji: "❓", label: "প্রশ্ন",  variant: "info" },
+  "[🎉সাফল্য]": { emoji: "🎉", label: "সাফল্য", variant: "success" },
+  "[📦পণ্য]":  { emoji: "📦", label: "পণ্য",   variant: "purple" },
 };
 
 function getCategory(content: string) {
@@ -50,10 +51,7 @@ export default function TrendingSidebar() {
   return (
     <div className="space-y-4 sticky top-4">
       {/* Community Stats card */}
-      <div
-        className="rounded-2xl overflow-hidden border"
-        style={{ borderColor: "var(--c-border)", backgroundColor: "var(--c-surface)", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
-      >
+      <Card padding="none" className="overflow-hidden">
         <div
           className="px-4 py-4"
           style={{ background: "linear-gradient(135deg, #0F6E56 0%, #10B981 100%)" }}
@@ -67,23 +65,14 @@ export default function TrendingSidebar() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 divide-x" style={{ borderTop: "1px solid var(--c-border)", borderColor: "var(--c-border)" }}>
-          <div className="px-3 py-3 text-center" style={{ borderColor: "var(--c-border)" }}>
-            <p className="text-base font-black" style={{ color: "#0F6E56" }}>১০০০+</p>
-            <p className="text-[10px] font-medium" style={{ color: "var(--c-text-muted)" }}>সক্রিয় সদস্য</p>
-          </div>
-          <div className="px-3 py-3 text-center">
-            <p className="text-base font-black" style={{ color: "#0F6E56" }}>৫০০+</p>
-            <p className="text-[10px] font-medium" style={{ color: "var(--c-text-muted)" }}>পোস্ট ও টিপস</p>
-          </div>
+        <div className="grid grid-cols-2 gap-3 p-3">
+          <StatCard label="সক্রিয় সদস্য" value="১০০০+" accent="green" className="!p-3" />
+          <StatCard label="পোস্ট ও টিপস" value="৫০০+" accent="green" className="!p-3" />
         </div>
-      </div>
+      </Card>
 
       {/* Trending posts */}
-      <div
-        className="rounded-2xl border overflow-hidden"
-        style={{ borderColor: "var(--c-border)", backgroundColor: "var(--c-surface)", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
-      >
+      <Card padding="none" className="overflow-hidden">
         <div className="flex items-center gap-2 px-4 py-3 border-b" style={{ borderColor: "var(--c-border)" }}>
           <div
             className="w-6 h-6 rounded-lg flex items-center justify-center"
@@ -132,12 +121,9 @@ export default function TrendingSidebar() {
                   </div>
                   <div className="flex-1 min-w-0">
                     {cat && (
-                      <span
-                        className="text-[9px] font-bold px-1.5 py-0.5 rounded-full inline-block mb-1"
-                        style={{ backgroundColor: cat.bg, color: cat.color }}
-                      >
+                      <Badge variant={cat.variant} className="mb-1 text-[9px]">
                         {cat.emoji} {cat.label}
-                      </span>
+                      </Badge>
                     )}
                     <p className="text-xs leading-snug mb-1 line-clamp-2" style={{ color: "var(--c-text)" }}>
                       {body}
@@ -165,13 +151,10 @@ export default function TrendingSidebar() {
             })
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Tips card */}
-      <div
-        className="rounded-2xl border p-4"
-        style={{ borderColor: "var(--c-border)", backgroundColor: "var(--c-surface)", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
-      >
+      <Card>
         <p className="text-xs font-bold mb-2" style={{ color: "var(--c-text)" }}>📌 কমিউনিটি নিয়মাবলী</p>
         <ul className="space-y-1.5">
           {[
@@ -186,7 +169,7 @@ export default function TrendingSidebar() {
             </li>
           ))}
         </ul>
-      </div>
+      </Card>
     </div>
   );
 }

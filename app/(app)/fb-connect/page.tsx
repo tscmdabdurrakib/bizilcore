@@ -175,7 +175,7 @@ export default function FbConnectPage() {
     );
   }, [pages, search]);
 
-  const callbackUrl = typeof window !== "undefined" ? `${window.location.origin}/api/webhook/facebook` : "";
+  const callbackUrl = typeof window !== "undefined" ? `${window.location.origin}/api/webhooks/facebook` : "";
   const noPages = !loading && pages.length === 0;
   const fbAppMissing = !FB_APP_ID;
 

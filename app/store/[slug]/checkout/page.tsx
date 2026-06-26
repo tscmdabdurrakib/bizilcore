@@ -5,6 +5,7 @@ import { useCart } from "@/lib/store/cart";
 import { useStoreTheme } from "@/components/store/ThemeProvider";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { BD_DISTRICTS, BD_UPAZILAS, getShippingFee } from "@/lib/store/bangladesh";
+import { trackFunnelEvent } from "@/lib/store/funnel";
 import { ImageIcon, ChevronRight } from "lucide-react";
 
 export default function CheckoutPage() {
@@ -19,16 +20,44 @@ export default function CheckoutPage() {
 
   const preAppliedCoupon = searchParams.get("coupon") || "";
   const preDiscount = parseFloat(searchParams.get("discount") || "0");
+  const affiliateCode = searchParams.get("ref") || "";
 
   const [form, setForm] = useState({
     name: "", phone: "", altPhone: "",
     district: "", upazila: "", address: "", note: "",
-    payment: "cod" as "cod" | "bkash" | "nagad",
+    payment: "cod" as "cod" | "bkash" | "nagad" | "sslcommerz",
     transactionId: "",
+    giftCardCode: "",
+    loyaltyPointsUsed: "0",
   });
+  const [fulfillmentType, setFulfillmentType] = useState<"delivery" | "pickup">("delivery");
+  const [deliverySlot, setDeliverySlot] = useState("");
+  const [savedAddresses, setSavedAddresses] = useState<Array<{
+    id: string; label: string | null; address: string; district: string | null; upazila: string | null; isDefault: boolean;
+  }>>([]);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [guestOtpToken, setGuestOtpToken] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [shopInfo, setShopInfo] = useState<{ storeBkashNumber: string | null; storeNagadNumber: string | null; storeCODEnabled: boolean; storeShippingFee: number; storeDhakaFee: number; storeFreeShipping: number | null } | null>(null);
+  const [shopInfo, setShopInfo] = useState<{
+    id?: string;
+    storeBkashNumber: string | null;
+    storeNagadNumber: string | null;
+    storeCODEnabled: boolean;
+    storeSslcommerzEnabled?: boolean;
+    storeShippingFee: number;
+    storeDhakaFee: number;
+    storeFreeShipping: number | null;
+    storeLoyaltyEnabled?: boolean;
+    storePickupEnabled?: boolean;
+    storePickupAddress?: string | null;
+    storeCheckoutOtpEnabled?: boolean;
+    deliverySlots?: Array<{ label: string; value: string }>;
+  } | null>(null);
+  const [loyaltyPoints, setLoyaltyPoints] = useState(0);
 
   const text = defaults.text;
   const muted = defaults.muted;
@@ -42,16 +71,108 @@ export default function CheckoutPage() {
       .then(d => {
         setShopInfo(d);
         if (!d.storeCODEnabled) {
-          const firstAvailable = d.storeBkashNumber ? "bkash" : d.storeNagadNumber ? "nagad" : "cod";
-          setForm(f => ({ ...f, payment: firstAvailable as "cod" | "bkash" | "nagad" }));
+          const firstAvailable = d.storeBkashNumber ? "bkash" : d.storeNagadNumber ? "nagad" : d.storeSslcommerzEnabled ? "sslcommerz" : "cod";
+          setForm(f => ({ ...f, payment: firstAvailable as "cod" | "bkash" | "nagad" | "sslcommerz" }));
         }
+        if (d.id) trackFunnelEvent(d.id, "checkout_start");
+      })
+      .catch(() => {});
+    fetch(`/api/store/customer/orders?slug=${slug}`)
+      .then(r => r.json())
+      .then(d => {
+        setLoyaltyPoints(d.customer?.loyaltyPoints ?? 0);
+        setIsLoggedIn(!!d.customer);
+      })
+      .catch(() => {});
+    fetch("/api/store/customer/addresses")
+      .then(r => r.json())
+      .then(d => {
+        const addrs = d.addresses ?? [];
+        setSavedAddresses(addrs);
+        const def = addrs.find((a: { isDefault: boolean }) => a.isDefault) ?? addrs[0];
+        if (def) applyAddress(def);
       })
       .catch(() => {});
   }, [slug]);
 
-  const shippingFee = form.district
-    ? getShippingFee(form.district, shopInfo?.storeDhakaFee ?? 60, shopInfo?.storeShippingFee ?? 120)
-    : (shopInfo?.storeDhakaFee ?? 60);
+  function applyAddress(addr: { address: string; district: string | null; upazila: string | null }) {
+    setForm(f => ({
+      ...f,
+      address: addr.address,
+      district: addr.district || "",
+      upazila: addr.upazila || "",
+    }));
+  }
+
+  async function sendOtp() {
+    if (!form.phone) { setError("ফোন নম্বর দিন"); return; }
+    setOtpLoading(true);
+    setError("");
+    const r = await fetch("/api/store/checkout-otp/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slug, phone: form.phone }),
+    });
+    const d = await r.json();
+    setOtpLoading(false);
+    if (r.ok) {
+      setOtpSent(true);
+      if (d.devOtp) setOtpCode(d.devOtp);
+    } else {
+      setError(d.error || "OTP পাঠানো যায়নি");
+    }
+  }
+
+  async function verifyOtp() {
+    if (!otpCode) { setError("OTP দিন"); return; }
+    setOtpLoading(true);
+    const r = await fetch("/api/store/checkout-otp/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slug, phone: form.phone, otp: otpCode }),
+    });
+    const d = await r.json();
+    setOtpLoading(false);
+    if (r.ok) {
+      setGuestOtpToken(d.token);
+    } else {
+      setError(d.error || "OTP ভুল");
+    }
+  }
+
+  // Begin-checkout capture: once a usable phone is entered, save the cart
+  // server-side (debounced) so it can be recovered if the order isn't placed.
+  useEffect(() => {
+    const phoneDigits = form.phone.replace(/[^0-9]/g, "");
+    if (phoneDigits.length < 11 || items.length === 0) return;
+    const t = setTimeout(() => {
+      fetch("/api/store/abandoned-cart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug,
+          phone: form.phone,
+          customerName: form.name || null,
+          subtotal,
+          items: items.map((i) => ({
+            productId: i.productId,
+            productName: i.productName,
+            variantId: i.variantId,
+            variantName: i.variantName,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice,
+          })),
+        }),
+      }).catch(() => {});
+    }, 1500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.phone, form.name, items, subtotal, slug]);
+
+  const shippingFee = fulfillmentType === "pickup" ? 0
+    : form.district
+      ? getShippingFee(form.district, shopInfo?.storeDhakaFee ?? 60, shopInfo?.storeShippingFee ?? 120)
+      : (shopInfo?.storeDhakaFee ?? 60);
 
   const freeShipping = shopInfo?.storeFreeShipping;
   const effectiveShipping = freeShipping && subtotal >= freeShipping ? 0 : shippingFee;
@@ -69,8 +190,16 @@ export default function CheckoutPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!form.name || !form.phone || !form.district || !form.address) {
+    if (!form.name || !form.phone) {
       setError("সব প্রয়োজনীয় তথ্য পূরণ করুন।");
+      return;
+    }
+    if (fulfillmentType === "delivery" && (!form.district || !form.address)) {
+      setError("ডেলিভারি ঠিকানা পূরণ করুন।");
+      return;
+    }
+    if (!isLoggedIn && shopInfo?.storeCheckoutOtpEnabled !== false && !guestOtpToken && fulfillmentType === "delivery") {
+      setError("ফোন OTP যাচাই করুন।");
       return;
     }
     if (items.length === 0) {
@@ -92,11 +221,48 @@ export default function CheckoutPage() {
         paymentMethod: form.payment,
         transactionId: form.transactionId || null,
         couponCode: preAppliedCoupon || null,
-        items: items.map(i => ({ productId: i.productId, variantId: i.variantId, quantity: i.quantity })),
+        giftCardCode: form.giftCardCode || null,
+        loyaltyPointsUsed: parseInt(form.loyaltyPointsUsed, 10) || 0,
+        affiliateCode: affiliateCode || null,
+        utmSource: searchParams.get("utm_source") || null,
+        utmCampaign: searchParams.get("utm_campaign") || null,
+        guestOtpToken: guestOtpToken || null,
+        fulfillmentType,
+        deliverySlot: deliverySlot || null,
+        items: items.map(i => ({
+          productId: i.itemType === "combo" ? undefined : i.productId,
+          comboId: i.comboId || (i.itemType === "combo" ? i.productId : undefined),
+          variantId: i.variantId,
+          quantity: i.quantity,
+        })),
       }),
     });
     const d = await r.json();
     if (r.ok) {
+      if (d.requiresPayment && d.paymentMethod === "sslcommerz") {
+        const pay = await fetch("/api/payment/sslcommerz", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            slug,
+            orderNumber: d.orderNumber,
+            amount: d.amount,
+            customerName: form.name,
+            customerPhone: form.phone,
+            customerAddress: form.address,
+          }),
+        });
+        const payData = await pay.json();
+        if (pay.ok && payData.gatewayUrl) {
+          clearCart();
+          window.location.href = payData.gatewayUrl;
+          return;
+        }
+        setError(payData.error || "পেমেন্ট শুরু করা যায়নি।");
+        setLoading(false);
+        return;
+      }
+      if (shopInfo?.id) trackFunnelEvent(shopInfo.id, "purchase");
       clearCart();
       router.push(`/store/${slug}/order-success?order=${d.orderNumber}`);
     } else {
@@ -139,11 +305,71 @@ export default function CheckoutPage() {
                   <input required value={form.phone} onChange={e => updateField("phone", e.target.value)} className={inputCls} style={inputStyle} placeholder="01XXXXXXXXX" />
                 </div>
               </div>
+              {!isLoggedIn && shopInfo?.storeCheckoutOtpEnabled !== false && (
+                <div className="mt-4 p-3 rounded-xl border" style={{ borderColor: border }}>
+                  <p className="text-xs font-semibold mb-2" style={{ color: text }}>গেস্ট চেকআউট — OTP যাচাই</p>
+                  {guestOtpToken ? (
+                    <p className="text-xs text-green-600 font-semibold">✓ ফোন যাচাই হয়েছে</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2 items-end">
+                      {!otpSent ? (
+                        <button type="button" onClick={sendOtp} disabled={otpLoading}
+                          className="px-3 py-2 rounded-lg text-xs font-bold text-white" style={{ backgroundColor: primary }}>
+                          {otpLoading ? "..." : "OTP পাঠান"}
+                        </button>
+                      ) : (
+                        <>
+                          <input value={otpCode} onChange={e => setOtpCode(e.target.value)}
+                            className={inputCls + " flex-1 min-w-[100px]"} style={inputStyle} placeholder="৬ ডিজিট OTP" />
+                          <button type="button" onClick={verifyOtp} disabled={otpLoading}
+                            className="px-3 py-2 rounded-lg text-xs font-bold text-white" style={{ backgroundColor: primary }}>
+                            যাচাই
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
+            {/* Fulfillment type */}
+            {shopInfo?.storePickupEnabled && (
+              <div className="p-4 rounded-2xl border" style={{ borderColor: border, backgroundColor: surface }}>
+                <h2 className="font-semibold mb-3 text-sm" style={{ color: text }}>ডেলিভারি পদ্ধতি</h2>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setFulfillmentType("delivery")}
+                    className="flex-1 py-2 rounded-xl text-xs font-bold border"
+                    style={{ borderColor: fulfillmentType === "delivery" ? primary : border, color: fulfillmentType === "delivery" ? primary : text }}>
+                    🚚 হোম ডেলিভারি
+                  </button>
+                  <button type="button" onClick={() => setFulfillmentType("pickup")}
+                    className="flex-1 py-2 rounded-xl text-xs font-bold border"
+                    style={{ borderColor: fulfillmentType === "pickup" ? primary : border, color: fulfillmentType === "pickup" ? primary : text }}>
+                    🏪 স্টোর থেকে নিন
+                  </button>
+                </div>
+                {fulfillmentType === "pickup" && shopInfo.storePickupAddress && (
+                  <p className="text-xs mt-2" style={{ color: muted }}>ঠিকানা: {shopInfo.storePickupAddress}</p>
+                )}
+              </div>
+            )}
+
             {/* Delivery address */}
+            {fulfillmentType === "delivery" && (
             <div className="p-4 rounded-2xl border" style={{ borderColor: border, backgroundColor: surface }}>
               <h2 className="font-semibold mb-4 text-sm" style={{ color: text }}>ডেলিভারি ঠিকানা</h2>
+              {savedAddresses.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {savedAddresses.map(addr => (
+                    <button key={addr.id} type="button" onClick={() => applyAddress(addr)}
+                      className="px-3 py-1.5 rounded-full text-xs font-semibold border"
+                      style={{ borderColor: form.address === addr.address ? primary : border, color: form.address === addr.address ? primary : text }}>
+                      {addr.label || "ঠিকানা"} {addr.isDefault ? "★" : ""}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
@@ -178,6 +404,19 @@ export default function CheckoutPage() {
                 )}
               </div>
             </div>
+            )}
+
+            {(shopInfo?.deliverySlots?.length ?? 0) > 0 && fulfillmentType === "delivery" && (
+              <div className="p-4 rounded-2xl border" style={{ borderColor: border, backgroundColor: surface }}>
+                <h2 className="font-semibold mb-3 text-sm" style={{ color: text }}>ডেলিভারি সময়</h2>
+                <select value={deliverySlot} onChange={e => setDeliverySlot(e.target.value)} className={inputCls} style={inputStyle}>
+                  <option value="">সময় বেছে নিন (ঐচ্ছিক)</option>
+                  {shopInfo?.deliverySlots?.map(slot => (
+                    <option key={slot.value} value={slot.value}>{slot.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Payment */}
             <div className="p-4 rounded-2xl border" style={{ borderColor: border, backgroundColor: surface }}>
@@ -213,11 +452,40 @@ export default function CheckoutPage() {
                     </div>
                   </label>
                 )}
+                {shopInfo?.storeSslcommerzEnabled && (
+                  <label className="flex items-center gap-3 p-3 rounded-xl border cursor-pointer" style={{ borderColor: form.payment === "sslcommerz" ? primary : border, backgroundColor: form.payment === "sslcommerz" ? primary + "10" : "transparent" }}>
+                    <input type="radio" name="payment" value="sslcommerz" checked={form.payment === "sslcommerz"} onChange={e => updateField("payment", e.target.value)} className="hidden" />
+                    <span>💳</span>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold" style={{ color: text }}>Card / SSLCommerz</p>
+                      <p className="text-xs" style={{ color: muted }}>Visa, Mastercard, bKash via gateway</p>
+                    </div>
+                  </label>
+                )}
                 {(form.payment === "bkash" || form.payment === "nagad") && (
                   <div className="mt-2">
                     <label className={labelCls} style={labelStyle}>Transaction ID *</label>
                     <input required value={form.transactionId} onChange={e => updateField("transactionId", e.target.value)}
                       className={inputCls} style={inputStyle} placeholder="Transaction ID দিন" />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl border" style={{ borderColor: border, backgroundColor: surface }}>
+              <h2 className="font-semibold mb-4 text-sm" style={{ color: text }}>Gift Card & Loyalty</h2>
+              <div className="space-y-3">
+                <div>
+                  <label className={labelCls} style={labelStyle}>Gift Card Code</label>
+                  <input value={form.giftCardCode} onChange={e => updateField("giftCardCode", e.target.value.toUpperCase())}
+                    className={inputCls} style={inputStyle} placeholder="GC-XXXXXX" />
+                </div>
+                {shopInfo?.storeLoyaltyEnabled && loyaltyPoints > 0 && (
+                  <div>
+                    <label className={labelCls} style={labelStyle}>Use Loyalty Points (available: {loyaltyPoints})</label>
+                    <input type="number" min={0} max={loyaltyPoints} value={form.loyaltyPointsUsed}
+                      onChange={e => updateField("loyaltyPointsUsed", e.target.value)}
+                      className={inputCls} style={inputStyle} />
                   </div>
                 )}
               </div>

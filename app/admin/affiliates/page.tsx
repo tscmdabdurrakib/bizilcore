@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Users, TrendingUp, DollarSign, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw, Edit2, Check } from "lucide-react";
+import AdminCard from "../components/AdminCard";
+import AdminPillTabs from "../components/AdminPillTabs";
 
 const PLAN_COLOR: Record<string, { bg: string; text: string }> = {
   free:     { bg: "#F0F0F0", text: "#666" },
@@ -123,21 +125,19 @@ export default function AdminAffiliatesPage() {
       )}
 
       {/* Filter */}
-      <div className="flex gap-2">
-        {["all", "pending", "approved", "rejected"].map(s => (
-          <button key={s} onClick={() => setFilterStatus(s)}
-            className="px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
-            style={{
-              backgroundColor: filterStatus === s ? "#1A1A18" : "#F0F0EE",
-              color: filterStatus === s ? "#fff" : "#555",
-            }}>
-            {s === "all" ? "সব" : s === "pending" ? "Pending" : s === "approved" ? "Approved" : "Rejected"}
-          </button>
-        ))}
-      </div>
+      <AdminPillTabs
+        tabs={[
+          { key: "all", label: "সব" },
+          { key: "pending", label: "Pending" },
+          { key: "approved", label: "Approved" },
+          { key: "rejected", label: "Rejected" },
+        ]}
+        active={filterStatus}
+        onChange={setFilterStatus}
+      />
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+      <AdminCard hover={false} className="!p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -260,7 +260,7 @@ export default function AdminAffiliatesPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </AdminCard>
     </div>
   );
 }

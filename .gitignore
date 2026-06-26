@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+pass
 
 # debug
 npm-debug.log*
@@ -48,3 +49,8 @@ next-env.d.ts
 
 /app/generated/prisma
 backups/
+
+# PWA generated service worker files
+public/sw.js
+public/workbox-*.js
+public/swe-worker-*.js

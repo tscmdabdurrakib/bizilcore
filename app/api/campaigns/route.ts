@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendWhatsAppMessage, formatPhone, decryptToken } from "@/lib/whatsapp";
-import { sendSMS, decryptApiKey } from "@/lib/sms";
+import { sendPlatformSMS } from "@/lib/sms/send";
+import { getGlobalSmsSettings } from "@/lib/sms/credits";
 import { computeSegmentRecipients, type SegmentKey } from "@/lib/segments";
 
 export const dynamic = "force-dynamic";
@@ -44,10 +45,11 @@ export async function POST(req: NextRequest) {
   if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
 
   const body = await req.json();
-  const { segment, channel, message } = body as {
+  const { segment, channel, message, smsType } = body as {
     segment: string;
     channel: string;
     message: string;
+    smsType?: string;
   };
 
   if (!segment || !VALID_SEGMENTS.includes(segment as SegmentKey)) {
@@ -106,45 +108,23 @@ export async function POST(req: NextRequest) {
       channelError = "WhatsApp সংযুক্ত নেই — বার্তা পাঠানো হয়নি";
     }
   } else if (channel === "sms") {
-    const smsSettings = await prisma.smsSettings.findUnique({
-      where: { userId: session.user.id },
-    });
-
-    if (smsSettings?.isConnected && smsSettings.apiKey) {
-      const apiKey = decryptApiKey(smsSettings.apiKey);
-
-      for (const c of recipients) {
-        if (!c.phone) continue;
-        const phone = c.phone.replace(/[^0-9]/g, "");
-        if (!phone) continue;
-        try {
-          const success = await sendSMS(apiKey, phone, message);
-          if (success) sentCount++;
-          await prisma.messageLog.create({
-            data: {
-              userId: session.user.id,
-              customerId: c.id,
-              toPhone: phone,
-              message,
-              status: success ? "sent" : "failed",
-              errorMessage: success ? null : "SMS send failed",
-            },
-          });
-        } catch {
-          await prisma.messageLog.create({
-            data: {
-              userId: session.user.id,
-              customerId: c.id,
-              toPhone: phone,
-              message,
-              status: "failed",
-              errorMessage: "Send error",
-            },
-          });
-        }
+    const globalSettings = await getGlobalSmsSettings();
+    const resolvedSmsType =
+      globalSettings.maskingEnabled && smsType === "masking" ? "masking" : "non_masking";
+    for (const c of recipients) {
+      if (!c.phone) continue;
+      try {
+        const result = await sendPlatformSMS(session.user.id, c.phone, message, {
+          customerId: c.id,
+          smsType: resolvedSmsType,
+        });
+        if (result.success) sentCount++;
+      } catch {
+        /* logged inside sendPlatformSMS */
       }
-    } else {
-      channelError = "SMS সংযুক্ত নেই — বার্তা পাঠানো হয়নি";
+    }
+    if (sentCount === 0 && recipients.length > 0) {
+      channelError = "SMS পাঠানো যায়নি — ক্রেডিট চেক করুন";
     }
   }
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Loader2, Save, Settings, Info, Shield } from "lucide-react";
+import HappyHourSettings from "@/components/restaurant/HappyHourSettings";
 
 interface ShopSettings {
   restOrderPrefix: string;
@@ -184,6 +185,8 @@ export default function RestaurantSettingsPage() {
             className={inp("max-w-[100px]")} style={inpStyle} />
         </FieldRow>
       </SettingSection>
+
+      <HappyHourSettings />
 
       <SettingSection title="ডিসকাউন্ট নিয়ন্ত্রণ">
         <div className="flex items-start gap-3 p-3 rounded-xl mb-3" style={{ backgroundColor: "#FEF3C7", borderLeft: "3px solid #D97706" }}>

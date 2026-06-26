@@ -80,7 +80,7 @@ export default function PrintReports() {
             <XAxis dataKey="day" tick={{ fontSize: 10 }} interval={4} />
             <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `৳${(v / 1000).toFixed(0)}k`} />
             <Tooltip
-              formatter={(v: number) => [formatBDT(v), "আয়"]}
+              formatter={((v: number) => [formatBDT(v), "আয়"]) as never}
               contentStyle={{ borderRadius: 12, border: "1px solid #E8E6DF", fontSize: 12 }}
             />
             <Bar dataKey="revenue" fill={PRINT_COLOR} radius={[4, 4, 0, 0]} />

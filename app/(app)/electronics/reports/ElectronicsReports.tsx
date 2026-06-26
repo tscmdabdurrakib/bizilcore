@@ -109,7 +109,7 @@ export default function ElectronicsReports() {
             <BarChart data={chartData} margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
               <XAxis dataKey="label" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `৳${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: number) => `৳${v.toLocaleString("bn-BD")}`} />
+              <Tooltip formatter={((v: number) => `৳${v.toLocaleString("bn-BD")}`) as never} />
               <Bar dataKey="revenue" name="আয়" fill={PRIMARY} radius={[4, 4, 0, 0]} />
               <Bar dataKey="partsTotal" name="পার্টস খরচ" fill="#EF4444" radius={[4, 4, 0, 0]} />
               <Bar dataKey="profit" name="লাভ" fill="#10B981" radius={[4, 4, 0, 0]} />
@@ -132,7 +132,7 @@ export default function ElectronicsReports() {
                   cx="50%"
                   cy="50%"
                   outerRadius={75}
-                  label={({ type, percent }) => `${DEVICE_TYPE_LABELS[type] || type} ${(percent * 100).toFixed(0)}%`}
+                  label={({ type, percent }: any) => `${DEVICE_TYPE_LABELS[type] || type} ${(percent * 100).toFixed(0)}%`}
                   labelLine={false}
                 >
                   {data.deviceTypeBreakdown.map((_, i) => (

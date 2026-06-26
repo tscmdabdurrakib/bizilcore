@@ -4,6 +4,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { Bell, Package, MessageSquare, Check, Trash2, X, ShoppingBag, Settings } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import FeedbackWidget from "@/components/FeedbackWidget";
+import SmsCreditsHeaderBadge from "@/components/sms/SmsCreditsHeaderBadge";
+import ShopSwitcher from "@/components/ShopSwitcher";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard":          "ড্যাশবোর্ড",
@@ -13,11 +16,12 @@ const PAGE_TITLES: Record<string, string> = {
   "/suppliers":          "Supplier",
   "/hisab/purchases":    "মাল কেনা (Purchase)",
   "/hisab/due-ledger":   "বাকি খাতা",
-  "/hisab":              "হিসাব",
+  "/accounting":              "হিসাব",
   "/reports":            "রিপোর্ট",
   "/communications":     "যোগাযোগ কেন্দ্র",
   "/activity-log":       "Activity Log",
   "/settings":           "সেটিংস",
+  "/shops":              "শাখা ব্যবস্থাপনা",
   "/notifications":      "নোটিফিকেশন",
   "/admin":              "অ্যাডমিন প্যানেল",
   "/tasks":              "টাস্ক ম্যানেজমেন্ট",
@@ -27,6 +31,12 @@ interface LowStockProduct { id: string; name: string; stockQty: number; lowStock
 interface SuggestedOrderItem { id: string; commenterName: string; commentText: string; }
 interface NotifItem { id: string; type: string; title: string; body: string | null; link: string | null; read: boolean; createdAt: string; }
 
+interface AppTopbarProps {
+  shopId: string;
+  shopName: string;
+  logoUrl?: string | null;
+}
+
 function timeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
   if (diff < 60) return "এইমাত্র";
@@ -35,7 +45,7 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(diff / 86400)} দিন আগে`;
 }
 
-export default function AppTopbar() {
+export default function AppTopbar({ shopId, shopName, logoUrl }: AppTopbarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -49,24 +59,10 @@ export default function AppTopbar() {
   const title = Object.entries(PAGE_TITLES).find(([k]) => pathname.startsWith(k))?.[1] ?? "BizilCore";
 
   useEffect(() => {
+    // Only the unread badge needs to load eagerly with the page.
     fetch("/api/notifications/count").then(r => r.json()).then(d => {
       setUnread(d.unread ?? 0);
     }).catch(() => {});
-
-    const sessionKey = "bizilcore_session_checks";
-    const last = localStorage.getItem(sessionKey);
-    const now = Date.now();
-    if (!last || now - parseInt(last) > 6 * 60 * 60 * 1000) {
-      localStorage.setItem(sessionKey, String(now));
-      fetch("/api/notifications/plan-expiry", { method: "POST" }).catch(() => {});
-      fetch("/api/cron/sms-drip", { method: "POST" }).catch(() => {});
-      const week = Math.floor(now / (7 * 24 * 60 * 60 * 1000));
-      const lastTipWeek = localStorage.getItem("bizilcore_last_tip_week");
-      if (lastTipWeek !== String(week)) {
-        localStorage.setItem("bizilcore_last_tip_week", String(week));
-        fetch("/api/notifications/weekly-tip", { method: "POST" }).catch(() => {});
-      }
-    }
 
     const pollReminders = () => {
       fetch("/api/tasks/reminders", { method: "POST" })
@@ -80,7 +76,13 @@ export default function AppTopbar() {
         })
         .catch(() => {});
     };
-    pollReminders();
+
+    const ric = (cb: () => void) =>
+      typeof (window as unknown as { requestIdleCallback?: unknown }).requestIdleCallback === "function"
+        ? (window as unknown as { requestIdleCallback: (cb: () => void) => number }).requestIdleCallback(cb)
+        : window.setTimeout(cb, 2000);
+    ric(pollReminders);
+
     const interval = setInterval(pollReminders, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
@@ -134,18 +136,22 @@ export default function AppTopbar() {
 
   return (
     <header
-      className="flex items-center justify-between px-5 h-14 border-b flex-shrink-0 sticky top-0 z-30"
+      className="flex items-center justify-between px-5 lg:px-8 h-14 flex-shrink-0 sticky top-0 z-30 backdrop-blur-md"
       style={{
-        backgroundColor: "var(--shell-bg)",
-        borderColor: "var(--shell-border)",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+        backgroundColor: "color-mix(in srgb, var(--shell-bg) 88%, transparent)",
+        borderBottom: "1px solid var(--shell-border)",
+        boxShadow: "var(--shadow-card)",
       }}
     >
-      <h1 className="font-bold text-[15px] tracking-tight" style={{ color: "var(--shell-text)" }}>
-        {title}
-      </h1>
+      <div className="flex items-center gap-3 min-w-0">
+        <ShopSwitcher currentShopId={shopId} currentShopName={shopName} logoUrl={logoUrl} />
+        <h1 className="font-bold text-base tracking-tight hidden md:block truncate font-display" style={{ color: "var(--shell-text)" }}>
+          {title}
+        </h1>
+      </div>
 
       <div className="flex items-center gap-2">
+        <SmsCreditsHeaderBadge />
         {/* Notification Bell */}
         <div ref={ref} className="relative">
           <button
@@ -164,20 +170,20 @@ export default function AppTopbar() {
 
           {open && (
             <div
-              className="absolute right-0 top-full mt-2 rounded-2xl border shadow-2xl overflow-hidden z-50"
-              style={{ width: 360, backgroundColor: "var(--c-surface)", borderColor: "var(--c-border)" }}
+              className="absolute right-0 top-full mt-2 rounded-2xl overflow-hidden z-50 card-premium"
+              style={{ width: 360, boxShadow: "var(--shadow-elevated)" }}
             >
               {/* Panel Header */}
               <div className="flex items-center justify-between px-5 py-3.5 border-b"
                 style={{ borderColor: "var(--c-border)", background: "linear-gradient(135deg, var(--c-bg), var(--c-surface))" }}>
                 <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #0F6E56, #0A5442)" }}>
+                  <div className="w-7 h-7 rounded-xl flex items-center justify-center" style={{ backgroundColor: "var(--c-primary)" }}>
                     <Bell size={13} color="#fff" />
                   </div>
                   <div>
                     <p className="text-sm font-bold" style={{ color: "var(--c-text)" }}>নোটিফিকেশন</p>
                     {unread > 0 && (
-                      <p className="text-[10px] font-semibold" style={{ color: "#EF4444" }}>{unread}টি অপঠিত</p>
+                      <p className="text-[10px] font-semibold" style={{ color: "var(--bg-danger-text)" }}>{unread}টি অপঠিত</p>
                     )}
                   </div>
                 </div>
@@ -185,18 +191,24 @@ export default function AppTopbar() {
                   {unread > 0 && (
                     <button onClick={markAllRead}
                       className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all hover:opacity-80"
-                      style={{ backgroundColor: "#E8F5F0", color: "#0F6E56" }}>
+                      style={{ backgroundColor: "var(--c-primary-light)", color: "var(--c-primary-text)" }}>
                       <Check size={10} /> সব পড়া
                     </button>
                   )}
                   <button onClick={clearRead}
-                    className="p-1.5 rounded-xl transition-colors hover:bg-gray-100"
+                    className="p-1.5 rounded-xl transition-colors"
+                    style={{ color: "var(--c-text-muted)" }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = "var(--c-bg)"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = "transparent"; }}
                     title="পড়া notification মুছুন">
-                    <Trash2 size={13} style={{ color: "var(--c-text-muted)" }} />
+                    <Trash2 size={13} />
                   </button>
                   <button onClick={() => setOpen(false)}
-                    className="p-1.5 rounded-xl transition-colors hover:bg-gray-100">
-                    <X size={13} style={{ color: "var(--c-text-muted)" }} />
+                    className="p-1.5 rounded-xl transition-colors"
+                    style={{ color: "var(--c-text-muted)" }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = "var(--c-bg)"; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = "transparent"; }}>
+                    <X size={13} />
                   </button>
                 </div>
               </div>
@@ -217,8 +229,8 @@ export default function AppTopbar() {
                 ) : isEmpty ? (
                   <div className="py-14 text-center px-6">
                     <div className="w-16 h-16 rounded-3xl mx-auto mb-4 flex items-center justify-center"
-                      style={{ background: "linear-gradient(135deg, #E8F5F0, #C8EDE3)" }}>
-                      <Bell size={26} style={{ color: "#0F6E56" }} />
+                      style={{ backgroundColor: "var(--c-primary-light)" }}>
+                      <Bell size={26} style={{ color: "var(--c-primary)" }} />
                     </div>
                     <p className="text-sm font-bold mb-1" style={{ color: "var(--c-text)" }}>সব ঠিকঠাক!</p>
                     <p className="text-xs" style={{ color: "var(--c-text-muted)" }}>কোনো নতুন নোটিফিকেশন নেই।</p>
@@ -229,23 +241,23 @@ export default function AppTopbar() {
                     {lowStock.length > 0 && (
                       <>
                         <div className="px-4 pt-3 pb-1">
-                          <p className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: "#EF4444" }}>⚠ কম স্টক</p>
+                          <p className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: "var(--bg-danger-text)" }}>⚠ কম স্টক</p>
                         </div>
                         {lowStock.map(p => (
                           <button key={p.id}
                             onClick={() => { router.push(`/inventory/${p.id}/edit`); setOpen(false); }}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-left transition-all hover:brightness-95"
-                            style={{ backgroundColor: "#FFF5F5" }}>
+                            className="w-full flex items-center gap-3 px-4 py-3 text-left transition-all hover:opacity-90"
+                            style={{ backgroundColor: "var(--bg-danger-soft)" }}>
                             <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm"
-                              style={{ background: "linear-gradient(135deg, #FEE2E2, #FECACA)" }}>
-                              <Package size={16} style={{ color: "#EF4444" }} />
+                              style={{ backgroundColor: "var(--icon-red-bg)" }}>
+                              <Package size={16} style={{ color: "var(--icon-red-text)" }} />
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-bold truncate" style={{ color: "var(--c-text)" }}>কম স্টক: {p.name}</p>
-                              <p className="text-[10px] font-medium mt-0.5" style={{ color: "#EF4444" }}>মাত্র {p.stockQty} টি বাকি আছে</p>
+                              <p className="text-[10px] font-medium mt-0.5" style={{ color: "var(--bg-danger-text)" }}>মাত্র {p.stockQty} টি বাকি আছে</p>
                             </div>
                             <span className="text-[10px] font-bold px-2 py-1 rounded-xl flex-shrink-0"
-                              style={{ backgroundColor: "#FEE2E2", color: "#EF4444" }}>{p.stockQty}</span>
+                              style={{ backgroundColor: "var(--icon-red-bg)", color: "var(--icon-red-text)" }}>{p.stockQty}</span>
                           </button>
                         ))}
                       </>
@@ -255,23 +267,23 @@ export default function AppTopbar() {
                     {suggested.length > 0 && (
                       <>
                         <div className="px-4 pt-3 pb-1">
-                          <p className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: "#1877F2" }}>💬 সম্ভাব্য অর্ডার</p>
+                          <p className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: "var(--bg-fb-text)" }}>💬 সম্ভাব্য অর্ডার</p>
                         </div>
                         {suggested.map(s => (
                           <button key={s.id}
                             onClick={() => { router.push(`/orders/new?suggestId=${s.id}&customerName=${encodeURIComponent(s.commenterName)}`); setOpen(false); }}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-left transition-all hover:brightness-95"
-                            style={{ backgroundColor: "#F0F6FF" }}>
+                            className="w-full flex items-center gap-3 px-4 py-3 text-left transition-all hover:opacity-90"
+                            style={{ backgroundColor: "var(--bg-fb-soft)" }}>
                             <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm"
-                              style={{ background: "linear-gradient(135deg, #DBEAFE, #BFDBFE)" }}>
-                              <MessageSquare size={16} style={{ color: "#1877F2" }} />
+                              style={{ backgroundColor: "var(--icon-blue-bg)" }}>
+                              <MessageSquare size={16} style={{ color: "var(--bg-fb-text)" }} />
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-bold" style={{ color: "var(--c-text)" }}>{s.commenterName}</p>
                               <p className="text-[10px] truncate mt-0.5" style={{ color: "var(--c-text-muted)" }}>{s.commentText}</p>
                             </div>
                             <span className="text-[10px] font-bold px-2 py-1 rounded-xl flex-shrink-0"
-                              style={{ backgroundColor: "#DBEAFE", color: "#1877F2" }}>অর্ডার</span>
+                              style={{ backgroundColor: "var(--icon-blue-bg)", color: "var(--bg-fb-text)" }}>অর্ডার</span>
                           </button>
                         ))}
                       </>
@@ -291,15 +303,15 @@ export default function AppTopbar() {
                             }}
                             className="w-full flex items-center gap-3 px-4 py-3 text-left transition-all"
                             style={{
-                              backgroundColor: n.read ? "transparent" : "#F0FDF7",
-                              borderLeft: n.read ? "none" : "3px solid #0F6E56",
+                              backgroundColor: n.read ? "transparent" : "var(--row-selected-bg)",
+                              borderLeft: n.read ? "none" : "3px solid var(--c-primary)",
                             }}
                             onMouseEnter={e => { if (n.read) (e.currentTarget as HTMLElement).style.backgroundColor = "var(--c-bg)"; }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = n.read ? "transparent" : "#F0FDF7"; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = n.read ? "transparent" : "var(--row-selected-bg)"; }}
                           >
                             <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm"
-                              style={{ background: n.read ? "linear-gradient(135deg, var(--c-bg), var(--c-border))" : "linear-gradient(135deg, #E8F5F0, #C8EDE3)" }}>
-                              <Bell size={16} style={{ color: n.read ? "var(--c-text-muted)" : "#0F6E56" }} />
+                              style={{ backgroundColor: n.read ? "var(--c-bg)" : "var(--c-primary-light)" }}>
+                              <Bell size={16} style={{ color: n.read ? "var(--c-text-muted)" : "var(--c-primary)" }} />
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-bold" style={{ color: n.read ? "var(--c-text-sub)" : "var(--c-text)" }}>{n.title}</p>
@@ -307,7 +319,7 @@ export default function AppTopbar() {
                               <p className="text-[10px] mt-0.5" style={{ color: "var(--c-text-muted)" }}>{timeAgo(n.createdAt)}</p>
                             </div>
                             {!n.read && (
-                              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: "#0F6E56", boxShadow: "0 0 0 3px #C8EDE3" }} />
+                              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: "var(--c-primary)", boxShadow: "0 0 0 3px var(--c-primary-light)" }} />
                             )}
                           </button>
                         ))}
@@ -342,11 +354,15 @@ export default function AppTopbar() {
           নতুন অর্ডার
         </button>
 
+        <ThemeToggle />
+
         <button
           onClick={() => router.push("/settings")}
           title="সেটিংস"
-          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all hover:bg-gray-100 flex-shrink-0"
-          style={{ color: "var(--shell-text-muted)", border: "1px solid var(--shell-border)" }}
+          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all flex-shrink-0 hover:opacity-80"
+          style={{ color: "var(--shell-text-muted)", border: "1px solid var(--shell-border)", backgroundColor: "transparent" }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = "var(--c-bg)"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = "transparent"; }}
         >
           <Settings size={16} />
         </button>

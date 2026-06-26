@@ -254,7 +254,7 @@ export default function MedicinesPage() {
               <div className="flex gap-4 pt-1">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <div onClick={() => setForm(f => ({ ...f, requiresRx: !f.requiresRx }))}
-                    className="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
+                    className="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors cursor-pointer"
                     style={{ borderColor: form.requiresRx ? S.primary : S.border, backgroundColor: form.requiresRx ? S.primary : "transparent" }}>
                     {form.requiresRx && <Check size={11} color="#fff" />}
                   </div>
@@ -262,7 +262,7 @@ export default function MedicinesPage() {
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <div onClick={() => setForm(f => ({ ...f, isControlled: !f.isControlled }))}
-                    className="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
+                    className="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors cursor-pointer"
                     style={{ borderColor: form.isControlled ? "#EF4444" : S.border, backgroundColor: form.isControlled ? "#EF4444" : "transparent" }}>
                     {form.isControlled && <Check size={11} color="#fff" />}
                   </div>

@@ -39,6 +39,7 @@ type Vehicle = {
   model: string;
   seats: number;
   acAvailable: boolean;
+  fuelType?: string;
   dailyRate: number;
   halfDayRate?: number | null;
   hourlyRate?: number | null;

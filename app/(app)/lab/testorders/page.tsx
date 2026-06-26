@@ -7,7 +7,7 @@ import { formatBDT } from "@/lib/utils";
 import DatePicker from "@/components/ui/DatePicker";
 
 interface Patient { id: string; name: string; phone: string | null; address: string | null; }
-interface LabTest { id: string; name: string; banglaName: string | null; shortCode: string; category: string; price: number; homeCollectionPrice: number | null; sampleType: string | null; }
+interface LabTest { id: string; name: string; banglaName: string | null; shortCode: string; category: string; price: number; homeCollectionPrice: number | null; sampleType: string | null; isActive?: boolean; }
 interface TestPackage { id: string; name: string; price: number; tests: { id: string; test: LabTest }[]; }
 interface SelectedTest { testId: string; name: string; shortCode: string; price: number; }
 interface TestOrder {

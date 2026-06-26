@@ -42,6 +42,18 @@ export default function LoginPage() {
     }
 
     showToast("success", "সফলভাবে লগইন হয়েছে ✓");
+    try {
+      await fetch("/api/activity/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action_type: "login",
+          action_label: "লগইন করা হয়েছে",
+        }),
+      });
+    } catch {
+      // silent
+    }
     const res = await fetch("/api/auth/session");
     const session = await res.json();
     if (session?.user?.onboarded) {

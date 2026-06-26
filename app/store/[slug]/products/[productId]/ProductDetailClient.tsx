@@ -1,15 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   ShoppingCart, Star, Minus, Plus, Zap,
-  ImageIcon, Heart, Share2, MessageCircle, CheckCircle, ChevronRight
+  ImageIcon, Heart, Share2, MessageCircle, CheckCircle, ChevronRight, Bell
 } from "lucide-react";
 import { useCart } from "@/lib/store/cart";
 import { useWishlist } from "@/lib/store/wishlist";
+import { useStoreCustomer } from "@/lib/store/store-customer";
 import { useRouter } from "next/navigation";
 import { DynamicProductCard } from "@/components/store/DynamicProductCard";
+import { trackRecentlyViewed } from "@/lib/store/recently-viewed";
+import { trackFunnelEvent } from "@/lib/store/funnel";
+import { trackStoreAddToCart } from "@/components/store/StorePixelTracker";
+import { RecentlyViewedSection } from "@/components/store/RecentlyViewedSection";
+import { WhatsAppShareButton } from "@/components/store/WhatsAppShareButton";
+import { SocialProofBadge } from "@/components/store/SocialProofBadge";
 
 /* ── Types ── */
 interface Variant { id: string; name: string; size: string | null; color: string | null; price: number | null; stockQty: number; }
@@ -23,7 +30,7 @@ interface Product {
 }
 interface Props {
   product: Product;
-  shop: { id: string; name: string; storeSlug: string; storeShowStock: boolean; storeShowReviews: boolean; storeSocialWA: string | null; phone: string | null; };
+  shop: { id: string; name: string; storeSlug: string; storeShowStock: boolean; storeShowReviews: boolean; storeSocialWA: string | null; phone: string | null; storeSocialProofEnabled?: boolean; };
   relatedProducts: RelatedProduct[];
 }
 
@@ -59,6 +66,7 @@ function StarPicker({ value, onChange }: { value: number; onChange: (v: number) 
 export function ProductDetailClient({ product, shop, relatedProducts }: Props) {
   const addItem = useCart((s) => s.addItem);
   const { toggle, isWishlisted } = useWishlist();
+  const { customer } = useStoreCustomer();
   const router = useRouter();
   const slug = shop.storeSlug;
   const wishlisted = isWishlisted(product.id);
@@ -70,6 +78,9 @@ export function ProductDetailClient({ product, shop, relatedProducts }: Props) {
   const [mainImage, setMainImage] = useState(product.imageUrl);
   const [addedToCart, setAddedToCart] = useState(false);
   const [activeTab, setActiveTab] = useState<"details"|"reviews"|"faqs">("details");
+  const [productQuestions, setProductQuestions] = useState<Array<{ id: string; askerName: string; question: string; answer: string | null }>>([]);
+  const [qaForm, setQaForm] = useState({ name: "", phone: "", question: "" });
+  const [qaSubmitting, setQaSubmitting] = useState(false);
 
   /* review form */
   const [reviewName, setReviewName] = useState("");
@@ -78,6 +89,38 @@ export function ProductDetailClient({ product, shop, relatedProducts }: Props) {
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewSuccess, setReviewSuccess] = useState("");
   const [reviewError, setReviewError] = useState("");
+  const [notifyEmail, setNotifyEmail] = useState("");
+  const [notifySent, setNotifySent] = useState(false);
+
+  useEffect(() => {
+    trackRecentlyViewed(slug, {
+      id: product.id,
+      name: product.name,
+      sellPrice: product.sellPrice,
+      imageUrl: product.imageUrl,
+    });
+    trackFunnelEvent(shop.id, "product_view", product.id);
+    fetch(`/api/store/product-questions?slug=${slug}&productId=${product.id}`)
+      .then(r => r.json())
+      .then(d => setProductQuestions(d.questions ?? []))
+      .catch(() => {});
+  }, [slug, shop.id, product.id, product.name, product.sellPrice, product.imageUrl]);
+
+  async function submitQuestion(e: React.FormEvent) {
+    e.preventDefault();
+    if (!qaForm.name || !qaForm.question) return;
+    setQaSubmitting(true);
+    const r = await fetch("/api/store/product-questions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slug, productId: product.id, ...qaForm }),
+    });
+    setQaSubmitting(false);
+    if (r.ok) {
+      setQaForm({ name: "", phone: "", question: "" });
+      setReviewSuccess("প্রশ্ন পাঠানো হয়েছে! উত্তর পেলে এখানে দেখাবে।");
+    }
+  }
 
   const images: string[] = (() => {
     try {
@@ -107,16 +150,48 @@ export function ProductDetailClient({ product, shop, relatedProducts }: Props) {
 
   function handleAddToCart(): boolean {
     if (!canAdd) return false;
-    addItem({ productId: product.id, productName: product.name, productImage: product.imageUrl, variantId: selectedVariant?.id ?? null, variantName: selectedVariant?.name ?? null, unitPrice: effectivePrice, quantity: qty }, slug);
+    addItem({
+      itemType: "product",
+      productId: product.id,
+      productName: product.name,
+      productImage: product.imageUrl,
+      variantId: selectedVariant?.id ?? null,
+      variantName: selectedVariant?.name ?? null,
+      unitPrice: effectivePrice,
+      quantity: qty,
+    }, slug);
+    trackFunnelEvent(shop.id, "add_to_cart", product.id);
+    trackStoreAddToCart(product.id, effectivePrice * qty);
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 2000);
     return true;
+  }
+
+  async function handleNotifyMe() {
+    if (!notifyEmail.trim()) return;
+    await fetch("/api/store/stock-alert", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slug, productId: product.id, email: notifyEmail }),
+    });
+    setNotifySent(true);
   }
 
   function handleBuyNow() { if (handleAddToCart()) router.push(`/store/${slug}/checkout`); }
 
   function handleWishlist() {
     toggle({ productId: product.id, productName: product.name, productImage: product.imageUrl, sellPrice: product.sellPrice, slug });
+    if (customer) {
+      const method = wishlisted ? "DELETE" : "POST";
+      const url = wishlisted
+        ? `/api/store/wishlist?productId=${product.id}`
+        : "/api/store/wishlist";
+      fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: method === "POST" ? JSON.stringify({ productId: product.id, slug }) : undefined,
+      }).catch(() => {});
+    }
   }
 
   function handleShare() {
@@ -326,6 +401,19 @@ export function ProductDetailClient({ product, shop, relatedProducts }: Props) {
                   : "✓ স্টক আছে"
                 : "✗ স্টক শেষ"}
             </p>
+            {!inStock && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-2xl">
+                <p className="text-sm font-semibold mb-2 flex items-center gap-2"><Bell size={14} /> Notify when back in stock</p>
+                {notifySent ? (
+                  <p className="text-xs text-green-600">We&apos;ll notify you when restocked!</p>
+                ) : (
+                  <div className="flex gap-2">
+                    <input value={notifyEmail} onChange={e => setNotifyEmail(e.target.value)} placeholder="Your email" className="flex-1 border rounded-full px-3 py-2 text-sm" />
+                    <button onClick={handleNotifyMe} className="px-4 py-2 bg-black text-white text-xs rounded-full">Notify Me</button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -461,16 +549,29 @@ export function ProductDetailClient({ product, shop, relatedProducts }: Props) {
             {/* FAQs tab */}
             {activeTab === "faqs" && (
               <div className="max-w-2xl space-y-4">
-                {[
-                  { q: "এই পণ্যটি কত দিনে ডেলিভারি পাব?", a: "সাধারণত ঢাকার মধ্যে ১-২ দিন এবং ঢাকার বাইরে ৩-৫ দিনের মধ্যে ডেলিভারি দেওয়া হয়।" },
-                  { q: "পণ্যে সমস্যা হলে কি ফেরত দেওয়া যাবে?", a: "হ্যাঁ, পণ্য পাওয়ার ৭ দিনের মধ্যে ত্রুটিপূর্ণ হলে ফেরত বা বিনিময় করা যাবে।" },
-                  { q: "কোন পেমেন্ট পদ্ধতি গ্রহণ করা হয়?", a: "বিকাশ, নগদ, এবং ক্যাশ অন ডেলিভারি গ্রহণ করা হয়।" },
-                ].map((f, i) => (
-                  <details key={i} className="border border-gray-200 rounded-2xl">
-                    <summary className="px-5 py-4 cursor-pointer text-sm font-semibold text-black select-none">{f.q}</summary>
-                    <p className="px-5 pb-4 text-sm text-gray-600 leading-relaxed">{f.a}</p>
+                {productQuestions.length > 0 ? productQuestions.map(q => (
+                  <details key={q.id} className="border border-gray-200 rounded-2xl" open>
+                    <summary className="px-5 py-4 cursor-pointer text-sm font-semibold text-black select-none">
+                      {q.question} <span className="text-gray-400 font-normal">— {q.askerName}</span>
+                    </summary>
+                    <p className="px-5 pb-4 text-sm text-gray-600 leading-relaxed">{q.answer}</p>
                   </details>
-                ))}
+                )) : (
+                  <p className="text-sm text-gray-500">এখনো কোনো প্রশ্ন-উত্তর নেই। প্রথম প্রশ্ন করুন!</p>
+                )}
+                <form onSubmit={submitQuestion} className="border border-gray-200 rounded-2xl p-5 space-y-3 mt-6">
+                  <h4 className="font-semibold text-sm">প্রশ্ন করুন</h4>
+                  <input required placeholder="আপনার নাম" value={qaForm.name} onChange={e => setQaForm(f => ({ ...f, name: e.target.value }))}
+                    className="w-full border rounded-xl px-3 py-2 text-sm" />
+                  <input placeholder="ফোন (ঐচ্ছিক)" value={qaForm.phone} onChange={e => setQaForm(f => ({ ...f, phone: e.target.value }))}
+                    className="w-full border rounded-xl px-3 py-2 text-sm" />
+                  <textarea required placeholder="আপনার প্রশ্ন" value={qaForm.question} onChange={e => setQaForm(f => ({ ...f, question: e.target.value }))}
+                    rows={3} className="w-full border rounded-xl px-3 py-2 text-sm resize-none" />
+                  <button type="submit" disabled={qaSubmitting}
+                    className="px-4 py-2 rounded-xl bg-black text-white text-sm font-semibold disabled:opacity-60">
+                    {qaSubmitting ? "পাঠানো হচ্ছে..." : "প্রশ্ন পাঠান"}
+                  </button>
+                </form>
               </div>
             )}
           </div>
@@ -504,6 +605,14 @@ export function ProductDetailClient({ product, shop, relatedProducts }: Props) {
           </section>
         )}
 
+        <RecentlyViewedSection slug={slug} excludeId={product.id} />
+
+        <WhatsAppShareButton
+          productName={product.name}
+          whatsappNumber={shop.storeSocialWA || shop.phone}
+          slug={slug}
+          productId={product.id}
+        />
       </div>
     </div>
   );

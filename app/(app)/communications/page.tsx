@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Send, MessageCircle, Users, Phone, Search, CheckCircle2, RefreshCw, Clock, AlertCircle, ChevronLeft, ChevronRight, Keyboard } from "lucide-react";
 import PlanGate from "@/components/PlanGate";
 import Link from "next/link";
+import { PageShell, Tabs, StatCard, Card, Badge, Button, EmptyState } from "@/components/ui";
 
 interface Customer {
   id: string;
@@ -212,7 +213,17 @@ export default function CommunicationsPage() {
 
   return (
     <PlanGate feature="sms">
-    <div className="max-w-5xl mx-auto">
+    <PageShell
+      title="যোগাযোগ কেন্দ্র"
+      subtitle="কাস্টমারদের message পাঠান"
+      className="max-w-5xl"
+      stats={!loading ? (
+        <>
+          <StatCard label="কাস্টমার (ফোন আছে)" value={customers.filter(c => c.phone).length} icon={Users} accent="green" />
+          <StatCard label="WhatsApp API" value={waConnected ? "সংযুক্ত" : "সংযুক্ত নেই"} icon={MessageCircle} accent={waConnected ? "green" : "gold"} iconBg={waConnected ? "var(--icon-green-bg)" : "var(--icon-amber-bg)"} iconColor={waConnected ? "var(--icon-green-text)" : "var(--icon-amber-text)"} />
+        </>
+      ) : undefined}
+    >
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg"
           style={{ backgroundColor: toast.type === "success" ? "#1D9E75" : "#E24B4A" }}>
@@ -220,36 +231,23 @@ export default function CommunicationsPage() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-xl font-bold" style={{ color: S.text }}>যোগাযোগ কেন্দ্র</h1>
-          <p className="text-sm mt-0.5" style={{ color: S.muted }}>কাস্টমারদের message পাঠান</p>
-        </div>
-      </div>
-
       {/* Tab switcher */}
-      <div className="flex gap-2 mb-5">
-        <button
-          onClick={() => setActiveTab("whatsapp")}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-colors"
-          style={{ backgroundColor: activeTab === "whatsapp" ? "#25D366" : S.surface, color: activeTab === "whatsapp" ? "#fff" : S.secondary, borderColor: activeTab === "whatsapp" ? "#25D366" : S.border }}>
-          <MessageCircle size={14} /> WhatsApp API
-        </button>
-        <button
-          onClick={() => setActiveTab("bulk")}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-colors"
-          style={{ backgroundColor: activeTab === "bulk" ? S.primary : S.surface, color: activeTab === "bulk" ? "#fff" : S.secondary, borderColor: activeTab === "bulk" ? S.primary : S.border }}>
-          <Users size={14} /> Bulk WhatsApp (Manual)
-        </button>
-      </div>
+      <Tabs
+        tabs={[
+          { key: "whatsapp", label: "WhatsApp API", icon: MessageCircle },
+          { key: "bulk", label: "Bulk WhatsApp (Manual)", icon: Users },
+        ]}
+        active={activeTab}
+        onChange={(k) => setActiveTab(k as "whatsapp" | "bulk")}
+        className="mb-5"
+      />
 
       {/* ─── WHATSAPP API TAB ─── */}
       {activeTab === "whatsapp" && (
         <>
           {/* Not connected banner */}
           {waConnected === false && !loading && (
-            <div className="rounded-2xl px-5 py-4 mb-5 flex items-center justify-between" style={{ backgroundColor: "#FEF9C3", border: "1px solid #FDE047" }}>
+            <div className="rounded-2xl border px-5 py-4 mb-5 flex items-center justify-between card-premium" style={{ backgroundColor: "#FEF9C3", borderColor: "#FDE047" }}>
               <div className="flex items-center gap-3">
                 <AlertCircle size={18} style={{ color: "#854D0E" }} />
                 <p className="text-sm font-medium" style={{ color: "#854D0E" }}>⚠️ WhatsApp সংযুক্ত নেই।</p>
@@ -265,7 +263,7 @@ export default function CommunicationsPage() {
           {/* Message composer + history */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {/* Left: Composer */}
-            <div className="rounded-2xl border p-5 space-y-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+            <Card className="space-y-4">
               <div className="flex items-center gap-2">
                 <Send size={15} style={{ color: "#25D366" }} />
                 <h2 className="font-semibold text-sm" style={{ color: S.text }}>Message পাঠান</h2>
@@ -375,10 +373,10 @@ export default function CommunicationsPage() {
               {waConnected === false && (
                 <p className="text-xs text-center" style={{ color: "#DC2626" }}>WhatsApp সংযুক্ত করুন Settings এ</p>
               )}
-            </div>
+            </Card>
 
             {/* Right: History */}
-            <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+            <Card>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Clock size={15} style={{ color: S.primary }} />
@@ -394,10 +392,7 @@ export default function CommunicationsPage() {
                   {[1,2,3].map(i => <div key={i} className="h-14 rounded-xl animate-pulse" style={{ backgroundColor: S.bg }} />)}
                 </div>
               ) : logs.length === 0 ? (
-                <div className="text-center py-12">
-                  <MessageCircle size={32} className="mx-auto mb-3" style={{ color: S.border }} />
-                  <p className="text-sm" style={{ color: S.muted }}>এখনো কোনো message পাঠানো হয়নি।</p>
-                </div>
+                <EmptyState icon={MessageCircle} title="এখনো কোনো message পাঠানো হয়নি।" />
               ) : (
                 <>
                   <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
@@ -414,9 +409,9 @@ export default function CommunicationsPage() {
                               <p className="text-xs mt-1 line-clamp-2" style={{ color: S.secondary }}>{log.message}</p>
                             </div>
                             <div className="flex-shrink-0 text-right">
-                              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: badge.bg, color: badge.color }}>
+                              <Badge variant={log.status === "sent" ? "success" : log.status === "failed" ? "danger" : "warning"}>
                                 {badge.label}
-                              </span>
+                              </Badge>
                               <p className="text-xs mt-1" style={{ color: S.muted }}>
                                 {new Date(log.sentAt).toLocaleDateString("bn-BD", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                               </p>
@@ -446,7 +441,7 @@ export default function CommunicationsPage() {
                   )}
                 </>
               )}
-            </div>
+            </Card>
           </div>
         </>
       )}
@@ -455,14 +450,12 @@ export default function CommunicationsPage() {
       {activeTab === "bulk" && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {/* Left: Customer Selection */}
-          <div className="rounded-2xl border p-5 space-y-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+          <Card className="space-y-4">
             <div className="flex items-center gap-2">
               <Users size={16} style={{ color: S.primary }} />
               <h2 className="font-semibold text-sm" style={{ color: S.text }}>কাস্টমার বেছে নিন</h2>
               {selectedIds.size > 0 && (
-                <span className="ml-auto text-xs px-2 py-0.5 rounded-full font-semibold" style={{ backgroundColor: "var(--c-primary-light)", color: S.primary }}>
-                  {selectedIds.size} জন নির্বাচিত
-                </span>
+                <Badge variant="info">{selectedIds.size} জন নির্বাচিত</Badge>
               )}
             </div>
 
@@ -521,11 +514,11 @@ export default function CommunicationsPage() {
                 </label>
               ))}
             </div>
-          </div>
+          </Card>
 
           {/* Right: Message Composer */}
           <div className="space-y-4">
-            <div className="rounded-2xl border p-5" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+            <Card>
               <div className="flex items-center gap-2 mb-4">
                 <MessageCircle size={16} style={{ color: S.primary }} />
                 <h2 className="font-semibold text-sm" style={{ color: S.text }}>মেসেজ টেমপ্লেট</h2>
@@ -596,11 +589,11 @@ export default function CommunicationsPage() {
                   <p className="text-sm" style={{ color: S.muted }}>বাম দিক থেকে কাস্টমার নির্বাচন করুন</p>
                 </div>
               )}
-            </div>
+            </Card>
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
     </PlanGate>
   );
 }

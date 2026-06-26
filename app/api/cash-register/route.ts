@@ -27,11 +27,12 @@ async function getTodaySalesCash(shopId: string, userId: string): Promise<number
   return result._sum.amount ?? 0;
 }
 
-async function getTodayExpenses(shopId: string): Promise<number> {
+async function getTodayExpenses(shopId: string, userId: string): Promise<number> {
   const today = new Date();
-  const result = await prisma.expense.aggregate({
+  const result = await prisma.transaction.aggregate({
     where: {
-      shopId,
+      type: "expense",
+      OR: [{ shopId }, { shopId: null, userId }],
       date: { gte: startOfDay(today), lte: endOfDay(today) },
     },
     _sum: { amount: true },
@@ -60,7 +61,7 @@ export async function GET() {
   }
 
   const salesCash = await getTodaySalesCash(shop.id, session.user.id);
-  const expenses = await getTodayExpenses(shop.id);
+  const expenses = await getTodayExpenses(shop.id, session.user.id);
   const expectedCash = register.openingCash + salesCash - expenses;
 
   return NextResponse.json({
@@ -139,7 +140,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   const salesCash = await getTodaySalesCash(shop.id, session.user.id);
-  const expenses = await getTodayExpenses(shop.id);
+  const expenses = await getTodayExpenses(shop.id, session.user.id);
   const expectedCash = register.openingCash + salesCash - expenses;
   const difference = closingCash - expectedCash;
 

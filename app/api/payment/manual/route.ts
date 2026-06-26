@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendSubscriptionUpgradeEmail } from "@/lib/mailer";
+import { activateSubscriptionFromPayment } from "@/lib/payment/activate-subscription";
+import { attemptZiniPayVerification } from "@/lib/payment/zinipay-flow";
+import { getPlatformZiniPayApiKey } from "@/lib/zinipay";
 
 const PLAN_PRICES: Record<string, Record<number, number>> = {
   pro:      { 1: 199, 3: 549, 6: 999, 12: 1799 },
@@ -36,11 +40,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid duration" }, { status: 400 });
     }
 
+    const trimmedTxId = transactionId.trim();
+
     const existing = await prisma.payment.findFirst({
       where: {
-        userId: session.user.id,
-        transactionId: transactionId.trim(),
-        status: { in: ["pending", "approved"] },
+        transactionId: trimmedTxId,
+        status: { in: ["pending", "approved", "completed"] },
       },
     });
 
@@ -72,7 +77,6 @@ export async function POST(req: NextRequest) {
           : false;
 
         if (!notStarted && !expired && !maxUsed && !userUsed && !belowMin && !wrongPlan) {
-          // If baseMonths set, discount is calculated from that month's price
           let baseAmountForDiscount = originalAmount;
           if (promo.baseMonths && Number(months) !== promo.baseMonths) {
             const basePrice = PLAN_PRICES[plan]?.[promo.baseMonths];
@@ -101,7 +105,7 @@ export async function POST(req: NextRequest) {
         promoCodeId: promoRecord?.id ?? null,
         promoCodeStr: promoRecord?.code ?? null,
         method,
-        transactionId: transactionId.trim(),
+        transactionId: trimmedTxId,
         senderPhone: senderPhone?.trim() || null,
         status: "pending",
       },
@@ -127,7 +131,72 @@ export async function POST(req: NextRequest) {
       ]);
     }
 
-    return NextResponse.json({ success: true, paymentId: payment.id });
+    const ziniPayKey = getPlatformZiniPayApiKey();
+    let autoVerified = false;
+
+    if (ziniPayKey) {
+      const result = await attemptZiniPayVerification(ziniPayKey, {
+        transactionId: trimmedTxId,
+        amount: finalAmount,
+        invoiceId: payment.id,
+        expectedMethod: method,
+      });
+
+      if (result.verifyId) {
+        await prisma.payment.update({
+          where: { id: payment.id },
+          data: {
+            zinipayVerifyId: result.verifyId,
+            verificationNote: result.fallbackReason ?? (result.success ? "auto" : "manual_fallback"),
+            adminNote: result.error ? `ZiniPay: ${result.error}` : null,
+          },
+        });
+      }
+
+      if (result.success && result.transactionId) {
+        const { endDate } = await activateSubscriptionFromPayment({
+          userId: session.user.id,
+          plan,
+          months: Number(months),
+          paymentId: payment.id,
+          trxId: result.transactionId,
+          senderPhone: result.senderNumber ?? senderPhone?.trim() ?? null,
+          status: "completed",
+        });
+
+        autoVerified = true;
+
+        const user = await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { email: true, name: true },
+        });
+
+        if (user?.email) {
+          const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`;
+          sendSubscriptionUpgradeEmail({
+            toEmail: user.email,
+            userName: user.name ?? "ব্যবহারকারী",
+            plan,
+            months: Number(months),
+            amount: finalAmount,
+            method,
+            transactionId: result.transactionId,
+            startDate: new Date(),
+            endDate,
+            invoiceNumber,
+          }).catch(() => {});
+        }
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      paymentId: payment.id,
+      autoVerified,
+      message: autoVerified
+        ? "Payment verified! Plan activate হয়েছে।"
+        : "Payment request পাঠানো হয়েছে। Admin verification-এর পর activate হবে।",
+    });
   } catch (err) {
     console.error("[ManualPayment] Error:", err);
     return NextResponse.json({ error: "সমস্যা হয়েছে। আবার চেষ্টা করুন।" }, { status: 500 });

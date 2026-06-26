@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Tag, Plus, Loader2, Pencil, Trash2, X, Check } from "lucide-react";
+import { Tag, Plus, Loader2, Pencil, Trash2, X } from "lucide-react";
 import DatePicker from "@/components/ui/DatePicker";
+import { PageShell, Card, Badge, Button, EmptyState, Input } from "@/components/ui";
 
 interface Coupon {
   id: string;
@@ -38,15 +39,6 @@ export default function StoreCouponsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
-
-  const S = {
-    surface: "var(--c-surface)",
-    border: "var(--c-border)",
-    text: "var(--c-text)",
-    muted: "var(--c-text-muted)",
-    secondary: "var(--c-text-sub)",
-    primary: "var(--c-primary)",
-  };
 
   function showToast(type: "success" | "error", msg: string) {
     setToast({ type, msg });
@@ -133,13 +125,20 @@ export default function StoreCouponsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-40">
-        <Loader2 size={24} className="animate-spin" style={{ color: S.muted }} />
+        <Loader2 size={24} className="animate-spin" style={{ color: "var(--c-text-muted)" }} />
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-5">
+    <PageShell
+      title="কুপন"
+      subtitle={`${coupons.length}টি কুপন`}
+      className="max-w-3xl"
+      actions={
+        <Button icon={Plus} onClick={openNew}>নতুন কুপন</Button>
+      }
+    >
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg"
           style={{ backgroundColor: toast.type === "success" ? "#1D9E75" : "#E24B4A" }}>
@@ -149,145 +148,104 @@ export default function StoreCouponsPage() {
 
       {deleteId && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="rounded-2xl p-6 max-w-sm w-full" style={{ backgroundColor: S.surface }}>
-            <h3 className="font-semibold text-base mb-2" style={{ color: S.text }}>কুপন মুছে দিন?</h3>
-            <p className="text-sm mb-5" style={{ color: S.secondary }}>এই কাজ undo করা যাবে না।</p>
+          <Card className="max-w-sm w-full">
+            <h3 className="font-semibold text-base mb-2" style={{ color: "var(--c-text)" }}>কুপন মুছে দিন?</h3>
+            <p className="text-sm mb-5" style={{ color: "var(--c-text-sub)" }}>এই কাজ undo করা যাবে না।</p>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteId(null)} className="flex-1 py-2.5 rounded-xl border text-sm" style={{ borderColor: S.border, color: S.text }}>বাতিল</button>
-              <button onClick={handleDelete} disabled={deleting} className="flex-1 py-2.5 rounded-xl text-white text-sm font-medium" style={{ backgroundColor: "#E24B4A" }}>
+              <Button variant="outline" className="flex-1" onClick={() => setDeleteId(null)}>বাতিল</Button>
+              <Button variant="danger" className="flex-1" onClick={handleDelete} disabled={deleting} loading={deleting}>
                 {deleting ? "মুছছে..." : "মুছে দিন"}
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
       {showForm && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto" style={{ backgroundColor: S.surface }}>
-            <div className="flex items-center justify-between p-5 border-b sticky top-0" style={{ borderColor: S.border, backgroundColor: S.surface }}>
-              <p className="font-semibold text-sm" style={{ color: S.text }}>{editId ? "কুপন সম্পাদনা" : "নতুন কুপন"}</p>
-              <button onClick={() => setShowForm(false)}><X size={18} style={{ color: S.muted }} /></button>
+          <Card padding="none" className="w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-5 border-b sticky top-0 card-premium" style={{ borderColor: "var(--c-border)" }}>
+              <p className="font-semibold text-sm" style={{ color: "var(--c-text)" }}>{editId ? "কুপন সম্পাদনা" : "নতুন কুপন"}</p>
+              <button onClick={() => setShowForm(false)}><X size={18} style={{ color: "var(--c-text-muted)" }} /></button>
             </div>
             <div className="p-5 space-y-4">
+              <Input
+                label="কুপন কোড *"
+                value={form.code}
+                onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))}
+                placeholder="SAVE20"
+                className="font-mono"
+              />
               <div>
-                <label className="text-xs font-medium mb-1.5 block" style={{ color: S.secondary }}>কুপন কোড *</label>
-                <input value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))}
-                  placeholder="SAVE20" className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none font-mono"
-                  style={{ backgroundColor: S.surface, borderColor: S.border, color: S.text }} />
-              </div>
-              <div>
-                <label className="text-xs font-medium mb-1.5 block" style={{ color: S.secondary }}>ধরন *</label>
+                <label className="text-xs font-semibold uppercase tracking-wide mb-1.5 block" style={{ color: "var(--c-text-sub)" }}>ধরন *</label>
                 <div className="flex gap-2">
                   {(["percent", "fixed"] as const).map(t => (
-                    <button key={t} onClick={() => setForm(f => ({ ...f, type: t }))}
-                      className="flex-1 py-2.5 rounded-xl border text-sm font-medium"
-                      style={form.type === t ? { backgroundColor: S.primary, color: "#fff", borderColor: S.primary } : { borderColor: S.border, color: S.text }}>
+                    <Button
+                      key={t}
+                      variant={form.type === t ? "primary" : "outline"}
+                      className="flex-1"
+                      onClick={() => setForm(f => ({ ...f, type: t }))}
+                    >
                       {t === "percent" ? "% শতাংশ" : "৳ নির্দিষ্ট"}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
-              <div>
-                <label className="text-xs font-medium mb-1.5 block" style={{ color: S.secondary }}>
-                  মান * {form.type === "percent" ? "(%)" : "(৳)"}
-                </label>
-                <input value={form.value} onChange={e => setForm(f => ({ ...f, value: e.target.value }))}
-                  type="number" placeholder={form.type === "percent" ? "20" : "50"}
-                  className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
-                  style={{ backgroundColor: S.surface, borderColor: S.border, color: S.text }} />
-              </div>
+              <Input
+                label={`মান * ${form.type === "percent" ? "(%)" : "(৳)"}`}
+                value={form.value}
+                onChange={e => setForm(f => ({ ...f, value: e.target.value }))}
+                type="number"
+                placeholder={form.type === "percent" ? "20" : "50"}
+              />
               <div className="grid grid-cols-2 gap-3">
+                <Input label="সর্বনিম্ন অর্ডার (৳)" value={form.minOrder} onChange={e => setForm(f => ({ ...f, minOrder: e.target.value }))} type="number" placeholder="ঐচ্ছিক" />
+                <Input label="সর্বোচ্চ ছাড় (৳)" value={form.maxDiscount} onChange={e => setForm(f => ({ ...f, maxDiscount: e.target.value }))} type="number" placeholder="ঐচ্ছিক" />
+                <Input label="সর্বোচ্চ ব্যবহার" value={form.maxUse} onChange={e => setForm(f => ({ ...f, maxUse: e.target.value }))} type="number" placeholder="ঐচ্ছিক" />
                 <div>
-                  <label className="text-xs font-medium mb-1.5 block" style={{ color: S.secondary }}>সর্বনিম্ন অর্ডার (৳)</label>
-                  <input value={form.minOrder} onChange={e => setForm(f => ({ ...f, minOrder: e.target.value }))}
-                    type="number" placeholder="ঐচ্ছিক"
-                    className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
-                    style={{ backgroundColor: S.surface, borderColor: S.border, color: S.text }} />
-                </div>
-                <div>
-                  <label className="text-xs font-medium mb-1.5 block" style={{ color: S.secondary }}>সর্বোচ্চ ছাড় (৳)</label>
-                  <input value={form.maxDiscount} onChange={e => setForm(f => ({ ...f, maxDiscount: e.target.value }))}
-                    type="number" placeholder="ঐচ্ছিক"
-                    className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
-                    style={{ backgroundColor: S.surface, borderColor: S.border, color: S.text }} />
-                </div>
-                <div>
-                  <label className="text-xs font-medium mb-1.5 block" style={{ color: S.secondary }}>সর্বোচ্চ ব্যবহার</label>
-                  <input value={form.maxUse} onChange={e => setForm(f => ({ ...f, maxUse: e.target.value }))}
-                    type="number" placeholder="ঐচ্ছিক"
-                    className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
-                    style={{ backgroundColor: S.surface, borderColor: S.border, color: S.text }} />
-                </div>
-                <div>
-                  <label className="text-xs font-medium mb-1.5 block" style={{ color: S.secondary }}>মেয়াদ শেষ</label>
+                  <label className="text-xs font-semibold uppercase tracking-wide mb-1.5 block" style={{ color: "var(--c-text-sub)" }}>মেয়াদ শেষ</label>
                   <DatePicker
-  value={form.expiresAt}
-  onChange={v => setForm(f => ({ ...f, expiresAt: v }))}
-  className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
-  style={{ backgroundColor: S.surface, borderColor: S.border, color: S.text }}
-/>
+                    value={form.expiresAt}
+                    onChange={v => setForm(f => ({ ...f, expiresAt: v }))}
+                    className="w-full px-3 py-2.5 rounded-xl border text-sm outline-none"
+                    style={{ backgroundColor: "var(--c-surface)", borderColor: "var(--c-border)", color: "var(--c-text)" }}
+                  />
                 </div>
               </div>
               <div className="flex gap-3 pt-1">
-                <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 rounded-xl border text-sm" style={{ borderColor: S.border, color: S.text }}>বাতিল</button>
-                <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 rounded-xl text-white text-sm font-medium disabled:opacity-50" style={{ backgroundColor: S.primary }}>
+                <Button variant="outline" className="flex-1" onClick={() => setShowForm(false)}>বাতিল</Button>
+                <Button className="flex-1" onClick={handleSave} disabled={saving} loading={saving}>
                   {saving ? "সেভ হচ্ছে..." : "সেভ করুন"}
-                </button>
+                </Button>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #EC4899 0%, #9333EA 100%)" }}>
-            <Tag size={18} color="#fff" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold" style={{ color: S.text }}>কুপন</h1>
-            <p className="text-xs" style={{ color: S.muted }}>{coupons.length}টি কুপন</p>
-          </div>
-        </div>
-        <button onClick={openNew}
-          className="flex items-center gap-2 px-4 h-9 rounded-xl text-white text-sm font-semibold"
-          style={{ backgroundColor: S.primary }}>
-          <Plus size={15} /> নতুন কুপন
-        </button>
-      </div>
-
       {coupons.length === 0 ? (
-        <div className="text-center py-16" style={{ color: S.muted }}>
-          <Tag size={32} className="mx-auto mb-3 opacity-40" />
-          <p className="text-sm mb-3">কোনো কুপন নেই</p>
-          <button onClick={openNew} className="px-4 py-2 rounded-xl text-white text-sm font-medium" style={{ backgroundColor: S.primary }}>
-            প্রথম কুপন তৈরি করুন
-          </button>
-        </div>
+        <EmptyState icon={Tag} title="কোনো কুপন নেই" action={{ label: "প্রথম কুপন তৈরি করুন", onClick: openNew }} />
       ) : (
         <div className="space-y-3">
           {coupons.map(c => {
             const expired = isExpired(c);
             return (
-              <div key={c.id} className="rounded-2xl border p-4" style={{ backgroundColor: S.surface, borderColor: S.border }}>
+              <Card key={c.id} padding="md">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="px-3 py-1.5 rounded-lg flex-shrink-0" style={{ backgroundColor: "#EEF2FF" }}>
-                      <span className="text-sm font-bold font-mono" style={{ color: "#4338CA" }}>{c.code}</span>
-                    </div>
+                    <Badge variant="info" className="px-3 py-1.5 font-mono font-bold text-sm">{c.code}</Badge>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium" style={{ color: S.text }}>
+                      <p className="text-sm font-medium" style={{ color: "var(--c-text)" }}>
                         {c.type === "percent" ? `${c.value}% ছাড়` : `৳${c.value} ছাড়`}
                         {c.maxDiscount ? ` (সর্বোচ্চ ৳${c.maxDiscount})` : ""}
                       </p>
                       <div className="flex items-center gap-2 flex-wrap mt-0.5">
-                        {c.minOrder && <span className="text-xs" style={{ color: S.muted }}>ন্যূনতম ৳{c.minOrder}</span>}
-                        {c.maxUse && <span className="text-xs" style={{ color: S.muted }}>{c.usedCount}/{c.maxUse} ব্যবহৃত</span>}
+                        {c.minOrder && <span className="text-xs" style={{ color: "var(--c-text-muted)" }}>ন্যূনতম ৳{c.minOrder}</span>}
+                        {c.maxUse && <span className="text-xs" style={{ color: "var(--c-text-muted)" }}>{c.usedCount}/{c.maxUse} ব্যবহৃত</span>}
                         {c.expiresAt && (
-                          <span className="text-xs" style={{ color: expired ? "#E24B4A" : S.muted }}>
-                            {expired ? "মেয়াদ শেষ" : `${new Date(c.expiresAt).toLocaleDateString("bn-BD")}`}
-                          </span>
+                          expired
+                            ? <Badge variant="danger">মেয়াদ শেষ</Badge>
+                            : <span className="text-xs" style={{ color: "var(--c-text-muted)" }}>{new Date(c.expiresAt).toLocaleDateString("bn-BD")}</span>
                         )}
                       </div>
                     </div>
@@ -295,22 +253,22 @@ export default function StoreCouponsPage() {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button onClick={() => toggleActive(c)}
                       className="relative w-10 h-5 rounded-full transition-colors"
-                      style={{ backgroundColor: c.isActive && !expired ? S.primary : S.border }}>
+                      style={{ backgroundColor: c.isActive && !expired ? "var(--c-primary)" : "var(--c-border)" }}>
                       <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${c.isActive ? "translate-x-5" : "translate-x-0.5"}`} />
                     </button>
                     <button onClick={() => openEdit(c)} className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: "var(--c-surface-raised)" }}>
-                      <Pencil size={13} style={{ color: S.secondary }} />
+                      <Pencil size={13} style={{ color: "var(--c-text-sub)" }} />
                     </button>
                     <button onClick={() => setDeleteId(c.id)} className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#FEF2F2" }}>
                       <Trash2 size={13} style={{ color: "#EF4444" }} />
                     </button>
                   </div>
                 </div>
-              </div>
+              </Card>
             );
           })}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

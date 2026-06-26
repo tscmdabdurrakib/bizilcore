@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import {
   TrendingUp, MousePointer, Users, DollarSign, Clock,
   CheckCircle, AlertCircle, ExternalLink, Copy, Crown,
-  Edit2, X, Send, ChevronRight, Wallet
+  Edit2, X, Send, ChevronRight, Wallet, RefreshCw
 } from "lucide-react";
+import { PageShell, StatCard, Card, Badge, Button, Input } from "@/components/ui";
 
 const S = { surface: "var(--c-surface)", border: "var(--c-border)", text: "var(--c-text)", muted: "var(--c-text-muted)", secondary: "var(--c-text-sub)", primary: "var(--c-primary)", bg: "var(--c-bg)" };
 
@@ -125,8 +126,8 @@ export default function AffiliatePage() {
   );
 
   if (locked) return (
-    <div className="max-w-md">
-      <div className="rounded-2xl p-8 text-center" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
+    <PageShell title="Affiliate Dashboard" subtitle="আপনার link share করে income করুন" className="max-w-md">
+      <Card className="p-8 text-center">
         <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: "#F0FBF6" }}>
           <TrendingUp size={28} style={{ color: S.primary }} />
         </div>
@@ -141,35 +142,31 @@ export default function AffiliatePage() {
             </div>
           ))}
         </div>
-        <a href="/settings?tab=subscription" className="block w-full py-3 rounded-xl text-white font-medium text-center flex items-center justify-center gap-2" style={{ backgroundColor: S.primary }}>
-          <Crown size={16} /> Pro-তে Upgrade করুন
+        <a href="/settings?tab=subscription">
+          <Button icon={Crown} className="w-full">Pro-তে Upgrade করুন</Button>
         </a>
-      </div>
-    </div>
+      </Card>
+    </PageShell>
   );
 
   const aff = data?.affiliate;
   const cr = data?.commissionRates ?? { pro: 50, business: 150 };
 
   return (
-    <div className="max-w-2xl space-y-5">
+    <PageShell
+      title="Affiliate Dashboard"
+      subtitle="আপনার link share করে income করুন"
+      className="max-w-2xl"
+      actions={
+        <Button variant="outline" size="sm" icon={RefreshCw} loading={loading} onClick={() => { setLoading(true); load(); }}>
+          Refresh
+        </Button>
+      }
+    >
       {toast && <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg" style={{ backgroundColor: toast.type === "success" ? "#1D9E75" : "#E24B4A" }}>{toast.msg}</div>}
 
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-xl font-bold" style={{ color: S.text }}>Affiliate Dashboard</h1>
-          <p className="text-sm mt-0.5" style={{ color: S.muted }}>আপনার link share করে income করুন</p>
-        </div>
-        <button onClick={() => { setLoading(true); load(); }} disabled={loading}
-          className="text-xs px-3 py-1.5 rounded-lg border flex items-center gap-1.5 disabled:opacity-50"
-          style={{ borderColor: S.border, color: S.muted }}>
-          <svg className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-          Refresh
-        </button>
-      </div>
-
       {/* Commission Info Card */}
-      <div className="rounded-2xl p-5" style={{ backgroundColor: "#F0FBF6", border: "1px solid #A7F3D0" }}>
+      <div className="rounded-2xl border p-5 card-premium" style={{ backgroundColor: "#F0FBF6", borderColor: "#A7F3D0" }}>
         <h3 className="font-semibold text-sm mb-3" style={{ color: "#0F6E56" }}>Commission Rates</h3>
         <div className="grid grid-cols-2 gap-4">
           <div className="text-center"><p className="text-2xl font-bold" style={{ color: "#0F6E56" }}>৳{cr.pro}</p><p className="text-xs mt-0.5" style={{ color: "#065F46" }}>Pro Signup</p></div>
@@ -179,42 +176,39 @@ export default function AffiliatePage() {
 
       {/* No affiliate yet */}
       {!aff && (
-        <div className="rounded-2xl p-6" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
+        <Card>
           <h3 className="font-semibold mb-3" style={{ color: S.text }}>Affiliate Program-এ যোগ দিন</h3>
           {!showApplyForm ? (
-            <button onClick={() => setShowApplyForm(true)} className="w-full py-3 rounded-xl text-white font-medium text-sm" style={{ backgroundColor: S.primary }}>
-              আবেদন করুন
-            </button>
+            <Button onClick={() => setShowApplyForm(true)} className="w-full">আবেদন করুন</Button>
           ) : (
             <div className="space-y-3">
-              <div>
-                <label className="text-sm font-medium block mb-1.5" style={{ color: S.text }}>bKash নম্বর (payout-এর জন্য) *</label>
-                <input type="tel" value={bkash} onChange={e => setBkash(e.target.value)} placeholder="01XXXXXXXXX"
-                  className="w-full h-10 px-3 rounded-xl border text-sm outline-none" style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
-              </div>
+              <Input type="tel" label="bKash নম্বর (payout-এর জন্য) *" value={bkash} onChange={e => setBkash(e.target.value)} placeholder="01XXXXXXXXX" />
               <div className="flex gap-2">
-                <button onClick={() => setShowApplyForm(false)} className="flex-1 py-2.5 rounded-xl border text-sm" style={{ borderColor: S.border, color: S.secondary }}>বাতিল</button>
-                <button onClick={apply} disabled={applying} className="flex-1 py-2.5 rounded-xl text-white text-sm font-medium disabled:opacity-60" style={{ backgroundColor: S.primary }}>
-                  {applying ? "জমা হচ্ছে..." : "আবেদন করুন"}
-                </button>
+                <Button variant="outline" onClick={() => setShowApplyForm(false)} className="flex-1">বাতিল</Button>
+                <Button onClick={apply} loading={applying} className="flex-1">{applying ? "জমা হচ্ছে..." : "আবেদন করুন"}</Button>
               </div>
             </div>
           )}
-        </div>
+        </Card>
       )}
 
       {aff && (
         <>
           {/* Status */}
-          <div className="rounded-2xl p-4 flex items-start gap-3" style={{
+          <div className="rounded-2xl border p-4 flex items-start gap-3 card-premium" style={{
             backgroundColor: aff.status === "approved" ? "#E1F5EE" : aff.status === "pending" ? "#FFF8E7" : "#FEE2E2",
-            border: `1px solid ${aff.status === "approved" ? "#A7F3D0" : aff.status === "pending" ? "#FDE68A" : "#FCA5A5"}`
+            borderColor: aff.status === "approved" ? "#A7F3D0" : aff.status === "pending" ? "#FDE68A" : "#FCA5A5"
           }}>
             {aff.status === "approved" ? <CheckCircle size={18} style={{ color: "#059669" }} /> :
               aff.status === "pending" ? <Clock size={18} style={{ color: "#D97706" }} /> :
                 <AlertCircle size={18} style={{ color: "#DC2626" }} />}
-            <div>
-              <p className="font-medium text-sm" style={{ color: aff.status === "approved" ? "#065F46" : aff.status === "pending" ? "#92600A" : "#7F1D1D" }}>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant={aff.status === "approved" ? "success" : aff.status === "pending" ? "warning" : "danger"}>
+                  {aff.status === "approved" ? "Active" : aff.status === "pending" ? "Pending" : "Rejected"}
+                </Badge>
+              </div>
+              <p className="font-medium text-sm mt-1.5" style={{ color: aff.status === "approved" ? "#065F46" : aff.status === "pending" ? "#92600A" : "#7F1D1D" }}>
                 {aff.status === "approved" ? "✓ Affiliate Account Active — share করুন এবং earn করুন!" :
                   aff.status === "pending" ? "আবেদন পর্যালোচনা হচ্ছে (১-৩ কার্যদিবস)" :
                     "আবেদন প্রত্যাখ্যান করা হয়েছে"}
@@ -226,51 +220,35 @@ export default function AffiliatePage() {
           {aff.status === "approved" && (
             <>
               {/* Affiliate Link */}
-              <div className="rounded-2xl p-5" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
+              <Card>
                 <p className="text-sm font-semibold mb-3" style={{ color: S.text }}>আপনার Affiliate Link</p>
                 <div className="flex items-center gap-2 mb-4">
                   <div className="flex-1 h-10 rounded-xl px-3 text-xs flex items-center overflow-hidden" style={{ backgroundColor: S.bg, color: S.secondary }}>
                     <span className="truncate">{affiliateLink()}</span>
                   </div>
-                  <button onClick={copyLink} className="h-10 px-4 rounded-xl text-white text-sm font-medium flex items-center gap-1.5 flex-shrink-0" style={{ backgroundColor: S.primary }}>
-                    <Copy size={14} /> {copied ? "Copied!" : "Copy"}
-                  </button>
+                  <Button onClick={copyLink} icon={Copy} size="sm">{copied ? "Copied!" : "Copy"}</Button>
                   <a href={affiliateLink()} target="_blank" rel="noopener noreferrer"
                     className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: S.bg }}>
                     <ExternalLink size={15} style={{ color: S.secondary }} />
                   </a>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <button onClick={shareWhatsApp} className="py-2.5 rounded-xl text-white text-sm font-medium flex items-center justify-center gap-2" style={{ backgroundColor: "#25D366" }}>
-                    <Send size={14} /> WhatsApp
-                  </button>
-                  <button onClick={shareFacebook} className="py-2.5 rounded-xl text-white text-sm font-medium flex items-center justify-center gap-2" style={{ backgroundColor: "#1877F2" }}>
-                    <ChevronRight size={14} /> Facebook
-                  </button>
+                  <Button onClick={shareWhatsApp} style={{ backgroundColor: "#25D366" }} icon={Send}>WhatsApp</Button>
+                  <Button onClick={shareFacebook} style={{ backgroundColor: "#1877F2" }} icon={ChevronRight}>Facebook</Button>
                 </div>
-              </div>
+              </Card>
 
               {/* Stats */}
               <div className="grid grid-cols-2 gap-4">
-                {[
-                  { icon: MousePointer, label: "মোট Click", value: aff.totalClicks },
-                  { icon: Users, label: "মোট Signup", value: aff.totalSignups },
-                  { icon: DollarSign, label: "মোট Earnings", value: `৳${aff.totalEarnings.toFixed(0)}` },
-                  { icon: Clock, label: "Pending Payout", value: `৳${aff.pendingPayout.toFixed(0)}` },
-                ].map(stat => (
-                  <div key={stat.label} className="rounded-2xl p-5" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <stat.icon size={15} style={{ color: S.primary }} />
-                      <span className="text-xs" style={{ color: S.muted }}>{stat.label}</span>
-                    </div>
-                    <p className="text-2xl font-bold" style={{ color: S.text }}>{stat.value}</p>
-                  </div>
-                ))}
+                <StatCard label="মোট Click" value={aff.totalClicks} icon={MousePointer} accent="green" />
+                <StatCard label="মোট Signup" value={aff.totalSignups} icon={Users} accent="blue" iconBg="var(--icon-blue-bg)" iconColor="var(--icon-blue-text)" />
+                <StatCard label="মোট Earnings" value={`৳${aff.totalEarnings.toFixed(0)}`} icon={DollarSign} accent="gold" iconBg="var(--icon-amber-bg)" iconColor="var(--icon-amber-text)" />
+                <StatCard label="Pending Payout" value={`৳${aff.pendingPayout.toFixed(0)}`} icon={Clock} accent="gold" iconBg="var(--icon-amber-bg)" iconColor="var(--icon-amber-text)" />
               </div>
 
               {/* Daily Click Chart (last 14 days) */}
               {data?.dailyStats && data.dailyStats.length > 0 && (
-                <div className="rounded-2xl p-5" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
+                <Card>
                   <p className="text-sm font-semibold mb-4" style={{ color: S.text }}>শেষ ১৪ দিনের Clicks</p>
                   <div className="flex items-end gap-1 h-24">
                     {data.dailyStats.slice(-14).map((d, i) => {
@@ -292,31 +270,31 @@ export default function AffiliatePage() {
                       <div className="w-3 h-3 rounded" style={{ backgroundColor: "#0F6E56" }} /> Signup (conversion)
                     </div>
                   </div>
-                </div>
+                </Card>
               )}
 
               {/* Recent Conversions */}
               {data?.recentConversions && data.recentConversions.length > 0 && (
-                <div className="rounded-2xl" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
+                <Card padding="none">
                   <p className="px-5 pt-5 pb-3 text-sm font-semibold" style={{ color: S.text }}>সাম্প্রতিক Conversion</p>
                   <div className="divide-y" style={{ borderColor: S.border }}>
                     {data.recentConversions.map((c, i) => (
                       <div key={i} className="flex items-center justify-between px-5 py-3">
                         <div>
-                          <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: c.plan === "business" ? "#FFF3DC" : "#E1F5EE", color: c.plan === "business" ? "#EF9F27" : "#0F6E56" }}>
+                          <Badge variant={c.plan === "business" ? "warning" : "success"}>
                             {c.plan ?? "—"} plan
-                          </span>
+                          </Badge>
                           <p className="text-xs mt-0.5" style={{ color: S.muted }}>{new Date(c.date).toLocaleDateString("bn-BD")}</p>
                         </div>
                         <p className="font-semibold text-sm" style={{ color: "#0F6E56" }}>+৳{(c.commission ?? 0).toFixed(0)}</p>
                       </div>
                     ))}
                   </div>
-                </div>
+                </Card>
               )}
 
               {/* Payout Section */}
-              <div className="rounded-2xl p-5" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
+              <Card>
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-sm font-semibold" style={{ color: S.text }}>Payout তথ্য</p>
                   {!showBkashEdit && (
@@ -344,10 +322,9 @@ export default function AffiliatePage() {
                 </div>
 
                 {aff.pendingPayout >= 500 ? (
-                  <button onClick={requestPayout} disabled={requestingPayout}
-                    className="w-full py-3 rounded-xl text-white font-medium text-sm disabled:opacity-60" style={{ backgroundColor: S.primary }}>
+                  <Button onClick={requestPayout} loading={requestingPayout} className="w-full">
                     {requestingPayout ? "Request পাঠানো হচ্ছে..." : `৳${aff.pendingPayout.toFixed(0)} Payout Request করুন`}
-                  </button>
+                  </Button>
                 ) : (
                   <p className="text-xs text-center" style={{ color: S.muted }}>
                     Minimum ৳৫০০ pending থাকলে payout request করা যাবে। এখন: <strong>৳{aff.pendingPayout.toFixed(0)}</strong>
@@ -365,24 +342,21 @@ export default function AffiliatePage() {
                             <p className="text-sm font-semibold" style={{ color: S.text }}>৳{p.amount.toFixed(0)}</p>
                             <p className="text-xs" style={{ color: S.muted }}>{p.bkashNumber} · {new Date(p.createdAt).toLocaleDateString("bn-BD")}</p>
                           </div>
-                          <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{
-                            backgroundColor: p.status === "paid" ? "#E1F5EE" : "#FFF8E7",
-                            color: p.status === "paid" ? "#059669" : "#D97706"
-                          }}>
+                          <Badge variant={p.status === "paid" ? "success" : "warning"}>
                             {p.status === "paid" ? "✓ পরিশোধিত" : "Processing"}
-                          </span>
+                          </Badge>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
-              </div>
+              </Card>
             </>
           )}
 
           {/* Pending status tips */}
           {aff.status === "pending" && (
-            <div className="rounded-2xl p-5" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
+            <Card>
               <h3 className="font-semibold text-sm mb-3" style={{ color: S.text }}>অপেক্ষার সময়ে কী করবেন?</h3>
               <div className="space-y-2">
                 {["আপনার bKash নম্বর সঠিক আছে কিনা নিশ্চিত করুন", "বন্ধুদের বলুন যে আপনি affiliate program-এ যোগ দিচ্ছেন", "Approval পেলে email এবং SMS পাবেন"].map((tip, i) => (
@@ -406,10 +380,10 @@ export default function AffiliatePage() {
                   </div>
                 )}
               </div>
-            </div>
+            </Card>
           )}
         </>
       )}
-    </div>
+    </PageShell>
   );
 }

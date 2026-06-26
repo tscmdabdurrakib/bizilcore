@@ -122,7 +122,7 @@ export default function CartPage() {
                       </div>
                       {/* Delete */}
                       <button
-                        onClick={() => removeItem(item.productId, item.variantId)}
+                        onClick={() => removeItem({ productId: item.productId, variantId: item.variantId, comboId: item.comboId })}
                         className="flex-shrink-0 text-red-500 hover:text-red-600 transition-colors mt-0.5"
                         aria-label="Remove item"
                       >
@@ -139,7 +139,7 @@ export default function CartPage() {
                       {/* Quantity stepper */}
                       <div className="flex items-center gap-0 bg-[#F0F0F0] rounded-full overflow-hidden">
                         <button
-                          onClick={() => updateQty(item.productId, item.variantId, item.quantity - 1)}
+                          onClick={() => updateQty({ productId: item.productId, variantId: item.variantId, comboId: item.comboId }, item.quantity - 1)}
                           className="w-9 h-9 flex items-center justify-center hover:bg-gray-200 transition-colors rounded-full"
                         >
                           <Minus size={14} className="text-black" />
@@ -148,7 +148,7 @@ export default function CartPage() {
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => updateQty(item.productId, item.variantId, item.quantity + 1)}
+                          onClick={() => updateQty({ productId: item.productId, variantId: item.variantId, comboId: item.comboId }, item.quantity + 1)}
                           className="w-9 h-9 flex items-center justify-center hover:bg-gray-200 transition-colors rounded-full"
                         >
                           <Plus size={14} className="text-black" />

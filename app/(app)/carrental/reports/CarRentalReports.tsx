@@ -66,7 +66,7 @@ export default function CarRentalReports() {
           <BarChart data={data.monthlyRevenue}>
             <XAxis dataKey="month" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} />
-            <Tooltip formatter={(v: number) => [formatBDT(v), "আয়"]} />
+            <Tooltip formatter={((v: number) => [formatBDT(v), "আয়"]) as never} />
             <Bar dataKey="revenue" fill={S.primary} radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>

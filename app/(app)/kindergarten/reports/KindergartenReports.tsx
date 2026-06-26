@@ -78,7 +78,7 @@ export default function KindergartenReports() {
           <LineChart data={data.attendanceTrend.filter(d => d.total > 0)}>
             <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={d => d.slice(5)} />
             <YAxis tick={{ fontSize: 10 }} />
-            <Tooltip formatter={(v: number, n: string) => [v, n === "present" ? "উপস্থিত" : "অনুপস্থিত"]} />
+            <Tooltip formatter={((v: number, n: string) => [v, n === "present" ? "উপস্থিত" : "অনুপস্থিত"]) as never} />
             <Line type="monotone" dataKey="present" stroke="#10B981" strokeWidth={2} dot={false} name="present" />
             <Line type="monotone" dataKey="absent" stroke="#EF4444" strokeWidth={2} dot={false} name="absent" />
           </LineChart>

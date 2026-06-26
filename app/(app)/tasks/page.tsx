@@ -12,6 +12,7 @@ import TaskReports from "./TaskReports";
 import TaskTemplatesModal, { type TaskTemplate } from "./TaskTemplates";
 import { TaskTimerProvider, FloatingTimer } from "./TaskTimerContext";
 import EmployeeTaskBoard from "./EmployeeTaskBoard";
+import { PageShell, StatCard, Tabs, Card, Button } from "@/components/ui";
 import {
   LayoutGrid, List, CalendarDays, BarChart2, Plus, Search,
   SlidersHorizontal, Download, User, BookmarkPlus, X,
@@ -389,38 +390,18 @@ function TasksContent() {
       : tasks;
 
   return (
-    <div className="space-y-4 max-w-7xl mx-auto pb-8">
-
-      {/* ── Page Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="flex items-center gap-3 flex-1">
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm"
-            style={{ background: "linear-gradient(135deg, #0F6E56, #0A5442)" }}>
-            <ClipboardList size={18} color="#fff" />
-          </div>
-          <div>
-            <h1 className="text-lg font-extrabold" style={{ color: S.text }}>টাস্ক ম্যানেজমেন্ট</h1>
-            <p className="text-[11px] mt-0.5 font-medium" style={{ color: S.muted }}>অর্ডার, ডেলিভারি, সাপ্লায়ার ও টিমের কাজ ট্র্যাক করুন</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => exportCSV(tasks)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all hover:opacity-80"
-            style={{ borderColor: S.border, color: S.muted, backgroundColor: S.surface }}>
-            <Download size={13} /> CSV
-          </button>
-          <button onClick={() => setTemplateOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all hover:opacity-80"
-            style={{ borderColor: "#8B5CF6", color: "#8B5CF6", backgroundColor: "#F5F3FF" }}>
-            <LayoutTemplate size={13} /> টেমপ্লেট
-          </button>
-          <button onClick={() => { setCreateInitialData(undefined); setCreateOpen(true); }}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-bold transition-all hover:opacity-90 active:scale-95 shadow-md"
-            style={{ background: "linear-gradient(135deg, #0F6E56, #0A5442)" }}>
-            <Plus size={16} /> নতুন টাস্ক
-          </button>
-        </div>
-      </div>
+    <PageShell
+      title="টাস্ক ম্যানেজমেন্ট"
+      subtitle="অর্ডার, ডেলিভারি, সাপ্লায়ার ও টিমের কাজ ট্র্যাক করুন"
+      actions={
+        <>
+          <Button variant="outline" size="sm" icon={Download} onClick={() => exportCSV(tasks)}>CSV</Button>
+          <Button variant="outline" size="sm" icon={LayoutTemplate} onClick={() => setTemplateOpen(true)} style={{ borderColor: "#8B5CF6", color: "#8B5CF6", backgroundColor: "#F5F3FF" }}>টেমপ্লেট</Button>
+          <Button size="sm" icon={Plus} onClick={() => { setCreateInitialData(undefined); setCreateOpen(true); }}>নতুন টাস্ক</Button>
+        </>
+      }
+      className="pb-8"
+    >
 
       {/* ── Stat Cards ── */}
       {view !== "reports" && view !== "activity" && view !== "employees" && (
@@ -530,31 +511,13 @@ function TasksContent() {
         </div>
       )}
 
-      {/* ── View Tabs + Search bar ── */}
-      <div className="rounded-2xl border overflow-hidden" style={{ borderColor: S.border, backgroundColor: S.surface }}>
-        {/* Tab row */}
-        <div className="flex items-stretch border-b" style={{ borderColor: S.border, backgroundColor: S.bg }}>
-          {VIEW_TABS.map(({ mode, icon: Icon, label, color, bg }, idx, arr) => {
-            const isActive = view === mode;
-            return (
-              <button key={mode} onClick={() => setView(mode)}
-                className="flex items-center gap-2 px-5 py-3 text-sm font-bold transition-all flex-1 justify-center relative"
-                style={{
-                  backgroundColor: isActive ? bg : "transparent",
-                  color: isActive ? color : S.muted,
-                  borderRight: idx < arr.length - 1 ? `1px solid var(--c-border)` : "none",
-                }}>
-                <Icon size={15} />
-                <span>{label}</span>
-                {isActive && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full" style={{ backgroundColor: color }} />
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Search + filter strip */}
+      <Card padding="none" className="overflow-hidden">
+        <Tabs
+          variant="underline"
+          tabs={VIEW_TABS.map(({ mode, icon, label }) => ({ key: mode, label, icon }))}
+          active={view}
+          onChange={(k) => setView(k as ViewMode)}
+        />
         {view !== "reports" && view !== "activity" && view !== "employees" && (
           <div className="space-y-0">
             <div className="flex items-center gap-2 px-4 py-2.5">
@@ -634,7 +597,7 @@ function TasksContent() {
             </div>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* ── Saved Presets ── */}
       {view !== "reports" && view !== "employees" && presets.length > 0 && (
@@ -970,7 +933,7 @@ function TasksContent() {
           defaultAssigneeId={employeeCreateAssigneeId} />
       )}
       <FloatingTimer />
-    </div>
+    </PageShell>
   );
 }
 

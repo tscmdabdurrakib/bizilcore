@@ -48,14 +48,14 @@ export default function DashboardLaundry({
   const stats = [
     { label: "আজ আসা অর্ডার", value: todayOrders, icon: Package, color: "#6366F1", bg: "#EEF2FF" },
     { label: "প্রক্রিয়াধীন", value: inProcessCount, icon: Clock, color: "#F59E0B", bg: "#FFFBEB" },
-    { label: "Ready (সংগ্রহের অপেক্ষা)", value: readyCount, icon: CheckCircle, color: "#10B981", bg: "#ECFDF5" },
+    { label: "প্রস্তুত (সংগ্রহের অপেক্ষা)", value: readyCount, icon: CheckCircle, color: "#10B981", bg: "#ECFDF5" },
     { label: "আজকের আয়", value: formatBDT(todayRevenue), icon: Droplets, color: LAUNDRY_COLOR, bg: LAUNDRY_LIGHT },
   ];
 
   const pipeline = [
     { label: "Received", count: receivedCount, color: "#6B7280" },
     { label: "In Process", count: inProcessCount, color: "#F59E0B" },
-    { label: "Ready", count: readyCount, color: "#10B981" },
+    { label: "প্রস্তুত", count: readyCount, color: "#10B981" },
     { label: "Out for Delivery", count: outForDeliveryCount, color: "#3B82F6" },
   ];
 

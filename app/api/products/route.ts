@@ -1,68 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { cacheGet, cacheSet, cacheDel, CK, TTL } from "@/lib/cache";
 import { logActivity } from "@/lib/logActivity";
+import { trackForUser } from "@/lib/activity/trackFromSession";
 import { checkAndAwardBadges } from "@/lib/badges";
 import { markSetupTask } from "@/lib/setupProgress";
+import { getCachedProductsPage1, fetchProductsUncached } from "@/lib/data/cached-queries";
+import { revalidateProducts } from "@/lib/cache/revalidate";
 
-async function getShopId(userId: string) {
-  const shop = await prisma.shop.findUnique({ where: { userId } });
-  return shop?.id;
+async function getShopId() {
+  const { getActiveShopForApi } = await import("@/lib/shops/access");
+  const ctx = await getActiveShopForApi();
+  if ("error" in ctx) return null;
+  return ctx.activeShop.id;
 }
 
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const shopId = await getShopId(session.user.id);
+  const shopId = await getShopId();
   if (!shopId) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
 
   const { searchParams } = new URL(req.url);
   const page = parseInt(searchParams.get("page") ?? "1");
   const limit = Math.min(parseInt(searchParams.get("limit") ?? "50"), 50);
   const search = searchParams.get("search") ?? "";
-  const noCache = searchParams.get("nocache") === "1";
   const all = searchParams.get("all") === "1";
   const withVariants = searchParams.get("withVariants") === "1";
 
-  const whereClause = {
-    shopId,
-    ...(search ? { name: { contains: search, mode: "insensitive" as const } } : {}),
-  };
-
-  if (all || withVariants) {
-    const products = await prisma.product.findMany({
-      where: whereClause,
-      orderBy: { createdAt: "desc" },
-      include: withVariants ? { variants: { orderBy: { createdAt: "asc" } } } : undefined,
-    });
+  if (page === 1 && !search && !all && !withVariants) {
+    const products = await getCachedProductsPage1(shopId, limit);
     return NextResponse.json(products);
   }
 
-  // Cache only page 1 with no search
-  const shouldCache = page === 1 && !search;
-  const cacheKey = CK.products(shopId);
-
-  if (shouldCache && !noCache) {
-    const cached = cacheGet<unknown[]>(cacheKey);
-    if (cached) return NextResponse.json(cached);
-  }
-
-  const products = await prisma.product.findMany({
-    where: whereClause,
-    orderBy: { createdAt: "desc" },
-    skip: (page - 1) * limit,
-    take: limit,
-  });
-
-  if (shouldCache) cacheSet(cacheKey, products, TTL.PRODUCTS);
+  const products = await fetchProductsUncached(shopId, { page, limit, search, all, withVariants });
   return NextResponse.json(products);
 }
 
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const shopId = await getShopId(session.user.id);
+  const shopId = await getShopId();
   if (!shopId) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
 
   const body = await req.json();
@@ -101,13 +79,18 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  cacheDel(CK.products(shopId));
+  revalidateProducts(shopId);
   await logActivity({
     shopId,
     userId: session.user.id,
     action: "নতুন পণ্য যোগ",
     detail: `${product.name}${product.sku ? ` (SKU: ${product.sku})` : ""} · স্টক: ${product.stockQty}`,
   });
+  trackForUser(session.user.id, shopId, {
+    actionType: "product_added",
+    actionLabel: `নতুন পণ্য যোগ: ${product.name}`,
+    metadata: { product_id: product.id, product_name: product.name },
+  }).catch(() => {});
   checkAndAwardBadges(session.user.id, "product_added").catch(() => {});
   markSetupTask(session.user.id, "first_product").catch(() => {});
   return NextResponse.json(product, { status: 201 });

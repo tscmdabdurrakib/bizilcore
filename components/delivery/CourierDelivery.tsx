@@ -3,9 +3,16 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import PlanGate from "@/components/PlanGate";
-import { Search, Truck, RefreshCw, Package, ChevronLeft, ChevronRight, ExternalLink, DollarSign, Clock } from "lucide-react";
+import { RefreshCw, Package, ChevronLeft, ChevronRight, ExternalLink, DollarSign, Clock, Truck } from "lucide-react";
 import { formatBDT, formatBanglaDate } from "@/lib/utils";
-import { S } from "@/lib/theme";
+import PageShell from "@/components/ui/PageShell";
+import StatCard from "@/components/ui/StatCard";
+import Card from "@/components/ui/Card";
+import Badge from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
+import FilterBar from "@/components/ui/FilterBar";
+import Select from "@/components/ui/Select";
+import EmptyState from "@/components/ui/EmptyState";
 
 interface DeliveryOrder {
   id: string;
@@ -96,103 +103,46 @@ export default function CourierDelivery() {
   const collectedCod = orders.filter(o => o.codStatus === "collected").length;
   const totalPages   = Math.ceil(total / LIMIT);
 
-  const activeTab = STATUS_TABS.find(t => t.key === statusFilter) ?? STATUS_TABS[0];
-
   return (
     <PlanGate feature="courier">
-    <div className="max-w-5xl mx-auto space-y-5">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #2B7CE9 0%, #1A5FBF 100%)" }}>
-            <Truck size={18} color="#fff" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold" style={{ color: S.text }}>ডেলিভারি ট্র্যাকিং</h1>
-            <p className="text-xs" style={{ color: S.muted }}>সব active shipment এক জায়গায়</p>
-          </div>
-        </div>
-        <button
-          onClick={load}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium transition-colors hover:bg-gray-50"
-          style={{ borderColor: S.border, color: S.secondary, backgroundColor: S.surface }}
-        >
-          <RefreshCw size={14} /> Refresh
-        </button>
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: "মোট Shipment", value: total,        color: S.text,      bg: S.surface,   icon: Package },
-          { label: "এই পেজে",     value: orders.length, color: "#2B7CE9",   bg: "#E1F0FF",   icon: Truck },
-          { label: "COD Pending", value: pendingCod,    color: "#EF9F27",   bg: "#FFF3DC",   icon: Clock },
-          { label: "Cash পেয়েছি", value: collectedCod, color: "#0F6E56",   bg: "#E8F5F0",   icon: DollarSign },
-        ].map(s => {
-          const Icon = s.icon;
-          return (
-            <div key={s.label} className="rounded-2xl p-4 border" style={{ backgroundColor: s.bg, borderColor: S.border }}>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs" style={{ color: S.muted }}>{s.label}</p>
-                <Icon size={14} style={{ color: s.color }} />
-              </div>
-              <p className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</p>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="flex flex-wrap gap-3 items-center">
-        <div className="flex gap-1 p-1 rounded-xl border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-          {STATUS_TABS.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setStatusFilter(tab.key)}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-              style={statusFilter === tab.key
-                ? { backgroundColor: tab.color, color: "#fff" }
-                : { color: S.secondary }}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        <select
-          value={courier}
-          onChange={e => setCourier(e.target.value)}
-          className="h-9 px-3 rounded-xl border text-sm outline-none"
-          style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }}
-        >
-          {couriers.map(c => (
-            <option key={c} value={c}>{COURIER_LABELS[c] ?? c}</option>
-          ))}
-        </select>
-
-        <div className="relative flex-1 min-w-[180px]">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: S.muted }} />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="কাস্টমার বা Tracking ID..."
-            className="w-full h-9 pl-9 pr-3 rounded-xl border text-sm outline-none"
-            style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }}
+    <PageShell
+      title="ডেলিভারি ট্র্যাকিং"
+      subtitle="সব active shipment এক জায়গায়"
+      actions={<Button variant="outline" icon={RefreshCw} onClick={load}>Refresh</Button>}
+      stats={
+        <>
+          <StatCard label="মোট Shipment" value={total} icon={Package} accent="blue" />
+          <StatCard label="এই পেজে" value={orders.length} icon={Truck} accent="blue" />
+          <StatCard label="COD Pending" value={pendingCod} icon={Clock} accent="gold" />
+          <StatCard label="Cash পেয়েছি" value={collectedCod} icon={DollarSign} accent="green" />
+        </>
+      }
+    >
+      <FilterBar
+        tabs={STATUS_TABS.map(t => ({ key: t.key, label: t.label }))}
+        activeTab={statusFilter}
+        onTabChange={setStatusFilter}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="কাস্টমার বা Tracking ID..."
+        filters={
+          <Select
+            value={courier}
+            onChange={e => setCourier(e.target.value)}
+            options={couriers.map(c => ({ value: c, label: COURIER_LABELS[c] ?? c }))}
+            className="h-10 py-2"
           />
-        </div>
-      </div>
+        }
+      />
 
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="h-24 rounded-2xl animate-pulse" style={{ backgroundColor: S.surface }} />
+            <div key={i} className="h-24 rounded-2xl animate-pulse card-premium" />
           ))}
         </div>
       ) : orders.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 rounded-2xl border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ backgroundColor: activeTab.bg }}>
-            <Truck size={28} style={{ color: activeTab.color }} />
-          </div>
-          <p className="font-semibold text-sm" style={{ color: S.secondary }}>কোনো shipment পাওয়া যায়নি</p>
-          <p className="text-xs mt-1" style={{ color: S.muted }}>এই ফিল্টারে কোনো ডেলিভারি নেই</p>
-        </div>
+        <EmptyState icon={Truck} title="কোনো shipment পাওয়া যায়নি" description="এই ফিল্টারে কোনো ডেলিভারি নেই" />
       ) : (
         <div className="space-y-2">
           {orders.map(o => {
@@ -202,12 +152,8 @@ export default function CourierDelivery() {
             const days = daysSince(o.createdAt);
 
             return (
-              <div
-                key={o.id}
-                className="rounded-2xl border overflow-hidden"
-                style={{ backgroundColor: S.surface, borderColor: S.border, borderLeft: `3px solid ${st.color}` }}
-              >
-                <div className="p-4">
+              <div key={o.id} style={{ borderLeft: `3px solid ${st.color}` }}>
+              <Card padding="md" className="overflow-hidden rounded-l-none">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-1.5">
@@ -218,44 +164,40 @@ export default function CourierDelivery() {
                         >
                           #{o.id.slice(-6).toUpperCase()}
                         </Link>
-                        <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ backgroundColor: st.bg, color: st.color }}>
+                        <Badge variant={st.key === "delivered" ? "success" : st.key === "returned" ? "danger" : "info"}>
                           {st.label}
-                        </span>
+                        </Badge>
                         {cod && (
-                          <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: cod.bg, color: cod.text }}>
-                            COD: {cod.label}
-                          </span>
+                          <Badge variant="warning">COD: {cod.label}</Badge>
                         )}
                         {days > 0 && (
-                          <span className="text-xs font-medium" style={{ color: days > 7 ? "#E24B4A" : S.muted }}>
+                          <span className="text-xs font-medium" style={{ color: days > 7 ? "#E24B4A" : "var(--c-text-muted)" }}>
                             {days} দিন আগে
                           </span>
                         )}
                       </div>
 
                       {o.customer && (
-                        <p className="text-sm mb-1.5" style={{ color: S.text }}>
+                        <p className="text-sm mb-1.5" style={{ color: "var(--c-text)" }}>
                           <Link href={`/customers/${o.customer.id}`} className="font-medium hover:underline">
                             {o.customer.name}
                           </Link>
-                          {o.customer.phone && <span style={{ color: S.muted }}> · {o.customer.phone}</span>}
+                          {o.customer.phone && <span style={{ color: "var(--c-text-muted)" }}> · {o.customer.phone}</span>}
                         </p>
                       )}
 
                       {(o.courierName || o.courierTrackId) && (
                         <div className="flex items-center gap-2 flex-wrap">
                           {o.courierName && (
-                            <span className="text-xs px-2.5 py-0.5 rounded-lg font-bold" style={{ backgroundColor: "#E1F0FF", color: "#2B7CE9" }}>
-                              {COURIER_LABELS[o.courierName] ?? o.courierName.toUpperCase()}
-                            </span>
+                            <Badge variant="info">{COURIER_LABELS[o.courierName] ?? o.courierName.toUpperCase()}</Badge>
                           )}
                           {o.courierTrackId && (
-                            <span className="text-xs font-mono" style={{ color: S.secondary }}>{o.courierTrackId}</span>
+                            <span className="text-xs font-mono" style={{ color: "var(--c-text-sub)" }}>{o.courierTrackId}</span>
                           )}
                           {trackUrl && (
                             <a href={trackUrl} target="_blank" rel="noopener noreferrer"
                               className="flex items-center gap-1 text-xs font-medium hover:underline"
-                              style={{ color: S.primary }}>
+                              style={{ color: "var(--c-primary)" }}>
                               <ExternalLink size={11} /> Track করুন
                             </a>
                           )}
@@ -264,14 +206,14 @@ export default function CourierDelivery() {
                     </div>
 
                     <div className="text-right flex-shrink-0">
-                      <p className="font-bold text-sm" style={{ color: S.text }}>{formatBDT(o.totalAmount)}</p>
+                      <p className="font-bold text-sm" style={{ color: "var(--c-text)" }}>{formatBDT(o.totalAmount)}</p>
                       {o.dueAmount > 0 && (
                         <p className="text-xs mt-0.5" style={{ color: "#E24B4A" }}>বাকি {formatBDT(o.dueAmount)}</p>
                       )}
-                      <p className="text-xs mt-0.5" style={{ color: S.muted }}>{formatBanglaDate(o.createdAt)}</p>
+                      <p className="text-xs mt-0.5" style={{ color: "var(--c-text-muted)" }}>{formatBanglaDate(o.createdAt)}</p>
                     </div>
                   </div>
-                </div>
+              </Card>
               </div>
             );
           })}
@@ -280,31 +222,21 @@ export default function CourierDelivery() {
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-1">
-          <p className="text-xs" style={{ color: S.muted }}>পৃষ্ঠা {page}/{totalPages} · মোট {total}</p>
+          <p className="text-xs" style={{ color: "var(--c-text-muted)" }}>পৃষ্ঠা {page}/{totalPages} · মোট {total}</p>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium disabled:opacity-40"
-              style={{ borderColor: S.border, backgroundColor: S.surface, color: S.secondary }}
-            >
-              <ChevronLeft size={14} /> পূর্ববর্তী
-            </button>
+            <Button variant="outline" size="sm" icon={ChevronLeft} onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
+              পূর্ববর্তী
+            </Button>
             <span className="text-xs px-3 py-2 rounded-xl font-bold" style={{ backgroundColor: "#E1F0FF", color: "#2B7CE9" }}>
               {page}
             </span>
-            <button
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium disabled:opacity-40"
-              style={{ borderColor: S.border, backgroundColor: S.surface, color: S.secondary }}
-            >
-              পরবর্তী <ChevronRight size={14} />
-            </button>
+            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+              পরবর্তী <ChevronRight size={14} className="inline ml-1" />
+            </Button>
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
     </PlanGate>
   );
 }

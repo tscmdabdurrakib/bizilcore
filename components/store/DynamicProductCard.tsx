@@ -2,10 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { ShoppingCart, Star } from "lucide-react";
 import { useCart } from "@/lib/store/cart";
 import { useWishlist } from "@/lib/store/wishlist";
 import { useStoreTheme } from "./ThemeProvider";
+import { FlashCountdown } from "./FlashCountdown";
+import { SocialProofBadge } from "./SocialProofBadge";
 
 interface Product {
   id: string; name: string; description: string | null; category: string | null;
@@ -13,8 +16,9 @@ interface Product {
   hasVariants: boolean; storeVisible: boolean; storeFeatured: boolean;
 }
 
-export function DynamicProductCard({ product: p, slug, showDiscount, fullWidth }: {
+export function DynamicProductCard({ product: p, slug, showDiscount, fullWidth, flashEndAt, flashSalePrice, socialProofEnabled }: {
   product: Product; slug: string; showDiscount?: boolean; fullWidth?: boolean;
+  flashEndAt?: string; flashSalePrice?: number; socialProofEnabled?: boolean;
 }) {
   const { primary } = useStoreTheme();
   const { addItem } = useCart();
@@ -24,8 +28,9 @@ export function DynamicProductCard({ product: p, slug, showDiscount, fullWidth }
 
   const imgs = Array.isArray(p.images) ? p.images as string[] : [];
   const img = !imgErr && (p.imageUrl || imgs[0]);
-  const discountPct = showDiscount ? 20 : 0;
-  const origPrice = discountPct > 0 ? Math.round(p.sellPrice / (1 - discountPct / 100)) : null;
+  const discountPct = showDiscount ? 20 : flashSalePrice ? Math.round((1 - flashSalePrice / p.sellPrice) * 100) : 0;
+  const displayPrice = flashSalePrice ?? p.sellPrice;
+  const origPrice = discountPct > 0 ? p.sellPrice : null;
   const stars = 4 + (p.id.charCodeAt(0) % 2) * 0.5;
   const reviewCount = 50 + (p.id.charCodeAt(1) % 100);
 
@@ -35,12 +40,13 @@ export function DynamicProductCard({ product: p, slug, showDiscount, fullWidth }
     setAdding(true);
     addItem(
       {
+        itemType: "product",
         productId: p.id,
         productName: p.name,
         productImage: p.imageUrl || null,
         variantId: null,
         variantName: null,
-        unitPrice: p.sellPrice,
+        unitPrice: displayPrice,
         quantity: 1,
       },
       slug
@@ -55,15 +61,25 @@ export function DynamicProductCard({ product: p, slug, showDiscount, fullWidth }
       <div className="relative bg-[#F0EEED] rounded-2xl overflow-hidden mb-3"
         style={{ aspectRatio: "3/4" }}>
         {img ? (
-          <img src={img as string} alt={p.name}
+          <Image
+            src={img as string}
+            alt={p.name}
+            fill
+            sizes="(max-width: 640px) 220px, 250px"
             onError={() => setImgErr(true)}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+          />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <ShoppingCart size={40} className="text-gray-300" />
           </div>
         )}
         {/* Badges */}
+        {flashEndAt && (
+          <div className="absolute top-3 right-3">
+            <FlashCountdown endAt={flashEndAt} primary={primary} />
+          </div>
+        )}
         <div className="absolute top-3 left-3 flex flex-col gap-1">
           {p.storeFeatured && (
             <span className="bg-black text-white text-[10px] font-bold px-2.5 py-1 rounded-full">New</span>
@@ -99,14 +115,17 @@ export function DynamicProductCard({ product: p, slug, showDiscount, fullWidth }
         </div>
         {/* Price */}
         <div className="flex items-center gap-2">
-          <span className="font-bold text-base text-black">৳{p.sellPrice.toLocaleString("bn-BD")}</span>
-          {origPrice && (
+          <span className="font-bold text-base text-black">৳{displayPrice.toLocaleString("bn-BD")}</span>
+          {origPrice && origPrice !== displayPrice && (
             <>
               <span className="text-sm text-gray-400 line-through">৳{origPrice.toLocaleString("bn-BD")}</span>
-              <span className="text-xs font-semibold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">-{discountPct}%</span>
+              {discountPct > 0 && (
+                <span className="text-xs font-semibold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">-{discountPct}%</span>
+              )}
             </>
           )}
         </div>
+        <SocialProofBadge slug={slug} productId={p.id} enabled={socialProofEnabled} />
       </div>
     </Link>
   );

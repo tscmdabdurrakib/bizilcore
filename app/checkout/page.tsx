@@ -40,10 +40,10 @@ interface PricingConfig {
   discountLabel: string;
 }
 
-const METHODS = [
-  { id: "bkash", label: "bKash", number: "01800-000000", color: "#E2136E", bg: "#FDE8F3", icon: "📱" },
-  { id: "nagad", label: "Nagad", number: "01800-000000", color: "#F05A28", bg: "#FEF0EB", icon: "💳" },
-  { id: "rocket", label: "Rocket (DBBL)", number: "01800-000000", color: "#8B1EC4", bg: "#F5EEFB", icon: "🚀" },
+const METHOD_META = [
+  { id: "bkash", label: "bKash", color: "#E2136E", bg: "#FDE8F3", icon: "📱" },
+  { id: "nagad", label: "Nagad", color: "#F05A28", bg: "#FEF0EB", icon: "💳" },
+  { id: "rocket", label: "Rocket (DBBL)", color: "#8B1EC4", bg: "#F5EEFB", icon: "🚀" },
 ];
 
 const MONTHS = [
@@ -69,8 +69,11 @@ function CheckoutContent() {
   const [senderPhone, setSenderPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [autoVerified, setAutoVerified] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [autoVerifyEnabled, setAutoVerifyEnabled] = useState(false);
+  const [paymentNumbers, setPaymentNumbers] = useState<Record<string, string | null>>({});
 
   const [pricingConfigs, setPricingConfigs] = useState<PricingConfig[]>([]);
 
@@ -79,7 +82,21 @@ function CheckoutContent() {
       .then((r) => r.json())
       .then((data: PricingConfig[]) => setPricingConfigs(data))
       .catch(() => {});
+    fetch("/api/payment/config")
+      .then((r) => r.json())
+      .then((data: { autoVerifyEnabled: boolean; numbers: Record<string, string | null> }) => {
+        setAutoVerifyEnabled(data.autoVerifyEnabled ?? false);
+        setPaymentNumbers(data.numbers ?? {});
+      })
+      .catch(() => {});
   }, []);
+
+  const methods = METHOD_META
+    .filter((m) => m.id !== "rocket" || paymentNumbers.rocket)
+    .map((m) => ({
+      ...m,
+      number: paymentNumbers[m.id] || "—",
+    }));
 
   function getMonthlyBase(key: string): number {
     const cfg = pricingConfigs.find((c) => c.planKey === key);
@@ -133,7 +150,7 @@ function CheckoutContent() {
 
   const baseAmount = getPriceForDuration(planKey, months);
   const amount = promoResult ? promoResult.finalAmount : baseAmount;
-  const selectedMethod = METHODS.find((m) => m.id === method);
+  const selectedMethod = methods.find((m) => m.id === method);
 
   async function applyPromo() {
     if (!promoInput.trim()) return;
@@ -185,6 +202,7 @@ function CheckoutContent() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "সমস্যা হয়েছে"); setSubmitting(false); return; }
+      setAutoVerified(Boolean(data.autoVerified));
       setDone(true);
     } catch {
       setError("Network সমস্যা। আবার চেষ্টা করুন।");
@@ -199,9 +217,15 @@ function CheckoutContent() {
           <div style={{ width: 80, height: 80, borderRadius: "50%", backgroundColor: S.primaryLight, margin: "0 auto 20px", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <CheckCircle size={40} color={S.primary} />
           </div>
-          <h2 style={{ color: S.text, fontSize: 22, fontWeight: 700, marginBottom: 10 }}>Payment Submission সম্পন্ন!</h2>
+          <h2 style={{ color: S.text, fontSize: 22, fontWeight: 700, marginBottom: 10 }}>
+            {autoVerified ? "Plan Activate হয়েছে!" : "Payment Submission সম্পন্ন!"}
+          </h2>
           <p style={{ color: S.textSub, fontSize: 14, lineHeight: 1.7, marginBottom: 24 }}>
-            আপনার payment request পাঠানো হয়েছে। Admin verification-এর পর সাধারণত <strong style={{ color: S.text }}>১২-২৪ ঘণ্টার মধ্যে</strong> আপনার plan activate হবে।
+            {autoVerified ? (
+              <>আপনার payment verify হয়েছে এবং plan <strong style={{ color: S.text }}>এখনই active</strong>। Dashboard-এ যেয়ে সব premium ফিচার ব্যবহার করুন।</>
+            ) : (
+              <>আপনার payment request পাঠানো হয়েছে। Admin verification-এর পর সাধারণত <strong style={{ color: S.text }}>১২-২৪ ঘণ্টার মধ্যে</strong> আপনার plan activate হবে।</>
+            )}
           </p>
           <div style={{ backgroundColor: S.bg, borderRadius: 12, padding: 16, marginBottom: 24, textAlign: "left" }}>
             {[
@@ -221,12 +245,14 @@ function CheckoutContent() {
               </div>
             ))}
           </div>
-          <Link href="/billing" style={{ display: "block", padding: "13px 20px", borderRadius: 12, backgroundColor: S.primary, color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: 14, marginBottom: 10 }}>
-            Billing History দেখুন
+          <Link href={autoVerified ? "/dashboard" : "/billing"} style={{ display: "block", padding: "13px 20px", borderRadius: 12, backgroundColor: S.primary, color: "#fff", textDecoration: "none", fontWeight: 700, fontSize: 14, marginBottom: 10 }}>
+            {autoVerified ? "Dashboard-এ যান" : "Billing History দেখুন"}
           </Link>
+          {!autoVerified && (
           <Link href="/dashboard" style={{ display: "block", padding: "11px 20px", borderRadius: 12, border: `1px solid ${S.border}`, color: S.textSub, textDecoration: "none", fontSize: 14 }}>
             Dashboard-এ যান
           </Link>
+          )}
         </div>
       </div>
     );
@@ -411,7 +437,7 @@ function CheckoutContent() {
             <div style={{ backgroundColor: S.surface, borderRadius: 16, border: `1px solid ${S.border}`, padding: 24 }}>
               <h3 style={{ color: S.text, fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Payment Method বেছে নিন</h3>
               <div className="space-y-3 mb-6">
-                {METHODS.map((m) => (
+                {methods.map((m) => (
                   <button
                     key={m.id}
                     onClick={() => setMethod(m.id)}
@@ -557,7 +583,7 @@ function CheckoutContent() {
                     style={{ flex: 2, padding: "12px", borderRadius: 12, backgroundColor: S.primary, color: "#fff", fontSize: 14, fontWeight: 700, border: "none", cursor: submitting ? "not-allowed" : "pointer", opacity: submitting ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
                   >
                     {submitting ? (
-                      <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />পাঠানো হচ্ছে...</>
+                      <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{autoVerifyEnabled ? "Payment verify হচ্ছে..." : "পাঠানো হচ্ছে..."}</>
                     ) : "✅ Payment Submit করুন"}
                   </button>
                 </div>
@@ -616,7 +642,7 @@ function CheckoutContent() {
             <div style={{ borderTop: `1px solid ${S.border}`, paddingTop: 14 }}>
               <div className="flex items-center gap-1.5" style={{ color: S.textMuted, fontSize: 11 }}>
                 <Clock size={12} />
-                <span>Verification: ১২-২৪ ঘণ্টা</span>
+                <span>{autoVerifyEnabled ? "Instant verification" : "Verification: ১২-২৪ ঘণ্টা"}</span>
               </div>
               <div className="flex items-center gap-1.5 mt-1.5" style={{ color: S.textMuted, fontSize: 11 }}>
                 <Shield size={12} />

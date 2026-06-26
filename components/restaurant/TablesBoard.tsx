@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, UtensilsCrossed, X, Loader2, Settings, Trash2, Minus, Clock, ArrowRightLeft, Merge, QrCode, Download } from "lucide-react";
+import { Plus, UtensilsCrossed, X, Loader2, Settings, Trash2, Minus, Clock, ArrowRightLeft, Merge, QrCode, Download, Ticket } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
-import QRCode from "qrcode";
 
 interface DiningTable {
   id: string; number: number; capacity: number; floor?: string; status: string;
@@ -24,10 +23,14 @@ interface ROrderItem {
 
 interface RestaurantOrder {
   id: string; type: string; status: string; totalAmount: number; paidAmount: number;
+  subtotal?: number; discount?: number; vatAmount?: number; serviceAmount?: number;
   orderNumber?: string; customerName?: string; note?: string; createdAt: string;
   items: ROrderItem[]; table?: { id: string; number: number } | null;
   waiter?: { id: string; user: { name: string } } | null;
   tipAmount?: number;
+  kotSent?: boolean;
+  couponCode?: string | null;
+  discountBreakdown?: { type: string; label: string; amount: number }[] | null;
 }
 
 interface CartItem { menuItem: MenuItem; quantity: number; }
@@ -103,6 +106,10 @@ export default function TablesBoard() {
   const [orderNote, setOrderNote] = useState("");
   const [orderStep, setOrderStep] = useState(1);
   const [submittingOrder, setSubmittingOrder] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number; label: string } | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState("");
 
   const [occupiedTable, setOccupiedTable] = useState<DiningTable | null>(null);
   const [activeOrder, setActiveOrder] = useState<RestaurantOrder | null>(null);
@@ -111,6 +118,9 @@ export default function TablesBoard() {
   const [discount, setDiscount] = useState("0");
   const [tipInput, setTipInput] = useState("0");
   const [paying, setPaying] = useState(false);
+  const [aoCouponInput, setAoCouponInput] = useState("");
+  const [aoCouponLoading, setAoCouponLoading] = useState(false);
+  const [aoCouponError, setAoCouponError] = useState("");
 
   const [waiterList, setWaiterList] = useState<{ id: string; name: string }[]>([]);
   const [assigningWaiter, setAssigningWaiter] = useState(false);
@@ -154,6 +164,7 @@ export default function TablesBoard() {
     try {
       const origin = window.location.origin;
       const url = `${origin}/qr/${shopSlug}/${table.number}`;
+      const QRCode = (await import("qrcode")).default;
       const dataUrl = await QRCode.toDataURL(url, { width: 300, margin: 2, color: { dark: "#1C1C1C", light: "#FFFFFF" } });
       setQrDataUrl(dataUrl);
     } catch { /* ignore */ }
@@ -172,6 +183,7 @@ export default function TablesBoard() {
     if (orderTable) {
       fetch("/api/restaurant/menu-items?available=true").then(r => r.json()).then(setMenuItems).catch(() => {});
       setCart([]); setOrderNote(""); setMenuCat("all"); setOrderStep(1);
+      setCouponInput(""); setAppliedCoupon(null); setCouponError("");
     }
   }, [orderTable]);
 
@@ -216,6 +228,40 @@ export default function TablesBoard() {
     } else {
       showToast("error", "ওয়েটার পরিবর্তন করা যায়নি");
     }
+  }
+
+  async function applyCouponToActiveOrder() {
+    if (!activeOrder) return;
+    const code = aoCouponInput.trim().toUpperCase();
+    if (!code) { setAoCouponError("কুপন কোড দিন"); return; }
+    setAoCouponLoading(true); setAoCouponError("");
+    try {
+      const r = await fetch(`/api/restaurant/orders/${activeOrder.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "apply_coupon", couponCode: code }),
+      });
+      const d = await r.json();
+      if (!r.ok) { setAoCouponError(d.error ?? "কুপন প্রযোজ্য নয়"); }
+      else {
+        setActiveOrder(d); setAoCouponInput("");
+        showToast("success", `কুপন ${code} প্রয়োগ হয়েছে!`);
+      }
+    } catch { setAoCouponError("Error"); }
+    setAoCouponLoading(false);
+  }
+
+  async function removeCouponFromActiveOrder() {
+    if (!activeOrder) return;
+    setAoCouponLoading(true);
+    try {
+      const r = await fetch(`/api/restaurant/orders/${activeOrder.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "remove_coupon" }),
+      });
+      if (r.ok) { const d = await r.json(); setActiveOrder(d); showToast("success", "কুপন সরানো হয়েছে ✓"); }
+      else { showToast("error", "কুপন সরানো যায়নি"); }
+    } catch { /* ignore */ }
+    setAoCouponLoading(false);
   }
 
   function openEdit(table: DiningTable) {
@@ -275,20 +321,56 @@ export default function TablesBoard() {
 
   const cartTotal = cart.reduce((s, c) => s + c.menuItem.price * c.quantity, 0);
   const cartCount = cart.reduce((s, c) => s + c.quantity, 0);
+  const discountedTotal = Math.max(0, cartTotal - (appliedCoupon?.discount ?? 0));
+
+  async function applyCoupon() {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) { setCouponError("কুপন কোড দিন"); return; }
+    setCouponLoading(true); setCouponError("");
+    try {
+      const r = await fetch("/api/restaurant/coupons/validate", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, cartTotal, items: cart.map(c => ({ menuItemId: c.menuItem.id, name: c.menuItem.name, category: c.menuItem.category, quantity: c.quantity, unitPrice: c.menuItem.price })) }),
+      });
+      const d = await r.json();
+      if (!r.ok || !d.valid) { setCouponError(d.error ?? "অবৈধ কুপন"); setAppliedCoupon(null); }
+      else {
+        setAppliedCoupon({ code, discount: d.discount.amount ?? 0, label: d.discount.label ?? code });
+        setCouponInput("");
+        showToast("success", `কুপন ${code} প্রয়োগ হয়েছে!`);
+      }
+    } catch { setCouponError("Error"); setAppliedCoupon(null); }
+    setCouponLoading(false);
+  }
+
+  function removeCoupon() {
+    setAppliedCoupon(null); setCouponInput(""); setCouponError("");
+  }
 
   async function submitOrder() {
     if (!cart.length || !orderTable) return;
     setSubmittingOrder(true);
-    const r = await fetch("/api/restaurant/orders", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: "dine_in", tableId: orderTable.id, note: orderNote || null,
-        items: cart.map(c => ({ menuItemId: c.menuItem.id, quantity: c.quantity })),
-      }),
-    });
-    setSubmittingOrder(false);
-    if (r.ok) { showToast("success", "অর্ডার তৈরি হয়েছে ✓"); setOrderTable(null); loadTables(); }
-    else { const d = await r.json(); showToast("error", d.error ?? "অর্ডার তৈরি করা যায়নি"); }
+    try {
+      const r = await fetch("/api/restaurant/orders", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "dine_in", tableId: orderTable.id, note: orderNote || null,
+          items: cart.map(c => ({ menuItemId: c.menuItem.id, quantity: c.quantity })),
+          ...(appliedCoupon ? { couponCode: appliedCoupon.code } : {}),
+        }),
+      });
+      setSubmittingOrder(false);
+      if (r.ok) {
+        showToast("success", "অর্ডার তৈরি হয়েছে ✓"); setOrderTable(null); loadTables();
+      } else {
+        let errorMsg = "অর্ডার তৈরি করা যায়নি";
+        try { const d = await r.json(); errorMsg = d.error ?? errorMsg; } catch {}
+        showToast("error", errorMsg);
+      }
+    } catch {
+      setSubmittingOrder(false);
+      showToast("error", "নেটওয়ার্ক সমস্যা — আবার চেষ্টা করুন");
+    }
   }
 
   async function sendKot() {
@@ -298,7 +380,7 @@ export default function TablesBoard() {
       body: JSON.stringify({ action: "send_kot" }),
     });
     if (r.ok) { const d = await r.json(); setActiveOrder(d); showToast("success", "KOT পাঠানো হয়েছে ✓"); }
-    else showToast("error", "KOT পাঠানো যায়নি");
+    else { let msg = "KOT পাঠানো যায়নি"; try { const d = await r.json(); msg = d.error ?? msg; } catch {} showToast("error", msg); }
   }
 
   async function requestBill() {
@@ -308,7 +390,7 @@ export default function TablesBoard() {
       body: JSON.stringify({ action: "request_bill" }),
     });
     if (r.ok) { const d = await r.json(); setActiveOrder(d); showToast("success", "বিল অনুরোধ পাঠানো হয়েছে"); }
-    else showToast("error", "বিল অনুরোধ করা যায়নি");
+    else { let msg = "বিল অনুরোধ করা যায়নি"; try { const d = await r.json(); msg = d.error ?? msg; } catch {} showToast("error", msg); }
   }
 
   async function handlePayment() {
@@ -322,7 +404,7 @@ export default function TablesBoard() {
     });
     setPaying(false);
     if (r.ok) { showToast("success", "পেমেন্ট সম্পন্ন ✓"); setOccupiedTable(null); loadTables(); }
-    else showToast("error", "পেমেন্ট রেকর্ড করা যায়নি");
+    else { let msg = "পেমেন্ট রেকর্ড করা যায়নি"; try { const d = await r.json(); msg = d.error ?? msg; } catch {} showToast("error", msg); }
   }
 
   async function doMerge() {
@@ -338,7 +420,8 @@ export default function TablesBoard() {
       showToast("success", d.message ?? "মার্জ সফল ✓");
       setShowMerge(false); setMergeSource(null); setMergeTarget(""); loadTables();
     } else {
-      const d = await r.json(); showToast("error", d.error ?? "মার্জ করা যায়নি");
+      let msg = "মার্জ করা যায়নি"; try { const d = await r.json(); msg = d.error ?? msg; } catch {}
+      showToast("error", msg);
     }
   }
 
@@ -354,7 +437,8 @@ export default function TablesBoard() {
       showToast("success", "অর্ডার সরানো হয়েছে ✓");
       setShowMove(false); setMoveTarget(""); setOccupiedTable(null); loadTables();
     } else {
-      const d = await r.json(); showToast("error", d.error ?? "সরানো যায়নি");
+      let msg = "সরানো যায়নি"; try { const d = await r.json(); msg = d.error ?? msg; } catch {}
+      showToast("error", msg);
     }
   }
 
@@ -593,8 +677,15 @@ export default function TablesBoard() {
                       <div className="pt-2 border-t mt-2" style={{ borderColor: S.border }}>
                         <div className="flex justify-between text-sm font-bold">
                           <span style={{ color: S.text }}>মোট</span>
-                          <span style={{ color: ORANGE }}>{formatBDT(cartTotal)}</span>
+                          <span style={{ color: ORANGE }}>{formatBDT(discountedTotal)}</span>
                         </div>
+                        {appliedCoupon && (
+                          <div className="flex items-center justify-between mt-1.5 px-2 py-1 rounded-lg text-[10px] font-semibold"
+                            style={{ backgroundColor: "#EFF6FF", color: "#1D4ED8" }}>
+                            <span>🎟️ {appliedCoupon.code}: −{formatBDT(appliedCoupon.discount)}</span>
+                            <button onClick={removeCoupon}><X size={9} /></button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -623,10 +714,45 @@ export default function TablesBoard() {
                       <span style={{ color: ORANGE }} className="font-mono font-semibold">{formatBDT(c.menuItem.price * c.quantity)}</span>
                     </div>
                   ))}
+
+                  {/* Coupon section */}
+                  <div className="pt-2 border-t space-y-2" style={{ borderColor: S.border }}>
+                    <label className="flex items-center gap-1.5 text-xs font-bold" style={{ color: ORANGE }}>
+                      <Ticket size={12} /> কুপন আছে?
+                    </label>
+                    {!appliedCoupon ? (
+                      <div className="flex gap-1.5">
+                        <input value={couponInput} onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponError(""); }}
+                          onKeyDown={e => e.key === "Enter" && applyCoupon()}
+                          placeholder="কুপন কোড লিখুন (যেমন: SAVE10)"
+                          className="flex-1 px-3 py-2.5 rounded-xl text-sm border-2 outline-none font-mono tracking-wider"
+                          style={{ borderColor: couponError ? "#EF4444" : "#FDBA74", backgroundColor: "#FFFBF5", color: S.text }} />
+                        <button onClick={applyCoupon} disabled={couponLoading || !couponInput.trim()}
+                          className="px-4 py-2.5 rounded-xl text-xs font-bold text-white disabled:opacity-40 flex items-center gap-1.5"
+                          style={{ backgroundColor: ORANGE }}>
+                          {couponLoading ? <Loader2 size={12} className="animate-spin" /> : <><Ticket size={12} /> প্রয়োগ</>}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold"
+                        style={{ backgroundColor: "#EFF6FF", color: "#1D4ED8" }}>
+                        <span><Ticket size={11} className="inline mr-1" />{appliedCoupon.label}: −{formatBDT(appliedCoupon.discount)}</span>
+                        <button onClick={removeCoupon}><X size={11} /></button>
+                      </div>
+                    )}
+                    {couponError && <p className="text-[10px] text-red-500 px-1">{couponError}</p>}
+                  </div>
+
                   <div className="pt-2 border-t flex justify-between font-bold" style={{ borderColor: S.border }}>
                     <span style={{ color: S.text }}>মোট</span>
-                    <span style={{ color: ORANGE }} className="font-mono">{formatBDT(cartTotal)}</span>
+                    <span style={{ color: ORANGE }} className="font-mono">{formatBDT(discountedTotal)}</span>
                   </div>
+                  {appliedCoupon && discountedTotal < cartTotal && (
+                    <div className="flex justify-between text-xs">
+                      <span style={{ color: S.muted }}>মূল মূল্য</span>
+                      <span style={{ color: S.muted, textDecoration: "line-through" }} className="font-mono">{formatBDT(cartTotal)}</span>
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-3">
                   <button onClick={() => setOrderStep(1)} className="flex-1 py-3 rounded-xl border text-sm font-semibold" style={{ borderColor: S.border, color: S.secondary }}>
@@ -716,8 +842,74 @@ export default function TablesBoard() {
                 <div className="rounded-xl border p-4 space-y-2" style={{ borderColor: S.border }}>
                   <div className="flex justify-between text-sm">
                     <span style={{ color: S.muted }}>সাবটোটাল</span>
-                    <span className="font-mono" style={{ color: S.text }}>{formatBDT(activeOrder.totalAmount)}</span>
+                    <span className="font-mono" style={{ color: S.text }}>{formatBDT(activeOrder.subtotal ?? activeOrder.totalAmount)}</span>
                   </div>
+                  {(activeOrder.discount ?? 0) > 0 && (
+                    <>
+                      {activeOrder.discountBreakdown && activeOrder.discountBreakdown.length > 0 ? (
+                        activeOrder.discountBreakdown.map((d, i) => (
+                          <div key={i} className="flex justify-between text-xs">
+                            <span style={{ color: "#059669" }}>✓ {d.label}</span>
+                            <span className="font-mono" style={{ color: "#059669" }}>−{formatBDT(d.amount)}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="flex justify-between text-xs">
+                          <span style={{ color: "#059669" }}>ছাড়{activeOrder.couponCode ? ` (${activeOrder.couponCode})` : ""}</span>
+                          <span className="font-mono" style={{ color: "#059669" }}>−{formatBDT(activeOrder.discount ?? 0)}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {(activeOrder.vatAmount ?? 0) > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span style={{ color: S.muted }}>VAT</span>
+                      <span className="font-mono" style={{ color: S.text }}>+{formatBDT(activeOrder.vatAmount ?? 0)}</span>
+                    </div>
+                  )}
+                  {(activeOrder.serviceAmount ?? 0) > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span style={{ color: S.muted }}>সার্ভিস চার্জ</span>
+                      <span className="font-mono" style={{ color: S.text }}>+{formatBDT(activeOrder.serviceAmount ?? 0)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm font-bold pt-1.5 border-t" style={{ borderColor: S.border }}>
+                    <span style={{ color: S.text }}>মোট</span>
+                    <span className="font-mono" style={{ color: ORANGE }}>{formatBDT(activeOrder.totalAmount)}</span>
+                  </div>
+
+                  {/* Coupon section for active order */}
+                  {activeOrder.status !== "paid" && (
+                    <div className="pt-2 border-t space-y-2" style={{ borderColor: S.border }}>
+                      <label className="text-xs font-semibold" style={{ color: "#EA580C" }}>🎟️ কুপন</label>
+                      {!activeOrder.couponCode ? (
+                        <div className="flex gap-1.5">
+                          <input value={aoCouponInput}
+                            onChange={e => { setAoCouponInput(e.target.value.toUpperCase()); setAoCouponError(""); }}
+                            onKeyDown={e => e.key === "Enter" && applyCouponToActiveOrder()}
+                            placeholder="কুপন কোড লিখুন…"
+                            className="flex-1 px-2.5 py-1.5 rounded-lg text-[11px] border outline-none font-mono tracking-wider"
+                            style={{ borderColor: aoCouponError ? "#EF4444" : S.border, backgroundColor: S.bg, color: S.text }} />
+                          <button onClick={applyCouponToActiveOrder}
+                            disabled={aoCouponLoading || !aoCouponInput.trim()}
+                            className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-white disabled:opacity-40"
+                            style={{ backgroundColor: ORANGE }}>
+                            {aoCouponLoading ? <Loader2 size={11} className="animate-spin" /> : <Ticket size={11} />}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold"
+                          style={{ backgroundColor: "#EFF6FF", color: "#1D4ED8" }}>
+                          <span><Ticket size={11} className="inline mr-1" />{activeOrder.couponCode} প্রয়োগ হয়েছে</span>
+                          <button onClick={removeCouponFromActiveOrder} disabled={aoCouponLoading}>
+                            {aoCouponLoading ? <Loader2 size={11} className="animate-spin" /> : <X size={11} />}
+                          </button>
+                        </div>
+                      )}
+                      {aoCouponError && <p className="text-[10px] text-red-500 px-1">{aoCouponError}</p>}
+                    </div>
+                  )}
+
                   <div>
                     <label className="text-xs font-semibold" style={{ color: S.muted }}>ডিসকাউন্ট (৳)</label>
                     <input type="number" value={discount} onChange={e => setDiscount(e.target.value)}

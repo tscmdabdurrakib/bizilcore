@@ -82,7 +82,7 @@ export default function CateringReportsPage() {
             <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
             <XAxis dataKey="month" tick={{ fontSize: 11, fill: "var(--c-text-muted)" }} />
             <YAxis tick={{ fontSize: 11, fill: "var(--c-text-muted)" }} tickFormatter={v => `৳${(v / 1000).toFixed(0)}k`} />
-            <Tooltip formatter={(v: number) => `৳${v.toLocaleString()}`} contentStyle={{ background: S.surface, border: `1px solid ${S.border}`, borderRadius: 8 }} />
+            <Tooltip formatter={((v: number) => `৳${v.toLocaleString()}`) as never} contentStyle={{ background: S.surface, border: `1px solid ${S.border}`, borderRadius: 8 }} />
             <Bar dataKey="revenue" name="Revenue" fill="#EA580C" radius={[4, 4, 0, 0]} />
             <Bar dataKey="profit"  name="মুনাফা"  fill="#10B981" radius={[4, 4, 0, 0]} />
           </BarChart>
@@ -98,7 +98,7 @@ export default function CateringReportsPage() {
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
-                <Pie data={data.eventTypePie} dataKey="count" nameKey="type" cx="50%" cy="50%" outerRadius={70} label={({ type, percent }) => `${TYPE_LABELS[type] ?? type} ${Math.round(percent * 100)}%`}>
+                <Pie data={data.eventTypePie} dataKey="count" nameKey="type" cx="50%" cy="50%" outerRadius={70} label={({ type, percent }: any) => `${TYPE_LABELS[type] ?? type} ${Math.round(percent * 100)}%`}>
                   {data.eventTypePie.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                 </Pie>
                 <Legend formatter={(v) => TYPE_LABELS[v] ?? v} />

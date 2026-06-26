@@ -1,18 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireShop } from "@/lib/getShop";
 import { prisma } from "@/lib/prisma";
+import { getRestaurantShop } from "@/lib/restaurant/api-shop";
 
 export async function GET() {
-  const { shop } = await requireShop();
+  const ctx = await getRestaurantShop();
+  if ("error" in ctx) return ctx.error;
+
   const coupons = await prisma.coupon.findMany({
-    where: { shopId: shop.id },
+    where: { shopId: ctx.shop.id },
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json(coupons);
 }
 
 export async function POST(req: NextRequest) {
-  const { shop } = await requireShop();
+  const ctx = await getRestaurantShop();
+  if ("error" in ctx) return ctx.error;
+
   const body = await req.json();
 
   const {
@@ -27,13 +31,13 @@ export async function POST(req: NextRequest) {
   }
 
   const existing = await prisma.coupon.findUnique({
-    where: { shopId_code: { shopId: shop.id, code: code.toUpperCase() } },
+    where: { shopId_code: { shopId: ctx.shop.id, code: code.toUpperCase() } },
   });
   if (existing) return NextResponse.json({ error: "এই কোড ইতিমধ্যে আছে" }, { status: 409 });
 
   const coupon = await prisma.coupon.create({
     data: {
-      shopId: shop.id,
+      shopId: ctx.shop.id,
       name: name || null,
       code: code.toUpperCase(),
       type,

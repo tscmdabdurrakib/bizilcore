@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isAuthorizedCron, getCronSecret } from "@/lib/cron-auth";
 
 export async function GET(req: NextRequest) {
-  const auth = req.headers.get("Authorization");
-  const expected = `Bearer ${process.env.CRON_SECRET ?? "bizilcore-cron"}`;
-  if (auth !== expected) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isAuthorizedCron(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const baseUrl = process.env.REPLIT_DEV_DOMAIN
     ? `https://${process.env.REPLIT_DEV_DOMAIN}`
@@ -11,7 +10,7 @@ export async function GET(req: NextRequest) {
 
   const res = await fetch(`${baseUrl}/api/admin/backup`, {
     method: "POST",
-    headers: { Authorization: expected },
+    headers: { Authorization: `Bearer ${getCronSecret() ?? ""}` },
   });
   const data = await res.json();
   return NextResponse.json(data);

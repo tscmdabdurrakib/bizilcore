@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -67,8 +68,8 @@ export async function POST(req: NextRequest) {
       isVeg: body.isVeg ?? false,
       prepMinutes: body.prepMinutes ?? 15,
       menuCategoryId: body.menuCategoryId ?? null,
-      variants: body.variants ?? null,
-      addons: body.addons ?? null,
+      variants: body.variants == null ? Prisma.JsonNull : (body.variants as Prisma.InputJsonValue),
+      addons: body.addons == null ? Prisma.JsonNull : (body.addons as Prisma.InputJsonValue),
     },
     include: { menuCategory: { select: { id: true, name: true } } },
   });

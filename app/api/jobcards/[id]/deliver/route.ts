@@ -36,7 +36,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     },
   });
 
-  if (mileageOut) {
+  if (mileageOut && jobCard.vehicleId) {
     await prisma.vehicle.update({
       where: { id: jobCard.vehicleId },
       data: { lastMileage: Number(mileageOut) },

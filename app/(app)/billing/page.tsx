@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import SmsCreditPurchaseForm from "@/components/sms/SmsCreditPurchaseForm";
+import SmsCreditHistoryTable from "@/components/sms/SmsCreditHistoryTable";
+import SmsBillingInfoCard from "@/components/sms/SmsBillingInfoCard";
 import {
   Crown, Clock, CheckCircle, XCircle, AlertCircle,
   ArrowUpRight, CreditCard, ChevronRight, Zap,
@@ -10,6 +13,7 @@ import {
   RefreshCw, Calendar, Receipt, Mail, MessageSquare,
   Package, Infinity, FileText, Bell, Layers,
 } from "lucide-react";
+import { PageShell, StatCard, Card } from "@/components/ui";
 
 /* ─────────────────────────────────────────
    Design-system tokens (CSS vars)
@@ -171,7 +175,7 @@ const METHOD_ICONS: Record<string, (s: number) => React.ReactNode> = {
 };
 
 const FAQ = [
-  { q: "Payment করার পর কতক্ষণে Plan activate হয়?",   a: "সাধারণত ১২–২৪ ঘণ্টার মধ্যে। Manual verification শেষ হলে SMS-এ জানানো হবে।" },
+  { q: "Payment করার পর কতক্ষণে Plan activate হয়?",   a: "Transaction ID verify হলে সাথে সাথে activate হয়। Verify না হলে admin approval-এর পর ১২–২৪ ঘণ্টার মধ্যে activate হবে।" },
   { q: "কোন payment method গুলো accept করা হয়?",       a: "bKash, Nagad, Rocket (DBBL) এবং Bank Transfer। সব ক্ষেত্রে Transaction ID দিতে হবে।" },
   { q: "Renew করলে কি বাকি দিনগুলো যোগ হয়?",           a: "হ্যাঁ! বর্তমান মেয়াদ শেষ হওয়ার পরে নতুন মেয়াদ শুরু হবে।" },
   { q: "Upgrade করলে কি extra পয়সা লাগে?",             a: "বাকি মেয়াদের আনুপাতিক credit পাবেন। Checkout-এ সঠিক হিসাব দেখা যাবে।" },
@@ -211,6 +215,7 @@ export default function BillingPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [expandedPayment, setExpandedPayment] = useState<string | null>(null);
+  const [smsRefreshKey, setSmsRefreshKey] = useState(0);
 
   useEffect(() => {
     fetch("/api/subscription").then(r => r.json()).then(d => {
@@ -261,7 +266,31 @@ export default function BillingPage() {
 
   /* ───── Hero card ───────────────────────────────── */
   return (
-    <div className="space-y-6">
+    <PageShell
+      title="Billing & Subscription"
+      subtitle="Plan, payment ও SMS credits ম্যানেজ করুন"
+      stats={
+        <>
+          <StatCard
+            label="বর্তমান Plan"
+            value={pm.label}
+            icon={Crown}
+            accent={planKey === "pro" ? "green" : "none"}
+            iconBg={S.iconPurpleBg}
+            iconColor={S.iconPurpleText}
+          />
+          <StatCard
+            label="বাকি দিন"
+            value={daysLeft !== null && !isFree ? `${daysLeft} দিন` : isFree ? "—" : "Expired"}
+            icon={Calendar}
+            accent={isUrgent ? "red" : "gold"}
+            iconBg={isUrgent ? S.iconRedBg : S.iconAmberBg}
+            iconColor={isUrgent ? S.iconRedText : S.iconAmberText}
+          />
+          <StatCard label="মোট Payment" value={payments.length} icon={Receipt} accent="blue" iconBg={S.iconBlueBg} iconColor={S.iconBlueText} />
+        </>
+      }
+    >
 
       {/* HERO ────────────────────────────────────── */}
       <div className="rounded-3xl overflow-hidden"
@@ -454,8 +483,15 @@ export default function BillingPage() {
             </div>
           )}
 
+          {/* SMS Credits */}
+          <div id="sms-credits" className="space-y-4 scroll-mt-20">
+            <SmsBillingInfoCard />
+            <SmsCreditPurchaseForm onPurchaseComplete={() => setSmsRefreshKey((k) => k + 1)} />
+            <SmsCreditHistoryTable refreshKey={smsRefreshKey} />
+          </div>
+
           {/* Payment History */}
-          <div className="rounded-2xl border overflow-hidden" style={{ borderColor: S.border }}>
+          <Card padding="none" className="overflow-hidden">
             <div className="px-6 py-4 flex items-center justify-between"
               style={{ background: S.surface, borderBottom:`1px solid ${S.border}` }}>
               <div className="flex items-center gap-3">
@@ -494,9 +530,9 @@ export default function BillingPage() {
             ) : (
               <div style={{ background: S.surface }}>
                 {payments.map((p, i) => {
-                  const sm   = STATUS_META[p.status] ?? STATUS_META.pending;
+                  const sm   = STATUS_META[p.status as keyof typeof STATUS_META] ?? STATUS_META.pending;
                   const pmPl = PLAN_META[(p.plan as PlanKey)] ?? PLAN_META.free;
-                  const mm   = METHOD_META[p.method] ?? METHOD_META.bank;
+                  const mm   = METHOD_META[p.method as keyof typeof METHOD_META] ?? METHOD_META.bank;
                   const MIcon= METHOD_ICONS[p.method] ?? METHOD_ICONS.bank;
                   const isOpen = expandedPayment === p.id;
                   return (
@@ -586,7 +622,7 @@ export default function BillingPage() {
                 })}
               </div>
             )}
-          </div>
+          </Card>
 
           {/* Pending notice */}
           {payments.some(p => p.status === "pending") && (
@@ -613,7 +649,7 @@ export default function BillingPage() {
         <div className="space-y-5">
 
           {/* Quick actions */}
-          <div className="rounded-2xl border overflow-hidden" style={{ background: S.surface, borderColor: S.border }}>
+          <Card padding="none" className="overflow-hidden">
             <div className="px-5 py-4" style={{ borderBottom:`1px solid ${S.border}` }}>
               <p className="font-bold text-sm" style={{ color: S.text }}>Quick Actions</p>
             </div>
@@ -635,10 +671,10 @@ export default function BillingPage() {
                 </Link>
               ))}
             </div>
-          </div>
+          </Card>
 
           {/* Support card */}
-          <div className="rounded-2xl border p-5" style={{ background: S.surface, borderColor: S.border }}>
+          <Card>
             <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
               style={{ background: `linear-gradient(135deg,${PLAN_META.business.gradFrom},${PLAN_META.business.gradTo})` }}>
               <Headphones size={18} color="white"/>
@@ -659,10 +695,10 @@ export default function BillingPage() {
                 <Mail size={13}/> support@bizilcore.com
               </a>
             </div>
-          </div>
+          </Card>
 
           {/* Accepted payment methods */}
-          <div className="rounded-2xl border p-5" style={{ background: S.surface, borderColor: S.border }}>
+          <Card>
             <p className="font-bold text-sm mb-3" style={{ color: S.text }}>গৃহীত Payment Methods</p>
             <div className="grid grid-cols-2 gap-2.5">
               {(["bkash","nagad","rocket","bank"] as const).map(k => {
@@ -677,10 +713,10 @@ export default function BillingPage() {
                 );
               })}
             </div>
-          </div>
+          </Card>
 
           {/* FAQ */}
-          <div className="rounded-2xl border overflow-hidden" style={{ background: S.surface, borderColor: S.border }}>
+          <Card padding="none" className="overflow-hidden">
             <div className="px-5 py-4" style={{ borderBottom:`1px solid ${S.border}` }}>
               <p className="font-bold text-sm" style={{ color: S.text }}>সাধারণ প্রশ্ন</p>
             </div>
@@ -700,11 +736,11 @@ export default function BillingPage() {
                 )}
               </div>
             ))}
-          </div>
+          </Card>
 
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }
 

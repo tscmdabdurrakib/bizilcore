@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { StoreHomeClient } from "./StoreHomeClient";
+import { getStoreCombos } from "@/lib/store/combos";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -39,7 +40,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
 
   if (!shop || !shop.storeEnabled) notFound();
 
-  const [products, categoryRows, totalOrders, reviewRows] = await Promise.all([
+  const [products, categoryRows, totalOrders, reviewRows, combos] = await Promise.all([
     prisma.product.findMany({
       where: { shopId: shop.id, storeVisible: true },
       orderBy: { createdAt: "desc" },
@@ -64,6 +65,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
           select: { id: true, reviewerName: true, rating: true, comment: true, createdAt: true },
         })
       : Promise.resolve([]),
+    getStoreCombos(shop.id),
   ]);
 
   const reviews = reviewRows.map(r => ({ ...r, createdAt: r.createdAt.toISOString() }));
@@ -75,6 +77,7 @@ export default async function StorePage({ params }: { params: Promise<{ slug: st
       categories={categoryRows.map(c => c.category!)}
       totalOrders={totalOrders}
       reviews={reviews}
+      combos={combos}
     />
   );
 }

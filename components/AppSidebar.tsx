@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { signOut } from "next-auth/react";
 import BrandLogo from "./BrandLogo";
+import ShopLogo from "./ShopLogo";
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -40,8 +41,10 @@ import {
   Star,
   MessageSquare,
   Bell,
+  Plug,
+  Send,
 } from "lucide-react";
-import { getNavGroups, getNavItems, BUSINESS_TYPE_META, type NavItem as ModuleNavItem } from "@/lib/modules";
+import { getNavGroups, getNavItems, getStoreNavItems, BUSINESS_TYPE_META, type NavItem as ModuleNavItem } from "@/lib/modules";
 import { createPortal } from "react-dom";
 
 interface NavItem {
@@ -55,72 +58,91 @@ interface NavGroup {
   items: NavItem[];
 }
 
-const storeSubItems: NavItem[] = [
-  { href: "/store/setup",                icon: Store,       label: "সেটআপ"          },
-  { href: "/store/theme",                icon: Palette,     label: "থিম"             },
-  { href: "/store/appearance",           icon: ImageIcon,   label: "লুক ও ফিল"      },
-  { href: "/store/products",             icon: Package,     label: "পণ্য"            },
-  { href: "/store/orders",               icon: ShoppingBag, label: "অর্ডার"          },
-  { href: "/store/coupons",              icon: Tag,         label: "কুপন"            },
-  { href: "/store/reviews",              icon: Star,        label: "রিভিউ"           },
-  { href: "/store/settings",             icon: Settings2,   label: "সেটিংস"          },
-  { href: "/dashboard/store/analytics",  icon: BarChart2,   label: "অ্যানালিটিক্স"  },
-  { href: "/dashboard/store/customers",  icon: Users,       label: "কাস্টমার"        },
-];
+const storeSubItems: NavItem[] = getStoreNavItems().map(({ href, icon, label }) => ({ href, icon, label }));
 
-function StoreHoverItem({ collapsed }: { collapsed: boolean }) {
+function isStorePath(pathname: string) {
+  return pathname.startsWith("/store") || pathname.startsWith("/dashboard/store");
+}
+
+function StoreNavItem({ collapsed }: { collapsed: boolean }) {
   const pathname = usePathname();
-  const storeActive = pathname.startsWith("/store");
-  const triggerRef = useRef<HTMLDivElement>(null);
+  const storeActive = isStorePath(pathname);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const flyoutRef = useRef<HTMLDivElement>(null);
+  const subListRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [flyoutPos, setFlyoutPos] = useState({ top: 0, left: 0 });
   const [mounted, setMounted] = useState(false);
+  const [subHeight, setSubHeight] = useState(0);
 
   useEffect(() => { setMounted(true); }, []);
 
-  const show = () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    if (triggerRef.current) {
+  useEffect(() => {
+    if (!collapsed && storeActive) setOpen(true);
+  }, [collapsed, storeActive]);
+
+  useEffect(() => {
+    if (collapsed) setOpen(false);
+  }, [collapsed]);
+
+  useEffect(() => {
+    if (!subListRef.current) return;
+    const el = subListRef.current;
+    const measure = () => setSubHeight(el.scrollHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [open, collapsed]);
+
+  useEffect(() => {
+    if (!collapsed || !open) return;
+    const onPointerDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (triggerRef.current?.contains(target) || flyoutRef.current?.contains(target)) return;
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [collapsed, open]);
+
+  const toggle = () => {
+    if (collapsed && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
-      setPos({ top: rect.top, left: rect.right + 6 });
+      setFlyoutPos({ top: rect.top, left: rect.right + 6 });
     }
-    setOpen(true);
+    setOpen((prev) => !prev);
   };
 
-  const hide = () => {
-    timerRef.current = setTimeout(() => setOpen(false), 150);
-  };
-
-  const flyout = open && mounted ? (
+  const collapsedFlyout = collapsed && open && mounted ? (
     <div
-      className="fixed z-[9999] rounded-xl shadow-2xl border overflow-hidden"
+      ref={flyoutRef}
+      className="store-flyout-enter fixed z-[9999] rounded-xl shadow-2xl border overflow-hidden"
       style={{
-        top: pos.top,
-        left: pos.left,
-        width: 196,
+        top: flyoutPos.top,
+        left: flyoutPos.left,
+        width: 200,
         backgroundColor: "var(--shell-bg)",
         borderColor: "var(--shell-border)",
         boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
       }}
-      onMouseEnter={show}
-      onMouseLeave={hide}
     >
       <div className="px-3 pt-2.5 pb-1 border-b" style={{ borderColor: "var(--shell-border)" }}>
         <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#0F6E56" }}>আমার স্টোর</p>
       </div>
-      <div className="p-1.5">
-        {storeSubItems.map((item) => {
-          const active = pathname.startsWith(item.href);
+      <div className="p-1.5 max-h-[70vh] overflow-y-auto">
+        {storeSubItems.map((item, i) => {
+          const active = isActive(pathname, item.href);
           return (
             <Link
               key={item.href}
               href={item.href}
               onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+              className="store-flyout-item flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 hover:translate-x-0.5"
               style={{
                 backgroundColor: active ? "#E1F5EE" : "transparent",
                 color: active ? "#0F6E56" : "var(--shell-nav-inactive)",
+                animationDelay: `${i * 30}ms`,
               }}
             >
               <item.icon size={14} className="flex-shrink-0" />
@@ -134,36 +156,126 @@ function StoreHoverItem({ collapsed }: { collapsed: boolean }) {
 
   return (
     <>
-      <div ref={triggerRef} onMouseEnter={show} onMouseLeave={hide}>
+      <style>{`
+        @keyframes storeSubReveal {
+          from { opacity: 0; transform: translateX(-8px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes storeFlyoutIn {
+          from { opacity: 0; transform: translateX(-10px) scale(0.97); }
+          to   { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        @keyframes storeFlyoutItemIn {
+          from { opacity: 0; transform: translateX(-6px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        .store-flyout-enter { animation: storeFlyoutIn 0.22s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .store-flyout-item  { animation: storeFlyoutItemIn 0.2s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .store-sub-reveal   { animation: storeSubReveal 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
+      `}</style>
+
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={toggle}
+        title={collapsed ? "আমার স্টোর" : undefined}
+        className="group w-full flex items-center rounded-xl mb-px cursor-pointer transition-all duration-200 ease-out hover:brightness-[0.97] dark:hover:brightness-110"
+        style={{
+          backgroundColor: storeActive || open ? "var(--shell-nav-active-bg)" : "transparent",
+          color: storeActive || open ? "var(--shell-nav-active-color)" : "var(--shell-nav-inactive)",
+          padding: collapsed ? "8px 0" : "7px 8px",
+          justifyContent: collapsed ? "center" : "flex-start",
+          gap: collapsed ? 0 : 9,
+          fontWeight: storeActive || open ? 600 : 450,
+          fontSize: "0.8125rem",
+        }}
+      >
         <div
-          className="flex items-center rounded-xl mb-px transition-all cursor-default select-none"
+          className="w-[26px] h-[26px] flex items-center justify-center rounded-lg flex-shrink-0 transition-all duration-200"
           style={{
-            backgroundColor: storeActive ? "var(--shell-nav-active-bg)" : "transparent",
-            color: storeActive ? "var(--shell-nav-active-color)" : "var(--shell-nav-inactive)",
-            padding: collapsed ? "8px 0" : "7px 8px",
-            justifyContent: collapsed ? "center" : "flex-start",
-            gap: collapsed ? 0 : 9,
-            fontWeight: storeActive ? 600 : 450,
-            fontSize: "0.8125rem",
+            backgroundColor: storeActive || open ? "rgba(15,110,86,0.18)" : "transparent",
+            transform: open && !collapsed ? "scale(1.05)" : "scale(1)",
           }}
         >
-          <div
-            className="w-[26px] h-[26px] flex items-center justify-center rounded-lg flex-shrink-0"
-            style={{ backgroundColor: storeActive ? "rgba(15,110,86,0.18)" : "transparent" }}
-          >
-            <Store size={15} style={{ strokeWidth: storeActive ? 2.2 : 1.75 }} />
-          </div>
-          {!collapsed && (
-            <>
-              <span className="truncate flex-1">আমার স্টোর</span>
-              <svg width="9" height="9" viewBox="0 0 10 10" fill="none" style={{ flexShrink: 0, opacity: 0.45 }}>
+          <Store size={15} style={{ strokeWidth: storeActive || open ? 2.2 : 1.75 }} />
+        </div>
+        {!collapsed && (
+          <>
+            <span className="truncate flex-1 text-left">আমার স্টোর</span>
+            <div
+              className="w-4 h-4 flex items-center justify-center rounded transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+              style={{
+                transform: open ? "rotate(90deg)" : "rotate(0deg)",
+                opacity: open ? 0.8 : 0.4,
+              }}
+            >
+              <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
                 <path d="M3 2L7 5L3 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-            </>
-          )}
+            </div>
+          </>
+        )}
+      </button>
+
+      {!collapsed && (
+        <div
+          className="overflow-hidden transition-[max-height,opacity] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
+          style={{
+            maxHeight: open ? subHeight : 0,
+            opacity: open ? 1 : 0,
+          }}
+        >
+          <div ref={subListRef} className="relative mb-0.5 pt-0.5 pb-0.5">
+            <div
+              className="absolute left-[21px] top-1 bottom-1 w-px rounded-full transition-opacity duration-300"
+              style={{
+                backgroundColor: "rgba(15,110,86,0.15)",
+                opacity: open ? 1 : 0,
+              }}
+            />
+            {storeSubItems.map((item, i) => {
+              const active = isActive(pathname, item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`${open ? "store-sub-reveal" : ""} group/sub relative flex items-center rounded-lg mb-px transition-all duration-150 hover:pl-[38px] ${
+                    active ? "" : "hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
+                  }`}
+                  style={{
+                    backgroundColor: active ? "var(--shell-nav-active-bg)" : "transparent",
+                    color: active ? "var(--shell-nav-active-color)" : "var(--shell-nav-inactive)",
+                    padding: "5px 8px 5px 34px",
+                    gap: 8,
+                    fontWeight: active ? 600 : 450,
+                    fontSize: "0.75rem",
+                    animationDelay: open ? `${i * 28}ms` : "0ms",
+                  }}
+                >
+                  <span
+                    className="absolute left-[17px] top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full transition-all duration-200"
+                    style={{
+                      backgroundColor: active ? "#0F6E56" : "rgba(15,110,86,0.25)",
+                      transform: active
+                        ? "translateY(-50%) scale(1.2)"
+                        : "translateY(-50%) scale(0.85)",
+                      boxShadow: active ? "0 0 0 3px rgba(15,110,86,0.15)" : "none",
+                    }}
+                  />
+                  <item.icon
+                    size={13}
+                    className="flex-shrink-0 transition-transform duration-150 group-hover/sub:scale-110"
+                    style={{ strokeWidth: active ? 2.2 : 1.75, color: "currentColor" }}
+                  />
+                  <span className="truncate">{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
         </div>
-      </div>
-      {mounted && flyout ? createPortal(flyout, document.body) : null}
+      )}
+
+      {collapsedFlyout ? createPortal(collapsedFlyout, document.body) : null}
     </>
   );
 }
@@ -174,6 +286,7 @@ const navGroups: NavGroup[] = [
       { href: "/dashboard",   icon: LayoutDashboard, label: "ড্যাশবোর্ড" },
       { href: "/orders",      icon: ShoppingBag,     label: "অর্ডার" },
       { href: "/fb-orders",   icon: MessageSquare,   label: "FB ইনবক্স" },
+      { href: "/inbox",       icon: MessageCircle,   label: "ইউনিফাইড ইনবক্স" },
       { href: "/delivery",    icon: Navigation,      label: "ডেলিভারি" },
       { href: "/returns",     icon: RotateCcw,       label: "রিটার্ন" },
       { href: "/inventory",   icon: Package,         label: "পণ্য ও স্টক" },
@@ -185,7 +298,7 @@ const navGroups: NavGroup[] = [
   {
     label: "আর্থিক ব্যবস্থাপনা",
     items: [
-      { href: "/hisab",            icon: BookOpen,     label: "হিসাব" },
+      { href: "/accounting",            icon: BookOpen,     label: "হিসাব" },
       { href: "/expenses",         icon: TrendingDown, label: "খরচ ট্র্যাকার" },
       { href: "/invoices",         icon: FileText,     label: "ইনভয়েস" },
       { href: "/purchase-orders",  icon: ShoppingCart, label: "ক্রয় অর্ডার" },
@@ -197,13 +310,12 @@ const navGroups: NavGroup[] = [
     label: "HR / টিম",
     items: [
       { href: "/hr",        icon: UserCog,       label: "কর্মী ব্যবস্থাপনা" },
-      { href: "/hr/shifts", icon: CalendarClock, label: "শিফট ম্যানেজমেন্ট" },
     ],
   },
   {
     label: "Growth",
     items: [
-      { href: "/shops",           icon: Store,       label: "Multi-Shop" },
+      { href: "/shops",           icon: Store,       label: "শাখা" },
       { href: "/affiliate",       icon: TrendingUp,  label: "Affiliate" },
       { href: "/community",       icon: Users,       label: "কমিউনিটি" },
     ],
@@ -211,6 +323,7 @@ const navGroups: NavGroup[] = [
   {
     items: [
       { href: "/billing",        icon: CreditCard,    label: "Billing" },
+      { href: "/integrations",   icon: Plug,          label: "ইন্টিগ্রেশন" },
       { href: "/notifications",  icon: Bell,          label: "নোটিফিকেশন" },
       { href: "/communications", icon: MessageCircle, label: "যোগাযোগ" },
       { href: "/activity-log",   icon: ClipboardList, label: "Activity Log" },
@@ -223,9 +336,10 @@ const navGroups: NavGroup[] = [
 const systemNavGroup: NavGroup = {
   label: "সিস্টেম",
   items: [
-    { href: "/billing",  icon: CreditCard, label: "Billing"  },
-    { href: "/settings", icon: Settings,   label: "সেটিংস"  },
-    { href: "/support",  icon: Headphones, label: "সাপোর্ট" },
+    { href: "/billing",      icon: CreditCard, label: "Billing"       },
+    { href: "/integrations", icon: Plug,       label: "ইন্টিগ্রেশন"   },
+    { href: "/settings",     icon: Settings,   label: "সেটিংস"        },
+    { href: "/support",      icon: Headphones, label: "সাপোর্ট"       },
   ],
 };
 
@@ -244,7 +358,7 @@ interface Props {
   businessType?: string;
 }
 
-const PRO_LOCKED_HREFS = ["/delivery", "/reports", "/hr", "/hr/shifts", "/communications", "/tasks"];
+const PRO_LOCKED_HREFS = ["/delivery", "/reports", "/hr", "/communications", "/tasks"];
 
 const mobileBottomItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "হোম" },
@@ -260,6 +374,7 @@ const moreMenuGroups = [
     iconBg: "#EFF6FF",
     items: [
       { href: "/fb-orders",  icon: MessageSquare, label: "FB ইনবক্স" },
+      { href: "/inbox",      icon: MessageCircle, label: "ইউনিফাইড ইনবক্স" },
       { href: "/returns",    icon: RotateCcw,    label: "রিটার্ন" },
       { href: "/delivery",   icon: Navigation,   label: "ডেলিভারি" },
       { href: "/suppliers",  icon: Truck,        label: "Supplier" },
@@ -271,7 +386,7 @@ const moreMenuGroups = [
     accent: "#10B981",
     iconBg: "#ECFDF5",
     items: [
-      { href: "/hisab",           icon: BookOpen,     label: "হিসাব" },
+      { href: "/accounting",           icon: BookOpen,     label: "হিসাব" },
       { href: "/expenses",        icon: TrendingDown, label: "খরচ" },
       { href: "/invoices",        icon: FileText,     label: "ইনভয়েস" },
       { href: "/purchase-orders", icon: ShoppingCart, label: "ক্রয় অর্ডার" },
@@ -285,7 +400,6 @@ const moreMenuGroups = [
     iconBg: "#FFFBEB",
     items: [
       { href: "/hr",        icon: UserCog,       label: "কর্মী" },
-      { href: "/hr/shifts", icon: CalendarClock, label: "শিফট" },
     ],
   },
   {
@@ -299,9 +413,12 @@ const moreMenuGroups = [
       { href: "/store/products",   icon: Package,    label: "পণ্য"       },
       { href: "/store/settings",   icon: Settings2,  label: "সেটিংস"    },
       { href: "/store/orders",     icon: ShoppingBag,label: "অর্ডার"    },
+      { href: "/store/abandoned",  icon: ShoppingCart,label: "পরিত্যক্ত কার্ট" },
+      { href: "/store/posts",      icon: Send,        label: "পোস্ট শিডিউলার" },
       { href: "/store/coupons",    icon: Tag,        label: "কুপন"       },
       { href: "/store/reviews",    icon: Star,       label: "রিভিউ"     },
       { href: "/dashboard/store/analytics",  icon: BarChart2,  label: "অ্যানালিটিক্স" },
+      { href: "/dashboard/store/insights",   icon: TrendingUp, label: "ইনসাইট"         },
       { href: "/dashboard/store/customers",  icon: Users,      label: "কাস্টমার"       },
     ],
   },
@@ -310,7 +427,7 @@ const moreMenuGroups = [
     accent: "#10B981",
     iconBg: "#ECFDF5",
     items: [
-      { href: "/shops",          icon: Store,      label: "Multi-Shop"      },
+      { href: "/shops",          icon: Store,      label: "শাখা"      },
       { href: "/affiliate",      icon: TrendingUp, label: "Affiliate"       },
       { href: "/community",      icon: Users,      label: "কমিউনিটি"       },
     ],
@@ -321,6 +438,7 @@ const moreMenuGroups = [
     iconBg: "#F5F3FF",
     items: [
       { href: "/billing",        icon: CreditCard,    label: "Billing" },
+      { href: "/integrations",   icon: Plug,          label: "ইন্টিগ্রেশন" },
       { href: "/notifications",  icon: Bell,          label: "নোটিফিকেশন" },
       { href: "/communications", icon: MessageCircle, label: "SMS" },
       { href: "/activity-log",   icon: ClipboardList, label: "লগ" },
@@ -349,9 +467,10 @@ function buildDynamicMoreMenuGroups(businessType: string, salesChannel = "both")
     accent: "#8B5CF6",
     iconBg: "#F5F3FF",
     items: [
-      { href: "/billing",  icon: CreditCard, label: "Billing",  module: "billing"  },
-      { href: "/settings", icon: Settings,   label: "সেটিংস",  module: "settings" },
-      { href: "/support",  icon: Headphones, label: "সাপোর্ট", module: "support"  },
+      { href: "/billing",      icon: CreditCard, label: "Billing",      module: "billing"      },
+      { href: "/integrations", icon: Plug,       label: "ইন্টিগ্রেশন", module: "integrations" },
+      { href: "/settings",     icon: Settings,   label: "সেটিংস",      module: "settings"     },
+      { href: "/support",      icon: Headphones, label: "সাপোর্ট",     module: "support"      },
     ],
   });
 
@@ -423,19 +542,22 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
       <Link
         href={item.href}
         title={collapsed ? item.label : undefined}
-        className="flex items-center rounded-xl mb-px transition-all relative"
+        className="flex items-center rounded-xl mb-0.5 transition-all relative group"
         style={{
           backgroundColor: active ? "var(--shell-nav-active-bg)" : "transparent",
           color: locked
             ? "var(--shell-nav-inactive)"
             : active ? "var(--shell-nav-active-color)" : "var(--shell-nav-inactive)",
           opacity: locked ? 0.55 : 1,
-          padding: collapsed ? "8px 0" : "7px 8px",
+          padding: collapsed ? "8px 0" : "7px 10px",
           justifyContent: collapsed ? "center" : "flex-start",
           gap: collapsed ? 0 : 9,
           fontWeight: active ? 600 : 450,
           fontSize: "0.8125rem",
+          borderLeft: active && !collapsed ? "3px solid var(--shell-nav-active-border)" : "3px solid transparent",
         }}
+        onMouseEnter={(e) => { if (!active) e.currentTarget.style.backgroundColor = "var(--surface-hover)"; }}
+        onMouseLeave={(e) => { if (!active) e.currentTarget.style.backgroundColor = "transparent"; }}
       >
         <div
           className="w-[26px] h-[26px] flex items-center justify-center rounded-lg flex-shrink-0 transition-all"
@@ -480,6 +602,7 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
           width: collapsed ? 52 : 224,
           backgroundColor: "var(--shell-bg)",
           borderColor: "var(--shell-border)",
+          boxShadow: "var(--shadow-sidebar)",
         }}
       >
         {/* Logo + collapse toggle */}
@@ -553,7 +676,7 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
               {group.items.map((item) => (
                 <NavLink key={item.href} item={item} />
               ))}
-              {gi === 0 && isFCommerce && <StoreHoverItem collapsed={collapsed} />}
+              {gi === 0 && isFCommerce && <StoreNavItem collapsed={collapsed} />}
             </div>
           ))}
           {isAdmin && (
@@ -592,7 +715,9 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
                 title={shopName}
               >
                 {logoUrl ? (
-                  <img src={logoUrl} alt={shopName} className="w-full h-full object-cover" />
+                  <div className="relative w-full h-full">
+                    <ShopLogo url={logoUrl} name={shopName} />
+                  </div>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-white font-bold text-sm">
                     {shopName?.[0]?.toUpperCase() ?? "S"}
@@ -620,7 +745,9 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
                 style={{ backgroundColor: logoUrl ? "transparent" : "#0F6E56" }}
               >
                 {logoUrl ? (
-                  <img src={logoUrl} alt={shopName} className="w-full h-full object-cover" />
+                  <div className="relative w-full h-full">
+                    <ShopLogo url={logoUrl} name={shopName} />
+                  </div>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-white font-bold text-sm">
                     {shopName?.[0]?.toUpperCase() ?? "S"}
@@ -662,10 +789,11 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
 
       {/* Mobile bottom nav */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-md"
         style={{
-          backgroundColor: "var(--shell-bg)",
+          backgroundColor: "color-mix(in srgb, var(--shell-bg) 92%, transparent)",
           borderTop: "1px solid var(--shell-border)",
+          boxShadow: "0 -4px 24px rgba(15,110,86,0.06)",
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
         }}
       >
@@ -775,7 +903,9 @@ export default function AppSidebar({ shopName, plan = "free", isAdmin = false, l
                   style={{ background: logoUrl ? "transparent" : "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}
                 >
                   {logoUrl ? (
-                    <img src={logoUrl} alt={shopName} className="w-full h-full object-cover" />
+                    <div className="relative w-full h-full">
+                      <ShopLogo url={logoUrl} name={shopName} />
+                    </div>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-white font-bold text-sm">
                       {shopName.charAt(0).toUpperCase()}

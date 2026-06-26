@@ -21,6 +21,7 @@ interface Coupon {
   memberTier?: string | null;
   bogoGetQty?: number;
   bogoGetDiscount?: number;
+  bogoGetItemId?: string | null;
   applicableItemIds?: string[] | null;
   applicableCategories?: string[] | null;
   createdAt: string;
@@ -80,7 +81,7 @@ const EMPTY_FORM = {
   happyHourStart: "15:00", happyHourEnd: "18:00",
   happyHourDays: [0, 1, 2, 3, 4, 5, 6] as number[],
   memberTier: "silver",
-  bogoGetQty: "1", bogoGetDiscount: "100",
+  bogoGetQty: "1", bogoGetDiscount: "100", bogoGetItemId: "",
   applicableItemIds: [] as string[],
   applicableCategories: [] as string[],
 };
@@ -96,18 +97,25 @@ export default function CouponManagement() {
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [menuItems, setMenuItems] = useState<SimpleMenuItem[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const showToast = (type: "success" | "error", msg: string) => {
     setToast({ type, msg }); setTimeout(() => setToast(null), 3000);
   };
 
   const load = useCallback(async () => {
+    setLoadError(null);
     try {
       const [rC, rM] = await Promise.all([
         fetch("/api/restaurant/coupons"),
         fetch("/api/restaurant/menu-items?limit=200"),
       ]);
-      if (rC.ok) setCoupons(await rC.json());
+      if (rC.ok) {
+        setCoupons(await rC.json());
+      } else {
+        const err = await rC.json().catch(() => ({}));
+        setLoadError((err as { error?: string }).error ?? "কুপন লোড করা যায়নি");
+      }
       if (rM.ok) {
         const data = await rM.json();
         const items: SimpleMenuItem[] = (Array.isArray(data) ? data : data.items ?? []).map(
@@ -117,7 +125,9 @@ export default function CouponManagement() {
         );
         setMenuItems(items);
       }
-    } catch {}
+    } catch {
+      setLoadError("কুপন লোড করা যায়নি");
+    }
     setLoading(false);
   }, []);
 
@@ -146,6 +156,7 @@ export default function CouponManagement() {
       memberTier: c.memberTier ?? "silver",
       bogoGetQty: String(c.bogoGetQty ?? 1),
       bogoGetDiscount: String(c.bogoGetDiscount ?? 100),
+      bogoGetItemId: c.bogoGetItemId ?? "",
       applicableItemIds: c.applicableItemIds ?? [],
       applicableCategories: c.applicableCategories ?? [],
     });
@@ -160,6 +171,17 @@ export default function CouponManagement() {
         : [...f.applicableItemIds, id],
     }));
   };
+
+  const toggleApplicableCategory = (cat: string) => {
+    setForm(f => ({
+      ...f,
+      applicableCategories: f.applicableCategories.includes(cat)
+        ? f.applicableCategories.filter(x => x !== cat)
+        : [...f.applicableCategories, cat],
+    }));
+  };
+
+  const menuCategories = Array.from(new Set(menuItems.map(m => m.category).filter(Boolean))).sort();
 
   const toggleDay = (d: number) => {
     setForm(prev => ({
@@ -189,7 +211,9 @@ export default function CouponManagement() {
       memberTier: form.type === "member" ? form.memberTier : null,
       bogoGetQty: form.type === "bogo" ? Number(form.bogoGetQty) : 1,
       bogoGetDiscount: form.type === "bogo" ? Number(form.bogoGetDiscount) : 100,
-      applicableItemIds: (form.type === "bogo" || form.type === "combo") && form.applicableItemIds.length > 0 ? form.applicableItemIds : null,
+      bogoGetItemId: form.type === "bogo" && form.bogoGetItemId ? form.bogoGetItemId : null,
+      applicableItemIds: ["bogo", "combo", "happyhour", "percent", "fixed", "member"].includes(form.type) && form.applicableItemIds.length > 0
+        ? form.applicableItemIds : null,
       applicableCategories: form.applicableCategories.length > 0 ? form.applicableCategories : null,
     };
     try {
@@ -232,11 +256,21 @@ export default function CouponManagement() {
   );
 
   return (
-    <div>
+    <div className="min-h-[200px]">
       {/* Toast */}
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl text-sm font-semibold shadow-lg text-white ${toast.type === "success" ? "bg-green-500" : "bg-red-500"}`}>
           {toast.msg}
+        </div>
+      )}
+
+      {loadError && (
+        <div className="mb-4 p-3 rounded-xl text-xs font-semibold border"
+          style={{ borderColor: "#FECACA", backgroundColor: "#FEF2F2", color: "#B91C1C" }}>
+          {loadError}
+          <button type="button" onClick={() => { setLoading(true); load(); }} className="ml-2 underline">
+            আবার চেষ্টা
+          </button>
         </div>
       )}
 
@@ -390,6 +424,26 @@ export default function CouponManagement() {
                   style={{ borderColor: S.border, backgroundColor: S.bg, color: S.text }} />
               </div>
 
+              {/* Category scope (happy hour, percent, fixed, member) */}
+              {["happyhour", "percent", "fixed", "member"].includes(form.type) && menuCategories.length > 0 && (
+                <div>
+                  <label className="block text-xs font-semibold mb-2" style={{ color: S.muted }}>প্রযোজ্য ক্যাটাগরি (ঐচ্ছিক)</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {menuCategories.map(cat => (
+                      <button key={cat} type="button" onClick={() => toggleApplicableCategory(cat)}
+                        className="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border"
+                        style={{
+                          backgroundColor: form.applicableCategories.includes(cat) ? "#FFF7ED" : S.bg,
+                          color: form.applicableCategories.includes(cat) ? S.primary : S.muted,
+                          borderColor: form.applicableCategories.includes(cat) ? S.primary : S.border,
+                        }}>
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Happy Hour fields */}
               {form.type === "happyhour" && (
                 <div className="space-y-3 p-3 rounded-xl border" style={{ borderColor: "#F59E0B", backgroundColor: "#FFFBEB" }}>
@@ -465,6 +519,19 @@ export default function CouponManagement() {
                         style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }} />
                     </div>
                   </div>
+                  {menuItems.length > 0 && (
+                    <div>
+                      <label className="block text-xs font-semibold mb-1" style={{ color: S.muted }}>বিনামূল্যে/ছাড় আইটেম (ঐচ্ছিক — খালি = একই আইটেম)</label>
+                      <select value={form.bogoGetItemId} onChange={e => setForm(f => ({ ...f, bogoGetItemId: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-xl text-sm border outline-none"
+                        style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }}>
+                        <option value="">ট্রিগার আইটেমের মতো</option>
+                        {menuItems.map(m => (
+                          <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -478,11 +545,13 @@ export default function CouponManagement() {
                 </div>
               )}
 
-              {/* Applicable items selector (BOGO + Combo) */}
-              {(form.type === "bogo" || form.type === "combo") && menuItems.length > 0 && (
+              {/* Applicable items selector */}
+              {(["bogo", "combo", "happyhour"] as string[]).includes(form.type) && menuItems.length > 0 && (
                 <div>
                   <label className="block text-xs font-semibold mb-2" style={{ color: S.muted }}>
-                    {form.type === "bogo" ? "BOGO ট্রিগার আইটেম" : "কম্বো আইটেমসমূহ (সব থাকলে ছাড় পাবে)"}
+                    {form.type === "bogo" ? "BOGO ট্রিগার আইটেম" :
+                      form.type === "combo" ? "কম্বো আইটেমসমূহ (সব থাকলে ছাড় পাবে)" :
+                      "প্রযোজ্য মেনু আইটেম (ঐচ্ছিক)"}
                   </label>
                   <div className="max-h-40 overflow-y-auto border rounded-xl p-2 space-y-1" style={{ borderColor: S.border, backgroundColor: S.bg }}>
                     {menuItems.map(m => (

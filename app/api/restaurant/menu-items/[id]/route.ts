@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -37,8 +38,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(body.isVeg !== undefined && { isVeg: body.isVeg }),
       ...(body.prepMinutes !== undefined && { prepMinutes: body.prepMinutes }),
       ...("menuCategoryId" in body && { menuCategoryId: body.menuCategoryId ?? null }),
-      ...("variants" in body && { variants: body.variants ?? null }),
-      ...("addons" in body && { addons: body.addons ?? null }),
+      ...("variants" in body && { variants: body.variants == null ? Prisma.JsonNull : (body.variants as Prisma.InputJsonValue) }),
+      ...("addons" in body && { addons: body.addons == null ? Prisma.JsonNull : (body.addons as Prisma.InputJsonValue) }),
     },
     include: { menuCategory: { select: { id: true, name: true } } },
   });

@@ -38,8 +38,9 @@ export async function POST() {
     phone: string | null;
     plan: string | null;
   }[]>`
-    SELECT u."createdAt", u."smsDripSentDays", u.phone, s.plan
+    SELECT u."createdAt", u."smsDripSentDays", sh.phone, s.plan
     FROM "User" u
+    LEFT JOIN "Shop" sh ON sh."userId" = u.id
     LEFT JOIN "Subscription" s ON s."userId" = u.id AND s.status = 'active'
     WHERE u.id = ${userId}
     LIMIT 1
@@ -83,8 +84,8 @@ export async function POST() {
     if (!drip) continue;
     if (!drip.condition(progress, orderCount, productCount, isPro, referralCode)) continue;
     const message = drip.message(referralCode);
-    const ok = await sendSMS(apiKey, user.phone, message);
-    if (ok) {
+    const result = await sendSMS(apiKey, user.phone, message);
+    if (result.success) {
       sent.push(day);
       await prisma.$executeRaw`
         UPDATE "User" SET "smsDripSentDays" = array_append("smsDripSentDays", ${day}) WHERE id = ${userId}

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireTaskPlan } from "@/lib/taskGuard";
 import { maybeCreateRecurringClone } from "@/lib/taskRecurrence";
+import { requireTaskShop } from "@/lib/tasks/server";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -10,8 +11,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!await requireTaskPlan(session.user.id)) return NextResponse.json({ error: "Pro plan required" }, { status: 403 });
 
   const { id } = await params;
-  const shop = await prisma.shop.findUnique({ where: { userId: session.user.id } });
-  if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+  const shopCtx = await requireTaskShop();
+  if ("error" in shopCtx) return shopCtx.error;
+  const shop = shopCtx.shop;
 
   const task = await prisma.task.findFirst({
     where: { id, shopId: shop.id },
@@ -40,8 +42,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!await requireTaskPlan(session.user.id)) return NextResponse.json({ error: "Pro plan required" }, { status: 403 });
 
   const { id } = await params;
-  const shop = await prisma.shop.findUnique({ where: { userId: session.user.id } });
-  if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+  const shopCtx = await requireTaskShop();
+  if ("error" in shopCtx) return shopCtx.error;
+  const shop = shopCtx.shop;
 
   const existing = await prisma.task.findFirst({
     where: { id, shopId: shop.id },
@@ -125,8 +128,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   if (!await requireTaskPlan(session.user.id)) return NextResponse.json({ error: "Pro plan required" }, { status: 403 });
 
   const { id } = await params;
-  const shop = await prisma.shop.findUnique({ where: { userId: session.user.id } });
-  if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+  const shopCtx = await requireTaskShop();
+  if ("error" in shopCtx) return shopCtx.error;
+  const shop = shopCtx.shop;
 
   const task = await prisma.task.findFirst({ where: { id, shopId: shop.id } });
   if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });

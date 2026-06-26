@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Search, Plus, Pencil, Trash2, Camera, Upload, FileDown, Sliders, X, Check, Sparkles, Loader2, AlertTriangle, ChevronDown, ChevronUp, Package, TrendingDown, BarChart3, ArrowRight } from "lucide-react";
+import { Plus, Pencil, Trash2, Camera, Upload, FileDown, Sliders, X, Check, Sparkles, Loader2, AlertTriangle, ChevronDown, ChevronUp, Package, TrendingDown, BarChart3 } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
 import dynamic from "next/dynamic";
 import Papa from "papaparse";
@@ -12,6 +12,7 @@ import ProductEditPanel from "@/components/inventory/ProductEditPanel";
 import ProductCreatePanel from "@/components/inventory/ProductCreatePanel";
 import PageHint from "@/components/PageHint";
 import DemoDataBanner from "@/components/DemoDataBanner";
+import { PageShell, StatCard, FilterBar, Card, Badge, EmptyState, Button, Select } from "@/components/ui";
 
 const BarcodeScanner = dynamic(() => import("@/components/BarcodeScanner"), { ssr: false });
 
@@ -48,9 +49,9 @@ interface ComboProduct {
 }
 
 function StockBadge({ qty, low }: { qty: number; low: number }) {
-  if (qty === 0) return <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-600">শেষ</span>;
-  if (qty <= low) return <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-600">কম স্টক</span>;
-  return <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600">ভালো</span>;
+  if (qty === 0) return <Badge variant="danger">শেষ</Badge>;
+  if (qty <= low) return <Badge variant="warning">কম স্টক</Badge>;
+  return <Badge variant="success">ভালো</Badge>;
 }
 
 export default function InventoryPage() {
@@ -257,8 +258,6 @@ export default function InventoryPage() {
       return true;
     });
 
-  const S = { surface: "var(--c-surface)", border: "var(--c-border)", text: "var(--c-text)", muted: "var(--c-text-muted)", secondary: "var(--c-text-sub)", primary: "var(--c-primary)" };
-
   const lowStockCount = products.filter(p => p.stockQty > 0 && p.stockQty <= p.lowStockAt).length;
   const outOfStockCount = products.filter(p => p.stockQty === 0).length;
   const totalValue = products.reduce((s, p) => s + p.sellPrice * p.stockQty, 0);
@@ -270,8 +269,42 @@ export default function InventoryPage() {
     { key: "combos", label: "কমবো প্যাক", count: combos.length },
   ];
 
+  const headerActions = (
+    <>
+      <Button variant="outline" size="sm" onClick={fetchAiPrediction} disabled={aiPredLoading} icon={aiPredLoading ? Loader2 : Sparkles}>
+        AI Prediction
+      </Button>
+      <Button variant="outline" size="sm" onClick={() => setShowScanner(true)} icon={Camera}>Barcode</Button>
+      <Button variant="outline" size="sm" onClick={() => {
+        const rows = products.map(p => ({ নাম: p.name, SKU: p.sku ?? "", "ক্রয়মূল্য (৳)": p.buyPrice, "বিক্রয়মূল্য (৳)": p.sellPrice, "স্টক": p.stockQty, "ক্যাটাগরি": p.category ?? "" }));
+        downloadExcel(rows, "inventory.xlsx", "পণ্য");
+      }} icon={FileDown}>Excel</Button>
+      <Button variant="outline" size="sm" onClick={() => setShowCsvModal(true)} icon={Upload}>Import</Button>
+      {tab === "combos" ? (
+        <Link href="/inventory/combos/new">
+          <Button size="sm" icon={Plus} style={{ background: "linear-gradient(135deg, #F59E0B, #D97706)" }}>কমবো যোগ</Button>
+        </Link>
+      ) : (
+        <Button size="sm" icon={Plus} onClick={() => setCreateProductPanelOpen(true)}>পণ্য যোগ</Button>
+      )}
+    </>
+  );
+
   return (
-    <div className="max-w-7xl mx-auto space-y-5 pb-6">
+    <PageShell
+      title="ইনভেন্টরি"
+      subtitle="পণ্যের স্টক ও মূল্য ব্যবস্থাপনা"
+      actions={headerActions}
+      stats={
+        <>
+          <StatCard label="মোট পণ্য" value={products.length} icon={Package} accent="blue" iconBg="var(--icon-blue-bg)" iconColor="var(--bg-info-text)" />
+          <StatCard label="কম স্টক" value={lowStockCount} icon={AlertTriangle} accent="gold" iconBg="var(--icon-amber-bg)" iconColor="var(--accent-warm)" />
+          <StatCard label="স্টক শেষ" value={outOfStockCount} icon={TrendingDown} accent="red" iconBg="var(--bg-danger-soft)" iconColor="var(--bg-danger-text)" />
+          <StatCard label="মোট মূল্যমান" value={formatBDT(totalValue)} icon={BarChart3} accent="green" />
+        </>
+      }
+      className="pb-6"
+    >
 
       {/* Toast */}
       {toast && (
@@ -448,78 +481,13 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* ── Page Header ── */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: "linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)" }}>
-            <Package size={20} color="#fff" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">ইনভেন্টরি</h1>
-            <p className="text-xs text-gray-500">পণ্যের স্টক ও মূল্য ব্যবস্থাপনা</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={fetchAiPrediction} disabled={aiPredLoading}
-            className="flex items-center gap-1.5 px-3.5 h-10 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-60">
-            {aiPredLoading ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} className="text-purple-500" />}
-            AI Prediction
-          </button>
-          <button onClick={() => setShowScanner(true)}
-            className="flex items-center gap-1.5 px-3.5 h-10 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
-            <Camera size={15} /> Barcode
-          </button>
-          <button onClick={() => {
-            const rows = products.map(p => ({ নাম: p.name, SKU: p.sku ?? "", "ক্রয়মূল্য (৳)": p.buyPrice, "বিক্রয়মূল্য (৳)": p.sellPrice, "স্টক": p.stockQty, "ক্যাটাগরি": p.category ?? "" }));
-            downloadExcel(rows, "inventory.xlsx", "পণ্য");
-          }} className="flex items-center gap-1.5 px-3.5 h-10 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
-            <FileDown size={15} /> Excel
-          </button>
-          <button onClick={() => setShowCsvModal(true)}
-            className="flex items-center gap-1.5 px-3.5 h-10 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
-            <Upload size={15} /> Import
-          </button>
-          {tab === "combos" ? (
-            <Link href="/inventory/combos/new" className="flex items-center gap-1.5 px-4 h-10 rounded-xl text-white text-sm font-bold transition-colors hover:opacity-90" style={{ background: "linear-gradient(135deg, #F59E0B, #D97706)" }}>
-              <Plus size={16} /> কমবো যোগ
-            </Link>
-          ) : (
-            <button onClick={() => setCreateProductPanelOpen(true)} className="flex items-center gap-1.5 px-4 h-10 rounded-xl text-white text-sm font-bold transition-colors hover:opacity-90 active:scale-95" style={{ background: "linear-gradient(135deg, var(--c-primary), #0A5442)" }}>
-              <Plus size={16} /> পণ্য যোগ
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* ── Page Hint (first visit) ── */}
       <PageHint page="inventory" text="এখানে আপনার সব পণ্য দেখুন ও পরিচালনা করুন। '+' বাটনে ক্লিক করে নতুন পণ্য যোগ করুন অথবা CSV ফাইল থেকে import করুন।" />
 
       {/* ── Demo Data Banner ── */}
       <DemoDataBanner />
 
-      {/* ── Stats Cards ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: "মোট পণ্য", value: products.length, sub: "ধরন", icon: Package, gradient: "from-blue-500 to-blue-700", iconBg: "bg-blue-50", iconColor: "text-blue-600" },
-          { label: "কম স্টক", value: lowStockCount, sub: "পণ্য", icon: AlertTriangle, gradient: "from-amber-400 to-amber-600", iconBg: "bg-amber-50", iconColor: "text-amber-600" },
-          { label: "স্টক শেষ", value: outOfStockCount, sub: "পণ্য", icon: TrendingDown, gradient: "from-red-400 to-red-600", iconBg: "bg-red-50", iconColor: "text-red-500" },
-          { label: "মোট মূল্যমান", value: formatBDT(totalValue), sub: "বিক্রয় মূল্যে", icon: BarChart3, gradient: "from-emerald-500 to-emerald-700", iconBg: "bg-emerald-50", iconColor: "text-emerald-600" },
-        ].map((stat) => (
-          <div key={stat.label} className="bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between mb-3">
-              <div className={`w-9 h-9 ${stat.iconBg} rounded-xl flex items-center justify-center`}>
-                <stat.icon size={18} className={stat.iconColor} />
-              </div>
-            </div>
-            <p className="text-2xl font-black text-gray-900">{stat.value}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{stat.label} · {stat.sub}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* ── AI Prediction Panel ── */}
       {aiPredData && (
-        <div className="bg-white rounded-2xl border border-purple-100 overflow-hidden">
+        <Card padding="none" className="border-purple-100 overflow-hidden">
           <button onClick={() => setShowAiPanel(p => !p)}
             className="w-full flex items-center justify-between px-5 py-3.5 text-left bg-purple-50 hover:bg-purple-100/50 transition-colors">
             <div className="flex items-center gap-2">
@@ -548,51 +516,32 @@ export default function InventoryPage() {
               )}
             </div>
           )}
-        </div>
+        </Card>
       )}
 
-      {/* ── Search + Tabs bar ── */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <div className="flex items-center gap-2 p-4 border-b border-gray-50 flex-wrap">
-          <div className="relative flex-1 min-w-[180px]">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="পণ্য বা SKU খুঁজুন..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 h-10 rounded-xl border border-gray-200 text-sm outline-none focus:border-gray-400 bg-gray-50 text-gray-800 transition-colors"
-            />
-          </div>
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="h-10 px-3 rounded-xl border border-gray-200 text-sm outline-none bg-gray-50 text-gray-700"
-          >
-            <option value="">সব ক্যাটাগরি</option>
-            {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-          </select>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-1 px-4 py-3 border-b border-gray-50">
-          {TABS.map((t) => {
-            const isCombo = t.key === "combos";
-            const isActive = tab === t.key;
-            return (
-              <button key={t.key} onClick={() => setTab(t.key)}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-                style={{
-                  backgroundColor: isActive ? (isCombo ? "#F59E0B" : "var(--c-primary)") : "transparent",
-                  color: isActive ? "#fff" : "#6B7280",
-                }}>
-                {t.label}
-                <span className={`text-xs px-1.5 py-0.5 rounded-md font-bold ${isActive ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
-                  {t.count}
-                </span>
-              </button>
-            );
-          })}
+      <Card padding="none" className="overflow-hidden">
+        <div className="p-4 border-b" style={{ borderColor: "var(--c-border)" }}>
+          <FilterBar
+            tabs={TABS}
+            activeTab={tab}
+            onTabChange={setTab}
+            search={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="পণ্য বা SKU খুঁজুন..."
+            filters={
+              tab !== "combos" ? (
+                <Select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  options={[
+                    { value: "", label: "সব ক্যাটাগরি" },
+                    ...categories.map(c => ({ value: c.name, label: c.name })),
+                  ]}
+                  className="min-w-[140px]"
+                />
+              ) : undefined
+            }
+          />
         </div>
 
         {/* ── Combos Tab ── */}
@@ -600,13 +549,11 @@ export default function InventoryPage() {
           combosLoading ? (
             <div className="p-6 space-y-3 animate-pulse">{[1,2,3].map(i => <div key={i} className="h-14 bg-gray-100 rounded-xl" />)}</div>
           ) : combos.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-3 text-2xl">📦</div>
-              <p className="text-gray-500 text-sm font-medium mb-2">কোনো কমবো প্যাক নেই</p>
-              <Link href="/inventory/combos/new" className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-600 hover:underline">
-                <Plus size={14} /> কমবো যোগ করুন
-              </Link>
-            </div>
+            <EmptyState
+              icon={Package}
+              title="কোনো কমবো প্যাক নেই"
+              action={{ label: "কমবো যোগ করুন", onClick: () => {}, href: "/inventory/combos/new" }}
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[640px]">
@@ -645,9 +592,10 @@ export default function InventoryPage() {
                         </span>
                       </td>
                       <td className="px-5 py-4">
-                        <button onClick={() => toggleComboActive(combo.id, combo.isActive)}
-                          className={`text-xs font-bold px-3 py-1.5 rounded-full transition-colors ${combo.isActive ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
-                          {combo.isActive ? "সক্রিয়" : "নিষ্ক্রিয়"}
+                        <button onClick={() => toggleComboActive(combo.id, combo.isActive)}>
+                          <Badge variant={combo.isActive ? "success" : "default"}>
+                            {combo.isActive ? "সক্রিয়" : "নিষ্ক্রিয়"}
+                          </Badge>
                         </button>
                       </td>
                       <td className="px-5 py-4">
@@ -673,27 +621,13 @@ export default function InventoryPage() {
               {[1, 2, 3, 4, 5].map((i) => <div key={i} className="h-14 bg-gray-100 rounded-xl" />)}
             </div>
           ) : filtered.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Package size={28} className="text-gray-400" />
-              </div>
-              <p className="text-gray-500 text-sm font-medium mb-4">
-                {products.length === 0 ? "এখনো কোনো পণ্য নেই।" : "কোনো পণ্য পাওয়া যায়নি"}
-              </p>
-              <div className="flex items-center justify-center gap-3 flex-wrap">
-                <button onClick={() => setCreateProductPanelOpen(true)} className="inline-flex items-center gap-1.5 text-sm font-bold px-4 py-2 rounded-xl text-white" style={{ backgroundColor: "#0F6E56" }}>
-                  <Plus size={14} /> পণ্য যোগ করুন
-                </button>
-                {products.length === 0 && (
-                  <button onClick={async () => {
-                    await fetch("/api/demo-data", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "products" }) });
-                    window.location.reload();
-                  }} className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl border" style={{ borderColor: "#D97706", color: "#D97706" }}>
-                    Demo data দিয়ে দেখুন
-                  </button>
-                )}
-              </div>
-            </div>
+            <EmptyState
+              icon={Package}
+              title={products.length === 0 ? "এখনো কোনো পণ্য নেই।" : "কোনো পণ্য পাওয়া যায়নি"}
+              action={products.length === 0
+                ? { label: "পণ্য যোগ করুন", onClick: () => setCreateProductPanelOpen(true) }
+                : undefined}
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[700px]">
@@ -721,7 +655,7 @@ export default function InventoryPage() {
                             )}
                             <span className="text-sm font-semibold text-gray-900">{p.name}</span>
                             {p.hasVariants && (
-                              <span className="text-xs font-bold px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-600">Variants</span>
+                              <Badge variant="info">Variants</Badge>
                             )}
                           </Link>
                         </td>
@@ -760,7 +694,7 @@ export default function InventoryPage() {
             </div>
           )
         )}
-      </div>
+      </Card>
 
       {/* ── Edit Slide-over Panel ── */}
       <ProductEditPanel
@@ -776,6 +710,6 @@ export default function InventoryPage() {
           onCreated={() => fetchProducts()}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

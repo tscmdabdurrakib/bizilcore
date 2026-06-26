@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireShop } from "@/lib/getShop";
 import { prisma } from "@/lib/prisma";
+import { getRestaurantShop } from "@/lib/restaurant/api-shop";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { shop } = await requireShop();
+  const ctx = await getRestaurantShop();
+  if ("error" in ctx) return ctx.error;
+
   const { id } = await params;
   const body = await req.json();
 
-  const coupon = await prisma.coupon.findFirst({ where: { id, shopId: shop.id } });
+  const coupon = await prisma.coupon.findFirst({ where: { id, shopId: ctx.shop.id } });
   if (!coupon) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const {
@@ -19,7 +21,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   if (code && code.toUpperCase() !== coupon.code) {
     const conflict = await prisma.coupon.findUnique({
-      where: { shopId_code: { shopId: shop.id, code: code.toUpperCase() } },
+      where: { shopId_code: { shopId: ctx.shop.id, code: code.toUpperCase() } },
     });
     if (conflict) return NextResponse.json({ error: "এই কোড ইতিমধ্যে আছে" }, { status: 409 });
   }
@@ -51,9 +53,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { shop } = await requireShop();
+  const ctx = await getRestaurantShop();
+  if ("error" in ctx) return ctx.error;
+
   const { id } = await params;
-  const coupon = await prisma.coupon.findFirst({ where: { id, shopId: shop.id } });
+  const coupon = await prisma.coupon.findFirst({ where: { id, shopId: ctx.shop.id } });
   if (!coupon) return NextResponse.json({ error: "Not found" }, { status: 404 });
   await prisma.coupon.delete({ where: { id } });
   return NextResponse.json({ ok: true });

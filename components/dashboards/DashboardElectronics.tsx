@@ -100,7 +100,7 @@ export default function DashboardElectronics({
     waiting_parts: { label: "Parts অপেক্ষা", color: "#7C3AED", bg: "#EDE9FE" },
     repairing:     { label: "মেরামত",        color: "#0F6E56", bg: "#E1F5EE" },
     quality_check: { label: "Quality Check", color: "#0369A1", bg: "#E0F2FE" },
-    ready:         { label: "Ready",         color: "#166534", bg: "#DCFCE7" },
+    ready:         { label: "প্রস্তুত",         color: "#166534", bg: "#DCFCE7" },
     delivered:     { label: "Delivered",     color: "#6B7280", bg: "#F3F4F6" },
   };
 
@@ -143,7 +143,7 @@ export default function DashboardElectronics({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: "আজ আসা ডিভাইস", value: st.todayJobCards, icon: Smartphone, color: PRIMARY, bg: "#EFF6FF" },
-          { label: "Ready ডিভাইস", value: st.readyCount, icon: CheckCircle, color: "#16A34A", bg: "#DCFCE7" },
+          { label: "প্রস্তুত ডিভাইস", value: st.readyCount, icon: CheckCircle, color: "#16A34A", bg: "#DCFCE7" },
           { label: "চলমান মেরামত", value: st.activeCount, icon: Wrench, color: "#B45309", bg: "#FEF3C7" },
           { label: "আজকের আয়", value: `৳${st.todayRevenue.toLocaleString("bn-BD")}`, icon: DollarSign, color: "#7C3AED", bg: "#F5F3FF" },
         ].map((card) => (

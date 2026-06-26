@@ -3,10 +3,11 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Check, MessageSquare, Copy, Trash2, Crown, User, ChevronRight, ChevronLeft, Loader2, ArrowLeft, Facebook, Link2, Unlink, X, Store, FileText, Users, Bell, CreditCard, Settings, Target, Moon, Sun, ShieldCheck, ShieldX, Wifi, WifiOff, Eye, EyeOff, Send, BookOpen, MessageCircle, Globe, ExternalLink, Sparkles, RefreshCw, Printer, Truck, RefreshCcw, Plus, Stethoscope, BedDouble, Trophy } from "lucide-react";
+import { Check, MessageSquare, Copy, Trash2, Crown, User, ChevronRight, ChevronLeft, Loader2, ArrowLeft, Facebook, Link2, Unlink, X, Store, FileText, Users, Bell, CreditCard, Settings, Target, ShieldCheck, ShieldX, Wifi, WifiOff, Eye, EyeOff, Send, BookOpen, MessageCircle, Globe, ExternalLink, Sparkles, RefreshCw, Printer, Truck, RefreshCcw, Plus, Stethoscope, BedDouble, Trophy } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 import { PLAN_DISPLAY, PLAN_LIMITS } from "@/lib/features";
 import { BUSINESS_TYPES, BUSINESS_TYPE_META, type BusinessType, SALES_CHANNELS, SALES_CHANNEL_META, type SalesChannel, isValidSalesChannel } from "@/lib/modules";
+import { PageShell } from "@/components/ui";
 
 /* ─── small helpers ─────────────────────────────────── */
 interface SMSPrefs {
@@ -237,13 +238,15 @@ function SettingsContent() {
   const [shop, setShop] = useState({ name: "", phone: "", email: "", category: "", address: "", logoUrl: "" });
   const [logoUploading, setLogoUploading] = useState(false);
   const [invoiceSettings, setInvoiceSettings] = useState({ invoiceNote: "", bankAccount: "", bankName: "" });
-  const [darkMode, setDarkMode] = useState(false);
   const [salesTarget, setSalesTarget] = useState(0);
   const [savingTarget, setSavingTarget] = useState(false);
   const [notifs, setNotifs] = useState({ lowStock: true, newOrder: true, dueReminder: false });
   const [smsConnected, setSmsConnected] = useState(false);
   const [smsMaskedKey, setSmsMaskedKey] = useState<string | null>(null);
   const [smsBalance, setSmsBalance] = useState<number | null>(null);
+  const [smsMaskingBalance, setSmsMaskingBalance] = useState<number | null>(null);
+  const [smsNonMaskingBalance, setSmsNonMaskingBalance] = useState<number | null>(null);
+  const [smsMaskingEnabled, setSmsMaskingEnabled] = useState(false);
   const [smsApiKeyInput, setSmsApiKeyInput] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
   const [connectingSMS, setConnectingSMS] = useState(false);
@@ -313,9 +316,6 @@ function SettingsContent() {
   }
 
   useEffect(() => {
-    const savedDark = typeof window !== "undefined" && localStorage.getItem("bizilcore-dark") === "1";
-    setDarkMode(savedDark);
-    if (savedDark) document.documentElement.classList.add("dark");
     fetch("/api/settings").then(r => r.json()).then(data => {
       if (data.shop) {
         setShop({ name: data.shop.name ?? "", phone: data.shop.phone ?? "", email: data.shop.email ?? "", category: data.shop.category ?? "", address: data.shop.address ?? "", logoUrl: data.shop.logoUrl ?? "" });
@@ -342,11 +342,11 @@ function SettingsContent() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/settings/sms").then(r => r.json()).then(d => {
-      setSmsConnected(d.isConnected ?? false);
-      setSmsMaskedKey(d.maskedApiKey ?? null);
+    fetch("/api/sms-credits/balance").then(r => r.json()).then(d => {
       setSmsBalance(d.balance ?? null);
-      if (d.preferences) setSmsPrefs(d.preferences);
+      setSmsMaskingBalance(d.maskingBalance ?? null);
+      setSmsNonMaskingBalance(d.nonMaskingBalance ?? null);
+      setSmsMaskingEnabled(d.maskingEnabled ?? false);
     }).catch(() => {});
   }, []);
 
@@ -553,17 +553,6 @@ function SettingsContent() {
     showToast(r.ok ? "success" : "error", r.ok ? "Invoice সেটিংস সেভ হয়েছে ✓" : "কিছু একটা সমস্যা হয়েছে।");
   }
 
-  function toggleDarkMode(on: boolean) {
-    setDarkMode(on);
-    if (on) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("bizilcore-dark", "1");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("bizilcore-dark", "0");
-    }
-  }
-
   const planDisplay = PLAN_DISPLAY[plan] ?? PLAN_DISPLAY.free;
   const planLimits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
 
@@ -664,6 +653,7 @@ function SettingsContent() {
     { key: "invoice",       label: "Invoice",       desc: "কাস্টম invoice সেটিংস",         icon: FileText,      color: "#0EA5E9", bg: "#F0F9FF",  group: "শপ"      },
     { key: "slip",          label: "অর্ডার স্লিপ",   desc: "পেকিং স্লিপ কাস্টমাইজ করুন",  icon: Printer,       color: "#64748B", bg: "#F8FAFC",  group: "শপ"      },
     { key: "notifications", label: "Notifications", desc: "SMS ও alert সেটিংস",           icon: Bell,          color: "#EF4444", bg: "#FEF2F2",  group: "সংযোগ"   },
+    { key: "sms",           label: "SMS",           desc: "ক্রেডিট ও অটো-SMS",            icon: MessageSquare, color: "#0F6E56", bg: "#E1F5EE",  group: "সংযোগ", href: "/settings/sms" },
     { key: "facebook",      label: "Facebook",      desc: "Page সংযোগ",                   icon: Facebook,      color: "#1877F2", bg: "#EFF6FF",  group: "সংযোগ"   },
     { key: "whatsapp",      label: "WhatsApp",      desc: "Meta API সংযোগ",               icon: MessageCircle, color: "#25D366", bg: "#F0FDF4",  group: "সংযোগ"   },
     { key: "courier",       label: "কুরিয়ার",        desc: "Pathao, RedX, Steadfast API",  icon: Truck,         color: "#F97316", bg: "#FFF7ED",  group: "সংযোগ"   },
@@ -679,7 +669,7 @@ function SettingsContent() {
   const ActiveTabIcon = activeTab?.icon ?? null;
 
   return (
-    <div className="max-w-5xl">
+    <PageShell title="সেটিংস" className="max-w-5xl">
       {toast && <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg" style={{ backgroundColor: toast.type === "success" ? "#1D9E75" : "#E24B4A" }}>{toast.msg}</div>}
       {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} onSuccess={() => { setShowUpgrade(false); refreshSub(); }} />}
 
@@ -1055,25 +1045,6 @@ function SettingsContent() {
                 লক্ষ্য: {salesTarget.toLocaleString("bn-BD")} টাকা/মাস
               </p>
             )}
-          </div>
-
-          {/* Dark Mode */}
-          <div className="rounded-2xl border p-5 shadow-sm" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span style={{ fontSize: "18px" }}>{darkMode ? "🌙" : "☀️"}</span>
-                <div>
-                  <h4 className="font-semibold text-sm" style={{ color: S.text }}>Dark Mode</h4>
-                  <p className="text-xs mt-0.5" style={{ color: S.muted }}>রাতে কাজ করার জন্য</p>
-                </div>
-              </div>
-              <div className="w-11 h-6 rounded-full flex items-center px-0.5 transition-colors cursor-pointer"
-                style={{ backgroundColor: darkMode ? S.primary : S.border }}
-                onClick={() => toggleDarkMode(!darkMode)}>
-                <div className="w-5 h-5 rounded-full bg-white shadow transition-transform"
-                  style={{ transform: darkMode ? "translateX(20px)" : "translateX(0)" }} />
-              </div>
-            </div>
           </div>
 
           {/* Password */}
@@ -1634,159 +1605,39 @@ function SettingsContent() {
 
           <InAppNotifPrefs />
 
-          {/* ── SMS.net.bd Self-Service ── */}
+          {/* ── SMS Credits (Platform) ── */}
           <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: S.surface, borderColor: S.border }}>
-            {/* Header */}
             <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${S.border}` }}>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: smsConnected ? "#DCFCE7" : "#FEE2E2" }}>
-                  {smsConnected ? <Wifi size={15} color="#16A34A" /> : <WifiOff size={15} color="#DC2626" />}
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#E1F5EE" }}>
+                  <MessageSquare size={15} color="#0F6E56" />
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm" style={{ color: S.text }}>SMS Notifications</h4>
-                  <p className="text-xs" style={{ color: smsConnected ? "#16A34A" : "#DC2626" }}>
-                    {smsConnected ? `🟢 সংযুক্ত আছে${smsBalance !== null ? ` — ব্যালেন্স: ৳${smsBalance}` : ""}` : "🔴 সংযুক্ত নেই"}
+                  <h4 className="font-semibold text-sm" style={{ color: S.text }}>SMS (ক্রেডিট ভিত্তিক)</h4>
+                  <p className="text-xs" style={{ color: S.muted }}>
+                    {smsBalance !== null
+                      ? smsMaskingEnabled
+                        ? `Masking: ${smsMaskingBalance ?? 0} · Non-Masking: ${smsNonMaskingBalance ?? 0} SMS`
+                        : `${smsNonMaskingBalance ?? smsBalance ?? 0} SMS credit`
+                      : "BizilCore প্ল্যাটফর্ম SMS"}
                   </p>
                 </div>
               </div>
-              {smsConnected && smsMaskedKey && (
-                <span className="text-xs font-mono px-2 py-1 rounded-lg" style={{ backgroundColor: S.bg, color: S.muted }}>{smsMaskedKey}</span>
-              )}
             </div>
-
-            <div className="p-5 space-y-5">
-              {/* Section A: API Connection */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: S.muted }}>API সংযোগ</p>
-                  <button onClick={() => setShowGuide(true)} className="flex items-center gap-1 text-xs" style={{ color: S.primary }}>
-                    <BookOpen size={12} /> কিভাবে পাবেন? →
-                  </button>
-                </div>
-                {!smsConnected ? (
-                  <div className="space-y-3">
-                    <div className="relative">
-                      <input
-                        type={showApiKey ? "text" : "password"}
-                        value={smsApiKeyInput}
-                        onChange={e => setSmsApiKeyInput(e.target.value)}
-                        placeholder="SMS.net.bd API Key"
-                        className="w-full pr-10 text-sm rounded-xl border outline-none px-3"
-                        style={{ height: "42px", borderColor: S.border, color: S.text, backgroundColor: S.bg }}
-                      />
-                      <button onClick={() => setShowApiKey(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: S.muted }}>
-                        {showApiKey ? <EyeOff size={14} /> : <Eye size={14} />}
-                      </button>
-                    </div>
-                    <p className="text-xs" style={{ color: S.muted }}>
-                      API Key পেতে <a href="https://portal.sms.net.bd" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: S.primary }}>portal.sms.net.bd</a> তে অ্যাকাউন্ট খুলুন।
-                    </p>
-                    <button onClick={connectSMS} disabled={connectingSMS || !smsApiKeyInput.trim()}
-                      className="w-full py-2.5 rounded-xl text-white text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
-                      style={{ backgroundColor: S.primary }}>
-                      {connectingSMS ? <><Loader2 size={14} className="animate-spin" /> যাচাই হচ্ছে...</> : <><Wifi size={14} /> সংযোগ করুন</>}
-                    </button>
-                  </div>
-                ) : (
-                  <button onClick={disconnectSMS} disabled={disconnectingSMS}
-                    className="flex items-center gap-2 text-sm px-4 py-2 rounded-xl border disabled:opacity-50"
-                    style={{ borderColor: "#FCA5A5", color: "#DC2626", backgroundColor: "#FEF2F2" }}>
-                    {disconnectingSMS ? <Loader2 size={13} className="animate-spin" /> : <Unlink size={13} />}
-                    সংযোগ বিচ্ছিন্ন করুন
-                  </button>
-                )}
-              </div>
-
-              {/* Section B: Notification Preferences (always visible, disabled if not connected) */}
-              <div className={!smsConnected ? "opacity-50 pointer-events-none select-none" : ""}>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: S.muted }}>নোটিফিকেশন পছন্দ</p>
-                  {!smsConnected && <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: "#FEF3C7", color: "#92600A" }}>আগে সংযুক্ত করুন</span>}
-                </div>
-                <div className="space-y-1 rounded-xl border divide-y" style={{ borderColor: S.border }}>
-                  {([
-                    { key: "orderConfirmed" as const, label: "অর্ডার তৈরি হলে SMS পাঠাবো", hint: "নতুন অর্ডার তৈরি হলে কাস্টমারকে SMS যাবে" },
-                    { key: "orderStatusChanged" as const, label: "অর্ডার স্ট্যাটাস পরিবর্তন হলে", hint: "অর্ডার shipped/processing হলে কাস্টমারকে জানানো হবে" },
-                    { key: "deliveryConfirmed" as const, label: "ডেলিভারি নিশ্চিত হলে", hint: "পণ্য delivered হলে কাস্টমারকে জানানো হবে" },
-                    { key: "paymentReceived" as const, label: "পেমেন্ট পাওয়া গেলে", hint: "পেমেন্ট কনফার্ম হলে কাস্টমারকে জানানো হবে" },
-                    { key: "lowStockAlert" as const, label: "স্টক কম হলে (নিজেকে জানাবে)", hint: "পণ্যের স্টক কমে গেলে shop owner কে সতর্ক করা হবে" },
-                  ] as const).map(({ key, label, hint }) => (
-                    <div key={key} className="px-3">
-                      <div className="flex items-start justify-between py-3 gap-3">
-                        <div>
-                          <p className="text-sm font-medium" style={{ color: S.text }}>{label}</p>
-                          <p className="text-xs mt-0.5" style={{ color: S.muted }}>{hint}</p>
-                        </div>
-                        <div className="mt-0.5 w-11 h-6 rounded-full flex-shrink-0 flex items-center px-0.5 transition-colors cursor-pointer"
-                          style={{ backgroundColor: smsPrefs[key] ? S.primary : S.border }}
-                          onClick={() => smsConnected && setSmsPrefs(p => ({ ...p, [key]: !p[key] }))}>
-                          <div className="w-5 h-5 rounded-full bg-white shadow transition-transform"
-                            style={{ transform: smsPrefs[key] ? "translateX(20px)" : "translateX(0)" }} />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <button onClick={saveSmsPrefs} disabled={savingPrefs || !smsConnected}
-                  className="w-full mt-3 py-2.5 rounded-xl text-white text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
-                  style={{ backgroundColor: S.primary }}>
-                  {savingPrefs ? <><Loader2 size={14} className="animate-spin" /> সেভ হচ্ছে...</> : <><Check size={14} /> পছন্দ সংরক্ষণ করুন</>}
-                </button>
-              </div>
-
-              {/* Section C: Test SMS (always visible, disabled if not connected) */}
-              <div className={!smsConnected ? "opacity-50 pointer-events-none select-none" : ""}>
-                <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: S.muted }}>টেস্ট SMS</p>
-                <div className="flex gap-2">
-                  <input
-                    type="tel"
-                    value={testPhone}
-                    onChange={e => setTestPhone(e.target.value)}
-                    placeholder="01XXXXXXXXX"
-                    className="flex-1 text-sm rounded-xl border outline-none px-3"
-                    style={{ height: "40px", borderColor: S.border, color: S.text, backgroundColor: S.bg }}
-                  />
-                  <button onClick={sendTestSMS} disabled={testingSSMS || !testPhone.trim() || !smsConnected}
-                    className="px-4 py-2 rounded-xl text-white text-sm font-medium disabled:opacity-50 flex items-center gap-1.5 flex-shrink-0"
-                    style={{ backgroundColor: S.primary }}>
-                    {testingSSMS ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
-                    {testingSSMS ? "পাঠাচ্ছে..." : "পাঠান"}
-                  </button>
-                </div>
+            <div className="p-5 space-y-3">
+              <p className="text-sm" style={{ color: S.muted }}>
+                SMS পাঠাতে ক্রেডিট কিনুন এবং অটো-SMS সেটিংস কনফিগার করুন।
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Link href="/settings/sms" className="px-4 py-2 rounded-xl text-sm font-bold text-white" style={{ backgroundColor: S.primary, textDecoration: "none" }}>
+                  SMS সেটিংস
+                </Link>
+                <Link href="/billing#sms-credits" className="px-4 py-2 rounded-xl text-sm font-bold border" style={{ borderColor: S.border, color: S.primary, textDecoration: "none" }}>
+                  ক্রেডিট কিনুন
+                </Link>
               </div>
             </div>
           </div>
-
-          {/* Guide Modal */}
-          {showGuide && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-              <div className="w-full max-w-md rounded-2xl p-6 shadow-2xl" style={{ backgroundColor: S.surface }}>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-base" style={{ color: S.text }}>🔑 কিভাবে API Key পাবেন</h3>
-                  <button onClick={() => setShowGuide(false)} style={{ color: S.muted }}><X size={18} /></button>
-                </div>
-                <div className="space-y-3">
-                  {[
-                    { step: "১", text: "portal.sms.net.bd তে যান এবং Sign Up করুন" },
-                    { step: "২", text: "Email verify করে লগইন করুন" },
-                    { step: "৩", text: 'Dashboard থেকে "API" মেনুতে যান' },
-                    { step: "৪", text: "আপনার API Key কপি করুন" },
-                    { step: "৫", text: 'BizilCore Settings এ paste করে "সংযোগ করুন" চাপুন' },
-                  ].map(({ step, text }) => (
-                    <div key={step} className="flex items-start gap-3">
-                      <span className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ backgroundColor: S.primary }}>{step}</span>
-                      <p className="text-sm pt-1" style={{ color: S.text }}>{text}</p>
-                    </div>
-                  ))}
-                </div>
-                <a href="https://portal.sms.net.bd" target="_blank" rel="noopener noreferrer"
-                  className="mt-5 block w-full text-center py-2.5 rounded-xl text-white text-sm font-medium"
-                  style={{ backgroundColor: S.primary }}>
-                  portal.sms.net.bd এ যান →
-                </a>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
@@ -2077,9 +1928,179 @@ function SettingsContent() {
       {/* Referral Tab */}
       {tab === "referral" && <ReferralPanel />}
 
+      {/* ─── Hospital Config Tab ─────────────────────────── */}
+      {tab === "hospitalconfig" && (
+        <div className="space-y-6">
+          {!hospitalConfigLoaded ? (
+            <div className="flex items-center justify-center py-16"><Loader2 className="animate-spin" size={28} style={{ color: "#378ADD" }} /></div>
+          ) : (
+            <>
+              <div className="rounded-2xl p-5 space-y-4" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
+                <h3 className="font-bold text-base" style={{ color: S.text }}>প্রতিষ্ঠান তথ্য</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>প্রতিষ্ঠানের ধরন</label>
+                    <select value={hospitalConfig.hospitalFacilityType} onChange={e => setHospitalConfig(p => ({ ...p, hospitalFacilityType: e.target.value }))}
+                      className="w-full rounded-xl border px-3 text-sm" style={{ height: 42, borderColor: S.border, color: S.text, backgroundColor: S.surface }}>
+                      <option value="hospital">হাসপাতাল</option>
+                      <option value="clinic">ক্লিনিক</option>
+                      <option value="diagnostic">ডায়াগনস্টিক সেন্টার</option>
+                      <option value="chamber">চেম্বার</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>রেজিস্ট্রেশন নম্বর</label>
+                    <input value={hospitalConfig.hospitalRegNumber} onChange={e => setHospitalConfig(p => ({ ...p, hospitalRegNumber: e.target.value }))}
+                      placeholder="DGDA-XXXX-XXXX" style={inp(false)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>জরুরি যোগাযোগ নম্বর</label>
+                    <input value={hospitalConfig.hospitalEmergencyPhone} onChange={e => setHospitalConfig(p => ({ ...p, hospitalEmergencyPhone: e.target.value }))}
+                      placeholder="01XXXXXXXXX" style={inp(false)} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl p-5 space-y-4" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
+                <h3 className="font-bold text-base" style={{ color: S.text }}>Prefix ও Token সেটিং</h3>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>Patient Prefix</label>
+                    <input value={hospitalConfig.hospitalPatientPrefix} onChange={e => setHospitalConfig(p => ({ ...p, hospitalPatientPrefix: e.target.value }))}
+                      placeholder="PAT" maxLength={6} style={inp(false)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>OPD Prefix</label>
+                    <input value={hospitalConfig.hospitalOpdPrefix} onChange={e => setHospitalConfig(p => ({ ...p, hospitalOpdPrefix: e.target.value }))}
+                      placeholder="OPD" maxLength={6} style={inp(false)} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>IPD Prefix</label>
+                    <input value={hospitalConfig.hospitalAdmissionPrefix} onChange={e => setHospitalConfig(p => ({ ...p, hospitalAdmissionPrefix: e.target.value }))}
+                      placeholder="IPD" maxLength={6} style={inp(false)} />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>Token রিসেট সময় (প্রতিদিন)</label>
+                  <input type="time" value={hospitalConfig.hospitalTokenResetTime} onChange={e => setHospitalConfig(p => ({ ...p, hospitalTokenResetTime: e.target.value }))}
+                    style={inp(false)} />
+                </div>
+              </div>
+
+              <div className="rounded-2xl p-5 space-y-3" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
+                <h3 className="font-bold text-base" style={{ color: S.text }}>বিকল্প সুবিধা</h3>
+                <Toggle checked={hospitalConfig.hospitalShowVitals} onChange={v => setHospitalConfig(p => ({ ...p, hospitalShowVitals: v }))} label="OPD ভিজিটে vital signs দেখান" />
+                <Toggle checked={hospitalConfig.hospitalAutoSms} onChange={v => setHospitalConfig(p => ({ ...p, hospitalAutoSms: v }))} label="Token ও ভর্তি নিশ্চিতে SMS পাঠান" />
+              </div>
+
+              <button disabled={savingHospitalConfig} onClick={async () => {
+                setSavingHospitalConfig(true);
+                const r = await fetch("/api/hospital/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(hospitalConfig) });
+                setSavingHospitalConfig(false);
+                showToast(r.ok ? "success" : "error", r.ok ? "সেটিংস সংরক্ষিত হয়েছে" : "সংরক্ষণ ব্যর্থ হয়েছে");
+              }} className="w-full py-3.5 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2"
+                style={{ backgroundColor: "#378ADD", opacity: savingHospitalConfig ? 0.7 : 1 }}>
+                {savingHospitalConfig ? <Loader2 size={16} className="animate-spin" /> : null}
+                সংরক্ষণ করুন
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ─── Bed Setup Tab ─────────────────────────────── */}
+      {tab === "bedsetup" && (
+        <div className="space-y-6">
+          <div className="rounded-2xl p-5 space-y-4" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
+            <h3 className="font-bold text-base" style={{ color: S.text }}>নতুন Bed যোগ করুন</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>Bed নম্বর *</label>
+                <input value={bedForm.number} onChange={e => setBedForm(p => ({ ...p, number: e.target.value }))} placeholder="101" style={inp(false)} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>Ward</label>
+                <input value={bedForm.ward} onChange={e => setBedForm(p => ({ ...p, ward: e.target.value }))} placeholder="General" style={inp(false)} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>Bed ধরন</label>
+                <select value={bedForm.type} onChange={e => setBedForm(p => ({ ...p, type: e.target.value }))}
+                  className="w-full rounded-xl border px-3 text-sm" style={{ height: 42, borderColor: S.border, color: S.text, backgroundColor: S.surface }}>
+                  <option value="general">General</option>
+                  <option value="icu">ICU</option>
+                  <option value="cabin">Cabin</option>
+                  <option value="vip">VIP</option>
+                  <option value="maternity">Maternity</option>
+                  <option value="pediatric">Pediatric</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>দৈনিক ভাড়া (৳)</label>
+                <input type="number" value={bedForm.dailyRate} onChange={e => setBedForm(p => ({ ...p, dailyRate: e.target.value }))} placeholder="0" style={inp(false)} />
+              </div>
+            </div>
+            <button disabled={addingBed || !bedForm.number.trim()} onClick={async () => {
+              setAddingBed(true);
+              const r = await fetch("/api/hospital/beds", { method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ number: bedForm.number, ward: bedForm.ward, type: bedForm.type, dailyRate: parseFloat(bedForm.dailyRate) || 0 }) });
+              if (r.ok) {
+                const newBed = await r.json();
+                setBeds(p => [newBed, ...p]);
+                setBedForm({ number: "", ward: "General", type: "general", dailyRate: "" });
+                showToast("success", "Bed যোগ করা হয়েছে");
+              } else { showToast("error", "Bed যোগ ব্যর্থ হয়েছে"); }
+              setAddingBed(false);
+            }} className="w-full py-3 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2"
+              style={{ backgroundColor: "#0EA5E9", opacity: (addingBed || !bedForm.number.trim()) ? 0.6 : 1 }}>
+              {addingBed ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+              Bed যোগ করুন
+            </button>
+          </div>
+
+          <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
+            <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: S.border }}>
+              <h3 className="font-bold text-base" style={{ color: S.text }}>সকল Bed তালিকা</h3>
+              {bedsLoading && <Loader2 size={16} className="animate-spin" style={{ color: S.muted }} />}
+            </div>
+            {beds.length === 0 ? (
+              <div className="p-8 text-center">
+                <BedDouble size={32} style={{ color: S.muted }} className="mx-auto mb-2" />
+                <p className="text-sm" style={{ color: S.muted }}>এখনো কোনো Bed যোগ করা হয়নি</p>
+              </div>
+            ) : (
+              <div className="divide-y" style={{ borderColor: S.border }}>
+                {beds.map(bed => (
+                  <div key={bed.id} className="flex items-center justify-between px-5 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold" style={{ backgroundColor: "#EFF6FF", color: "#378ADD" }}>
+                        {bed.number}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold" style={{ color: S.text }}>{bed.ward} · {bed.type.toUpperCase()}</p>
+                        <p className="text-xs" style={{ color: S.muted }}>৳{bed.dailyRate}/দিন · <span style={{ color: bed.status === "available" ? "#10B981" : "#F59E0B" }}>{bed.status === "available" ? "খালি" : "ব্যস্ত"}</span></p>
+                      </div>
+                    </div>
+                    <button disabled={deletingBedId === bed.id} onClick={async () => {
+                      if (!confirm(`Bed ${bed.number} মুছে দিবেন?`)) return;
+                      setDeletingBedId(bed.id);
+                      const r = await fetch(`/api/hospital/beds/${bed.id}`, { method: "DELETE" });
+                      if (r.ok) { setBeds(p => p.filter(b => b.id !== bed.id)); showToast("success", "Bed মুছে গেছে"); }
+                      else showToast("error", "Bed মুছতে ব্যর্থ");
+                      setDeletingBedId(null);
+                    }} className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#FEF2F2" }}>
+                      {deletingBedId === bed.id ? <Loader2 size={14} className="animate-spin text-red-500" /> : <Trash2 size={14} color="#DC2626" />}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }
 
@@ -3299,179 +3320,9 @@ function ReferralPanel() {
         </div>
       )}
 
-      {data && data.referrals.length === 0 && tab === "referral" && (
+      {data && data.referrals.length === 0 && (
         <div className="rounded-2xl p-8 text-center" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
           <p className="text-sm" style={{ color: S.muted }}>এখনো কাউকে refer করেননি। উপরের code share করুন!</p>
-        </div>
-      )}
-
-      {/* ─── Hospital Config Tab ─────────────────────────── */}
-      {tab === "hospitalconfig" && (
-        <div className="space-y-6">
-          {!hospitalConfigLoaded ? (
-            <div className="flex items-center justify-center py-16"><Loader2 className="animate-spin" size={28} style={{ color: "#378ADD" }} /></div>
-          ) : (
-            <>
-              <div className="rounded-2xl p-5 space-y-4" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
-                <h3 className="font-bold text-base" style={{ color: S.text }}>প্রতিষ্ঠান তথ্য</h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>প্রতিষ্ঠানের ধরন</label>
-                    <select value={hospitalConfig.hospitalFacilityType} onChange={e => setHospitalConfig(p => ({ ...p, hospitalFacilityType: e.target.value }))}
-                      className="w-full rounded-xl border px-3 text-sm" style={{ height: 42, borderColor: S.border, color: S.text, backgroundColor: S.surface }}>
-                      <option value="hospital">হাসপাতাল</option>
-                      <option value="clinic">ক্লিনিক</option>
-                      <option value="diagnostic">ডায়াগনস্টিক সেন্টার</option>
-                      <option value="chamber">চেম্বার</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>রেজিস্ট্রেশন নম্বর</label>
-                    <input value={hospitalConfig.hospitalRegNumber} onChange={e => setHospitalConfig(p => ({ ...p, hospitalRegNumber: e.target.value }))}
-                      placeholder="DGDA-XXXX-XXXX" style={inp(false)} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>জরুরি যোগাযোগ নম্বর</label>
-                    <input value={hospitalConfig.hospitalEmergencyPhone} onChange={e => setHospitalConfig(p => ({ ...p, hospitalEmergencyPhone: e.target.value }))}
-                      placeholder="01XXXXXXXXX" style={inp(false)} />
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-2xl p-5 space-y-4" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
-                <h3 className="font-bold text-base" style={{ color: S.text }}>Prefix ও Token সেটিং</h3>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>Patient Prefix</label>
-                    <input value={hospitalConfig.hospitalPatientPrefix} onChange={e => setHospitalConfig(p => ({ ...p, hospitalPatientPrefix: e.target.value }))}
-                      placeholder="PAT" maxLength={6} style={inp(false)} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>OPD Prefix</label>
-                    <input value={hospitalConfig.hospitalOpdPrefix} onChange={e => setHospitalConfig(p => ({ ...p, hospitalOpdPrefix: e.target.value }))}
-                      placeholder="OPD" maxLength={6} style={inp(false)} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>IPD Prefix</label>
-                    <input value={hospitalConfig.hospitalAdmissionPrefix} onChange={e => setHospitalConfig(p => ({ ...p, hospitalAdmissionPrefix: e.target.value }))}
-                      placeholder="IPD" maxLength={6} style={inp(false)} />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>Token রিসেট সময় (প্রতিদিন)</label>
-                  <input type="time" value={hospitalConfig.hospitalTokenResetTime} onChange={e => setHospitalConfig(p => ({ ...p, hospitalTokenResetTime: e.target.value }))}
-                    style={inp(false)} />
-                </div>
-              </div>
-
-              <div className="rounded-2xl p-5 space-y-3" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
-                <h3 className="font-bold text-base" style={{ color: S.text }}>বিকল্প সুবিধা</h3>
-                <Toggle checked={hospitalConfig.hospitalShowVitals} onChange={v => setHospitalConfig(p => ({ ...p, hospitalShowVitals: v }))} label="OPD ভিজিটে vital signs দেখান" />
-                <Toggle checked={hospitalConfig.hospitalAutoSms} onChange={v => setHospitalConfig(p => ({ ...p, hospitalAutoSms: v }))} label="Token ও ভর্তি নিশ্চিতে SMS পাঠান" />
-              </div>
-
-              <button disabled={savingHospitalConfig} onClick={async () => {
-                setSavingHospitalConfig(true);
-                const r = await fetch("/api/hospital/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(hospitalConfig) });
-                setSavingHospitalConfig(false);
-                showToast(r.ok ? "success" : "error", r.ok ? "সেটিংস সংরক্ষিত হয়েছে" : "সংরক্ষণ ব্যর্থ হয়েছে");
-              }} className="w-full py-3.5 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2"
-                style={{ backgroundColor: "#378ADD", opacity: savingHospitalConfig ? 0.7 : 1 }}>
-                {savingHospitalConfig ? <Loader2 size={16} className="animate-spin" /> : null}
-                সংরক্ষণ করুন
-              </button>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ─── Bed Setup Tab ─────────────────────────────── */}
-      {tab === "bedsetup" && (
-        <div className="space-y-6">
-          <div className="rounded-2xl p-5 space-y-4" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
-            <h3 className="font-bold text-base" style={{ color: S.text }}>নতুন Bed যোগ করুন</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>Bed নম্বর *</label>
-                <input value={bedForm.number} onChange={e => setBedForm(p => ({ ...p, number: e.target.value }))} placeholder="101" style={inp(false)} />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>Ward</label>
-                <input value={bedForm.ward} onChange={e => setBedForm(p => ({ ...p, ward: e.target.value }))} placeholder="General" style={inp(false)} />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>Bed ধরন</label>
-                <select value={bedForm.type} onChange={e => setBedForm(p => ({ ...p, type: e.target.value }))}
-                  className="w-full rounded-xl border px-3 text-sm" style={{ height: 42, borderColor: S.border, color: S.text, backgroundColor: S.surface }}>
-                  <option value="general">General</option>
-                  <option value="icu">ICU</option>
-                  <option value="cabin">Cabin</option>
-                  <option value="vip">VIP</option>
-                  <option value="maternity">Maternity</option>
-                  <option value="pediatric">Pediatric</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1.5" style={{ color: S.muted }}>দৈনিক ভাড়া (৳)</label>
-                <input type="number" value={bedForm.dailyRate} onChange={e => setBedForm(p => ({ ...p, dailyRate: e.target.value }))} placeholder="0" style={inp(false)} />
-              </div>
-            </div>
-            <button disabled={addingBed || !bedForm.number.trim()} onClick={async () => {
-              setAddingBed(true);
-              const r = await fetch("/api/hospital/beds", { method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ number: bedForm.number, ward: bedForm.ward, type: bedForm.type, dailyRate: parseFloat(bedForm.dailyRate) || 0 }) });
-              if (r.ok) {
-                const newBed = await r.json();
-                setBeds(p => [newBed, ...p]);
-                setBedForm({ number: "", ward: "General", type: "general", dailyRate: "" });
-                showToast("success", "Bed যোগ করা হয়েছে");
-              } else { showToast("error", "Bed যোগ ব্যর্থ হয়েছে"); }
-              setAddingBed(false);
-            }} className="w-full py-3 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2"
-              style={{ backgroundColor: "#0EA5E9", opacity: (addingBed || !bedForm.number.trim()) ? 0.6 : 1 }}>
-              {addingBed ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-              Bed যোগ করুন
-            </button>
-          </div>
-
-          <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
-            <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: S.border }}>
-              <h3 className="font-bold text-base" style={{ color: S.text }}>সকল Bed তালিকা</h3>
-              {bedsLoading && <Loader2 size={16} className="animate-spin" style={{ color: S.muted }} />}
-            </div>
-            {beds.length === 0 ? (
-              <div className="p-8 text-center">
-                <BedDouble size={32} style={{ color: S.muted }} className="mx-auto mb-2" />
-                <p className="text-sm" style={{ color: S.muted }}>এখনো কোনো Bed যোগ করা হয়নি</p>
-              </div>
-            ) : (
-              <div className="divide-y" style={{ borderColor: S.border }}>
-                {beds.map(bed => (
-                  <div key={bed.id} className="flex items-center justify-between px-5 py-3.5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold" style={{ backgroundColor: "#EFF6FF", color: "#378ADD" }}>
-                        {bed.number}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold" style={{ color: S.text }}>{bed.ward} · {bed.type.toUpperCase()}</p>
-                        <p className="text-xs" style={{ color: S.muted }}>৳{bed.dailyRate}/দিন · <span style={{ color: bed.status === "available" ? "#10B981" : "#F59E0B" }}>{bed.status === "available" ? "খালি" : "ব্যস্ত"}</span></p>
-                      </div>
-                    </div>
-                    <button disabled={deletingBedId === bed.id} onClick={async () => {
-                      if (!confirm(`Bed ${bed.number} মুছে দিবেন?`)) return;
-                      setDeletingBedId(bed.id);
-                      const r = await fetch(`/api/hospital/beds/${bed.id}`, { method: "DELETE" });
-                      if (r.ok) { setBeds(p => p.filter(b => b.id !== bed.id)); showToast("success", "Bed মুছে গেছে"); }
-                      else showToast("error", "Bed মুছতে ব্যর্থ");
-                      setDeletingBedId(null);
-                    }} className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#FEF2F2" }}>
-                      {deletingBedId === bed.id ? <Loader2 size={14} className="animate-spin text-red-500" /> : <Trash2 size={14} color="#DC2626" />}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
       )}
     </div>

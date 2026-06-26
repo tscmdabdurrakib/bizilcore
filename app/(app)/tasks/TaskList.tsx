@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import type { Task, TaskStatus } from "./page";
 import { getPriorityStyle, getStatusLabel, getCategoryLabel } from "./taskUtils";
+import { Card, Badge, EmptyState } from "@/components/ui";
 import {
   Calendar, CheckSquare, Trash2, ChevronUp, ChevronDown,
   Flag, UserCheck, Clock, Tag, X, ClipboardList,
@@ -150,20 +151,13 @@ export default function TaskList({ tasks, onTaskClick, onStatusChange, onRefresh
 
   if (tasks.length === 0) {
     return (
-      <div className="rounded-2xl border py-16 text-center" style={{ borderColor: S.border, backgroundColor: S.surface }}>
-        <div className="w-16 h-16 rounded-3xl mx-auto mb-4 flex items-center justify-center"
-          style={{ background: "linear-gradient(135deg, #E8F5F0, #C8EDE3)" }}>
-          <ClipboardList size={26} style={{ color: "#0F6E56" }} />
-        </div>
-        <p className="text-sm font-bold mb-1" style={{ color: S.text }}>কোনো টাস্ক পাওয়া যায়নি</p>
-        <p className="text-xs" style={{ color: S.muted }}>ফিল্টার পরিবর্তন করুন বা নতুন টাস্ক তৈরি করুন</p>
-      </div>
+      <EmptyState icon={ClipboardList} title="কোনো টাস্ক পাওয়া যায়নি" description="ফিল্টার পরিবর্তন করুন বা নতুন টাস্ক তৈরি করুন" />
     );
   }
 
   return (
     <div className="space-y-3 pb-24">
-      <div className="rounded-2xl border overflow-hidden" style={{ borderColor: S.border }}>
+      <Card padding="none" className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -315,7 +309,7 @@ export default function TaskList({ tasks, onTaskClick, onStatusChange, onRefresh
             </tbody>
           </table>
         </div>
-      </div>
+      </Card>
 
       {/* Pagination */}
       {totalPages > 1 && (

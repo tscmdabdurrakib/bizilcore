@@ -90,10 +90,10 @@ export default function SpaReportsPage() {
             <XAxis dataKey="label" tick={{ fontSize: 11, fill: S.muted }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 11, fill: S.muted }} axisLine={false} tickLine={false} />
             <Tooltip
-              formatter={(v: number, name: string) => [
+              formatter={((v: number, name: string) => [
                 name === "revenue" ? `৳${v.toLocaleString("en")}` : `${v}টি`,
                 name === "revenue" ? "আয়" : "সেশন",
-              ]}
+              ]) as never}
               contentStyle={{ borderRadius: 8, border: `1px solid ${S.border}`, backgroundColor: S.surface, fontSize: 12 }}
             />
             <Bar dataKey="revenue" fill={SPA_COLOR} radius={[4, 4, 0, 0]} />
@@ -110,12 +110,12 @@ export default function SpaReportsPage() {
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
-                <Pie data={data?.topServices ?? []} dataKey="count" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name, percent }) => `${name.length > 8 ? name.slice(0, 8) + "..." : name} ${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={10}>
+                <Pie data={data?.topServices ?? []} dataKey="count" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name, percent }: any) => `${name.length > 8 ? name.slice(0, 8) + "..." : name} ${(percent * 100).toFixed(0)}%`} labelLine={false} fontSize={10}>
                   {(data?.topServices ?? []).map((_, i) => (
                     <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(v: number) => [`${v}টি সেশন`]} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
+                <Tooltip formatter={((v: number) => [`${v}টি সেশন`]) as never} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
               </PieChart>
             </ResponsiveContainer>
           )}

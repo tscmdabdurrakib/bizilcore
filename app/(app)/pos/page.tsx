@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import Image from "next/image";
 import {
   Search, Trash2, Printer, X, Check, Loader2, ShoppingCart, Pill,
   AlertTriangle, Camera, Wifi, WifiOff, Package, RefreshCw, ChevronRight,
+  ScanLine, PauseCircle, ListChecks, GitBranch, Store,
 } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
-import { syncProductsToIndexedDB, getOfflineProducts, enqueueSale, flushSaleQueue, type PosProduct } from "@/lib/posDb";
+import { syncProductsToIndexedDB, getOfflineProducts, enqueueSale, flushSaleQueue, newIdempotencyKey, type PosProduct } from "@/lib/posDb";
 
 const S = {
   surface: "var(--c-surface)", border: "var(--c-border)", text: "var(--c-text)",
@@ -29,6 +31,14 @@ interface RetailCartItem {
   category: string | null; quantity: number; unitPrice: number; vatRate: number;
 }
 interface Customer { id: string; name: string; phone: string | null; }
+interface HeldSale {
+  id: string;
+  label: string;
+  cart: RetailCartItem[];
+  customer: Customer | null;
+  heldAt: number;
+}
+const HELD_SALES_KEY = "bizilcore-pos-held-sales";
 
 const VAT_NON_ESSENTIAL = 0.075;
 const ESSENTIAL_PHARMACY = new Set(["tablet", "syrup", "injection"]);
@@ -416,6 +426,15 @@ function RetailPOS() {
   const [isOnline, setIsOnline] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [offlineQueueLen, setOfflineQueueLen] = useState(0);
+  const [scanning, setScanning] = useState(false);
+  const [heldSales, setHeldSales] = useState<HeldSale[]>([]);
+  const [showHeld, setShowHeld] = useState(false);
+  const [branchId, setBranchId] = useState("");
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
+  const [branchStock, setBranchStock] = useState<Record<string, number>>({});
+  const searchRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const scannerControlsRef = useRef<{ stop: () => void } | null>(null);
 
   function showToast(type: "success" | "error", msg: string) {
     setToast({ type, msg });
@@ -448,6 +467,25 @@ function RetailPOS() {
       }
     } catch { /* ignore */ }
   }, []);
+
+  useEffect(() => {
+    fetch("/api/shops")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.branches?.length) setBranches(d.branches); })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!branchId) { setBranchStock({}); return; }
+    fetch(`/api/shops/${branchId}/stock`)
+      .then(r => r.ok ? r.json() : { stock: [] })
+      .then(d => {
+        const map: Record<string, number> = {};
+        for (const row of d.stock ?? []) map[row.productId] = row.quantity;
+        setBranchStock(map);
+      })
+      .catch(() => setBranchStock({}));
+  }, [branchId]);
 
   useEffect(() => {
     fetchProducts();
@@ -489,12 +527,129 @@ function RetailPOS() {
     return matchCat && matchSearch;
   });
 
+  function effectiveStock(p: PosProduct) {
+    if (branchId) return branchStock[p.id] ?? 0;
+    return p.stockQty;
+  }
+
   function addToCart(p: PosProduct) {
+    const stock = effectiveStock(p);
+    if (stock < 1) {
+      showToast("error", branchId ? "Branch-এ স্টক নেই" : "স্টক শেষ");
+      return;
+    }
     setCart(prev => {
       const exists = prev.find(i => i.productId === p.id);
-      if (exists) return prev.map(i => i.productId === p.id ? { ...i, quantity: i.quantity + 1 } : i);
+      if (exists) {
+        const nextQty = exists.quantity + 1;
+        if (nextQty > stock) return prev;
+        return prev.map(i => i.productId === p.id ? { ...i, quantity: nextQty } : i);
+      }
       return [...prev, { productId: p.id, name: p.name, category: p.category, quantity: 1, unitPrice: p.sellPrice, vatRate: 0 }];
     });
+  }
+
+  /** Match a scanned/typed code to a product by SKU (exact) or unique name. */
+  function findProductByCode(code: string): PosProduct | null {
+    const c = code.trim().toLowerCase();
+    if (!c) return null;
+    const bySku = products.find(p => (p.sku ?? "").toLowerCase() === c);
+    if (bySku) return bySku;
+    const byName = products.filter(p => p.name.toLowerCase().includes(c));
+    return byName.length === 1 ? byName[0] : null;
+  }
+
+  // USB/Bluetooth barcode scanners type the code then press Enter.
+  function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter") return;
+    const match = findProductByCode(search);
+    if (match) {
+      addToCart(match);
+      setSearch("");
+      showToast("success", `${match.name} যোগ হয়েছে`);
+    } else {
+      showToast("error", "এই কোড/নামে পণ্য পাওয়া যায়নি।");
+    }
+  }
+
+  // Camera-based barcode scanning via @zxing/browser (lazy-loaded).
+  async function startCameraScan() {
+    setScanning(true);
+    try {
+      const { BrowserMultiFormatReader } = await import("@zxing/browser");
+      const reader = new BrowserMultiFormatReader();
+      const controls = await reader.decodeFromVideoDevice(
+        undefined,
+        videoRef.current!,
+        (result) => {
+          if (result) {
+            const code = result.getText();
+            const match = findProductByCode(code);
+            if (match) {
+              addToCart(match);
+              showToast("success", `${match.name} যোগ হয়েছে`);
+              stopCameraScan();
+            } else {
+              showToast("error", `কোড "${code}" এর পণ্য পাওয়া যায়নি।`);
+            }
+          }
+        },
+      );
+      scannerControlsRef.current = controls;
+    } catch {
+      setScanning(false);
+      showToast("error", "ক্যামেরা চালু করা যায়নি।");
+    }
+  }
+
+  function stopCameraScan() {
+    scannerControlsRef.current?.stop();
+    scannerControlsRef.current = null;
+    setScanning(false);
+  }
+
+  // ── Hold / Park sales (persisted to localStorage) ──
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(HELD_SALES_KEY);
+      if (raw) setHeldSales(JSON.parse(raw));
+    } catch { /* ignore */ }
+  }, []);
+
+  function persistHeld(next: HeldSale[]) {
+    setHeldSales(next);
+    try { localStorage.setItem(HELD_SALES_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+  }
+
+  function holdCurrentSale() {
+    if (cart.length === 0) { showToast("error", "কার্ট খালি।"); return; }
+    const held: HeldSale = {
+      id: newIdempotencyKey(),
+      label: selectedCustomer?.name || `Hold #${heldSales.length + 1}`,
+      cart,
+      customer: selectedCustomer,
+      heldAt: Date.now(),
+    };
+    persistHeld([held, ...heldSales]);
+    setCart([]); setSelectedCustomer(null); setCustomerSearch(""); setDiscountValue("");
+    showToast("success", "বিক্রয় হোল্ড করা হয়েছে।");
+  }
+
+  function resumeHeldSale(held: HeldSale) {
+    if (cart.length > 0) holdCurrentSale();
+    setCart(held.cart);
+    setSelectedCustomer(held.customer);
+    persistHeld(heldSales.filter(h => h.id !== held.id));
+    setShowHeld(false);
+    showToast("success", "হোল্ড বিক্রয় ফিরিয়ে আনা হয়েছে।");
+  }
+
+  function deleteHeldSale(id: string) {
+    persistHeld(heldSales.filter(h => h.id !== id));
+  }
+
+  function printReceipt() {
+    if (typeof window !== "undefined") window.print();
   }
 
   function updateQty(id: string, qty: number) {
@@ -519,7 +674,9 @@ function RetailPOS() {
       customerId: selectedCustomer?.id,
       paymentMethod,
       discountAmount: discountAmt,
-      note: `POS বিক্রয় — ${paymentMethod}`,
+      note: `POS বিক্রয় — ${paymentMethod}${branchId ? ` — branch` : ""}`,
+      idempotencyKey: newIdempotencyKey(),
+      ...(branchId ? { branchId } : {}),
     };
 
     if (!isOnline) {
@@ -557,6 +714,55 @@ function RetailPOS() {
         </div>
       )}
 
+      {scanning && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 no-print">
+          <div className="rounded-2xl p-4 w-full max-w-sm" style={{ backgroundColor: "var(--c-surface-raised)" }}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold text-base flex items-center gap-2" style={{ color: S.text }}>
+                <ScanLine size={18} style={{ color: "#F59E0B" }} /> বারকোড স্ক্যান
+              </h3>
+              <button onClick={stopCameraScan} style={{ color: S.muted }}><X size={18} /></button>
+            </div>
+            <video ref={videoRef} className="w-full rounded-xl bg-black" style={{ aspectRatio: "4/3" }} />
+            <p className="text-xs text-center mt-2" style={{ color: S.muted }}>পণ্যের বারকোড ক্যামেরার সামনে ধরুন</p>
+          </div>
+        </div>
+      )}
+
+      {showHeld && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 no-print">
+          <div className="rounded-2xl p-5 w-full max-w-md max-h-[80vh] overflow-y-auto" style={{ backgroundColor: "var(--c-surface-raised)" }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-base flex items-center gap-2" style={{ color: S.text }}>
+                <ListChecks size={18} style={{ color: "#1D4ED8" }} /> হোল্ড করা বিক্রয় ({heldSales.length})
+              </h3>
+              <button onClick={() => setShowHeld(false)} style={{ color: S.muted }}><X size={18} /></button>
+            </div>
+            {heldSales.length === 0 ? (
+              <p className="text-sm text-center py-8" style={{ color: S.muted }}>কোনো হোল্ড করা বিক্রয় নেই।</p>
+            ) : (
+              <div className="space-y-2">
+                {heldSales.map(h => {
+                  const total = h.cart.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
+                  return (
+                    <div key={h.id} className="flex items-center justify-between gap-2 p-3 rounded-xl border" style={{ borderColor: S.border }}>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold truncate" style={{ color: S.text }}>{h.label}</p>
+                        <p className="text-xs" style={{ color: S.muted }}>{h.cart.length}টি পণ্য · {formatBDT(total)}</p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button onClick={() => resumeHeldSale(h)} className="text-xs px-3 py-1.5 rounded-lg text-white font-medium" style={{ backgroundColor: "#10B981" }}>ফিরিয়ে আনুন</button>
+                        <button onClick={() => deleteHeldSale(h.id)} style={{ color: "#E24B4A" }}><Trash2 size={14} /></button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {!isOnline && (
         <div className="mb-3 flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium"
           style={{ backgroundColor: "#FEF9C3", color: "#92400E" }}>
@@ -571,6 +777,66 @@ function RetailPOS() {
           style={{ backgroundColor: "#EFF6FF", color: "#1D4ED8" }}>
           <RefreshCw size={16} className="animate-spin" />
           <span>অফলাইন বিক্রয় সিঙ্ক হচ্ছে...</span>
+        </div>
+      )}
+
+      {branches.length > 0 && (
+        <div
+          className="mb-3 rounded-2xl border overflow-hidden"
+          style={{ borderColor: S.border, backgroundColor: S.surface }}
+        >
+          <div
+            className="px-4 py-2.5 flex items-center gap-2 border-b"
+            style={{ borderColor: S.border, background: "linear-gradient(90deg, #E1F5EE 0%, #ECFDF5 100%)" }}
+          >
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: "rgba(15,110,86,0.12)" }}>
+              <GitBranch size={14} style={{ color: "#0F6E56" }} />
+            </div>
+            <div>
+              <p className="text-xs font-bold leading-tight" style={{ color: "#065F46" }}>বিক্রির লোকেশন</p>
+              <p className="text-[10px]" style={{ color: "#047857" }}>
+                {branchId ? "শাখার স্টক থেকে কাটা হবে" : "মূল শপের স্টক ব্যবহার হচ্ছে"}
+              </p>
+            </div>
+          </div>
+          <div className="p-3 flex gap-2 overflow-x-auto pb-2">
+            <button
+              type="button"
+              onClick={() => { setBranchId(""); setCart([]); }}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold whitespace-nowrap transition-all flex-shrink-0"
+              style={{
+                borderColor: !branchId ? "#0F6E56" : S.border,
+                backgroundColor: !branchId ? "#E1F5EE" : S.surface,
+                color: !branchId ? "#065F46" : S.muted,
+                boxShadow: !branchId ? "0 0 0 1px #0F6E56" : undefined,
+              }}
+            >
+              <Store size={13} />
+              মূল শপ
+              {!branchId && <Check size={12} style={{ color: "#0F6E56" }} />}
+            </button>
+            {branches.map(b => {
+              const active = branchId === b.id;
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => { setBranchId(b.id); setCart([]); }}
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold whitespace-nowrap transition-all flex-shrink-0"
+                  style={{
+                    borderColor: active ? "#7C3AED" : S.border,
+                    backgroundColor: active ? "#F5F3FF" : S.surface,
+                    color: active ? "#5B21B6" : S.text,
+                    boxShadow: active ? "0 0 0 1px #7C3AED" : undefined,
+                  }}
+                >
+                  <GitBranch size={12} style={{ color: active ? "#7C3AED" : S.muted }} />
+                  {b.name}
+                  {active && <Check size={12} style={{ color: "#7C3AED" }} />}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -616,13 +882,70 @@ function RetailPOS() {
             </div>
             <div className="flex gap-3">
               <button onClick={clearCart} className="flex-1 py-2.5 rounded-xl border text-sm font-medium" style={{ borderColor: S.border, color: S.text }}>নতুন বিক্রয়</button>
-              <button onClick={() => window.print()} className="flex-1 py-2.5 rounded-xl text-white text-sm font-medium flex items-center justify-center gap-2" style={{ backgroundColor: "#10B981" }}>
+              <button onClick={printReceipt} className="flex-1 py-2.5 rounded-xl text-white text-sm font-medium flex items-center justify-center gap-2" style={{ backgroundColor: "#10B981" }}>
                 <Printer size={14} /> প্রিন্ট
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Thermal receipt — hidden on screen, the only thing that prints */}
+      {lastSale && (
+        <div className="thermal-receipt">
+          <div style={{ textAlign: "center", fontWeight: 700, fontSize: 14 }}>রসিদ / RECEIPT</div>
+          <div style={{ textAlign: "center", fontSize: 10 }}>{new Date().toLocaleString("bn-BD")}</div>
+          {selectedCustomer && <div style={{ fontSize: 11, marginTop: 4 }}>কাস্টমার: {selectedCustomer.name}</div>}
+          <div style={{ borderTop: "1px dashed #000", margin: "6px 0" }} />
+          {cart.map(i => (
+            <div key={i.productId} style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}>
+              <span>{i.name} x{i.quantity}</span>
+              <span>{(i.quantity * i.unitPrice).toFixed(2)}</span>
+            </div>
+          ))}
+          <div style={{ borderTop: "1px dashed #000", margin: "6px 0" }} />
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}>
+            <span>উপমোট</span><span>{subTotal.toFixed(2)}</span>
+          </div>
+          {vatAmount > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}>
+              <span>VAT</span><span>{vatAmount.toFixed(2)}</span>
+            </div>
+          )}
+          {discountAmt > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}>
+              <span>ছাড়</span><span>-{discountAmt.toFixed(2)}</span>
+            </div>
+          )}
+          <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: 13 }}>
+            <span>মোট</span><span>{lastSale.grandTotal.toFixed(2)}</span>
+          </div>
+          <div style={{ fontSize: 11, marginTop: 2 }}>
+            পেমেন্ট: {paymentMethod === "cash" ? "নগদ" : paymentMethod === "bkash" ? "bKash" : paymentMethod === "card" ? "Card" : "বাকি"}
+          </div>
+          <div style={{ textAlign: "center", fontSize: 10, marginTop: 8 }}>ধন্যবাদ! আবার আসবেন।</div>
+        </div>
+      )}
+
+      <style jsx global>{`
+        .thermal-receipt { display: none; }
+        @media print {
+          body * { visibility: hidden; }
+          .thermal-receipt, .thermal-receipt * { visibility: visible; }
+          .thermal-receipt {
+            display: block !important;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 80mm;
+            padding: 4mm;
+            color: #000;
+            font-family: 'Courier New', monospace;
+          }
+          .no-print { display: none !important; }
+          @page { size: 80mm auto; margin: 0; }
+        }
+      `}</style>
 
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-3">
@@ -643,12 +966,19 @@ function RetailPOS() {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         {/* Left: Product Grid */}
         <div className="lg:col-span-3 space-y-3">
-          {/* Search */}
-          <div className="flex items-center gap-2 px-3 h-12 rounded-xl border" style={{ borderColor: S.border, backgroundColor: S.surface }}>
-            <Search size={16} style={{ color: S.muted }} />
-            <input className="flex-1 bg-transparent outline-none text-sm" placeholder="পণ্যের নাম দিয়ে খুঁজুন..."
-              value={search} onChange={e => setSearch(e.target.value)} style={{ color: S.text }} />
-            {search && <button onClick={() => setSearch("")} style={{ color: S.muted }}><X size={14} /></button>}
+          {/* Search + Barcode */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 px-3 h-12 rounded-xl border flex-1" style={{ borderColor: S.border, backgroundColor: S.surface }}>
+              <Search size={16} style={{ color: S.muted }} />
+              <input ref={searchRef} className="flex-1 bg-transparent outline-none text-sm" placeholder="নাম/SKU দিয়ে খুঁজুন বা স্ক্যান করুন..."
+                value={search} onChange={e => setSearch(e.target.value)} onKeyDown={handleSearchKeyDown} style={{ color: S.text }} />
+              {search && <button onClick={() => setSearch("")} style={{ color: S.muted }}><X size={14} /></button>}
+            </div>
+            <button onClick={startCameraScan} title="বারকোড স্ক্যান"
+              className="h-12 px-3 rounded-xl border flex items-center justify-center flex-shrink-0"
+              style={{ borderColor: S.border, backgroundColor: S.surface, color: "#F59E0B" }}>
+              <ScanLine size={18} />
+            </button>
           </div>
 
           {/* Category Tabs */}
@@ -674,12 +1004,16 @@ function RetailPOS() {
                 <p className="text-sm" style={{ color: S.muted }}>কোনো পণ্য পাওয়া যায়নি</p>
               </div>
             ) : (
-              filteredProducts.map(p => (
+              filteredProducts.map(p => {
+                const stock = effectiveStock(p);
+                return (
                 <button key={p.id} onClick={() => addToCart(p)}
                   className="text-left p-3 rounded-xl border hover:shadow-sm transition-all hover:border-amber-300"
-                  style={{ backgroundColor: S.surface, borderColor: S.border, opacity: p.stockQty <= 0 ? 0.5 : 1 }}>
+                  style={{ backgroundColor: S.surface, borderColor: S.border, opacity: stock <= 0 ? 0.5 : 1 }}>
                   {p.imageUrl ? (
-                    <img src={p.imageUrl} alt={p.name} className="w-full h-20 object-cover rounded-lg mb-2" />
+                    <div className="relative w-full h-20 rounded-lg mb-2 overflow-hidden">
+                      <Image src={p.imageUrl} alt={p.name} fill sizes="120px" className="object-cover" />
+                    </div>
                   ) : (
                     <div className="w-full h-20 rounded-lg mb-2 flex items-center justify-center" style={{ backgroundColor: "#FFFBEB" }}>
                       <Package size={24} style={{ color: "#F59E0B" }} />
@@ -688,11 +1022,16 @@ function RetailPOS() {
                   <p className="text-xs font-semibold truncate" style={{ color: S.text }}>{p.name}</p>
                   {p.category && <p className="text-[10px] truncate" style={{ color: S.muted }}>{p.category}</p>}
                   <p className="text-sm font-bold font-mono mt-1" style={{ color: "#F59E0B" }}>{formatBDT(p.sellPrice)}</p>
-                  <p className="text-[10px]" style={{ color: p.stockQty <= 0 ? "#EF4444" : S.muted }}>
-                    স্টক: {p.stockQty <= 0 ? "শেষ" : p.stockQty}
+                  <p className="text-[10px]" style={{ color: stock <= 0 ? "#EF4444" : S.muted }}>
+                    স্টক: {stock <= 0 ? "শেষ" : stock}
+                    {branchId && (
+                      <span className="ml-1 px-1.5 py-0.5 rounded-md font-bold" style={{ backgroundColor: "#F5F3FF", color: "#7C3AED" }}>
+                        branch
+                      </span>
+                    )}
                   </p>
                 </button>
-              ))
+              );})
             )}
           </div>
         </div>
@@ -706,7 +1045,17 @@ function RetailPOS() {
                 <ShoppingCart size={16} style={{ color: "#F59E0B" }} />
                 <h3 className="font-semibold text-sm" style={{ color: S.text }}>কার্ট ({cart.length})</h3>
               </div>
-              {cart.length > 0 && <button onClick={() => setCart([])} className="text-xs" style={{ color: "#E24B4A" }}>মুছুন</button>}
+              <div className="flex items-center gap-3">
+                <button onClick={() => setShowHeld(true)} className="text-xs flex items-center gap-1" style={{ color: S.muted }}>
+                  <ListChecks size={13} /> হোল্ড{heldSales.length > 0 ? ` (${heldSales.length})` : ""}
+                </button>
+                {cart.length > 0 && (
+                  <button onClick={holdCurrentSale} className="text-xs flex items-center gap-1" style={{ color: "#1D4ED8" }}>
+                    <PauseCircle size={13} /> পার্ক
+                  </button>
+                )}
+                {cart.length > 0 && <button onClick={() => setCart([])} className="text-xs" style={{ color: "#E24B4A" }}>মুছুন</button>}
+              </div>
             </div>
             {cart.length === 0 ? (
               <div className="text-center py-10">

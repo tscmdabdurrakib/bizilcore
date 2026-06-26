@@ -6,7 +6,7 @@ import { SproutIcon, Loader2, ArrowLeft, Plus, X, Save, CloudSun, Droplets, Leaf
 import { formatBDT } from "@/lib/utils";
 import DatePicker from "@/components/ui/DatePicker";
 
-const S = { surface: "var(--c-surface)", border: "var(--c-border)", text: "var(--c-text)", muted: "var(--c-text-muted)" };
+const S = { surface: "var(--c-surface)", border: "var(--c-border)", text: "var(--c-text)", muted: "var(--c-text-muted)", bg: "var(--c-bg)" };
 const G = "#16A34A";
 
 interface ActivityLog { id: string; activityType: string; description: string; quantity?: string | null; cost: number; laborCount?: number | null; weather?: string | null; activityDate: string }

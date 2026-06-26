@@ -1,13 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { isAuthorizedCron } from "@/lib/cron-auth";
 
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET ?? "bizilcore-cron";
-  if (authHeader !== `Bearer ${cronSecret}`) {
+  if (!isAuthorizedCron(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const dbUrl = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
+  if (!dbUrl) {
+    return NextResponse.json(
+      { error: "SUPABASE_DATABASE_URL (or DATABASE_URL) is not set in .env.local" },
+      { status: 500 }
+    );
+  }
+
+  try {
+    return await runCheck(req);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Database error";
+    const isAuth =
+      message.includes("Authentication failed") ||
+      message.includes("password authentication failed");
+    console.error("[Cron] check-subscriptions failed:", err);
+    return NextResponse.json(
+      {
+        error: isAuth
+          ? "Supabase database authentication failed — reset the DB password in Supabase and update SUPABASE_DATABASE_URL in .env.local"
+          : message,
+      },
+      { status: 500 }
+    );
+  }
+}
+
+async function runCheck(_req: NextRequest) {
   const now = new Date();
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 

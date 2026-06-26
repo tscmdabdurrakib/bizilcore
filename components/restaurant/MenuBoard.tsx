@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   Plus, ScrollText, X, Loader2, Pencil, Trash2, Leaf, ToggleLeft, ToggleRight,
   Upload, FolderPlus, Layers, Tag, Ticket,
@@ -52,7 +53,28 @@ const EMPTY_FORM = {
 };
 
 export default function MenuBoard() {
-  const [tab, setTab]               = useState<"items" | "categories" | "coupons">("items");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [tab, setTab] = useState<"items" | "categories" | "coupons">("items");
+
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t === "coupons" || t === "categories" || t === "items") {
+      setTab(t);
+    } else if (!t) {
+      setTab("items");
+    }
+  }, [searchParams]);
+
+  const selectTab = (key: "items" | "categories" | "coupons") => {
+    setTab(key);
+    const params = new URLSearchParams(searchParams.toString());
+    if (key === "items") params.delete("tab");
+    else params.set("tab", key);
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  };
   const [items, setItems]           = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [loading, setLoading]       = useState(true);
@@ -287,7 +309,7 @@ export default function MenuBoard() {
               style={{ background: `linear-gradient(135deg, ${ORANGE} 0%, #C2410C 100%)` }}>
               <FolderPlus size={16} /> নতুন ক্যাটাগরি
             </button>
-          ) : (
+          ) : tab === "coupons" ? null : (
             <button onClick={openAdd}
               className="flex items-center gap-2 px-4 h-10 rounded-xl text-white text-sm font-semibold"
               style={{ background: `linear-gradient(135deg, ${ORANGE} 0%, #C2410C 100%)` }}>
@@ -297,18 +319,20 @@ export default function MenuBoard() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-xl w-fit" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
-        {([["items", "আইটেম", Layers], ["categories", "ক্যাটাগরি", Tag], ["coupons", "কুপন", Ticket]] as const).map(([key, label, Icon]) => (
-          <button key={key} onClick={() => setTab(key as "items" | "categories" | "coupons")}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
-            style={{
-              backgroundColor: tab === key ? ORANGE : "transparent",
-              color: tab === key ? "#fff" : S.secondary,
-            }}>
-            <Icon size={14} />{label}
-          </button>
-        ))}
+      {/* Tabs — full width + scroll so কুপন tab is always reachable on mobile */}
+      <div className="w-full overflow-x-auto pb-1 -mx-1 px-1">
+        <div className="flex gap-1 p-1 rounded-xl min-w-max sm:min-w-0 sm:w-fit" style={{ backgroundColor: S.surface, border: `1px solid ${S.border}` }}>
+          {([["items", "আইটেম", Layers], ["categories", "ক্যাটাগরি", Tag], ["coupons", "কুপন ও ছাড়", Ticket]] as const).map(([key, label, Icon]) => (
+            <button key={key} type="button" onClick={() => selectTab(key)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all flex-shrink-0 whitespace-nowrap"
+              style={{
+                backgroundColor: tab === key ? ORANGE : "transparent",
+                color: tab === key ? "#fff" : S.secondary,
+              }}>
+              <Icon size={14} />{label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {tab === "coupons" ? (

@@ -84,7 +84,7 @@ export default function SchoolReports() {
             <CartesianGrid strokeDasharray="3 3" stroke="var(--c-border)" />
             <XAxis dataKey="name" tick={{ fontSize: 10, fill: "var(--c-text-muted)" }} />
             <YAxis tick={{ fontSize: 10, fill: "var(--c-text-muted)" }} tickFormatter={(v) => `৳${(v/1000).toFixed(0)}k`} />
-            <Tooltip formatter={(v: number, name: string) => [formatBDT(v), name]} contentStyle={{ backgroundColor: "var(--c-surface)", borderColor: "var(--c-border)", borderRadius: 8, fontSize: 11 }} />
+            <Tooltip formatter={((v: number, name: string) => [formatBDT(v), name]) as never} contentStyle={{ backgroundColor: "var(--c-surface)", borderColor: "var(--c-border)", borderRadius: 8, fontSize: 11 }} />
             <Bar dataKey="সংগৃহীত" fill="#0F6E56" radius={[4,4,0,0]} />
             <Bar dataKey="বাকি"    fill="#EF4444" radius={[4,4,0,0]} />
           </BarChart>
@@ -104,7 +104,7 @@ export default function SchoolReports() {
                   {statusPie.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                 </Pie>
                 <Legend formatter={(v) => <span style={{ fontSize: 10, color: "var(--c-text-muted)" }}>{v}</span>} />
-                <Tooltip formatter={(v: number) => [`${v}জন`, "শিক্ষার্থী"]} contentStyle={{ backgroundColor: "var(--c-surface)", borderColor: "var(--c-border)", borderRadius: 8, fontSize: 11 }} />
+                <Tooltip formatter={((v: number) => [`${v}জন`, "শিক্ষার্থী"]) as never} contentStyle={{ backgroundColor: "var(--c-surface)", borderColor: "var(--c-border)", borderRadius: 8, fontSize: 11 }} />
               </PieChart>
             </ResponsiveContainer>
           )}

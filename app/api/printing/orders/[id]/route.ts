@@ -102,7 +102,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   });
 
   await prisma.activityLog.create({
-    data: { userId: user.id, shopId: shop.id, action: "print_order_updated", details: `Order ${order.orderNumber} → ${updated.status}` },
+    data: { userId: user.id, shopId: shop.id, action: "print_order_updated", detail: `Order ${order.orderNumber} → ${updated.status}` },
   }).catch(() => {});
 
   return NextResponse.json(updated);

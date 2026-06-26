@@ -33,25 +33,41 @@ export function maskApiKey(apiKey: string): string {
   return "••••••••" + apiKey.slice(-4);
 }
 
-export async function sendSMS(apiKey: string, toPhone: string, message: string): Promise<boolean> {
+export async function sendSMS(
+  apiKey: string,
+  toPhone: string,
+  message: string,
+  senderId?: string
+): Promise<{ success: boolean; errorCode?: number; errorMessage?: string }> {
   const phone = toPhone.replace(/[^0-9]/g, "");
-  if (!phone || !apiKey) return false;
+  if (!phone || !apiKey) return { success: false, errorMessage: "Missing phone or API key" };
   try {
+    const body: Record<string, string> = { api_key: apiKey, msg: message, to: phone };
+    if (senderId?.trim()) body.sender_id = senderId.trim();
+
     const res = await fetch(SMS_NET_BD_SEND, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ api_key: apiKey, msg: message, to: phone }),
+      body: JSON.stringify(body),
     });
     const data = await res.json();
-    return data?.error === 0 || res.ok;
+    if (data?.error === 0 || res.ok) return { success: true };
+    const errorCode = typeof data?.error === "number" ? data.error : undefined;
+    const errorMessage =
+      errorCode === 413
+        ? "Invalid Sender ID"
+        : errorCode === 417
+          ? "Insufficient provider balance"
+          : data?.msg ?? "Provider rejected message";
+    return { success: false, errorCode, errorMessage };
   } catch {
-    return false;
+    return { success: false, errorMessage: "Network error" };
   }
 }
 
 /**
  * Returns:
- *   number  — success (balance value, may be 0)
+ *   number  — success (balance value in BDT, may be 0)
  *   false   — invalid API key (got response, error != 0)
  *   null    — network/fetch error, can't verify
  */
@@ -71,14 +87,24 @@ export async function checkSMSBalance(apiKey: string): Promise<number | false | 
       return null;
     }
 
-    // sms.net.bd returns error:0 (number) on success; sometimes as string "0"
+    // sms.net.bd: { error: 0, data: { balance: "150.5000" } } — sometimes data is a plain string
     // eslint-disable-next-line eqeqeq
-    if (data?.error == 0) return parseFloat((data.data as string) ?? "0") || 0;
+    if (data?.error == 0) {
+      const payload = data.data;
+      let raw: string | number | undefined;
+      if (payload && typeof payload === "object" && "balance" in payload) {
+        raw = (payload as { balance?: string | number }).balance;
+      } else if (typeof payload === "string" || typeof payload === "number") {
+        raw = payload;
+      } else if (typeof data.balance === "string" || typeof data.balance === "number") {
+        raw = data.balance as string | number;
+      }
+      const n = parseFloat(String(raw ?? "0"));
+      return Number.isFinite(n) ? n : 0;
+    }
 
-    // Non-zero error means bad API key
     return false;
   } catch {
-    // Network error, DNS failure, timeout, etc.
     return null;
   }
 }

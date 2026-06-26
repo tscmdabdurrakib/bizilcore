@@ -2,14 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireTaskPlan } from "@/lib/taskGuard";
+import { requireTaskShop } from "@/lib/tasks/server";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!await requireTaskPlan(session.user.id)) return NextResponse.json({ error: "Pro plan required" }, { status: 403 });
 
-  const shop = await prisma.shop.findUnique({ where: { userId: session.user.id } });
-  if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
+  const shopCtx = await requireTaskShop();
+  if ("error" in shopCtx) return shopCtx.error;
+  const shop = shopCtx.shop;
 
   const { searchParams } = new URL(req.url);
   const daysParam = parseInt(searchParams.get("days") ?? "30");

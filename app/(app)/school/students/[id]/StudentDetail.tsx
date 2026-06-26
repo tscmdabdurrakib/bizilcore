@@ -15,6 +15,7 @@ interface Student {
   address?: string | null; dateOfBirth?: string | null; gender?: string | null; bloodGroup?: string | null;
   previousSchool?: string | null; status: string; notes?: string | null;
   admissionDate: string;
+  batchId?: string;
   batch?: { id: string; name: string; monthlyFee: number } | null;
   fees: FeeRecord[]; attendance: AttRecord[]; examResults: ExamResult[];
 }

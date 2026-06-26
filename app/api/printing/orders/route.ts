@@ -110,7 +110,7 @@ export async function POST(req: Request) {
   }
 
   await prisma.activityLog.create({
-    data: { userId: user.id, shopId: shop.id, action: "print_order_created", details: `Order ${orderNumber} created` },
+    data: { userId: user.id, shopId: shop.id, action: "print_order_created", detail: `Order ${orderNumber} created` },
   }).catch(() => {});
 
   return NextResponse.json(order);

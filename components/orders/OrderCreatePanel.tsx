@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { X, Plus, Trash2, Tag, Truck, Loader2, ShoppingCart, ChevronDown, ChevronUp, ShoppingBag } from "lucide-react";
 import { formatBDT } from "@/lib/utils";
 import RiskBadge from "@/components/orders/RiskBadge";
+import { Card, Button, Input } from "@/components/ui";
 
 interface Customer { id: string; name: string; phone: string | null; }
 interface ProductVariant { id: string; name: string; size: string | null; color: string | null; sku: string | null; price: number | null; stockQty: number; }
@@ -365,23 +366,11 @@ export default function OrderCreatePanel({ onClose, onCreated, prefillCustomerNa
                   ) : (
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-2">
-                        <input type="text" placeholder="নাম *" value={newCustomerName}
-                          onChange={e => setNewCustomerName(e.target.value)}
-                          className="h-10 px-3 rounded-xl border text-sm outline-none"
-                          style={{ borderColor: focused === "name" ? "#0F6E56" : S.border, backgroundColor: S.surface, color: S.text }}
-                          onFocus={() => setFocused("name")} onBlur={() => setFocused(null)} />
+                        <Input type="text" label="নাম *" placeholder="নাম" value={newCustomerName}
+                          onChange={e => setNewCustomerName(e.target.value)} />
                         <div className="relative">
-                          <input type="tel" placeholder="ফোন" value={newCustomerPhone}
-                            onChange={e => { setNewCustomerPhone(e.target.value); setPhoneRisk(null); }}
-                            className="h-10 px-3 rounded-xl border text-sm outline-none w-full"
-                            style={{
-                              borderColor: phoneRisk?.riskLevel === "blocked" ? "#DC2626"
-                                : phoneRisk?.riskLevel === "high" ? "#F87171"
-                                : phoneRisk?.riskLevel === "medium" ? "#FCA5A5"
-                                : focused === "phone" ? "#0F6E56" : S.border,
-                              backgroundColor: S.surface, color: S.text,
-                            }}
-                            onFocus={() => setFocused("phone")} onBlur={() => setFocused(null)} />
+                          <Input type="tel" label="ফোন" placeholder="01XXXXXXXXX" value={newCustomerPhone}
+                            onChange={e => { setNewCustomerPhone(e.target.value); setPhoneRisk(null); }} />
                           {checkingPhone && (
                             <Loader2 size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 animate-spin" style={{ color: S.muted }} />
                           )}
@@ -412,16 +401,10 @@ export default function OrderCreatePanel({ onClose, onCreated, prefillCustomerNa
                           </label>
                         </div>
                       )}
-                      <input type="text" placeholder="📍 ঠিকানা" value={newCustomerAddress}
-                        onChange={e => setNewCustomerAddress(e.target.value)}
-                        className="w-full h-10 px-3 rounded-xl border text-sm outline-none"
-                        style={{ borderColor: focused === "addr" ? "#0F6E56" : S.border, backgroundColor: S.surface, color: S.text }}
-                        onFocus={() => setFocused("addr")} onBlur={() => setFocused(null)} />
-                      <input type="url" placeholder="🔵 Facebook URL" value={newCustomerFacebook}
-                        onChange={e => setNewCustomerFacebook(e.target.value)}
-                        className="w-full h-10 px-3 rounded-xl border text-sm outline-none"
-                        style={{ borderColor: focused === "fb" ? "#1877F2" : S.border, backgroundColor: S.surface, color: S.text }}
-                        onFocus={() => setFocused("fb")} onBlur={() => setFocused(null)} />
+                      <Input type="text" label="ঠিকানা" placeholder="📍 ঠিকানা" value={newCustomerAddress}
+                        onChange={e => setNewCustomerAddress(e.target.value)} />
+                      <Input type="url" label="Facebook URL" placeholder="🔵 Facebook URL" value={newCustomerFacebook}
+                        onChange={e => setNewCustomerFacebook(e.target.value)} />
                       <div className="grid grid-cols-3 gap-2">
                         {CUSTOMER_GROUPS.map(g => (
                           <button key={g.key} type="button" onClick={() => setNewCustomerGroup(g.key)}
@@ -514,11 +497,11 @@ export default function OrderCreatePanel({ onClose, onCreated, prefillCustomerNa
                         </div>
                       );
                     })}
-                    <button type="button" onClick={() => setItems(prev => [...prev, { productId: "", productName: "", quantity: 1, unitPrice: 0, subtotal: 0 }])}
-                      className="flex items-center gap-2 text-sm font-bold px-4 py-3 rounded-xl border-2 w-full justify-center transition-all hover:bg-blue-50"
-                      style={{ borderColor: "#3B82F6", color: "#3B82F6", borderStyle: "dashed", backgroundColor: "#F8FBFF" }}>
-                      <Plus size={15} /> পণ্য বা কমবো যোগ করুন
-                    </button>
+                    <Button type="button" variant="outline" icon={Plus} onClick={() => setItems(prev => [...prev, { productId: "", productName: "", quantity: 1, unitPrice: 0, subtotal: 0 }])}
+                      className="w-full border-2 border-dashed"
+                      style={{ borderColor: "#3B82F6", color: "#3B82F6", backgroundColor: "#F8FBFF" }}>
+                      পণ্য বা কমবো যোগ করুন
+                    </Button>
                   </div>
                 </SectionCard>
 
@@ -550,15 +533,8 @@ export default function OrderCreatePanel({ onClose, onCreated, prefillCustomerNa
                       </div>
                     </div>
                     {/* Delivery */}
-                    <div>
-                      <label className="block text-[11px] font-bold mb-1 uppercase tracking-wide" style={{ color: S.muted }}>ডেলিভারি চার্জ</label>
-                      <div className="flex items-center rounded-xl border overflow-hidden" style={{ borderColor: focused === "delivery" ? "#8B5CF6" : S.border }}>
-                        <span className="px-3 h-10 flex items-center text-sm font-bold" style={{ backgroundColor: "#F5F3FF", color: "#8B5CF6", borderRight: `1px solid ${S.border}` }}>৳</span>
-                        <input type="number" value={deliveryCharge} min="0" onChange={e => setDeliveryCharge(e.target.value)}
-                          placeholder="০" className="flex-1 h-10 px-3 text-sm outline-none bg-transparent" style={{ color: S.text }}
-                          onFocus={() => setFocused("delivery")} onBlur={() => setFocused(null)} />
-                      </div>
-                    </div>
+                    <Input label="ডেলিভারি চার্জ" type="number" value={deliveryCharge} min="0"
+                      onChange={e => setDeliveryCharge(e.target.value)} placeholder="০" />
                     {/* Source + Note */}
                     <div className="grid grid-cols-2 gap-2">
                       <div>
@@ -572,14 +548,7 @@ export default function OrderCreatePanel({ onClose, onCreated, prefillCustomerNa
                           <option value="referral">🔗 Referral</option>
                         </select>
                       </div>
-                      <div>
-                        <label className="block text-[11px] font-bold mb-1 uppercase tracking-wide" style={{ color: S.muted }}>নোট</label>
-                        <input type="text" value={note} onChange={e => setNote(e.target.value)}
-                          placeholder="📝 অতিরিক্ত তথ্য..."
-                          className="w-full h-10 px-3 rounded-xl border text-sm outline-none"
-                          style={{ borderColor: focused === "note" ? "#0F6E56" : S.border, backgroundColor: S.surface, color: S.text }}
-                          onFocus={() => setFocused("note")} onBlur={() => setFocused(null)} />
-                      </div>
+                      <Input label="নোট" type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="📝 অতিরিক্ত তথ্য..." />
                     </div>
                   </div>
                 </SectionCard>
@@ -612,17 +581,13 @@ export default function OrderCreatePanel({ onClose, onCreated, prefillCustomerNa
                         );
                       })}
                     </div>
-                    <div className="flex gap-2">
-                      <input type="text" value={tagInput} onChange={e => setTagInput(e.target.value)}
-                        onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
-                        placeholder="# কাস্টম ট্যাগ..."
-                        className="flex-1 h-10 px-3 rounded-xl border text-sm outline-none"
-                        style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }} />
-                      <button type="button" onClick={addTag}
-                        className="px-4 h-10 rounded-xl text-sm font-bold"
-                        style={{ backgroundColor: "#FFF3DC", color: "#EF9F27", border: "2px solid #EF9F27" }}>
-                        যোগ
-                      </button>
+                    <div className="flex gap-2 items-end">
+                      <div className="flex-1 min-w-0">
+                        <Input type="text" value={tagInput} onChange={e => setTagInput(e.target.value)}
+                          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }}
+                          placeholder="# কাস্টম ট্যাগ..." />
+                      </div>
+                      <Button type="button" variant="secondary" onClick={addTag} className="flex-shrink-0">যোগ</Button>
                     </div>
                     {tags.filter(t => !["urgent","vip","gift-wrap","prepaid","cod"].includes(t)).length > 0 && (
                       <div className="flex flex-wrap gap-2">
@@ -668,10 +633,7 @@ export default function OrderCreatePanel({ onClose, onCreated, prefillCustomerNa
                         ))}
                       </div>
                       {MANUAL_COURIERS.includes(courierName) ? (
-                        <input type="text" value={trackId} onChange={e => setTrackId(e.target.value)}
-                          placeholder="Tracking ID"
-                          className="w-full h-10 px-3 rounded-xl border text-sm outline-none"
-                          style={{ borderColor: S.border, backgroundColor: S.surface, color: S.text }} />
+                        <Input type="text" label="Tracking ID" value={trackId} onChange={e => setTrackId(e.target.value)} placeholder="Tracking ID" />
                       ) : (
                         <p className="text-xs px-3 py-2.5 rounded-xl font-medium" style={{ backgroundColor: "#EFF6FF", color: "#3B82F6" }}>
                           সেভ হলে স্বয়ংক্রিয়ভাবে {ALL_COURIERS.find(c => c.key === courierName)?.label}-এ বুক হবে।
@@ -703,13 +665,12 @@ export default function OrderCreatePanel({ onClose, onCreated, prefillCustomerNa
               {isPhoneBlocked ? "অর্ডার দিতে নিচের চেকবক্সে টিক দিন" : "ঝুঁকির বিষয়ে নিশ্চিত হয়ে চেকবক্সে টিক দিন"}
             </p>
           )}
-          <button type="submit" form="order-create-form"
+          <Button type="submit" form="order-create-form" size="lg" className="w-full shadow-lg"
+            loading={submitting || bookingCourier}
             disabled={submitting || bookingCourier || dataLoading || !!((isPhoneBlocked || isPhoneRisky) && !confirmRisky)}
-            className="w-full py-3.5 rounded-2xl text-white font-extrabold text-sm disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg transition-all hover:opacity-90 active:scale-[0.98]"
-            style={{ background: confirmRisky && isPhoneBlocked ? "linear-gradient(135deg, #DC2626, #991B1B)" : "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}>
-            {(submitting || bookingCourier) && <Loader2 size={16} className="animate-spin" />}
+            style={{ background: confirmRisky && isPhoneBlocked ? "linear-gradient(135deg, #DC2626, #991B1B)" : undefined }}>
             {bookingCourier ? "কুরিয়ার বুক হচ্ছে..." : submitting ? "সেভ হচ্ছে..." : confirmRisky && isPhoneBlocked ? "⚠️ ঝুঁকি নিয়ে অর্ডার সেভ" : wantCourier ? "অর্ডার সেভ ও কুরিয়ার বুক" : "✓ অর্ডার সেভ করুন"}
-          </button>
+          </Button>
         </div>
       </div>
     </>
@@ -724,7 +685,7 @@ function SectionCard({
   headerRight?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border overflow-hidden transition-all" style={{ borderColor: expanded ? color + "60" : "var(--c-border)", backgroundColor: "var(--c-surface)" }}>
+    <Card padding="none" className="overflow-hidden transition-all" style={{ borderColor: expanded ? color + "60" : undefined }}>
       <button type="button" onClick={onToggle}
         className="w-full flex items-center gap-3 px-4 py-3.5 text-left"
         style={{ backgroundColor: expanded ? color + "08" : "transparent" }}>
@@ -740,6 +701,6 @@ function SectionCard({
           {children}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

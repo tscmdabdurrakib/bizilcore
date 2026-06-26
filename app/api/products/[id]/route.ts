@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logActivity } from "@/lib/logActivity";
+import { notifyBackInStock } from "@/lib/store/back-in-stock";
+import { trackForUser } from "@/lib/activity/trackFromSession";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-async function getShopId(userId: string): Promise<string | null> {
-  const shop = await prisma.shop.findUnique({ where: { userId }, select: { id: true } });
-  return shop?.id ?? null;
-}
+import { getApiShop } from "@/lib/shops/api-shop";
+import { revalidateProducts } from "@/lib/cache/revalidate";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const shopId = await getShopId(session.user.id);
-  if (!shopId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const shopCtx = await getApiShop();
+  if ("error" in shopCtx) return shopCtx.error;
+  const shopId = shopCtx.activeShop.id;
   const { id } = await params;
   const product = await prisma.product.findUnique({
     where: { id, shopId },
@@ -25,10 +25,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const shopId = await getShopId(session.user.id);
-  if (!shopId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const shopCtx = await getApiShop();
+  if ("error" in shopCtx) return shopCtx.error;
+  const shopId = shopCtx.activeShop.id;
   const { id } = await params;
   const body = await req.json();
+
+  const existing = await prisma.product.findUnique({ where: { id, shopId }, select: { stockQty: true } });
 
   const isPartialUpdate = body.storeVisible !== undefined || body.storeFeatured !== undefined;
   if (isPartialUpdate && !body.name) {
@@ -36,6 +39,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (body.storeVisible !== undefined) data.storeVisible = Boolean(body.storeVisible);
     if (body.storeFeatured !== undefined) data.storeFeatured = Boolean(body.storeFeatured);
     const product = await prisma.product.update({ where: { id, shopId }, data });
+    revalidateProducts(shopId);
     return NextResponse.json(product);
   }
 
@@ -58,14 +62,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     },
     include: { variants: { orderBy: { createdAt: "asc" } } },
   });
+
+  const newStock = parseInt(body.stockQty);
+  if (existing && existing.stockQty <= 0 && newStock > 0) {
+    notifyBackInStock(id, shopId).catch(() => {});
+  }
+
+  revalidateProducts(shopId);
   return NextResponse.json(product);
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const shopId = await getShopId(session.user.id);
-  if (!shopId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const shopCtx = await getApiShop();
+  if ("error" in shopCtx) return shopCtx.error;
+  const shopId = shopCtx.activeShop.id;
   const { id } = await params;
 
   const product = await prisma.product.findUnique({ where: { id, shopId }, select: { name: true, shopId: true } });
@@ -78,5 +90,11 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     action: "পণ্য মুছে ফেলা",
     detail: product.name,
   });
+  trackForUser(session.user.id, product.shopId, {
+    actionType: "product_deleted",
+    actionLabel: `পণ্য মুছে ফেলা: ${product.name}`,
+    metadata: { product_id: id, product_name: product.name },
+  }).catch(() => {});
+  revalidateProducts(shopId);
   return NextResponse.json({ success: true });
 }

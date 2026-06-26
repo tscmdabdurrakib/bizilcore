@@ -152,7 +152,7 @@ export default function DashboardConvention({ shopName, userName, userGender }: 
           { label: "এই মাসের বুকিং", value: `${stats.monthEvents}টি`, color: "#7C3AED", bg: "#F5F3FF", icon: PartyPopper },
           { label: "আজকের ইভেন্ট",   value: `${stats.todayEvents}টি`, color: "#0F6E56", bg: "#E1F5EE", icon: CalendarCheck },
           { label: "মোট Advance",     value: formatBDT(stats.totalAdvance), color: "#EF9F27", bg: "#FFF3DC", icon: Clock },
-          { label: "মোট Pending বাকি", value: formatBDT(stats.totalDue),    color: "#EF4444", bg: "#FEE2E2", icon: TrendingDown },
+          { label: "মোট অপেক্ষমান বাকি", value: formatBDT(stats.totalDue),    color: "#EF4444", bg: "#FEE2E2", icon: TrendingDown },
         ].map((card) => (
           <div key={card.label} className="rounded-2xl p-4 border" style={{ backgroundColor: S.surface, borderColor: S.border }}>
             <div className="flex items-center gap-2 mb-2">

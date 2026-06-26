@@ -4,9 +4,13 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import PlanGate from "@/components/PlanGate";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend, BarChart, Bar, AreaChart, Area,
-} from "recharts";
+  LazyLineChart as LineChart,
+  LazyBarChart as BarChart,
+  LazyAreaChart as AreaChart,
+  LazyPieChart as PieChart,
+  Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  Pie, Cell, Legend, Bar, Area,
+} from "@/components/reports/LazyRecharts";
 import { formatBDT } from "@/lib/utils";
 import {
   Download, FileSpreadsheet, TrendingUp, TrendingDown, Calendar, Search,
@@ -17,12 +21,13 @@ import {
 import { downloadExcel, downloadExcelMultiSheet } from "@/lib/excel";
 import PageHint from "@/components/PageHint";
 import DatePicker from "@/components/ui/DatePicker";
+import { PageShell, StatCard, Card, Tabs, Button } from "@/components/ui";
 
 interface OrderItem { quantity: number; unitPrice: number; subtotal: number; comboId?: string | null; comboSnapshot?: unknown; product: { id: string; name: string; buyPrice: number } | null }
 interface Order {
   id: string; status: string; totalAmount: number; paidAmount: number; dueAmount: number;
   createdAt: string; courierName: string | null; courierTrackId: string | null;
-  codStatus: string | null;
+  codStatus: string | null; branchId?: string | null;
   customer: { id: string; name: string; phone: string | null } | null;
   items: OrderItem[];
 }
@@ -78,42 +83,11 @@ const PRESET_RANGES = [
 
 const chartTooltipStyle = {
   borderRadius: 12,
-  border: "1px solid #E5E7EB",
-  boxShadow: "0 4px 16px rgba(0,0,0,0.10)",
+  border: "1px solid var(--c-border)",
+  boxShadow: "var(--shadow-elevated)",
   fontSize: 12,
   padding: "8px 12px",
 };
-
-function StatCard({
-  label, value, sub, icon: Icon, color, gradient, trend, trendValue,
-}: {
-  label: string; value: string; sub?: string;
-  icon?: React.ElementType; color?: string; gradient?: string;
-  trend?: "up" | "down"; trendValue?: string;
-}) {
-  const bg = gradient ?? "linear-gradient(135deg, #10B981 0%, #059669 100%)";
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between mb-3">
-        {Icon ? (
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ background: bg }}>
-            <Icon size={17} color="#fff" />
-          </div>
-        ) : <div />}
-        {trend && trendValue && (
-          <div className={`flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full ${trend === "up" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"}`}>
-            {trend === "up" ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-            {trendValue}
-          </div>
-        )}
-      </div>
-      <p className="text-xl font-black leading-tight" style={{ color: color ?? "#111827" }}>{value}</p>
-      <p className="text-xs text-gray-400 mt-1 font-medium">{label}</p>
-      {sub && <p className="text-[11px] text-gray-400 mt-0.5">{sub}</p>}
-    </div>
-  );
-}
 
 export default function ReportsPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -123,6 +97,7 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("sales");
   const [shopBranches, setShopBranches] = useState<{ id: string; name: string }[]>([]);
+  const [branchFilter, setBranchFilter] = useState<string>("all");
 
   const today = new Date().toISOString().split("T")[0];
   const monthStart = `${today.slice(0, 7)}-01`;
@@ -211,13 +186,19 @@ export default function ReportsPage() {
   const start = useMemo(() => new Date(dateFrom + "T00:00:00"), [dateFrom]);
   const end = useMemo(() => new Date(dateTo + "T23:59:59"), [dateTo]);
 
+  const branchScopedOrders = useMemo(() => {
+    if (branchFilter === "all") return orders;
+    if (branchFilter === "main") return orders.filter(o => !o.branchId);
+    return orders.filter(o => o.branchId === branchFilter);
+  }, [orders, branchFilter]);
+
   const validOrders = useMemo(() =>
-    orders.filter(o => COUNTED.includes(o.status) && new Date(o.createdAt) >= start && new Date(o.createdAt) <= end),
-    [orders, start, end]);
+    branchScopedOrders.filter(o => COUNTED.includes(o.status) && new Date(o.createdAt) >= start && new Date(o.createdAt) <= end),
+    [branchScopedOrders, start, end]);
 
   const periodOrders = useMemo(() =>
-    orders.filter(o => new Date(o.createdAt) >= start && new Date(o.createdAt) <= end),
-    [orders, start, end]);
+    branchScopedOrders.filter(o => new Date(o.createdAt) >= start && new Date(o.createdAt) <= end),
+    [branchScopedOrders, start, end]);
 
   // ─── SALES TAB ──────────────────────────────────────────────────────
   const salesByDay = useMemo(() => {
@@ -242,8 +223,8 @@ export default function ReportsPage() {
   const prevEnd = useMemo(() => { const d = new Date(start); d.setDate(d.getDate() - 1); return d; }, [start]);
   const prevStart = useMemo(() => { const d = new Date(prevEnd); d.setDate(d.getDate() - rangeDays + 1); return d; }, [prevEnd, rangeDays]);
   const prevOrders = useMemo(() =>
-    orders.filter(o => COUNTED.includes(o.status) && new Date(o.createdAt) >= prevStart && new Date(o.createdAt) <= prevEnd),
-    [orders, prevStart, prevEnd]);
+    branchScopedOrders.filter(o => COUNTED.includes(o.status) && new Date(o.createdAt) >= prevStart && new Date(o.createdAt) <= prevEnd),
+    [branchScopedOrders, prevStart, prevEnd]);
   const prevRevenue = prevOrders.reduce((s, o) => s + o.totalAmount, 0);
   const revenueChange = prevRevenue > 0 ? Math.round(((totalRevenue - prevRevenue) / prevRevenue) * 100) : 0;
 
@@ -371,7 +352,7 @@ export default function ReportsPage() {
   const topDueCustomers = [...customers].sort((a, b) => b.dueAmount - a.dueAmount).filter(c => c.dueAmount > 0).slice(0, 10);
 
   // ─── COD TAB ────────────────────────────────────────────────────────
-  const courierOrders = useMemo(() => orders.filter(o => o.courierTrackId), [orders]);
+  const courierOrders = useMemo(() => branchScopedOrders.filter(o => o.courierTrackId), [branchScopedOrders]);
   const periodCourierOrders = useMemo(() =>
     courierOrders.filter(o => new Date(o.createdAt) >= start && new Date(o.createdAt) <= end),
     [courierOrders, start, end]);
@@ -532,58 +513,54 @@ export default function ReportsPage() {
 
   return (
     <PlanGate feature="reports">
-    <div className="max-w-7xl mx-auto space-y-4">
+    <PageShell
+      title="রিপোর্ট"
+      subtitle="বিক্রি, লাভ ও পারফরম্যান্সের বিস্তারিত বিশ্লেষণ"
+      className="max-w-7xl"
+      actions={
+        <Button variant="outline" icon={FileSpreadsheet} onClick={exportFullReport}>Full Export</Button>
+      }
+    >
 
-      {/* ── Page Hint ── */}
       <PageHint page="reports" text="রিপোর্ট পেজে বিক্রি, লাভ ও পণ্যের পারফরম্যান্স দেখুন। তারিখ ফিল্টার করে নির্দিষ্ট সময়ের বিশ্লেষণ করুন এবং Excel-এ export করুন।" />
 
-      {/* Page Header */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm"
-            style={{ background: "linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)" }}>
-            <BarChart2 size={20} color="#fff" />
-          </div>
-          <div>
-            <h1 className="text-xl font-black text-gray-900">রিপোর্ট</h1>
-            <p className="text-xs text-gray-400 font-medium">বিক্রি, লাভ ও পারফরম্যান্সের বিস্তারিত বিশ্লেষণ</p>
-          </div>
-        </div>
-        <button onClick={exportFullReport}
-          className="flex items-center gap-2 px-4 h-10 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors flex-shrink-0">
-          <FileSpreadsheet size={15} className="text-green-600" /> Full Export
-        </button>
-      </div>
-
-      {/* Multi-shop banner */}
+      {/* Branch filter (multi-shop) */}
       {shopBranches.length > 0 && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm bg-emerald-50 border border-emerald-200">
-          <span>🏪</span>
-          <span className="text-emerald-800">
-            <strong>সব শাখার সম্মিলিত রিপোর্ট</strong> — মূল শপ + {shopBranches.map(b => b.name).join(", ")}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3 rounded-xl text-sm bg-emerald-50 border border-emerald-200">
+          <span className="text-emerald-800 flex items-center gap-2 flex-1">
+            <span>🏪</span>
+            <span>
+              {branchFilter === "all" && (
+                <><strong>সব লোকেশন</strong> — মূল শপ + {shopBranches.map(b => b.name).join(", ")}</>
+              )}
+              {branchFilter === "main" && (
+                <><strong>মূল শপ</strong> — branch ছাড়া অর্ডার/বিক্রি</>
+              )}
+              {branchFilter !== "all" && branchFilter !== "main" && (
+                <><strong>{shopBranches.find(b => b.id === branchFilter)?.name ?? "Branch"}</strong> — branch-wise বিক্রি ও অর্ডার</>
+              )}
+            </span>
           </span>
+          <select value={branchFilter} onChange={e => setBranchFilter(e.target.value)}
+            className="h-9 px-3 rounded-xl border border-emerald-200 text-xs font-semibold text-emerald-900 bg-white outline-none">
+            <option value="all">সব লোকেশন</option>
+            <option value="main">মূল শপ</option>
+            {shopBranches.map(b => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
         </div>
       )}
 
       {/* Tab Bar */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-1.5 shadow-sm">
-        <div className="flex overflow-x-auto gap-1">
-          {REPORT_TABS.map(t => (
-            <button key={t.key} onClick={() => setTab(t.key)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0"
-              style={{
-                backgroundColor: tab === t.key ? "#10B981" : "transparent",
-                color: tab === t.key ? "white" : "#6B7280",
-              }}>
-              <t.icon size={13} />
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <Tabs
+        tabs={REPORT_TABS.map(t => ({ key: t.key, label: t.label, icon: t.icon }))}
+        active={tab}
+        onChange={setTab}
+      />
 
       {/* Date Filter */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-3 shadow-sm flex items-center gap-3 flex-wrap">
+      <Card padding="sm" className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-2 text-gray-400">
           <Calendar size={15} />
           <span className="text-xs font-semibold text-gray-500">তারিখ ফিল্টার</span>
@@ -612,7 +589,7 @@ export default function ReportsPage() {
         <span className="text-xs ml-auto text-gray-400 font-medium">
           {validOrders.length}টি valid অর্ডার
         </span>
-      </div>
+      </Card>
 
       {/* ─── TAB 1: SALES ─────────────────────────────────────────────── */}
       {tab === "sales" && (
@@ -620,25 +597,20 @@ export default function ReportsPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <StatCard
               label="মোট বিক্রি" value={formatBDT(totalRevenue)}
-              sub={`${validOrders.length}টি অর্ডার`}
-              icon={TrendingUp} gradient="linear-gradient(135deg,#10B981,#059669)"
-              trend={revenueChange >= 0 ? "up" : "down"} trendValue={`${Math.abs(revenueChange)}%`}
+              icon={TrendingUp} accent="green"
+              trend={{ value: `${Math.abs(revenueChange)}%`, up: revenueChange >= 0 }}
             />
             <StatCard
               label="গড় অর্ডার মূল্য" value={formatBDT(avgOrderValue)}
-              sub="প্রতি অর্ডারে"
-              icon={CreditCard} gradient="linear-gradient(135deg,#3B82F6,#1D4ED8)"
+              icon={CreditCard} accent="blue" iconBg="var(--icon-blue-bg)" iconColor="var(--icon-blue-text)"
             />
             <StatCard
               label="মোট পরিশোধিত" value={formatBDT(totalPaid)}
-              sub="সংগৃহীত"
-              icon={DollarSign} gradient="linear-gradient(135deg,#8B5CF6,#6D28D9)"
+              icon={DollarSign} accent="gold" iconBg="var(--icon-purple-bg)" iconColor="var(--icon-purple-text)"
             />
             <StatCard
               label="মোট বাকি" value={formatBDT(totalDue)}
-              sub="due amount"
-              icon={AlertTriangle} gradient="linear-gradient(135deg,#F59E0B,#D97706)"
-              color={totalDue > 0 ? "#D97706" : "#111827"}
+              icon={AlertTriangle} accent="gold" iconBg="var(--icon-amber-bg)" iconColor="var(--icon-amber-text)"
             />
           </div>
 
@@ -736,13 +708,11 @@ export default function ReportsPage() {
         <div className="space-y-4">
           <div className="grid grid-cols-3 gap-3">
             <StatCard label="মোট বিক্রিত পিস" value={bestSellingData.reduce((s, p) => s + p.qty, 0).toLocaleString() + " পিস"}
-              icon={Package} gradient="linear-gradient(135deg,#10B981,#059669)" />
+              icon={Package} accent="green" />
             <StatCard label="সেরা বিক্রেতা" value={top10ByQty[0]?.name?.slice(0, 16) ?? "—"}
-              sub={`${top10ByQty[0]?.qty ?? 0} পিস`}
-              icon={Star} gradient="linear-gradient(135deg,#F59E0B,#D97706)" />
+              icon={Star} accent="gold" iconBg="var(--icon-amber-bg)" iconColor="var(--icon-amber-text)" />
             <StatCard label="মোট ক্যাটাগরি" value={categoryRevenue.length.toString()}
-              sub="active categories"
-              icon={Target} gradient="linear-gradient(135deg,#8B5CF6,#6D28D9)" />
+              icon={Target} accent="gold" iconBg="var(--icon-purple-bg)" iconColor="var(--icon-purple-text)" />
           </div>
 
           {/* Top 10 by qty */}
@@ -873,18 +843,15 @@ export default function ReportsPage() {
         <div className="space-y-4">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <StatCard label="মোট বিক্রয় রাজস্ব" value={formatBDT(totalRevAll)}
-              sub="সব সময়ের" icon={TrendingUp} gradient="linear-gradient(135deg,#3B82F6,#1D4ED8)" />
+              icon={TrendingUp} accent="blue" iconBg="var(--icon-blue-bg)" iconColor="var(--icon-blue-text)" />
             <StatCard label="মোট COGS" value={formatBDT(totalCogs)}
-              sub="ক্রয়মূল্য" icon={Package} gradient="linear-gradient(135deg,#F59E0B,#D97706)" />
+              icon={Package} accent="gold" iconBg="var(--icon-amber-bg)" iconColor="var(--icon-amber-text)" />
             <StatCard label="মোট লাভ" value={formatBDT(totalProfit)}
               icon={DollarSign}
-              gradient={totalProfit >= 0 ? "linear-gradient(135deg,#10B981,#059669)" : "linear-gradient(135deg,#EF4444,#DC2626)"}
-              color={totalProfit >= 0 ? "#059669" : "#DC2626"}
-              sub="gross profit" />
+              accent={totalProfit >= 0 ? "green" : "red"} />
             <StatCard label="গড় মার্জিন" value={`${overallMargin}%`}
               icon={Activity}
-              gradient={overallMargin >= 20 ? "linear-gradient(135deg,#10B981,#059669)" : overallMargin >= 10 ? "linear-gradient(135deg,#F59E0B,#D97706)" : "linear-gradient(135deg,#EF4444,#DC2626)"}
-              sub="gross margin" />
+              accent={overallMargin >= 20 ? "green" : overallMargin >= 10 ? "gold" : "red"} />
           </div>
 
           {/* Profit bar chart */}
@@ -1034,24 +1001,19 @@ export default function ReportsPage() {
               {intelKPIs && (
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   <StatCard label="সর্বোচ্চ মার্জিন পণ্য" value={intelKPIs.bestMargin?.name?.slice(0,14) ?? "—"}
-                    sub={intelKPIs.bestMargin ? `${intelKPIs.bestMargin.margin.toFixed(1)}% margin` : ""}
-                    icon={Star} gradient="linear-gradient(135deg,#10B981,#059669)" />
+                    icon={Star} accent="green"
+                    trend={intelKPIs.bestMargin ? { value: `${intelKPIs.bestMargin.margin.toFixed(1)}%`, up: true } : undefined} />
                   <StatCard label="সর্বনিম্ন মার্জিন পণ্য" value={intelKPIs.worstMargin?.name?.slice(0,14) ?? "—"}
-                    sub={intelKPIs.worstMargin ? `${intelKPIs.worstMargin.margin.toFixed(1)}% margin` : ""}
-                    icon={TrendingDown} gradient="linear-gradient(135deg,#EF4444,#DC2626)" color="#DC2626" />
+                    icon={TrendingDown} accent="red" iconBg="var(--icon-red-bg)" iconColor="var(--icon-red-text)"
+                    trend={intelKPIs.worstMargin ? { value: `${intelKPIs.worstMargin.margin.toFixed(1)}%`, up: false } : undefined} />
                   <StatCard label="শেষ হওয়ার পথে" value={String(intelKPIs.stockoutSoon)}
-                    sub="৭ দিনের মধ্যে শেষ"
                     icon={AlertTriangle}
-                    gradient={intelKPIs.stockoutSoon > 0 ? "linear-gradient(135deg,#EF4444,#DC2626)" : "linear-gradient(135deg,#10B981,#059669)"}
-                    color={intelKPIs.stockoutSoon > 0 ? "#DC2626" : "#059669"} />
+                    accent={intelKPIs.stockoutSoon > 0 ? "red" : "green"} />
                   <StatCard label="স্লো মুভার" value={String(intelKPIs.slowMovers)}
-                    sub="<১ পিস/সপ্তাহ, ৩০+ স্টক"
-                    icon={Package} gradient="linear-gradient(135deg,#F59E0B,#D97706)" color="#D97706" />
+                    icon={Package} accent="gold" iconBg="var(--icon-amber-bg)" iconColor="var(--icon-amber-text)" />
                   <StatCard label="মোট গ্রস প্রফিট" value={formatBDT(intelKPIs.totalGrossProfit)}
-                    sub={`গত ${intelDays} দিন`}
                     icon={DollarSign}
-                    gradient={intelKPIs.totalGrossProfit >= 0 ? "linear-gradient(135deg,#10B981,#059669)" : "linear-gradient(135deg,#EF4444,#DC2626)"}
-                    color={intelKPIs.totalGrossProfit >= 0 ? "#059669" : "#DC2626"} />
+                    accent={intelKPIs.totalGrossProfit >= 0 ? "green" : "red"} />
                 </div>
               )}
 
@@ -1226,15 +1188,14 @@ export default function ReportsPage() {
         <div className="space-y-4">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <StatCard label="মোট কাস্টমার" value={customers.length.toString()}
-              sub="সব মিলিয়ে" icon={Users} gradient="linear-gradient(135deg,#3B82F6,#1D4ED8)" />
+              icon={Users} accent="blue" iconBg="var(--icon-blue-bg)" iconColor="var(--icon-blue-text)" />
             <StatCard label="Repeat Customer" value={ltvData.filter(c => c.orderCount > 1).length.toString()}
-              sub={`${ltvData.length > 0 ? Math.round((ltvData.filter(c => c.orderCount > 1).length / ltvData.length) * 100) : 0}% retention`}
-              icon={TrendingUp} gradient="linear-gradient(135deg,#10B981,#059669)" />
+              icon={TrendingUp} accent="green"
+              trend={{ value: `${ltvData.length > 0 ? Math.round((ltvData.filter(c => c.orderCount > 1).length / ltvData.length) * 100) : 0}%`, up: true }} />
             <StatCard label="সর্বোচ্চ LTV" value={formatBDT(sortedLtv[0]?.revenue ?? 0)}
-              sub={sortedLtv[0]?.name?.slice(0, 16) ?? "—"}
-              icon={Star} gradient="linear-gradient(135deg,#F59E0B,#D97706)" />
+              icon={Star} accent="gold" iconBg="var(--icon-amber-bg)" iconColor="var(--icon-amber-text)" />
             <StatCard label="গড় LTV" value={formatBDT(ltvData.length > 0 ? ltvData.reduce((s, c) => s + c.revenue, 0) / ltvData.length : 0)}
-              sub="per customer" icon={DollarSign} gradient="linear-gradient(135deg,#8B5CF6,#6D28D9)" />
+              icon={DollarSign} accent="gold" iconBg="var(--icon-purple-bg)" iconColor="var(--icon-purple-text)" />
           </div>
 
           {/* LTV bar chart */}
@@ -1495,16 +1456,15 @@ export default function ReportsPage() {
             return (
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <StatCard label="সর্বোচ্চ মাসের বিক্রি" value={formatBDT(Math.max(...monthlyPL.map(r=>r.revenue)))}
-                  icon={TrendingUp} gradient="linear-gradient(135deg,#3B82F6,#1D4ED8)" />
+                  icon={TrendingUp} accent="blue" iconBg="var(--icon-blue-bg)" iconColor="var(--icon-blue-text)" />
                 <StatCard label="মোট খরচ (সব মাস)" value={formatBDT(totalExpenses)}
-                  icon={CreditCard} gradient="linear-gradient(135deg,#EF4444,#DC2626)" />
+                  icon={CreditCard} accent="red" iconBg="var(--icon-red-bg)" iconColor="var(--icon-red-text)" />
                 <StatCard label="মোট নেট লাভ" value={formatBDT(totalNetProfit)}
                   icon={DollarSign}
-                  gradient={totalNetProfit >= 0 ? "linear-gradient(135deg,#10B981,#059669)" : "linear-gradient(135deg,#EF4444,#DC2626)"}
-                  color={totalNetProfit >= 0 ? "#059669" : "#DC2626"} />
+                  accent={totalNetProfit >= 0 ? "green" : "red"} />
                 <StatCard label="সামগ্রিক নেট মার্জিন" value={`${overallPLMargin}%`}
                   icon={Activity}
-                  gradient={overallPLMargin >= 20 ? "linear-gradient(135deg,#10B981,#059669)" : overallPLMargin >= 10 ? "linear-gradient(135deg,#F59E0B,#D97706)" : "linear-gradient(135deg,#EF4444,#DC2626)"} />
+                  accent={overallPLMargin >= 20 ? "green" : overallPLMargin >= 10 ? "gold" : "red"} />
               </div>
             );
           })()}
@@ -1744,7 +1704,7 @@ export default function ReportsPage() {
         </div>
       )}
 
-    </div>
+    </PageShell>
     </PlanGate>
   );
 }

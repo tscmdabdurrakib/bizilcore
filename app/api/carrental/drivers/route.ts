@@ -13,13 +13,15 @@ export async function GET(req: NextRequest) {
   const drivers = await prisma.rentalDriver.findMany({
     where,
     include: {
-      vehicles: { select: { id: true, regNumber: true, brand: true, model: true } },
+      defaultVehicles: { select: { id: true, regNumber: true, brand: true, model: true } },
       _count: { select: { bookings: true } },
     },
     orderBy: { name: "asc" },
   });
 
-  return NextResponse.json(drivers);
+  return NextResponse.json(
+    drivers.map(({ defaultVehicles, ...d }) => ({ ...d, vehicles: defaultVehicles })),
+  );
 }
 
 export async function POST(req: NextRequest) {

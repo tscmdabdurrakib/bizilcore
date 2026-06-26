@@ -11,7 +11,11 @@ export async function GET() {
   });
   if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
 
-  return NextResponse.json(shop);
+  const { zinipayApiKey, ...safeShop } = shop;
+  return NextResponse.json({
+    ...safeShop,
+    zinipayConfigured: Boolean(zinipayApiKey?.trim()),
+  });
 }
 
 export async function PATCH(req: NextRequest) {
@@ -31,6 +35,7 @@ export async function PATCH(req: NextRequest) {
     "storeCODEnabled", "storeBkashNumber", "storeNagadNumber", "storeMinOrder",
     "storeFreeShipping", "storeShippingFee", "storeDhakaFee", "storeCustomDomain",
     "storeSocialFB", "storeSocialIG", "storeSocialWA",
+    "zinipayApiKey",
   ];
 
   const data: Record<string, unknown> = {};
@@ -47,5 +52,9 @@ export async function PATCH(req: NextRequest) {
     data,
   });
 
-  return NextResponse.json(updated);
+  const { zinipayApiKey, ...safeShop } = updated;
+  return NextResponse.json({
+    ...safeShop,
+    zinipayConfigured: Boolean(zinipayApiKey?.trim()),
+  });
 }

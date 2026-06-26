@@ -233,7 +233,7 @@ export default function JobCardsBoard({ businessType = "garage" }: { businessTyp
   useEffect(() => { fetchJobs(); }, [fetchJobs]);
 
   useEffect(() => {
-    fetch("/api/hr/staff").then(r => r.json()).then(setStaff).catch(() => {});
+    fetch("/api/staff").then(r => r.json()).then(setStaff).catch(() => {});
   }, []);
 
   const searchVehicle = async () => {

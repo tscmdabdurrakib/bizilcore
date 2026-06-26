@@ -62,22 +62,28 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   });
 
   if (restock !== false) {
-    for (const item of productItems) {
-      await prisma.product.update({
-        where: { id: item.productId! },
-        data: { stockQty: { increment: item.quantity } },
-      });
-      await prisma.stockMovement.create({
-        data: {
+    const { restoreOrderStock } = await import("@/lib/shops/order-stock");
+    await prisma.$transaction(async (tx) => {
+      for (const item of productItems) {
+        await restoreOrderStock(tx, order.branchId, [{
           productId: item.productId!,
-          userId: session.user.id,
-          type: "return",
+          comboId: null,
+          comboSnapshot: null,
           quantity: item.quantity,
-          reason: `Return from Order #${id.slice(-6).toUpperCase()}`,
-          orderId: id,
-        },
-      });
-    }
+        }]);
+        await tx.stockMovement.create({
+          data: {
+            productId: item.productId!,
+            userId: session.user.id,
+            type: "return",
+            quantity: item.quantity,
+            reason: `Return from Order #${id.slice(-6).toUpperCase()}`,
+            orderId: id,
+            branchId: order.branchId,
+          },
+        });
+      }
+    });
   }
 
   await prisma.order.update({

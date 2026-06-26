@@ -3,7 +3,7 @@ import { requireShop } from "@/lib/getShop";
 import { prisma } from "@/lib/prisma";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { shop } = await requireShop();
+  const { shop, session } = await requireShop();
   const { id } = await params;
   const body = await req.json();
 
@@ -30,7 +30,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (deal.commissionAmount > 0) {
       await prisma.transaction.create({
         data: {
-          shopId: shop.id,
+          userId: session.user.id,
           type: "income",
           amount: deal.commissionAmount,
           category: "commission",

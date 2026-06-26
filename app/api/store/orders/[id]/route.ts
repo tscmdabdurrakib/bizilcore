@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { bookCourierForOrder, CourierBookingError } from "@/lib/courier-booking";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -31,11 +32,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const shop = await prisma.shop.findUnique({ where: { userId: session.user.id }, select: { id: true } });
   if (!shop) return NextResponse.json({ error: "Shop not found" }, { status: 404 });
 
-  const order = await prisma.storeOrder.findFirst({ where: { id, shopId: shop.id } });
+  const order = await prisma.storeOrder.findFirst({
+    where: { id, shopId: shop.id },
+    include: { items: true },
+  });
   if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json();
-  const { status, paymentStatus } = body;
+  const { status, paymentStatus, courierName, manualTrackId } = body;
 
   const VALID_TRANSITIONS: Record<string, string[]> = {
     pending:    ["confirmed", "cancelled"],
@@ -57,20 +61,75 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
-  const updated = await prisma.storeOrder.update({
-    where: { id },
-    data: {
-      ...(status && { status }),
-      ...(paymentStatus && { paymentStatus }),
-    },
+  const isCancelling = status === "cancelled" && order.status !== "cancelled";
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const so = await tx.storeOrder.update({
+      where: { id },
+      data: {
+        ...(status && { status }),
+        ...(paymentStatus && { paymentStatus }),
+      },
+    });
+
+    if (status) {
+      await tx.order.updateMany({ where: { storeOrderId: id }, data: { status } });
+    }
+
+    // Restock inventory when an order is cancelled (stock was deducted at creation).
+    if (isCancelling) {
+      for (const item of order.items) {
+        if (item.variantId) {
+          await tx.productVariant.updateMany({
+            where: { id: item.variantId },
+            data: { stockQty: { increment: item.quantity } },
+          });
+        } else if (item.productId) {
+          await tx.product.updateMany({
+            where: { id: item.productId, shopId: shop.id },
+            data: { stockQty: { increment: item.quantity } },
+          });
+        }
+        if (item.productId) {
+          await tx.stockMovement.create({
+            data: {
+              productId: item.productId,
+              userId: session.user.id,
+              type: "in",
+              quantity: item.quantity,
+              reason: `store_order_cancelled:${order.orderNumber}`,
+            },
+          });
+        }
+      }
+    }
+
+    return so;
   });
 
-  if (status) {
-    await prisma.order.updateMany({
-      where: { storeOrderId: id },
-      data: { status },
+  // Opt-in courier auto-booking: when the merchant passes a courierName while
+  // moving the order forward, book the linked Order using the StoreOrder's
+  // recipient details (best-effort; booking failure is reported but doesn't
+  // revert the status change).
+  let courier: { trackingId: string; status: string; courierName: string } | null = null;
+  let courierError: string | null = null;
+  if (courierName && status && status !== "cancelled") {
+    const linked = await prisma.order.findFirst({
+      where: { storeOrderId: id, userId: session.user.id },
+      select: { id: true, courierTrackId: true },
     });
+    if (linked && !linked.courierTrackId) {
+      try {
+        courier = await bookCourierForOrder(session.user.id, linked.id, courierName, manualTrackId, {
+          name: order.customerName,
+          phone: order.customerPhone,
+          address: [order.customerAddress, order.customerUpazila, order.customerDistrict].filter(Boolean).join(", "),
+        });
+      } catch (err) {
+        courierError = err instanceof CourierBookingError ? err.message : "কুরিয়ার বুকিং ব্যর্থ হয়েছে।";
+      }
+    }
   }
 
-  return NextResponse.json(updated);
+  return NextResponse.json({ ...updated, courier, courierError });
 }

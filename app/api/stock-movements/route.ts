@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/logActivity";
 import { createAutoTask } from "@/lib/autoTasks";
+import { revalidateProducts } from "@/lib/cache/revalidate";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -70,5 +71,6 @@ export async function POST(req: NextRequest) {
     }).catch(() => {});
   }
 
+  revalidateProducts(product.shopId);
   return NextResponse.json(movement, { status: 201 });
 }

@@ -3,13 +3,19 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search, Plus, Download, Facebook, CheckCircle, XCircle, ExternalLink, ChevronLeft, ChevronRight, ShoppingBag, Loader2, MoreHorizontal, Printer, Truck, ShieldX } from "lucide-react";
+import { Plus, Download, Facebook, CheckCircle, XCircle, ExternalLink, ChevronLeft, ChevronRight, ShoppingBag, Loader2, MoreHorizontal, Printer, Truck, ShieldX, Clock } from "lucide-react";
 import { formatBDT, formatRelativeDate, getStatusStyle } from "@/lib/utils";
 import { downloadExcel } from "@/lib/excel";
 import OrderCreatePanel from "./OrderCreatePanel";
 import RiskBadge from "./RiskBadge";
 import PageHint from "@/components/PageHint";
 import DemoDataBanner from "@/components/DemoDataBanner";
+import PageShell from "@/components/ui/PageShell";
+import StatCard from "@/components/ui/StatCard";
+import Card from "@/components/ui/Card";
+import FilterBar from "@/components/ui/FilterBar";
+import Button from "@/components/ui/Button";
+import Select from "@/components/ui/Select";
 
 interface Order {
   id: string; status: string; totalAmount: number; paidAmount: number; dueAmount: number;
@@ -17,6 +23,8 @@ interface Order {
   courierTrackId: string | null; courierStatus: string | null;
   source?: string | null;
   storeOrderId?: string | null;
+  branchId?: string | null;
+  branch?: { id: string; name: string } | null;
   riskScore?: number | null;
   riskFlags?: string | null;
   fakeReported?: boolean;
@@ -74,6 +82,8 @@ export default function FCommerceOrders() {
   const [data, setData] = useState<PaginatedOrders>({ orders: [], total: 0, page: 1, limit: 50, pages: 1 });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [branchFilter, setBranchFilter] = useState("all");
+  const [shopBranches, setShopBranches] = useState<{ id: string; name: string }[]>([]);
   const [tab, setTab] = useState("all");
   const [page, setPage] = useState(1);
 
@@ -84,6 +94,8 @@ export default function FCommerceOrders() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState("confirmed");
   const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [bulkCourier, setBulkCourier] = useState("pathao");
+  const [statusTemplates, setStatusTemplates] = useState<Array<{ id: string; label: string }>>([]);
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [quickMenu, setQuickMenu] = useState<{ type: "status" | "actions" | "courier"; orderId: string; x: number; y: number } | null>(null);
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
@@ -190,10 +202,10 @@ export default function FCommerceOrders() {
   async function handleBulkStatus() {
     if (!selectedIds.size) return;
     setBulkUpdating(true);
-    const r = await fetch("/api/orders/bulk-status", {
-      method: "PATCH",
+    const r = await fetch("/api/orders/bulk-actions", {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: [...selectedIds], status: bulkStatus }),
+      body: JSON.stringify({ action: "status", ids: [...selectedIds], status: bulkStatus }),
     });
     if (r.ok) {
       const d = await r.json();
@@ -206,11 +218,78 @@ export default function FCommerceOrders() {
     setBulkUpdating(false);
   }
 
+  async function handleBulkConfirm() {
+    if (!selectedIds.size) return;
+    setBulkUpdating(true);
+    const r = await fetch("/api/orders/bulk-actions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "confirm", ids: [...selectedIds] }),
+    });
+    const d = await r.json();
+    setBulkUpdating(false);
+    if (r.ok) {
+      showToast("success", `${d.updated}টি অর্ডার নিশ্চিত ✓`);
+      setSelectedIds(new Set());
+      loadOrders(page);
+    } else showToast("error", "নিশ্চিত করা যায়নি");
+  }
+
+  async function handleBulkPrint() {
+    if (!selectedIds.size) return;
+    const r = await fetch("/api/orders/bulk-actions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "print", ids: [...selectedIds] }),
+    });
+    const d = await r.json();
+    if (r.ok && d.slips) {
+      for (const slip of d.slips as { url: string }[]) {
+        window.open(slip.url, "_blank");
+      }
+      showToast("success", `${d.slips.length}টি স্লিপ খোলা হয়েছে`);
+    }
+  }
+
+  async function handleBulkCourier() {
+    if (!selectedIds.size) return;
+    setBulkUpdating(true);
+    const r = await fetch("/api/orders/bulk-actions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "courier", ids: [...selectedIds], courierName: bulkCourier }),
+    });
+    const d = await r.json();
+    setBulkUpdating(false);
+    if (r.ok) {
+      showToast("success", `${d.booked}টি কুরিয়ার বুক ✓`);
+      if (d.errors?.length) showToast("error", d.errors[0]);
+      setSelectedIds(new Set());
+      loadOrders(page);
+    } else showToast("error", "কুরিয়ার বুক করা যায়নি");
+  }
+
+  async function handleBulkTemplate(templateId: string) {
+    if (!selectedIds.size) return;
+    setBulkUpdating(true);
+    const r = await fetch("/api/orders/bulk-actions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "send_template", ids: [...selectedIds], templateId }),
+    });
+    const d = await r.json();
+    setBulkUpdating(false);
+    if (r.ok) showToast("success", `${d.sent}টি SMS/WhatsApp পাঠানো ✓`);
+    else showToast("error", "মেসেজ পাঠানো যায়নি");
+  }
+
   async function loadOrders(pg = 1) {
     setLoading(true);
     const params = new URLSearchParams({ page: String(pg), limit: "50" });
     if (tab !== "all" && tab !== "cod_pending") params.set("status", tab);
     if (search) params.set("search", search);
+    if (branchFilter === "main") params.set("branchId", "main");
+    else if (branchFilter !== "all") params.set("branchId", branchFilter);
     const res = await fetch(`/api/orders?${params}`);
     const json = await res.json();
     if (Array.isArray(json)) {
@@ -221,8 +300,19 @@ export default function FCommerceOrders() {
     setLoading(false);
   }
 
-  useEffect(() => { setPage(1); }, [tab, search]);
-  useEffect(() => { loadOrders(page); }, [page, tab, search]);
+  useEffect(() => { setPage(1); }, [tab, search, branchFilter]);
+  useEffect(() => { loadOrders(page); }, [page, tab, search, branchFilter]);
+
+  useEffect(() => {
+    fetch("/api/shops")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.branches?.length) setShopBranches(d.branches); })
+      .catch(() => {});
+    fetch("/api/orders/status-templates")
+      .then(r => r.json())
+      .then(d => setStatusTemplates(d.templates ?? []))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     // Load Facebook suggestions
@@ -258,10 +348,22 @@ export default function FCommerceOrders() {
     });
   }
 
-  function convertSuggestion(s: SuggestedOrder) {
-    setPanelPrefillName(s.commenterName);
-    setPanelPrefillSuggestId(s.id);
-    setCreatePanelOpen(true);
+  async function convertSuggestion(s: SuggestedOrder) {
+    const r = await fetch("/api/suggested-orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: s.id }),
+    });
+    const d = await r.json();
+    if (r.ok) {
+      setDismissedIds(prev => new Set([...prev, s.id]));
+      showToast("success", d.replyMessage ?? `অর্ডার #${d.orderRef} তৈরি হয়েছে ✓`);
+      loadOrders(page);
+    } else {
+      setPanelPrefillName(s.commenterName);
+      setPanelPrefillSuggestId(s.id);
+      setCreatePanelOpen(true);
+    }
   }
 
   const orders = data.orders;
@@ -299,9 +401,35 @@ export default function FCommerceOrders() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-4">
+    <>
       {toast && <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-white text-sm font-medium shadow-lg" style={{ backgroundColor: toast.type === "success" ? "#1D9E75" : "#E24B4A" }}>{toast.msg}</div>}
 
+      <PageShell
+        title="অর্ডার"
+        subtitle="Facebook সেলের সব অর্ডার ট্র্যাক করুন"
+        actions={
+          <Button
+            icon={Plus}
+            onClick={() => { setPanelPrefillName(undefined); setPanelPrefillSuggestId(undefined); setCreatePanelOpen(true); }}
+          >
+            নতুন অর্ডার
+          </Button>
+        }
+        stats={!loading && orders.length > 0 ? (
+          <>
+            <StatCard label="মোট অর্ডার" value={`${data.total}টি`} icon={ShoppingBag} iconBg="#E8F5F0" iconColor="#0F6E56" accent="green" />
+            <StatCard label="Pending" value={`${orders.filter(o => o.status === "pending").length}টি`} icon={Clock} iconBg="#FFF3DC" iconColor="#EF9F27" accent="gold" />
+            <StatCard label="COD বাকি" value={`${codPendingCount}টি`} icon={Truck} iconBg="#EFF6FF" iconColor="#3B82F6" accent="blue" />
+            <StatCard
+              label="মোট বিক্রি"
+              value={`৳${orders.reduce((s, o) => s + o.totalAmount, 0).toLocaleString("en-IN")}`}
+              icon={ShoppingBag}
+              iconBg="#F5F3FF"
+              iconColor="#8B5CF6"
+            />
+          </>
+        ) : undefined}
+      >
       {/* ── Page Hint ── */}
       <PageHint page="orders" text="এখানে সব অর্ডার ট্র্যাক করুন। অর্ডারের status পরিবর্তন করতে পারবেন এবং কুরিয়ার ট্র্যাকিং যোগ করতে পারবেন।" />
 
@@ -333,8 +461,37 @@ export default function FCommerceOrders() {
           <button onClick={handleBulkStatus} disabled={bulkUpdating}
             className="w-full py-2 rounded-xl text-sm font-bold disabled:opacity-60 transition-opacity"
             style={{ backgroundColor: "var(--c-primary)", color: "#FFF" }}>
-            {bulkUpdating ? "আপডেট হচ্ছে..." : `${selectedIds.size}টি অর্ডার → ${STATUS_OPTIONS.find(s => s.key === bulkStatus)?.label ?? ""}`}
+            {bulkUpdating ? "আপডেট হচ্ছে..." : `${selectedIds.size}টি → ${STATUS_OPTIONS.find(s => s.key === bulkStatus)?.label ?? ""}`}
           </button>
+          <div className="flex flex-wrap gap-1.5 justify-center w-full">
+            <button onClick={handleBulkConfirm} disabled={bulkUpdating}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold" style={{ backgroundColor: "rgba(255,255,255,0.15)" }}>
+              ✓ Bulk Confirm
+            </button>
+            <button onClick={handleBulkPrint} disabled={bulkUpdating}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold" style={{ backgroundColor: "rgba(255,255,255,0.15)" }}>
+              🖨 Print Slips
+            </button>
+            <select value={bulkCourier} onChange={e => setBulkCourier(e.target.value)}
+              className="px-2 py-1 rounded-lg text-xs bg-white/10 text-white border-0">
+              {COURIER_LIST.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+            </select>
+            <button onClick={handleBulkCourier} disabled={bulkUpdating}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold" style={{ backgroundColor: "rgba(255,255,255,0.15)" }}>
+              📦 Book Courier
+            </button>
+          </div>
+          {statusTemplates.length > 0 && (
+            <div className="flex flex-wrap gap-1 justify-center w-full pt-1 border-t border-white/10">
+              <span className="text-[10px] text-white/60 w-full text-center mb-1">Quick SMS/WhatsApp</span>
+              {statusTemplates.slice(0, 4).map(t => (
+                <button key={t.id} onClick={() => handleBulkTemplate(t.id)} disabled={bulkUpdating}
+                  className="px-2 py-1 rounded-full text-[10px] font-semibold" style={{ backgroundColor: "rgba(255,255,255,0.12)" }}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -395,97 +552,39 @@ export default function FCommerceOrders() {
         </div>
       )}
 
-      {/* ── Page Header ──────────────────────────── */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md" style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}>
-            <ShoppingBag size={20} color="#fff" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold" style={{ color: S.text }}>অর্ডার</h1>
-            <p className="text-xs" style={{ color: S.muted }}>Facebook সেলের সব অর্ডার ট্র্যাক করুন</p>
-          </div>
-        </div>
-        <button
-          onClick={() => { setPanelPrefillName(undefined); setPanelPrefillSuggestId(undefined); setCreatePanelOpen(true); }}
-          className="flex items-center gap-2 px-5 h-10 rounded-2xl text-white text-sm font-semibold flex-shrink-0 shadow-md hover:opacity-90 transition-opacity active:scale-95"
-          style={{ background: "linear-gradient(135deg, #0F6E56 0%, #0A5442 100%)" }}>
-          <Plus size={16} /> নতুন অর্ডার
-        </button>
-      </div>
-
-      {/* ── Mini Stats Bar ───────────────────────── */}
-      {!loading && orders.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: "মোট অর্ডার",   value: `${data.total}টি`,                                                                         color: "#0F6E56", bg: "#E8F5F0" },
-            { label: "Pending",       value: `${orders.filter(o => o.status === "pending").length}টি`,                                  color: "#EF9F27", bg: "#FFF3DC" },
-            { label: "COD বাকি",     value: `${codPendingCount}টি`,                                                                    color: "#3B82F6", bg: "#EFF6FF" },
-            { label: "মোট বিক্রি",  value: `৳${orders.reduce((s, o) => s + o.totalAmount, 0).toLocaleString("en-IN")}`,               color: "#8B5CF6", bg: "#F5F3FF" },
-          ].map(s => (
-            <div key={s.label} className="rounded-2xl px-4 py-3 flex items-center gap-3" style={{ backgroundColor: s.bg }}>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: s.color }}>{s.label}</p>
-                <p className="text-lg font-bold" style={{ color: s.color }}>{s.value}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── Search + Export ──────────────────────────── */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: S.muted }} />
-          <input type="text" placeholder="কাস্টমার, অর্ডার ID বা Tracking..."
-            value={search} onChange={e => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 h-11 rounded-2xl border text-sm outline-none focus:ring-2 transition-all"
-            style={{ borderColor: S.border, color: S.text, backgroundColor: S.surface }} />
-        </div>
-        <button onClick={exportToExcel} disabled={loading || filtered.length === 0}
-          className="flex items-center gap-2 px-4 h-11 rounded-2xl border text-sm font-semibold flex-shrink-0 hover:bg-gray-50 disabled:opacity-40 transition-all active:scale-95"
-          style={{ borderColor: S.border, color: S.secondary, backgroundColor: S.surface }}>
-          <Download size={15} /> Excel
-        </button>
-      </div>
-
-      {/* ── Status Tabs ────────────────────────────── */}
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-        {STATUS_TABS.map(t => {
-          const isCodTab = t.key === "cod_pending";
-          const isActive = tab === t.key;
-          const tabColors: Record<string, string> = {
-            all: "#0F6E56", pending: "#EF9F27", confirmed: "#1D9E75",
-            shipped: "#3B82F6", delivered: "#059669", returned: "#EF4444", cod_pending: "#EF9F27",
-          };
-          const tabBgs: Record<string, string> = {
-            all: "#E8F5F0", pending: "#FFF3DC", confirmed: "#D1FAE5",
-            shipped: "#EFF6FF", delivered: "#D1FAE5", returned: "#FEE2E2", cod_pending: "#FFF3DC",
-          };
-          return (
-            <button key={t.key} onClick={() => setTab(t.key)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-2xl text-sm font-semibold flex-shrink-0 transition-all active:scale-95"
-              style={{
-                backgroundColor: isActive ? tabColors[t.key] : S.surface,
-                color: isActive ? "#fff" : S.secondary,
-                border: `1.5px solid ${isActive ? tabColors[t.key] : S.border}`,
-                boxShadow: isActive ? `0 4px 12px ${tabColors[t.key]}40` : "none",
-              }}>
-              {isActive && <span className="w-1.5 h-1.5 rounded-full bg-white opacity-80" />}
-              {t.label}
-              {isCodTab && codPendingCount > 0 && (
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none"
-                  style={{ backgroundColor: isActive ? "rgba(255,255,255,0.25)" : tabBgs[t.key], color: isActive ? "#FFF" : tabColors[t.key] }}>
-                  {codPendingCount}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+      <FilterBar
+        tabs={STATUS_TABS.map(t => ({
+          key: t.key,
+          label: t.label,
+          count: t.key === "cod_pending" && codPendingCount > 0 ? codPendingCount : undefined,
+        }))}
+        activeTab={tab}
+        onTabChange={setTab}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="কাস্টমার, অর্ডার ID বা Tracking..."
+        filters={shopBranches.length > 0 ? (
+          <Select
+            value={branchFilter}
+            onChange={e => setBranchFilter(e.target.value)}
+            options={[
+              { value: "all", label: "সব লোকেশন" },
+              { value: "main", label: "মূল শপ" },
+              ...shopBranches.map(b => ({ value: b.id, label: b.name })),
+            ]}
+            className="h-10 py-2"
+          />
+        ) : undefined}
+        actions={
+          <Button variant="outline" icon={Download} onClick={exportToExcel} disabled={loading || filtered.length === 0}>
+            Excel
+          </Button>
+        }
+        className="mb-1"
+      />
 
       {/* ── Orders Table ───────────────────────────── */}
-      <div className="rounded-2xl border overflow-hidden" style={{ borderColor: S.border, backgroundColor: S.surface }}>
+      <Card padding="none" className="overflow-hidden">
         {loading ? (
           <div className="p-4 space-y-2.5 animate-pulse">
             {[1,2,3,4,5,6].map(i => (
@@ -512,12 +611,9 @@ export default function FCommerceOrders() {
               {tab === "all" ? "এখনো কোনো অর্ডার নেই। প্রথম অর্ডারটি যোগ করুন!" : `"${STATUS_TABS.find(t => t.key === tab)?.label}" স্ট্যাটাসে কোনো অর্ডার নেই।`}
             </p>
             {tab === "all" && (
-              <button
-                onClick={() => { setPanelPrefillName(undefined); setPanelPrefillSuggestId(undefined); setCreatePanelOpen(true); }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-white text-sm font-semibold shadow-md hover:opacity-90 transition-opacity active:scale-95"
-                style={{ background: "linear-gradient(135deg, #0F6E56, #0A5442)" }}>
-                <Plus size={15} /> নতুন অর্ডার তৈরি করুন
-              </button>
+              <Button icon={Plus} onClick={() => { setPanelPrefillName(undefined); setPanelPrefillSuggestId(undefined); setCreatePanelOpen(true); }}>
+                নতুন অর্ডার তৈরি করুন
+              </Button>
             )}
           </div>
         ) : (
@@ -590,6 +686,9 @@ export default function FCommerceOrders() {
                             {o.customer?.phone && <span className="text-[11px]" style={{ color: S.muted }}>{o.customer.phone}</span>}
                             {o.storeOrderId && (
                               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg" style={{ backgroundColor: "#E1F5EE", color: "#0F6E56" }}>🛍 স্টোর</span>
+                            )}
+                            {o.branch?.name && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg" style={{ backgroundColor: "#EDE9FE", color: "#7C3AED" }}>🏪 {o.branch.name}</span>
                             )}
                           </div>
                         </div>
@@ -681,7 +780,7 @@ export default function FCommerceOrders() {
           </table>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* ── Pagination ─────────────────────────────── */}
       {data.pages > 1 && (
@@ -720,6 +819,8 @@ export default function FCommerceOrders() {
           </div>
         </div>
       )}
+
+      </PageShell>
 
       {/* ── Quick Menus ──────────────────────────── */}
       {quickMenu && (
@@ -901,6 +1002,6 @@ export default function FCommerceOrders() {
           prefillSuggestId={panelPrefillSuggestId}
         />
       )}
-    </div>
+    </>
   );
 }

@@ -49,7 +49,7 @@ export default function HospitalReports() {
             <BarChart data={data.monthly}>
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: S.muted }} />
               <YAxis tick={{ fontSize: 11, fill: S.muted }} width={55} tickFormatter={(v) => `৳${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: number) => formatBDT(v)} labelStyle={{ color: S.text }} contentStyle={{ backgroundColor: S.surface, border: `1px solid ${S.border}`, borderRadius: 12 }} />
+              <Tooltip formatter={((v: number) => formatBDT(v)) as never} labelStyle={{ color: S.text }} contentStyle={{ backgroundColor: S.surface, border: `1px solid ${S.border}`, borderRadius: 12 }} />
               <Bar dataKey="opdRevenue" fill={ACC} name="OPD আয়" radius={[4, 4, 0, 0]} />
               <Bar dataKey="ipdRevenue" fill="#7C3AED" name="IPD আয়" radius={[4, 4, 0, 0]} />
             </BarChart>
